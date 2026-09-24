@@ -2,7 +2,7 @@
 // Session management, QR token rotation, and student attendance recording service
 import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
-import type { Actor } from '../auth/types';
+import type { Actor, UserDocument } from '../auth/types';
 import type {
   SessionDocument,
   AttendanceDocument,
@@ -11,6 +11,8 @@ import type {
   QrMonitorData,
   SessionRecording,
   UpdateSessionInput,
+  AttendanceStatus,
+  SetAttendanceInput,
   AddRecordingInput,
   RemoveRecordingInput,
 } from './types';
@@ -491,6 +493,7 @@ export async function recordStudentAttendance(
       sessionEndsAt: session.endsAt,
       recordedAt: now,
       source,
+      status: 'present',
     };
 
     transaction.set(attendanceRef, attendanceDoc);
@@ -553,4 +556,187 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
     attendance: attendMap.get(s.id) || null,
     isActive: isSessionAttendanceActive(s, nowIso),
   }));
+}
+
+/**
+ * Admin menetapkan status kehadiran seorang peserta pada satu pertemuan.
+ *
+ * Dipakai untuk mencatat izin dan sakit, serta memperbaiki presensi yang gagal
+ * terpindai. Status 'absent' menghapus catatannya, sebab ketidakhadiran tanpa
+ * keterangan memang berarti tidak ada catatan -- menyimpan dokumen bernilai
+ * 'absent' akan membuat dua bentuk data untuk keadaan yang sama.
+ *
+ * Penghitung attendeeCount dan attendanceCount hanya menghitung yang hadir.
+ * Izin dan sakit tidak dihitung, sehingga rasio kehadiran tetap menggambarkan
+ * kehadiran yang sebenarnya.
+ *
+ * An admin sets a participant's attendance status for one meeting.
+ *
+ * Used to record excused and sick, and to repair a scan that failed. The
+ * 'absent' status deletes the record, since an unexplained absence is precisely
+ * the lack of a record -- storing an 'absent' document would give one situation
+ * two shapes.
+ *
+ * The attendeeCount and attendanceCount counters track only those present.
+ * Excused and sick are not counted, so the attendance ratio keeps describing
+ * actual attendance.
+ */
+export async function setAttendanceStatus(actor: Actor, input: SetAttendanceInput): Promise<void> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan mengubah status kehadiran');
+  }
+
+  const db = getAdminDb();
+  const session = await getSessionById(input.sessionId);
+  if (!session) {
+    throw new Error('Sesi tidak ditemukan');
+  }
+
+  const studentDoc = await db.collection('users').doc(input.studentId).get();
+  if (!studentDoc.exists) {
+    throw new Error('Peserta tidak ditemukan');
+  }
+  const student = studentDoc.data() as UserDocument;
+
+  if (student.classId !== session.classId) {
+    throw new Error('Peserta ini bukan anggota kelas pada pertemuan tersebut');
+  }
+
+  const attendanceRef = db.collection('attendance').doc(`${input.sessionId}_${input.studentId}`);
+  const sessionRef = db.collection('sessions').doc(input.sessionId);
+  const progressRef = db.collection('studentProgress').doc(input.studentId);
+  const now = new Date().toISOString();
+  const note = (input.note ?? '').trim().slice(0, 200) || null;
+
+  await db.runTransaction(async (tx) => {
+    const [existing, sessionSnap, progressSnap] = await Promise.all([
+      tx.get(attendanceRef),
+      tx.get(sessionRef),
+      tx.get(progressRef),
+    ]);
+
+    const before = existing.exists ? (existing.data() as AttendanceDocument) : null;
+    // Dokumen lama tidak memuat status dan seluruhnya berasal dari pemindaian.
+    // Older documents carry no status and all came from a scan.
+    const wasPresent = before ? (before.status ?? 'present') === 'present' : false;
+    const isPresent = input.status === 'present';
+
+    // Selisih dihitung dari perubahan keadaan, bukan ditambah atau dikurangi
+    // begitu saja: menetapkan status yang sama dua kali tidak boleh menggeser
+    // penghitungnya.
+    //
+    // The delta comes from the change of state rather than a plain increment or
+    // decrement: setting the same status twice must not move the counters.
+    const delta = (isPresent ? 1 : 0) - (wasPresent ? 1 : 0);
+
+    if (input.status === 'absent') {
+      if (existing.exists) tx.delete(attendanceRef);
+    } else {
+      const doc: AttendanceDocument = {
+        id: attendanceRef.id,
+        sessionId: input.sessionId,
+        sessionTitle: session.title,
+        classId: session.classId,
+        studentId: input.studentId,
+        studentName: student.name,
+        sessionEndsAt: session.endsAt,
+        // Waktu pemindaian asli dipertahankan bila ada; admin yang menambahkan
+        // keterangan tidak seharusnya menggeser jam kehadiran yang tercatat.
+        //
+        // The original scan time is kept when present; an admin adding a note
+        // should not shift the recorded arrival time.
+        recordedAt: before?.recordedAt ?? now,
+        source: before?.source ?? 'manual',
+        status: input.status,
+        note,
+        recordedBy: actor.name,
+      };
+      tx.set(attendanceRef, doc);
+    }
+
+    if (delta !== 0) {
+      tx.update(sessionRef, {
+        attendeeCount: Math.max(0, (sessionSnap.data()?.attendeeCount || 0) + delta),
+        updatedAt: now,
+      });
+      tx.set(
+        progressRef,
+        {
+          attendanceCount: Math.max(0, (progressSnap.exists ? progressSnap.data()?.attendanceCount || 0 : 0) + delta),
+          updatedAt: now,
+        },
+        { merge: true }
+      );
+    }
+  });
+}
+
+/**
+ * Admin mengambil daftar peserta sebuah pertemuan beserta status kehadirannya.
+ *
+ * Seluruh peserta kelas ditampilkan, termasuk yang belum punya catatan, sebab
+ * yang dicari admin justru siapa yang belum tercatat.
+ *
+ * An admin fetches a meeting's participant list with their attendance status.
+ *
+ * Every participant in the class is listed, including those without a record,
+ * since what an admin looks for is precisely who is still unaccounted for.
+ */
+export async function listSessionAttendance(
+  actor: Actor,
+  sessionId: string
+): Promise<{
+  session: SessionDocument;
+  entries: {
+    studentId: string;
+    studentName: string;
+    status: AttendanceStatus;
+    note: string | null;
+    recordedAt: string | null;
+    source: string | null;
+  }[];
+}> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan melihat rekap kehadiran');
+  }
+
+  const session = await getSessionById(sessionId);
+  if (!session) {
+    throw new Error('Sesi tidak ditemukan');
+  }
+
+  const db = getAdminDb();
+  const [studentsSnap, attendanceSnap] = await Promise.all([
+    db
+      .collection('users')
+      .where('classId', '==', session.classId)
+      .where('role', '==', 'student')
+      .select('uid', 'name')
+      .get(),
+    db.collection('attendance').where('sessionId', '==', sessionId).get(),
+  ]);
+
+  const records = new Map<string, AttendanceDocument>();
+  for (const doc of attendanceSnap.docs) {
+    const att = doc.data() as AttendanceDocument;
+    records.set(att.studentId, att);
+  }
+
+  const entries = studentsSnap.docs
+    .map((doc) => {
+      const data = doc.data() as { uid?: string; name?: string };
+      const uid = data.uid ?? doc.id;
+      const att = records.get(uid);
+      return {
+        studentId: uid,
+        studentName: data.name ?? '(tanpa nama)',
+        status: (att ? (att.status ?? 'present') : 'absent') as AttendanceStatus,
+        note: att?.note ?? null,
+        recordedAt: att?.recordedAt ?? null,
+        source: att?.source ?? null,
+      };
+    })
+    .sort((a, b) => a.studentName.localeCompare(b.studentName, 'id'));
+
+  return { session, entries };
 }

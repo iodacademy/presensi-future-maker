@@ -63,7 +63,21 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
   const classData = classDoc.data() as ClassDocument;
 
   const sessions = sessionsSnap.docs.map((d) => d.data() as SessionDocument);
-  const attendedSessionIds = new Set(attendSnap.docs.map((d) => (d.data() as AttendanceDocument).sessionId));
+  // Hanya catatan berstatus hadir yang dihitung. Izin dan sakit tersimpan pada
+  // koleksi yang sama, sehingga menghitung seluruh dokumen akan menampilkan
+  // peserta yang berhalangan sebagai hadir. Dokumen lama tidak memuat status
+  // dan seluruhnya berasal dari pemindaian, sehingga ketiadaannya berarti hadir.
+  //
+  // Only records marked present are counted. Excused and sick live in the same
+  // collection, so counting every document would show someone who was excused
+  // as present. Older documents carry no status and all came from a scan, so
+  // its absence means present.
+  const attendedSessionIds = new Set(
+    attendSnap.docs
+      .map((d) => d.data() as AttendanceDocument)
+      .filter((a) => (a.status ?? 'present') === 'present')
+      .map((a) => a.sessionId)
+  );
 
   let activeSession: StudentHomeSession | null = null;
   let nextSession: StudentHomeSession | null = null;

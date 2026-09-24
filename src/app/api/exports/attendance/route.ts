@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionActor } from '@/features/auth/session';
 import { getAdminDb } from '@/lib/firebase/admin';
-import type { AttendanceDocument } from '@/features/attendance/types';
+import { ATTENDANCE_STATUS_LABELS, type AttendanceDocument } from '@/features/attendance/types';
 
 export async function GET(request: Request) {
   const actor = await getSessionActor();
@@ -24,7 +24,12 @@ export async function GET(request: Request) {
 
     const records = snap.docs.map((d) => d.data() as AttendanceDocument);
 
-    const headers = ['Nama Siswa', 'Sesi Pertemuan', 'Waktu Hadir (WIB)', 'Metode'];
+    // Kolom status wajib ada. Tanpa itu catatan izin dan sakit terbaca sebagai
+    // kehadiran biasa pada rekap yang dipakai untuk penilaian.
+    //
+    // The status column is required. Without it, excused and sick records read
+    // as ordinary attendance on a report used for assessment.
+    const headers = ['Nama Siswa', 'Sesi Pertemuan', 'Status', 'Waktu Hadir (WIB)', 'Metode', 'Keterangan'];
 
     const rows = records.map((r) => {
       const sanitize = (val: any) => {
@@ -35,11 +40,19 @@ export async function GET(request: Request) {
         return `"${str.replace(/"/g, '""')}"`;
       };
 
+      // Dokumen lama tidak memuat status dan seluruhnya berasal dari pemindaian.
+      // Older documents carry no status and all came from a scan.
+      const status = ATTENDANCE_STATUS_LABELS[r.status ?? 'present'];
+      const method =
+        r.source === 'manual' ? 'Dicatat admin' : r.source === 'camera' ? 'Kamera HP' : 'Scan QR';
+
       return [
         sanitize(r.studentName),
         sanitize(r.sessionTitle),
+        sanitize(status),
         sanitize(r.recordedAt),
-        sanitize(r.source === 'camera' ? 'Kamera HP' : 'Scan QR'),
+        sanitize(method),
+        sanitize(r.note ?? ''),
       ].join(',');
     });
 

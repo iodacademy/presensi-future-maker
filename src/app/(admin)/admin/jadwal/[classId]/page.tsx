@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { Plus, Download, ArrowLeft, Trash2, Pencil } from 'lucide-react';
+import { Plus, Download, ArrowLeft, Trash2, Pencil, ClipboardCheck } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { CreateSessionModal } from '../create-session-modal';
 import { QrMonitorModal } from '../qr-monitor-modal';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { AttendanceModal } from '../attendance-modal';
 import type { ClassDocument } from '@/features/classes/types';
 import type { SessionDocument } from '@/features/attendance/types';
 import { isSessionAttendanceActive } from '@/features/attendance/policy';
@@ -46,6 +47,7 @@ export default function AdminJadwalDetailPage({ params }: { params: Promise<{ cl
   const [monitorSessionId, setMonitorSessionId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
   const [editSession, setEditSession] = useState<SessionDocument | null>(null);
+  const [attendanceSessionId, setAttendanceSessionId] = useState<string | null>(null);
 
   async function loadData() {
     try {
@@ -191,6 +193,14 @@ export default function AdminJadwalDetailPage({ params }: { params: Promise<{ cl
                   )}
                   <button
                     type="button"
+                    aria-label={`Daftar hadir ${session.title}`}
+                    onClick={() => setAttendanceSessionId(session.id)}
+                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}
+                  >
+                    <ClipboardCheck size={14} color="var(--color-primary)" strokeWidth={2} />
+                  </button>
+                  <button
+                    type="button"
                     aria-label={`Ubah pertemuan ${session.title}`}
                     onClick={() => setEditSession(session)}
                     style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}
@@ -249,6 +259,16 @@ export default function AdminJadwalDetailPage({ params }: { params: Promise<{ cl
           onClose={() => setEditSession(null)}
           onSuccess={() => {
             setEditSession(null);
+            loadData();
+          }}
+        />
+      )}
+
+      {attendanceSessionId && (
+        <AttendanceModal
+          sessionId={attendanceSessionId}
+          onClose={() => {
+            setAttendanceSessionId(null);
             loadData();
           }}
         />
