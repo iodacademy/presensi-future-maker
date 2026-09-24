@@ -41,10 +41,33 @@ export function getAdminApp(): App {
 
   const env = getEnv();
 
+  // serviceAccountId memberi tahu Firebase Admin atas nama akun mana custom
+  // token ditandatangani. Nilainya hanya berarti bila tidak ada kunci privat:
+  // saat itu createCustomToken menandatangani lewat IAM API. Bila tidak
+  // disebutkan, Firebase menebak akun bawaan App Engine lalu gagal dengan
+  // "Permission 'iam.serviceAccounts.signBlob' denied" -- menunjuk akun yang
+  // keliru, sehingga penyebabnya sulit dilacak.
+  //
+  // Dibaca sekali di sini agar berlaku untuk setiap jalur tanpa kunci privat di
+  // bawah, bukan hanya jalur terakhir.
+  //
+  // serviceAccountId tells Firebase Admin which account to sign custom tokens
+  // as. It only matters when there is no private key: createCustomToken then
+  // signs through the IAM API. Left unset, Firebase guesses the default App
+  // Engine account and fails with "Permission 'iam.serviceAccounts.signBlob'
+  // denied" -- naming the wrong account, which makes the cause hard to trace.
+  //
+  // Read once here so it applies to every keyless path below, not just the
+  // last one.
+  const signingAccount = process.env.FIREBASE_SERVICE_ACCOUNT_ID
+    ? { serviceAccountId: process.env.FIREBASE_SERVICE_ACCOUNT_ID }
+    : {};
+
   // 2. Jika berjalan di emulator atau mode test / If running in emulator or test mode
   if (process.env.FIRESTORE_EMULATOR_HOST || process.env.NODE_ENV === 'test') {
     adminApp = initializeApp({
       projectId: env.projectId,
+      ...signingAccount,
     });
     return adminApp;
   }
@@ -100,6 +123,7 @@ export function getAdminApp(): App {
 
   adminApp = initializeApp({
     projectId: env.projectId,
+    ...signingAccount,
   });
 
   return adminApp;

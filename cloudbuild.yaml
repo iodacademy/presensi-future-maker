@@ -75,7 +75,15 @@ steps:
       # Firebase credentials come from this service account's identity via the
       # metadata server -- no key needs storing anywhere.
       - --service-account=${_SERVICE}@${PROJECT_ID}.iam.gserviceaccount.com
-      - --set-env-vars=FIREBASE_PROJECT_ID=${_NEXT_PUBLIC_FIREBASE_PROJECT_ID}
+      # FIREBASE_SERVICE_ACCOUNT_ID memberi tahu Firebase Admin atas nama akun
+      # mana custom token ditandatangani. Tanpa ini Firebase menebak akun bawaan
+      # App Engine dan seluruh login gagal dengan galat signBlob yang menunjuk
+      # akun yang keliru.
+      #
+      # FIREBASE_SERVICE_ACCOUNT_ID tells Firebase Admin which account to sign
+      # custom tokens as. Without it Firebase guesses the default App Engine
+      # account and every login fails with a signBlob error naming the wrong one.
+      - --set-env-vars=FIREBASE_PROJECT_ID=${_NEXT_PUBLIC_FIREBASE_PROJECT_ID},FIREBASE_SERVICE_ACCOUNT_ID=${_SERVICE}@${PROJECT_ID}.iam.gserviceaccount.com
       # Rahasia sungguhan diambil dari Secret Manager saat runtime, bukan
       # dibekukan ke dalam image.
       #

@@ -12,7 +12,9 @@
     "test:unit": "vitest run tests/unit",
     "test:runtime": "playwright test",
     "bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
-    "repair-index": "tsx scripts/repair-email-index.ts"
+    "repair-index": "tsx scripts/repair-email-index.ts",
+    "diagnose-accounts": "tsx scripts/diagnose-accounts.ts",
+    "check-login": "tsx scripts/check-login.ts"
   },
   "dependencies": {
     "firebase": "^12.18.0",
