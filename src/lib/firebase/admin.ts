@@ -71,18 +71,28 @@ export function getAdminApp(): App {
     }
   }
 
-  // 5. Fallback ke Application Default Credentials dari Google Cloud / Fallback to Google Cloud ADC
+  // 5. Fallback ke Application Default Credentials / Fallback to Application Default Credentials
   //
-  // Di produksi tidak ada service-account.json (disk host ditimpa tiap deploy)
-  // dan tidak ada ADC. Tanpa penjagaan ini aplikasi tetap menyala lalu gagal
-  // pada permintaan pertama dengan galat kredensial yang menyesatkan; lebih
-  // baik berhenti saat boot dengan menyebut variabel yang kurang.
+  // Di atas Google Cloud (Cloud Run, App Engine, GCE) kredensial datang dari
+  // metadata server, jadi ADC selalu tersedia dan tidak ada variabel yang perlu
+  // diisi. Di luar itu -- misalnya hosting Node biasa -- ADC tidak ada, dan
+  // tanpa penjagaan ini aplikasi tetap menyala lalu gagal pada permintaan
+  // pertama dengan galat kredensial yang menyesatkan.
   //
-  // In production there is no service-account.json (the host disk is
-  // overwritten on every deploy) and no ADC. Without this guard the app boots
-  // and then fails on the first request with a misleading credential error;
-  // better to stop at boot naming the missing variable.
-  if (process.env.NODE_ENV === 'production') {
+  // K_SERVICE diisi Cloud Run, GAE_ENV diisi App Engine; keduanya penanda resmi
+  // runtime Google dan tidak muncul di tempat lain.
+  //
+  // On Google Cloud (Cloud Run, App Engine, GCE) credentials come from the
+  // metadata server, so ADC is always present and no variable needs setting.
+  // Elsewhere -- a plain Node host, say -- there is no ADC, and without this
+  // guard the app boots and then fails on the first request with a misleading
+  // credential error.
+  //
+  // K_SERVICE is set by Cloud Run and GAE_ENV by App Engine; both are official
+  // Google runtime markers that appear nowhere else.
+  const onGoogleCloud = Boolean(process.env.K_SERVICE || process.env.GAE_ENV);
+
+  if (process.env.NODE_ENV === 'production' && !onGoogleCloud) {
     throw new Error(
       'Kredensial Firebase Admin tidak ditemukan. Isi FIREBASE_PRIVATE_KEY dan FIREBASE_CLIENT_EMAIL di environment variables.'
     );

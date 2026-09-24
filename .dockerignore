@@ -1,0 +1,39 @@
+# Kredensial -- tidak boleh masuk image dengan cara apa pun.
+# Next.js menyalin berkas tak dikenal di root proyek ke folder standalone, jadi
+# tanpa baris ini service-account.json ikut terbungkus ke dalam image.
+#
+# Credentials -- must never enter the image by any route.
+# Next.js copies unrecognised root-level files into the standalone folder, so
+# without these lines service-account.json would be baked into the image.
+.env
+.env*.local
+service-account*.json
+*.pem
+
+# Artefak build dan dependensi -- dibangun ulang di dalam container
+# Build artifacts and dependencies -- rebuilt inside the container
+node_modules
+.next
+.next-build
+out
+build
+dist
+*.tsbuildinfo
+
+# Uji dan dokumentasi / Tests and docs
+test-results
+playwright-report
+tests
+docs
+.superpowers
+
+# Git dan editor / Git and editor
+.git
+.gitignore
+.vscode
+.idea
+.DS_Store
+
+# Sampah lokal / Local scratch
+users.json
+Warna

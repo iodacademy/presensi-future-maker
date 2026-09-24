@@ -1,0 +1,88 @@
+# Pipeline Cloud Build: GitHub -> image -> Cloud Run
+# Cloud Build pipeline: GitHub -> image -> Cloud Run
+#
+# Dipicu tiap push ke branch main. Substitusi _NEXT_PUBLIC_* diisi saat trigger
+# dibuat; nilainya memang terkirim ke peramban sehingga bukan rahasia.
+#
+# Triggered on every push to main. The _NEXT_PUBLIC_* substitutions are set when
+# the trigger is created; those values ship to the browser anyway, so they are
+# not secrets.
+
+substitutions:
+  _REGION: asia-southeast2
+  _SERVICE: presensi-future-maker
+  _REPO: containers
+  _NEXT_PUBLIC_FIREBASE_PROJECT_ID: ''
+  _NEXT_PUBLIC_FIREBASE_API_KEY: ''
+  _NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ''
+  _NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ''
+  _NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ''
+  _NEXT_PUBLIC_FIREBASE_APP_ID: ''
+  _NEXT_PUBLIC_APP_URL: ''
+
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg=NEXT_PUBLIC_FIREBASE_PROJECT_ID=${_NEXT_PUBLIC_FIREBASE_PROJECT_ID}
+      - --build-arg=NEXT_PUBLIC_FIREBASE_API_KEY=${_NEXT_PUBLIC_FIREBASE_API_KEY}
+      - --build-arg=NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}
+      - --build-arg=NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${_NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}
+      - --build-arg=NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}
+      - --build-arg=NEXT_PUBLIC_FIREBASE_APP_ID=${_NEXT_PUBLIC_FIREBASE_APP_ID}
+      - --build-arg=NEXT_PUBLIC_APP_URL=${_NEXT_PUBLIC_APP_URL}
+      # Dua tag: SHA untuk menelusuri revisi mana berasal dari commit mana,
+      # latest untuk rujukan manusia.
+      # Two tags: the SHA to trace which revision came from which commit, and
+      # latest for human reference.
+      - -t=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${SHORT_SHA}
+      - -t=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:latest
+      - .
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: ['push', '--all-tags', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}']
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${SHORT_SHA}
+      - --region=${_REGION}
+      - --platform=managed
+      # Aplikasi punya login sendiri; IAM Cloud Run tidak boleh menghalangi
+      # peserta membuka halaman masuk.
+      # The app has its own login; Cloud Run IAM must not block participants
+      # from reaching the sign-in page.
+      - --allow-unauthenticated
+      # Kredensial Firebase datang dari identitas service account ini lewat
+      # metadata server -- tidak ada kunci yang perlu disimpan di mana pun.
+      # Firebase credentials come from this service account's identity via the
+      # metadata server -- no key needs storing anywhere.
+      - --service-account=${_SERVICE}@${PROJECT_ID}.iam.gserviceaccount.com
+      - --set-env-vars=FIREBASE_PROJECT_ID=${_NEXT_PUBLIC_FIREBASE_PROJECT_ID}
+      # Rahasia sungguhan diambil dari Secret Manager saat runtime, bukan
+      # dibekukan ke dalam image.
+      # Real secrets are read from Secret Manager at runtime, not baked into the
+      # image.
+      - --set-secrets=QR_TOKEN_SECRET=qr-token-secret:latest,GOOGLE_CALENDAR_GAS_URL=gas-url:latest,GOOGLE_CALENDAR_GAS_SECRET=gas-secret:latest
+      # Satu instance selalu hidup: tanpa ini pengguna pertama tiap pagi
+      # menunggu cold start.
+      # One instance always warm: without this the first user each morning waits
+      # through a cold start.
+      - --min-instances=1
+      - --max-instances=10
+      - --memory=1Gi
+      - --cpu=1
+
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${SHORT_SHA}
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8

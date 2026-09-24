@@ -11,6 +11,14 @@ import type { NextConfig } from 'next';
 // server or static output".
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Menyalin dependensi terpakai ke satu folder mandiri, sehingga image Docker
+  // tidak perlu memuat seluruh node_modules. Hostinger memaksa nilai ini juga,
+  // jadi menyetelnya di sini tidak mengganggu jalur itu.
+  //
+  // Copies only the used dependencies into a self-contained folder, so the
+  // Docker image need not ship all of node_modules. Hostinger forces this value
+  // too, so setting it here does not disturb that path.
+  output: 'standalone',
   // Build tidak menimpa chunk dev yang sedang dilayani / Builds must not overwrite chunks served by a running dev server
   distDir: process.env.NODE_ENV === 'development' ? '.next' : '.next-build',
 };
