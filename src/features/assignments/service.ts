@@ -110,11 +110,73 @@ export async function listClassStudentsWithAssignment(
 
   const students = studentsSnap.docs.map((d) => d.data() as UserDocument);
 
-  // Ambil assignment mereka / Fetch their assignments
-  return Promise.all(
-    students.map(async (student) => {
-      const assignment = await getStudentAssignment(student.uid, phase);
-      return { student, assignment };
-    })
-  );
+  // Satu kueri untuk seluruh penugasan kelas ini, bukan satu pembacaan per
+  // siswa. Satu angkatan berisi puluhan peserta, sehingga pembacaan per baris
+  // mengulang perjalanan yang sama berkali-kali pada halaman yang paling sering
+  // dibuka saat menyusun mentoring.
+  //
+  // One query for the whole class's assignments rather than a read per student.
+  // A cohort holds dozens of participants, so per-row reads repeat the same
+  // round trip many times over on the page most used while arranging mentoring.
+  const assignmentsSnap = await db
+    .collection('assignments')
+    .where('classId', '==', classId)
+    .where('phase', '==', phase)
+    .get();
+
+  const byStudent = new Map<string, AssignmentDocument>();
+  for (const doc of assignmentsSnap.docs) {
+    const a = doc.data() as AssignmentDocument;
+    byStudent.set(a.studentId, a);
+  }
+
+  return students.map((student) => ({
+    student,
+    assignment: byStudent.get(student.uid) ?? null,
+  }));
+}
+
+/**
+ * Menugaskan satu mentor kepada beberapa siswa sekaligus.
+ *
+ * Tiap penugasan divalidasi sendiri-sendiri dan kegagalannya dikumpulkan, bukan
+ * menghentikan seluruh proses: satu siswa yang kelasnya berubah di tengah jalan
+ * tidak seharusnya membatalkan penugasan delapan belas siswa lainnya.
+ *
+ * Assigns one mentor to several students at once.
+ *
+ * Each assignment is validated on its own and failures are collected rather
+ * than halting the run: one student whose class changed midway should not undo
+ * the assignment of the other eighteen.
+ */
+export async function assignMentorToStudents(
+  actor: Actor,
+  input: { classId: string; mentorId: string; phase: Phase; studentIds: string[] }
+): Promise<{ assigned: number; failures: { studentId: string; reason: string }[] }> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan menugaskan mentor');
+  }
+
+  if (input.studentIds.length === 0) {
+    throw new Error('Pilih minimal satu peserta');
+  }
+
+  const failures: { studentId: string; reason: string }[] = [];
+  let assigned = 0;
+
+  for (const studentId of input.studentIds) {
+    try {
+      await assignMentorToStudent(actor, {
+        studentId,
+        classId: input.classId,
+        mentorId: input.mentorId,
+        phase: input.phase,
+      });
+      assigned += 1;
+    } catch (err) {
+      failures.push({ studentId, reason: (err as Error).message });
+    }
+  }
+
+  return { assigned, failures };
 }

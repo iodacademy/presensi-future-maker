@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getSessionActor } from '@/features/auth/session';
-import { assignMentorToStudent, listClassStudentsWithAssignment } from '@/features/assignments/service';
+import {
+  assignMentorToStudent,
+  assignMentorToStudents,
+  listClassStudentsWithAssignment,
+} from '@/features/assignments/service';
 import { isValidPhase } from '@/features/assignments/policy';
 
 export async function GET(request: Request) {
@@ -33,6 +37,23 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
+
+    // Penugasan banyak peserta dan satu peserta dilayani endpoint yang sama:
+    // aturannya identik, dan jalur kedua akan membuat dua tempat yang harus
+    // dijaga tetap sama.
+    //
+    // Bulk and single assignment share one endpoint: the rules are identical,
+    // and a second path would create two places to keep in step.
+    if (Array.isArray(body.studentIds)) {
+      const result = await assignMentorToStudents(actor, {
+        classId: body.classId,
+        mentorId: body.mentorId,
+        phase: body.phase,
+        studentIds: body.studentIds,
+      });
+      return NextResponse.json(result);
+    }
+
     await assignMentorToStudent(actor, body);
     return NextResponse.json({ success: true });
   } catch (err: any) {
