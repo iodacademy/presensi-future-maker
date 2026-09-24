@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { QrCode, Info } from 'lucide-react';
+import { QrCode, Info, Video } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import type { SessionDocument, AttendanceDocument } from '@/features/attendance/types';
 
@@ -164,6 +164,34 @@ export default function StudentJadwalPage() {
                   <div style={{ marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '6px', backgroundColor: 'var(--color-border)' }}>
                     <Info size={11} color="var(--color-text-muted)" strokeWidth={2} />
                     <span style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>QR dibuka admin saat sesi</span>
+                  </div>
+                )}
+
+                {/* Rekaman muncul setelah admin menambahkannya; satu sesi dapat
+                    memuat beberapa rekaman bila dipecah ke breakout room.
+
+                    Recordings appear once an admin adds them; one session may
+                    hold several when it splits into breakout rooms. */}
+                {(session.recordings?.length ?? 0) > 0 && (
+                  <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    {session.recordings!.map((r) => (
+                      <a
+                        key={r.id}
+                        href={r.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px',
+                          borderRadius: '8px', backgroundColor: 'var(--color-primary-light)',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        <Video size={12} color="var(--color-primary)" strokeWidth={2} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-primary)' }}>
+                          Rekaman - {r.label}
+                        </span>
+                      </a>
+                    ))}
                   </div>
                 )}
               </div>

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, FileUp, Video, MapPin } from 'lucide-react';
-import type { SessionMode } from '@/features/attendance/types';
+import type { SessionMode, SessionDocument } from '@/features/attendance/types';
 
 interface CreateSessionModalProps {
   classId: string;
@@ -10,6 +10,16 @@ interface CreateSessionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  /**
+   * Bila diisi, modal menyunting sesi tersebut alih-alih membuat yang baru.
+   * Formulirnya sama persis, sehingga menduplikasinya hanya akan membuat dua
+   * tempat yang harus diperbaiki setiap kali aturan validasi berubah.
+   *
+   * When provided, the modal edits that session instead of creating a new one.
+   * The form is identical, so duplicating it would only create two places to
+   * fix whenever a validation rule changes.
+   */
+  editSession?: SessionDocument | null;
 }
 
 // Modal dibangun presisi mengikuti node Figma 10:1793 (w=560, radius=16, padding=24, itemSpacing=14)
@@ -20,16 +30,18 @@ export function CreateSessionModal({
   isOpen,
   onClose,
   onSuccess,
+  editSession = null,
 }: CreateSessionModalProps) {
+  const isEdit = Boolean(editSession);
   const [entryMode, setEntryMode] = useState<'manual' | 'import'>('manual');
-  const [title, setTitle] = useState('');
-  const [mode, setMode] = useState<SessionMode>('online');
-  const [date, setDate] = useState('');
-  const [startTime, setStartTime] = useState('19:00');
-  const [endTime, setEndTime] = useState('22:00');
-  const [zoomUrl, setZoomUrl] = useState('');
-  const [address, setAddress] = useState('');
-  const [mapsUrl, setMapsUrl] = useState('');
+  const [title, setTitle] = useState(editSession?.title ?? '');
+  const [mode, setMode] = useState<SessionMode>(editSession?.mode ?? 'online');
+  const [date, setDate] = useState(editSession?.date ?? '');
+  const [startTime, setStartTime] = useState(editSession?.startTime ?? '19:00');
+  const [endTime, setEndTime] = useState(editSession?.endTime ?? '22:00');
+  const [zoomUrl, setZoomUrl] = useState(editSession?.zoomUrl ?? '');
+  const [address, setAddress] = useState(editSession?.address ?? '');
+  const [mapsUrl, setMapsUrl] = useState(editSession?.mapsUrl ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,8 +53,8 @@ export function CreateSessionModal({
     setError(null);
 
     try {
-      const res = await fetch('/api/sessions', {
-        method: 'POST',
+      const res = await fetch(isEdit ? `/api/sessions/${editSession!.id}` : '/api/sessions', {
+        method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           classId, title, date, startTime, endTime, mode,
@@ -53,7 +65,7 @@ export function CreateSessionModal({
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Gagal membuat sesi pertemuan');
+      if (!res.ok) throw new Error(data.error || (isEdit ? 'Gagal mengubah pertemuan' : 'Gagal membuat sesi pertemuan'));
 
       onSuccess();
       onClose();
@@ -78,7 +90,7 @@ export function CreateSessionModal({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '15px', fontWeight: 700, color: 'var(--color-text-main)' }}>
-              Tambah Pertemuan
+              {isEdit ? 'Ubah Pertemuan' : 'Tambah Pertemuan'}
             </h2>
             <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{classNameTitle}</span>
           </div>
@@ -224,7 +236,7 @@ export function CreateSessionModal({
                 disabled={loading}
                 style={{ padding: '9px 16px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--color-primary)', color: '#ffffff', fontSize: '11px', fontWeight: 700, cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
               >
-                {loading ? 'Menyimpan...' : 'Simpan dan Buat Presensi'}
+                {loading ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Simpan dan Buat Presensi'}
               </button>
             </div>
           </form>

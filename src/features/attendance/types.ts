@@ -2,6 +2,14 @@
 export type SessionMode = 'online' | 'offline';
 export type AttendanceOverride = 'auto' | 'open' | 'closed';
 
+export interface SessionRecording {
+  id: string;
+  /** Penanda ruang, misalnya "Kelas Utama" atau "Breakout 1" / Room label, e.g. "Main Room" or "Breakout 1" */
+  label: string;
+  url: string;
+  addedAt: string;
+}
+
 export interface SessionDocument {
   id: string;
   classId: string;
@@ -16,13 +24,16 @@ export interface SessionDocument {
   // Tautan bergabung ke sesi, dipakai sebelum dan selama sesi berlangsung
   // Join link for the session, used before and during the meeting
   zoomUrl: string | null;
-  // Tautan rekaman, diisi admin setelah sesi selesai. Berbeda dari zoomUrl:
-  // tautan bergabung tidak memutar apa pun setelah sesi berakhir.
+  // Rekaman sesi, diisi admin setelah sesi selesai. Berbentuk daftar karena
+  // satu sesi dapat pecah menjadi beberapa breakout room yang masing-masing
+  // merekam sendiri. Berbeda dari zoomUrl: tautan bergabung tidak memutar apa
+  // pun setelah sesi berakhir.
   //
-  // Recording link, filled in by an admin after the session ends. Distinct from
-  // zoomUrl: a join link plays nothing once the meeting is over.
-  recordingUrl?: string | null;
-  recordingNote?: string | null;
+  // Session recordings, filled in by an admin after the session ends. A list
+  // because one session may split into several breakout rooms, each recording
+  // separately. Distinct from zoomUrl: a join link plays nothing once the
+  // meeting is over.
+  recordings?: SessionRecording[];
   address: string | null;
   mapsUrl: string | null;
   attendanceOverride: AttendanceOverride;
@@ -56,10 +67,27 @@ export interface CreateSessionInput {
   mapsUrl?: string | null;
 }
 
-export interface SetRecordingInput {
+export interface UpdateSessionInput {
   sessionId: string;
-  recordingUrl: string | null;
-  recordingNote?: string | null;
+  title?: string;
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+  mode?: SessionMode;
+  zoomUrl?: string | null;
+  address?: string | null;
+  mapsUrl?: string | null;
+}
+
+export interface AddRecordingInput {
+  sessionId: string;
+  label: string;
+  url: string;
+}
+
+export interface RemoveRecordingInput {
+  sessionId: string;
+  recordingId: string;
 }
 
 export interface QrMonitorData {

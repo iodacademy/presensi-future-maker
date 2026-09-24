@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { Plus, Download, ArrowLeft } from 'lucide-react';
+import { Plus, Download, ArrowLeft, Trash2, Pencil } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { CreateSessionModal } from '../create-session-modal';
 import { QrMonitorModal } from '../qr-monitor-modal';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 import type { ClassDocument } from '@/features/classes/types';
 import type { SessionDocument } from '@/features/attendance/types';
 import { isSessionAttendanceActive } from '@/features/attendance/policy';
@@ -43,6 +44,8 @@ export default function AdminJadwalDetailPage({ params }: { params: Promise<{ cl
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [monitorSessionId, setMonitorSessionId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
+  const [editSession, setEditSession] = useState<SessionDocument | null>(null);
 
   async function loadData() {
     try {
@@ -186,6 +189,22 @@ export default function AdminJadwalDetailPage({ params }: { params: Promise<{ cl
                       Buka Monitor
                     </button>
                   )}
+                  <button
+                    type="button"
+                    aria-label={`Ubah pertemuan ${session.title}`}
+                    onClick={() => setEditSession(session)}
+                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}
+                  >
+                    <Pencil size={13} color="var(--color-text-muted)" strokeWidth={2} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Hapus pertemuan ${session.title}`}
+                    onClick={() => setPendingDelete({ id: session.id, label: session.title })}
+                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}
+                  >
+                    <Trash2 size={13} color="var(--color-danger)" strokeWidth={2} />
+                  </button>
                 </div>
               </div>
             );
@@ -219,6 +238,32 @@ export default function AdminJadwalDetailPage({ params }: { params: Promise<{ cl
 
       {monitorSessionId && (
         <QrMonitorModal sessionId={monitorSessionId} onClose={() => setMonitorSessionId(null)} totalStudents={classData?.studentCount || 0} />
+      )}
+
+      {editSession && (
+        <CreateSessionModal
+          classId={classId}
+          classNameTitle={classData?.canonicalName || ''}
+          isOpen
+          editSession={editSession}
+          onClose={() => setEditSession(null)}
+          onSuccess={() => {
+            setEditSession(null);
+            loadData();
+          }}
+        />
+      )}
+
+      {pendingDelete && (
+        <DeleteDialog
+          endpoint={`/api/sessions/${pendingDelete.id}`}
+          entityLabel={pendingDelete.label}
+          onClose={() => setPendingDelete(null)}
+          onDeleted={() => {
+            setPendingDelete(null);
+            loadData();
+          }}
+        />
       )}
     </AppShell>
   );

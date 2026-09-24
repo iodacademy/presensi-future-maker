@@ -9,7 +9,10 @@ import type {
   CreateSessionInput,
   AttendanceOverride,
   QrMonitorData,
-  SetRecordingInput,
+  SessionRecording,
+  UpdateSessionInput,
+  AddRecordingInput,
+  RemoveRecordingInput,
 } from './types';
 import type { ClassDocument } from '../classes/types';
 import {
@@ -142,24 +145,158 @@ export async function listSessionsForClass(classId: string): Promise<SessionDocu
  * zoomUrl, which is used to join. An empty value clears the recording rather
  * than being rejected.
  */
-export async function setSessionRecording(actor: Actor, input: SetRecordingInput): Promise<void> {
+export async function updateSession(actor: Actor, input: UpdateSessionInput): Promise<void> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan mengubah jadwal pertemuan');
+  }
+
+  const db = getAdminDb();
+  const sessionRef = db.collection('sessions').doc(input.sessionId);
+  const snap = await sessionRef.get();
+  if (!snap.exists) {
+    throw new Error('Sesi tidak ditemukan');
+  }
+
+  const current = snap.data() as SessionDocument;
+
+  const merged = {
+    classId: current.classId,
+    title: input.title ?? current.title,
+    date: input.date ?? current.date,
+    startTime: input.startTime ?? current.startTime,
+    endTime: input.endTime ?? current.endTime,
+    mode: input.mode ?? current.mode,
+    zoomUrl: input.zoomUrl !== undefined ? input.zoomUrl : current.zoomUrl,
+    address: input.address !== undefined ? input.address : current.address,
+    mapsUrl: input.mapsUrl !== undefined ? input.mapsUrl : current.mapsUrl,
+  };
+
+  const validated = validateSessionInput(merged);
+
+  const timeChanged =
+    validated.date !== current.date ||
+    validated.startTime !== current.startTime ||
+    validated.endTime !== current.endTime;
+
+  // Waktu sesi terkunci begitu ada yang hadir. Tiap catatan kehadiran menyimpan
+  // salinan sessionEndsAt saat pencatatan; menggeser waktu membuat salinan itu
+  // tidak lagi cocok dengan sesinya, sehingga jendela presensi dan rekap
+  // kehadiran ikut salah. Judul, tautan, dan alamat tetap boleh diperbaiki.
+  //
+  // Session times lock once anyone has attended. Each attendance record holds a
+  // copy of sessionEndsAt from the moment it was taken; shifting the time makes
+  // that copy disagree with its session, so the attendance window and the
+  // attendance report both go wrong. Title, links, and address stay editable.
+  if (timeChanged) {
+    const attended = await db
+      .collection('attendance')
+      .where('sessionId', '==', input.sessionId)
+      .limit(1)
+      .get();
+
+    if (!attended.empty) {
+      throw new Error(
+        'Waktu pertemuan tidak dapat diubah karena sudah ada peserta yang tercatat hadir. Judul, tautan, dan alamat masih dapat diperbaiki.'
+      );
+    }
+  }
+
+  const startsAt = toUtcIso(validated.date, validated.startTime);
+  const endsAt = toUtcIso(validated.date, validated.endTime);
+
+  await sessionRef.update({
+    title: validated.title,
+    date: validated.date,
+    startTime: validated.startTime,
+    endTime: validated.endTime,
+    startsAt,
+    endsAt,
+    mode: validated.mode,
+    zoomUrl: validated.zoomUrl,
+    address: validated.address,
+    mapsUrl: validated.mapsUrl,
+    // Nomor revisi dinaikkan agar token QR yang sudah terbit untuk jadwal lama
+    // langsung hangus; token terikat pada revisi.
+    //
+    // The revision number is bumped so QR tokens already issued for the old
+    // schedule expire at once; tokens are bound to the revision.
+    ...(timeChanged ? { qrRevision: (current.qrRevision || 1) + 1 } : {}),
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+/**
+ * Admin menambah satu rekaman pada sebuah sesi.
+ *
+ * Admin adds one recording to a session.
+ */
+export async function addSessionRecording(actor: Actor, input: AddRecordingInput): Promise<void> {
   if (actor.role !== 'admin') {
     throw new Error('Hanya admin yang diizinkan mengisi rekaman sesi');
   }
 
-  const url = validateRecordingUrl(input.recordingUrl);
-  const note = (input.recordingNote ?? '').trim().slice(0, 200) || null;
+  const url = validateRecordingUrl(input.url);
+  if (!url) {
+    throw new Error('Tautan rekaman wajib diisi');
+  }
+
+  const label = input.label.trim().slice(0, 60) || 'Kelas Utama';
 
   const db = getAdminDb();
   const sessionRef = db.collection('sessions').doc(input.sessionId);
-  if (!(await sessionRef.get()).exists) {
-    throw new Error('Sesi tidak ditemukan');
+
+  // Transaksi, bukan update array biasa: dua admin yang menambah rekaman
+  // hampir bersamaan sama-sama membaca daftar lama, dan yang menulis belakangan
+  // menghapus rekaman yang baru saja ditambahkan yang lain.
+  //
+  // A transaction rather than a plain array update: two admins adding
+  // recordings at nearly the same time both read the old list, and whoever
+  // writes last erases the recording the other just added.
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(sessionRef);
+    if (!snap.exists) {
+      throw new Error('Sesi tidak ditemukan');
+    }
+
+    const existing = ((snap.data() as SessionDocument).recordings || []) as SessionRecording[];
+    if (existing.some((r) => r.url === url)) {
+      throw new Error('Tautan rekaman ini sudah ditambahkan pada sesi tersebut');
+    }
+
+    tx.update(sessionRef, {
+      recordings: [
+        ...existing,
+        { id: crypto.randomUUID(), label, url, addedAt: new Date().toISOString() },
+      ],
+      updatedAt: new Date().toISOString(),
+    });
+  });
+}
+
+/**
+ * Admin menghapus satu rekaman dari sebuah sesi.
+ *
+ * Admin removes a single recording from a session.
+ */
+export async function removeSessionRecording(actor: Actor, input: RemoveRecordingInput): Promise<void> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan menghapus rekaman sesi');
   }
 
-  await sessionRef.update({
-    recordingUrl: url,
-    recordingNote: note,
-    updatedAt: new Date().toISOString(),
+  const db = getAdminDb();
+  const sessionRef = db.collection('sessions').doc(input.sessionId);
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(sessionRef);
+    if (!snap.exists) {
+      throw new Error('Sesi tidak ditemukan');
+    }
+
+    const existing = ((snap.data() as SessionDocument).recordings || []) as SessionRecording[];
+    tx.update(sessionRef, {
+      recordings: existing.filter((r) => r.id !== input.recordingId),
+      updatedAt: new Date().toISOString(),
+    });
   });
 }
 

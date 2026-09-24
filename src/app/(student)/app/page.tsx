@@ -40,7 +40,7 @@ export default function StudentHomePage() {
           Blue mobile header (node 11:2724/2799) -- top padding reduced from 56 to 24,
           Figma's 56 accounts for native status bar which doesn't apply in a web browser */}
       <div className="student-mobile-header" style={{ backgroundColor: 'var(--color-primary)', color: '#ffffff', padding: '24px 20px 22px' }}>
-        <div style={{ fontSize: '11px', fontFamily: 'var(--font-body)' }}>BOOTCAMP INNOVAITION</div>
+        <div style={{ fontSize: '11px', fontFamily: 'var(--font-body)' }}>FUTURE INNOVATORS BOOTCAMP</div>
         <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: '#ffffff', margin: '6px 0 0' }}>Halo, {studentName}</h1>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', padding: '4px 10px', borderRadius: '20px', backgroundColor: 'var(--color-header-pill)' }}>
           <MapPin size={11} color="#ffffff" strokeWidth={2} />

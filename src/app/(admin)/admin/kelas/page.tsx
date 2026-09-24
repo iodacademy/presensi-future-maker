@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { GraduationCap, BookOpen, Plus, Table2 } from 'lucide-react';
+import { GraduationCap, BookOpen, Plus, Table2, Trash2 } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import { CreateClassModal } from './create-class-modal';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 import type { ClassSummary } from '@/features/classes/types';
 
 // Warna badge kota mengikuti Figma: kota pertama primer (#0072ce), sisanya netral (#d9d9d6)
@@ -26,6 +27,7 @@ export default function AdminKelasPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
 
   async function loadClasses() {
     try {
@@ -198,19 +200,37 @@ export default function AdminKelasPage() {
                 <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
 
                 {/* Info tugas: sukses hijau bila ada, abu jika belum */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  {cls.dailyTaskCount > 0 ? (
-                    <span style={{ fontSize: '9px', color: 'var(--color-success)' }}>
-                      {cls.dailyTaskCount} Tugas Harian - {cls.capstoneTaskCount} Capstone
-                    </span>
-                  ) : (
-                    <>
-                      <BookOpen size={12} color="var(--color-text-faint)" strokeWidth={2} />
-                      <span style={{ fontSize: '9px', color: 'var(--color-text-faint)' }}>
-                        Belum ada instruksi tugas
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '5px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    {cls.dailyTaskCount > 0 ? (
+                      <span style={{ fontSize: '9px', color: 'var(--color-success)' }}>
+                        {cls.dailyTaskCount} Tugas Harian - {cls.capstoneTaskCount} Capstone
                       </span>
-                    </>
-                  )}
+                    ) : (
+                      <>
+                        <BookOpen size={12} color="var(--color-text-faint)" strokeWidth={2} />
+                        <span style={{ fontSize: '9px', color: 'var(--color-text-faint)' }}>
+                          Belum ada instruksi tugas
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    aria-label={`Hapus kelas ${cls.canonicalName}`}
+                    // Seluruh kartu membuka halaman kelas; tanpa stopPropagation
+                    // satu klik membuka halaman sekaligus dialog hapus.
+                    //
+                    // The whole card opens the class page; without stopPropagation
+                    // one click would open the page and the delete dialog at once.
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPendingDelete({ id: cls.id, label: cls.canonicalName });
+                    }}
+                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}
+                  >
+                    <Trash2 size={13} color="var(--color-danger)" strokeWidth={2} />
+                  </button>
                 </div>
               </div>
             );
@@ -273,6 +293,19 @@ export default function AdminKelasPage() {
         onClose={() => setIsModalOpen(false)}
         onSuccess={loadClasses}
       />
+
+      {pendingDelete && (
+        <DeleteDialog
+          endpoint={`/api/classes/${pendingDelete.id}`}
+          impactQuery="?impact=1"
+          entityLabel={pendingDelete.label}
+          onClose={() => setPendingDelete(null)}
+          onDeleted={() => {
+            setPendingDelete(null);
+            loadClasses();
+          }}
+        />
+      )}
     </AppShell>
   );
 }

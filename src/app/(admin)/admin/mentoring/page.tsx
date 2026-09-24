@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Plus, UserCheck, Download } from 'lucide-react';
+import { Plus, UserCheck, Download, Trash2 } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { Input } from '@/components/ui/input';
 import { AssignStudentModal } from './assign-student-modal';
 import type { ClassSummary } from '@/features/classes/types';
@@ -16,6 +17,7 @@ export default function AdminMentoringPage() {
   const [phase, setPhase] = useState<Phase>('bootcamp');
   const [slots, setSlots] = useState<MentoringSlotDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [availableMentors, setAvailableMentors] = useState<{ uid: string; name: string; email: string }[]>([]);
@@ -285,15 +287,25 @@ export default function AdminMentoringPage() {
                   <span style={{ fontSize: '10px', color: slot.studentName ? 'var(--color-text-main)' : 'var(--color-text-faint)' }}>
                     {slot.studentName || '-'}
                   </span>
-                  {isBooked && slot.bookingId && (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {isBooked && slot.bookingId && (
+                      <button
+                        type="button"
+                        onClick={() => handleCancelBooking(slot.bookingId!)}
+                        style={{ fontSize: '9px', padding: '4px 10px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--color-danger)', color: '#ffffff', cursor: 'pointer', fontWeight: 700 }}
+                      >
+                        Batalkan
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => handleCancelBooking(slot.bookingId!)}
-                      style={{ fontSize: '9px', padding: '4px 10px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--color-danger)', color: '#ffffff', cursor: 'pointer', fontWeight: 700 }}
+                      aria-label={`Hapus slot ${slot.date} ${slot.startTime}`}
+                      onClick={() => setPendingDelete({ id: slot.id, label: `${slot.date} ${slot.startTime} - ${slot.mentorName}` })}
+                      style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}
                     >
-                      Batalkan
+                      <Trash2 size={13} color="var(--color-danger)" strokeWidth={2} />
                     </button>
-                  )}
+                  </span>
                 </span>
               </div>
             );
@@ -351,6 +363,18 @@ export default function AdminMentoringPage() {
           mentorName={assignMentorName}
           onClose={() => setIsAssignOpen(false)}
           onSuccess={() => setIsAssignOpen(false)}
+        />
+      )}
+
+      {pendingDelete && (
+        <DeleteDialog
+          endpoint={`/api/mentoring/slots/${pendingDelete.id}`}
+          entityLabel={pendingDelete.label}
+          onClose={() => setPendingDelete(null)}
+          onDeleted={() => {
+            setPendingDelete(null);
+            if (selectedClassId) loadSlotsFor(selectedClassId, phase);
+          }}
         />
       )}
     </AppShell>

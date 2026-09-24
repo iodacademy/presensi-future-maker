@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionActor } from '@/features/auth/session';
 import { deleteSession, getSessionDeletionImpact } from '@/features/admin/delete-service';
-import { setSessionRecording } from '@/features/attendance/service';
+import { updateSession } from '@/features/attendance/service';
 
 // Ringkasan dampak sebelum penghapusan / Impact summary before deletion
 export async function GET(request: Request, { params }: { params: Promise<{ sessionId: string }> }) {
@@ -18,7 +18,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ sess
   }
 }
 
-// Menyimpan tautan rekaman sesi / Stores the session recording link
+// Mengubah detail pertemuan / Updates session details
 export async function PATCH(request: Request, { params }: { params: Promise<{ sessionId: string }> }) {
   const actor = await getSessionActor();
   if (!actor || actor.role !== 'admin') {
@@ -28,12 +28,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ se
   const { sessionId } = await params;
   try {
     const body = await request.json();
-    await setSessionRecording(actor, {
-      sessionId,
-      recordingUrl: body.recordingUrl ?? null,
-      recordingNote: body.recordingNote ?? null,
-    });
-    return NextResponse.json({ saved: true });
+    await updateSession(actor, { sessionId, ...body });
+    return NextResponse.json({ updated: true });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }
