@@ -33,13 +33,35 @@ function buildTitle(row: ScheduleRow): string {
   return `${row.kegiatan}: ${row.materi}`;
 }
 
-async function findClass(city: string, major: string): Promise<ClassDocument | null> {
+/**
+ * Menormalkan nama kota dan jurusan untuk dicocokkan.
+ *
+ * Kelas dibuat lewat formulir yang diketik manusia, sehingga "DKI Jakarta",
+ * "dki jakarta", dan "DKI  Jakarta" menunjuk kelas yang sama. Pencocokan yang
+ * menuntut huruf demi huruf akan melaporkan kelasnya belum ada, padahal ada.
+ *
+ * Normalises a city or major name for matching.
+ *
+ * Classes are created through a human-typed form, so "DKI Jakarta", "dki
+ * jakarta", and "DKI  Jakarta" mean the same class. Matching character by
+ * character would report the class missing when it exists.
+ */
+function normalise(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+async function loadClasses(): Promise<ClassDocument[]> {
   const db = getAdminDb();
-  const snap = await db.collection('classes').where('city', '==', city).get();
-  const match = snap.docs
-    .map((d) => d.data() as ClassDocument)
-    .find((c) => c.programName.toLowerCase() === major.toLowerCase());
-  return match ?? null;
+  const snap = await db.collection('classes').get();
+  return snap.docs.map((d) => d.data() as ClassDocument);
+}
+
+function findClass(all: ClassDocument[], city: string, major: string): ClassDocument | null {
+  return (
+    all.find(
+      (c) => normalise(c.city) === normalise(city) && normalise(c.programName) === normalise(major)
+    ) ?? null
+  );
 }
 
 /**
@@ -85,13 +107,30 @@ async function main() {
   let skipped = 0;
   const missing: string[] = [];
 
+  const allClasses = await loadClasses();
+
   for (const [key, rows] of byClass) {
     const [city, major] = key.split('|');
-    const cls = await findClass(city, major);
+    const cls = findClass(allClasses, city, major);
 
     if (!cls) {
       missing.push(`${city} - ${major}`);
-      console.log(`\n[LEWAT] ${city} - ${major}: kelas belum dibuat di aplikasi`);
+      // Sebutkan kelas yang kotanya mirip. Penyebab tersering bukan kelasnya
+      // belum dibuat, melainkan nama kota atau jurusannya tersimpan berbeda.
+      //
+      // Name any class with a similar city. The usual cause is not a missing
+      // class but a city or major stored under a different spelling.
+      const serupa = allClasses.filter(
+        (c) => normalise(c.city).includes(normalise(city).split(' ').pop() ?? '') ||
+               normalise(city).includes(normalise(c.city))
+      );
+      console.log(`\n[LEWAT] ${city} - ${major}: tidak ada kelas yang cocok`);
+      if (serupa.length > 0) {
+        console.log('  Kelas dengan kota mirip yang ada di aplikasi:');
+        for (const c of serupa) {
+          console.log(`    kota "${c.city}" jurusan "${c.programName}"`);
+        }
+      }
       continue;
     }
 
@@ -145,9 +184,14 @@ async function main() {
   if (!apply) {
     console.log(`Pratinjau: ${created} pertemuan akan dibuat, ${skipped} sudah ada.`);
     if (missing.length > 0) {
-      console.log(`\nKelas berikut belum ada di aplikasi dan dilewati:`);
+      console.log(`\nKelas berikut tidak ditemukan dan dilewati:`);
       for (const m of missing) console.log(`  - ${m}`);
-      console.log('Buat kelasnya lebih dulu lewat menu Kelas.');
+      console.log('\nSeluruh kelas yang ada di aplikasi:');
+      for (const c of allClasses) {
+        console.log(`  kota "${c.city}" jurusan "${c.programName}" (${c.status})`);
+      }
+      console.log('\nBila kelasnya sudah ada tetapi nama kota atau jurusannya berbeda,');
+      console.log('perbaiki namanya di aplikasi atau sesuaikan scripts/schedule-data.ts.');
     }
     console.log('\nJalankan ulang dengan --apply untuk menyimpan.\n');
   } else {

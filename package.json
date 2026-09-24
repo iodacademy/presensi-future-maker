@@ -15,7 +15,8 @@
     "repair-index": "tsx scripts/repair-email-index.ts",
     "diagnose-accounts": "tsx scripts/diagnose-accounts.ts",
     "check-login": "tsx scripts/check-login.ts",
-    "seed-schedule": "tsx scripts/seed-schedule.ts"
+    "seed-schedule": "tsx scripts/seed-schedule.ts",
+    "rename-class-city": "tsx scripts/rename-class-city.ts"
   },
   "dependencies": {
     "firebase": "^12.18.0",
