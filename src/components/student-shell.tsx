@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Calendar, Users, FileText, LogOut } from 'lucide-react';
+import { Home, Calendar, Users, FileText, BookOpen, LogOut } from 'lucide-react';
 
 interface NavItem {
   label: string;
@@ -16,6 +16,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Jadwal', href: '/app/jadwal', icon: Calendar },
   { label: 'Mentoring', href: '/app/mentoring', icon: Users },
   { label: 'Tugas', href: '/app/tugas', icon: FileText },
+  { label: 'Program', href: '/app/program', icon: BookOpen },
 ];
 
 interface StudentShellProps {
@@ -137,7 +138,24 @@ export function StudentShell({ userName, children }: StudentShellProps) {
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textDecoration: 'none', flex: 1 }}
             >
               <Icon size={20} color={active ? 'var(--color-primary)' : 'var(--color-text-faint)'} strokeWidth={2} />
-              <span style={{ fontSize: '9px', fontWeight: active ? 700 : 400, color: active ? 'var(--color-primary)' : 'var(--color-text-faint)' }}>
+              {/* Lima menu pada layar 360px menyisakan sekitar 66px per tombol.
+                  Tanpa penjagaan ini "Mentoring" terpotong di tengah kata;
+                  menyusut sedikit lebih terbaca daripada terpenggal.
+
+                  Five items on a 360px screen leave roughly 66px per button.
+                  Without this guard "Mentoring" breaks mid-word; shrinking
+                  slightly reads better than being cut off. */}
+              <span
+                style={{
+                  fontSize: '9px',
+                  fontWeight: active ? 700 : 400,
+                  color: active ? 'var(--color-primary)' : 'var(--color-text-faint)',
+                  whiteSpace: 'nowrap',
+                  maxWidth: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
                 {item.label}
               </span>
             </Link>
