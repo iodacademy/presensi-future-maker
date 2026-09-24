@@ -1,0 +1,74 @@
+<h2>Referensi Layout Lain — Home (semua pakai header gaya A)</h2>
+<p class="subtitle">Konten sama persis (sesi berlangsung + mentoring terdekat + tugas terdekat), hanya susunan/struktur kartunya yang beda. Pilih yang paling kamu suka.</p>
+
+<div class="cards">
+
+  <!-- ALT 1 — STACK (current, untuk referensi) -->
+  <div class="card" data-choice="alt-stack" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:#eef1f4">
+      <div style="width:210px;margin:0 auto;background:#fff;border-radius:22px;border:1px solid #e2e2e0;overflow:hidden;font-family:Arial,sans-serif">
+        <div style="padding:10px 12px 8px;background:#0072CE;color:#fff"><div style="font-size:8px;opacity:.8;letter-spacing:.4px">BOOTCAMP INNOVAITION</div><div style="font-size:11px;font-weight:700;font-family:'Poppins',sans-serif">Halo, Budi</div></div>
+        <div style="padding:10px">
+          <div style="background:#0072CE;border-radius:10px;padding:10px;margin-bottom:8px;color:#fff"><div style="font-size:7px;letter-spacing:.4px">SESI BERLANGSUNG</div><div style="font-size:10px;font-weight:700">Kelas Malam 19:00-22:00</div><div style="margin-top:6px;background:#fff;color:#0072CE;border-radius:7px;padding:6px;text-align:center;font-size:8px;font-weight:700">Scan QR Hadir</div></div>
+          <div style="border:1px solid #e2e2e0;border-radius:10px;padding:8px;margin-bottom:6px;display:flex;gap:8px;align-items:center"><div style="width:26px;height:26px;border-radius:7px;background:#eaf6fb;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#58CAE7" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div><div style="font-size:7px;color:#999">MENTORING</div><div style="font-size:9px;font-weight:700">Kamis 16:00 — Mentor Rama</div></div></div>
+          <div style="border:1px solid #fde1d3;background:#fff8f5;border-radius:10px;padding:8px;display:flex;gap:8px;align-items:center"><div style="width:26px;height:26px;border-radius:7px;background:#fee8de;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ED632F" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div><div><div style="font-size:7px;color:#ED632F">DEADLINE BESOK</div><div style="font-size:9px;font-weight:700">Tugas 4 — State Management</div></div></div>
+        </div>
+        <div style="display:flex;border-top:1px solid #eee;padding:6px 0"><div style="flex:1;text-align:center;font-size:7px;color:#0072CE">Home</div><div style="flex:1;text-align:center;font-size:7px;color:#999">Jadwal</div><div style="flex:1;text-align:center;font-size:7px;color:#999">Mentoring</div><div style="flex:1;text-align:center;font-size:7px;color:#999">Tugas</div></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Alt 1 — Stack vertikal (yang tadi)</h3>
+      <p>3 kartu ditumpuk vertikal, masing-masing full width. Paling aman untuk scan cepat atas→bawah. Hierarki jelas: sesi paling menonjol di atas.</p>
+    </div>
+  </div>
+
+  <!-- ALT 2 — HERO IMAGE + 2 KOLOM -->
+  <div class="card" data-choice="alt-hero-grid" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:#eef1f4">
+      <div style="width:210px;margin:0 auto;background:#fff;border-radius:22px;border:1px solid #e2e2e0;overflow:hidden;font-family:Arial,sans-serif">
+        <div style="padding:10px 12px 8px;background:#0072CE;color:#fff"><div style="font-size:8px;opacity:.8;letter-spacing:.4px">BOOTCAMP INNOVAITION</div><div style="font-size:11px;font-weight:700;font-family:'Poppins',sans-serif">Halo, Budi</div></div>
+        <!-- Hero image + sesi overlay -->
+        <div style="height:90px;background:linear-gradient(135deg,#0072CE 0%,#58CAE7 100%);position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:8px">
+          <div style="background:rgba(255,255,255,.95);border-radius:8px;padding:7px;display:flex;gap:6px;align-items:center">
+            <span style="width:6px;height:6px;background:#8AC208;border-radius:50%;display:inline-block"></span>
+            <div style="flex:1"><div style="font-size:7px;color:#0072CE;font-weight:700">SESI BERLANGSUNG</div><div style="font-size:8px;font-weight:700;color:#1a1a1a">Kelas Malam 19:00-22:00</div></div>
+            <div style="background:#0072CE;color:#fff;border-radius:6px;padding:5px 7px;font-size:7px;font-weight:700">QR</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;padding:8px">
+          <div style="flex:1;border:1px solid #e2e2e0;border-radius:10px;padding:8px;text-align:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#58CAE7" stroke-width="2" style="margin:0 auto 4px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><div style="font-size:7px;color:#999">MENTORING</div><div style="font-size:8px;font-weight:700">Kamis 16:00</div><div style="font-size:7px;color:#666">Mentor Rama</div></div>
+          <div style="flex:1;border:1px solid #fde1d3;background:#fff8f5;border-radius:10px;padding:8px;text-align:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ED632F" stroke-width="2" style="margin:0 auto 4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><div style="font-size:7px;color:#ED632F">DEADLINE</div><div style="font-size:8px;font-weight:700">Tugas 4</div><div style="font-size:7px;color:#666">Besok 23:59</div></div>
+        </div>
+        <div style="display:flex;border-top:1px solid #eee;padding:6px 0"><div style="flex:1;text-align:center;font-size:7px;color:#0072CE">Home</div><div style="flex:1;text-align:center;font-size:7px;color:#999">Jadwal</div><div style="flex:1;text-align:center;font-size:7px;color:#999">Mentoring</div><div style="flex:1;text-align:center;font-size:7px;color:#999">Tugas</div></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Alt 2 — Hero image + Grid 2 kolom</h3>
+      <p>Sesi dibuat jadi hero visual (gradient/image) dengan overlay presensi. Mentoring & Tugas dijejer 2 kolom di bawah — lebih padat, kesan modern.</p>
+    </div>
+  </div>
+
+  <!-- ALT 3 — COMPACT LIST -->
+  <div class="card" data-choice="alt-compact" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:#eef1f4">
+      <div style="width:210px;margin:0 auto;background:#fff;border-radius:22px;border:1px solid #e2e2e0;overflow:hidden;font-family:Arial,sans-serif">
+        <div style="padding:10px 12px 8px;background:#0072CE;color:#fff"><div style="font-size:8px;opacity:.8;letter-spacing:.4px">BOOTCAMP INNOVAITION</div><div style="font-size:11px;font-weight:700;font-family:'Poppins',sans-serif">Halo, Budi</div></div>
+        <div style="padding:10px">
+          <div style="font-size:8px;font-weight:700;color:#999;letter-spacing:.4px;margin-bottom:6px">HARI INI</div>
+          <div style="display:flex;gap:8px;align-items:center;padding:8px;border-radius:10px;background:#e6f2fb;border:1px solid #b8d8f0;margin-bottom:6px"><div style="width:30px;height:30px;border-radius:8px;background:#0072CE;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 14v3M14 19h3"/></svg></div><div style="flex:1"><div style="font-size:9px;font-weight:700">Kelas Malam</div><div style="font-size:7px;color:#666">19:00-22:00 • Hadir</div></div><div style="font-size:7px;color:#0072CE;font-weight:700">Scan →</div></div>
+          <div style="display:flex;gap:8px;align-items:center;padding:8px;border-radius:10px;border:1px solid #e2e2e0;margin-bottom:6px"><div style="width:30px;height:30px;border-radius:8px;background:#eaf6fb;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#58CAE7" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div style="flex:1"><div style="font-size:9px;font-weight:700">Mentoring — Mentor Rama</div><div style="font-size:7px;color:#666">Kamis 16:00 • Bootcamp</div></div><div style="font-size:7px;color:#999">→</div></div>
+          <div style="display:flex;gap:8px;align-items:center;padding:8px;border-radius:10px;border:1px solid #fde1d3;background:#fff8f5"><div style="width:30px;height:30px;border-radius:8px;background:#fee8de;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ED632F" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div><div style="flex:1"><div style="font-size:9px;font-weight:700">Tugas 4</div><div style="font-size:7px;color:#ED632F">Deadline besok 23:59</div></div><div style="font-size:7px;color:#ED632F;font-weight:700">Kumpul →</div></div>
+        </div>
+        <div style="display:flex;border-top:1px solid #eee;padding:6px 0"><div style="flex:1;text-align:center;font-size:7px;color:#0072CE">Home</div><div style="flex:1;text-align:center;font-size:7px;color:#999">Jadwal</div><div style="flex:1;text-align:center;font-size:7px;color:#999">Mentoring</div><div style="flex:1;text-align:center;font-size:7px;color:#999">Tugas</div></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Alt 3 — Compact list (Hari Ini)</h3>
+      <p>Tidak pakai kartu besar — semua jadi list item ringkas dengan ikon kiri. Paling hemat ruang vertikal, cocok kalau Home nanti mau tambah banyak info.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:8px">
+  <p class="label">Warna & ikon tetap sama (primer #0072CE, sekunder #58CAE7 / #ED632F / #FFD500, badge #8AC208). Klik kartu untuk pilih — nanti desain Figma akan pakai layout pilihanmu.</p>
+</div>

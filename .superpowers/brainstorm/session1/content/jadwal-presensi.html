@@ -1,0 +1,84 @@
+<h2>Desain Jadwal + Presensi (gabung, sesuai maumu)</h2>
+<p class="subtitle">Presensi tidak dipisah — ada di dalam kartu Jadwal. Dua jalur scan QR, online auto 19:00-22:00, offline manual admin.</p>
+
+<div class="split">
+  <!-- KIRI: List Jadwal -->
+  <div class="mockup">
+    <div class="mockup-header">Tab: Jadwal — Daftar sesi</div>
+    <div class="mockup-body" style="display:flex;justify-content:center;background:#eef1f4;padding:16px">
+      <div style="width:260px;background:#fff;border-radius:24px;border:1px solid #e2e2e0;overflow:hidden;font-family:Arial,sans-serif">
+        <div style="display:flex;gap:8px;padding:12px;border-bottom:1px solid #eee">
+          <div style="flex:1;background:#0072CE;color:#fff;border-radius:20px;padding:6px;text-align:center;font-size:9px;font-weight:700">Semua</div>
+          <div style="flex:1;border:1px solid #e2e2e0;border-radius:20px;padding:6px;text-align:center;font-size:9px">Online</div>
+          <div style="flex:1;border:1px solid #e2e2e0;border-radius:20px;padding:6px;text-align:center;font-size:9px">Offline</div>
+        </div>
+        <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+          <div style="border:2px solid #0072CE;border-radius:12px;padding:10px;background:#e6f2fb">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:8px;font-weight:700;color:#0072CE;letter-spacing:.4px">HARI INI • ONLINE</span><span style="font-size:7px;background:#8AC208;color:#fff;padding:3px 6px;border-radius:10px">BERLANGSUNG</span></div>
+            <div style="font-size:11px;font-weight:700;margin-top:4px;font-family:'Poppins',sans-serif">React Fundamentals</div>
+            <div style="font-size:9px;color:#666;margin-top:2px">19:00-22:00 • Zoom • Mentor Dina</div>
+            <div style="margin-top:8px;background:#fff;border:1px solid #0072CE;border-radius:8px;padding:7px;text-align:center;font-size:9px;font-weight:700;color:#0072CE;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0072CE" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> Scan QR Hadir</div>
+          </div>
+          <div style="border:1px solid #e2e2e0;border-radius:12px;padding:10px">
+            <div style="font-size:8px;color:#999">BESOK • OFFLINE</div>
+            <div style="font-size:11px;font-weight:700">UI/UX Workshop</div>
+            <div style="font-size:9px;color:#666">09:00-12:00 • Kampus Semarang</div>
+            <div style="margin-top:6px;font-size:8px;color:#999;background:#f4f4f5;border-radius:6px;padding:5px;text-align:center">QR dibuka admin saat sesi</div>
+          </div>
+          <div style="border:1px solid #e2e2e0;border-radius:12px;padding:10px;opacity:.6">
+            <div style="font-size:8px;color:#999">JUM, 14 NOV • ONLINE</div>
+            <div style="font-size:11px;font-weight:700">State Management</div>
+            <div style="font-size:9px;color:#666">19:00-22:00 • Zoom</div>
+            <div style="margin-top:6px;font-size:8px;color:#8AC208;font-weight:700">✓ Hadir 20:12</div>
+          </div>
+        </div>
+        <div style="display:flex;border-top:1px solid #eee;padding:8px 0 10px"><div style="flex:1;text-align:center;font-size:8px;color:#999">Home</div><div style="flex:1;text-align:center;font-size:8px;color:#0072CE;font-weight:700">Jadwal</div><div style="flex:1;text-align:center;font-size:8px;color:#999">Mentoring</div><div style="flex:1;text-align:center;font-size:8px;color:#999">Tugas</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KANAN: Flow QR -->
+  <div class="mockup">
+    <div class="mockup-header">Flow QR — 2 jalur hadir</div>
+    <div class="mockup-body" style="padding:16px;background:#fff">
+      <div style="display:flex;flex-direction:column;gap:12px;font-family:Arial,sans-serif">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="width:26px;height:26px;border-radius:50%;background:#0072CE;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">1</div>
+          <div style="flex:1"><div style="font-size:11px;font-weight:700">Jalur A — Via tombol Hadir</div><div style="font-size:10px;color:#666;margin-top:2px">Buka app → Jadwal → kartu sesi berlangsung → <b>Scan QR Hadir</b> → kamera terbuka → scan QR di layar/admin → <span style="color:#8AC208;font-weight:700">✓ Presensi tercatat di Firestore</span></div></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="width:26px;height:26px;border-radius:50%;background:#58CAE7;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">2</div>
+          <div style="flex:1"><div style="font-size:11px;font-weight:700">Jalur B — Langsung scan kamera HP</div><div style="font-size:10px;color:#666;margin-top:2px">Buka kamera HP → scan QR di layar/admin → auto deep-link buka app → <span style="color:#8AC208;font-weight:700">✓ Langsung hadir tanpa klik</span> (QR berisi link <code style="font-size:9px">app://presensi?token=xxx</code>)</div></div>
+        </div>
+        <div style="background:#fffbf5;border:1px solid #FFD500;border-radius:10px;padding:10px;margin-top:4px">
+          <div style="font-size:9px;font-weight:700;color:#a16207">ATURAN BUKA/TUTUP</div>
+          <div style="font-size:10px;color:#666;margin-top:4px">• <b>Online 19:00-22:00</b> → QR auto muncul di admin (auto open/close), di peserta tombol Scan aktif cuma jam itu.<br>• <b>Offline</b> → Admin tap "Buka Presensi" manual, QR muncul di layar admin/projector.<br>• QR refresh tiap 30 detik (anti screenshot share).</div>
+        </div>
+        <div style="background:#e6f2fb;border-radius:10px;padding:10px">
+          <div style="font-size:9px;font-weight:700;color:#0072CE">ADMIN — TAMPILAN QR</div>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:6px"><div style="width:60px;height:60px;background:#fff;border:1px solid #0072CE;border-radius:8px;display:flex;align-items:center;justify-content:center"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0072CE" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 14v3M14 19h3"/></svg></div><div style="font-size:10px;color:#333"><b>QR Sesi: React Fundamentals</b><br>Berlaku 30 detik • 12/20 hadir<br><span style="color:#999">Tampilkan di layar / projector</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px">
+  <p class="label">Konfirmasi desain Jadwal:</p>
+  <ul style="font-size:13px;line-height:1.7;color:#333">
+    <li>Kartu Jadwal & Presensi gabung, filter Semua/Online/Offline di atas</li>
+    <li>Status jelas: Berlangsung (biru), Akan Datang (abu), Selesai + ✓ Hadir (hijau #8AC208)</li>
+    <li>QR bisa dua jalur, Firestore catat <code>userId, jadwalId, timestamp, via</code></li>
+  </ul>
+</div>
+
+<div class="options" style="margin-top:12px">
+  <div class="option" data-choice="approve-jadwal" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>Setuju Jadwal + QR ini</h3><p>Lanjut ke Mentoring</p></div>
+  </div>
+  <div class="option" data-choice="revise-jadwal" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content"><h3>Masih ada yang mau diubah</h3></div>
+  </div>
+</div>

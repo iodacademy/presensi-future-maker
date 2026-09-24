@@ -1,0 +1,81 @@
+:root {
+  /* Warna diambil langsung dari node Figma (Design UI) via figma-cli eval
+     Colors extracted directly from Figma nodes (Design UI) via figma-cli eval */
+  --color-primary: #0072ce;
+  --color-primary-hover: #005bb5;
+  --color-primary-light: #e6f2fb;
+  --color-sidebar-admin: #243c4b;
+  --color-sidebar-admin-border: #335368;
+  --color-bg-app: #f4f4f5;
+  --color-surface: #ffffff;
+  --color-text-main: #243c4b;
+  --color-text-muted: #666666;
+  --color-text-faint: #999999;
+  --color-border: #d9d9d6;
+  --color-danger: #d40d15;
+  --color-danger-light: #fee8de;
+  --color-success: #8ac208;
+  --color-success-light: #f0f9e8;
+  --color-warning: #ed632f;
+  --color-warning-light: #fff8e5;
+  --color-sidebar-inactive-text: #c9d8e0;
+
+  /* Token khusus shell peserta (sidebar putih desktop + bottom nav mobile), dari node 15:2 & 11:2724
+     Student-shell-specific tokens (white desktop sidebar + mobile bottom nav), from node 15:2 & 11:2724 */
+  --color-student-border: #e5e7eb;
+  --color-student-inactive: #71717a;
+  --color-avatar-cyan: #58cae7;
+  --color-header-pill: #3d93db;
+  --color-info: #58cae7;
+  --color-highlight-yellow: #ffd500;
+  --color-highlight-yellow-text: #7c2d12;
+  --color-bg-student: #f8fafb;
+
+  --font-heading: var(--font-poppins), 'Poppins', sans-serif;
+  --font-body: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--color-bg-app);
+  color: var(--color-text-main);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+/* Shell peserta: sidebar (desktop, node 15:2) vs bottom-nav (mobile, node 11:2724)
+   Student shell: sidebar (desktop, node 15:2) vs bottom nav (mobile, node 11:2724)
+   Breakpoint 900px dipilih di antara lebar frame mobile 390 dan desktop 1280 */
+.student-sidebar { display: none; }
+.student-bottom-nav { display: flex; }
+.student-mobile-header { display: block; }
+.student-topbar { display: none; }
+.student-mobile-only { display: block; }
+
+/* Grid 2 kolom (main + sidebar kanan) di desktop; stack 1 kolom di mobile (node 11:2724 vs 15:2) */
+.student-content-grid { display: flex; flex-direction: column; }
+.student-content-grid--home { grid-template-columns: minmax(0, 700fr) minmax(0, 288fr); }
+.student-content-grid--mentoring { grid-template-columns: minmax(0, 628fr) minmax(0, 360fr); }
+.student-content-grid--task-detail { grid-template-columns: minmax(0, 644fr) minmax(0, 340fr); }
+
+@media (min-width: 900px) {
+  .student-sidebar { display: flex; }
+  .student-bottom-nav { display: none; }
+  .student-mobile-header { display: none; }
+  .student-mobile-only { display: none; }
+  .student-topbar { display: flex; }
+  .student-content-grid { display: grid; align-items: start; }
+}

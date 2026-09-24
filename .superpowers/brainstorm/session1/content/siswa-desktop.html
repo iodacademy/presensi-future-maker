@@ -1,0 +1,92 @@
+<h2>Aplikasi Peserta — Versi Desktop (responsif)</h2>
+<p class="subtitle">Mobile app tetap jadi acuan utama. Kalau dibuka di layar besar, bottom nav pindah jadi sidebar kiri, konten melebar jadi kolom/grid — bukan cuma mockup HP di-stretch.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Home — Desktop (Sesi Berlangsung)</div>
+  <div class="mockup-body" style="padding:0;background:#eef1f4">
+    <div style="display:flex;height:420px;font-family:Arial,sans-serif;max-width:900px;margin:0 auto;border:1px solid #e2e2e0;background:#fff">
+      <!-- Sidebar jadi nav -->
+      <div style="width:180px;background:#0072CE;color:#fff;padding:16px;flex-shrink:0;display:flex;flex-direction:column;gap:16px">
+        <div>
+          <div style="font-size:9px;opacity:.8;letter-spacing:.4px">BOOTCAMP INNOVAITION</div>
+          <div style="font-size:13px;font-weight:700;font-family:'Poppins',sans-serif;margin-top:2px">Halo, Budi</div>
+          <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);border-radius:20px;padding:3px 8px;margin-top:6px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span style="font-size:9px">Web Programming • Semarang</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="background:rgba(255,255,255,.2);border-radius:8px;padding:8px 10px;font-size:10px;font-weight:700;display:flex;gap:8px;align-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg> Home</div>
+          <div style="padding:8px 10px;font-size:10px;color:#e0f0fc;display:flex;gap:8px;align-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e0f0fc" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Jadwal</div>
+          <div style="padding:8px 10px;font-size:10px;color:#e0f0fc;display:flex;gap:8px;align-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e0f0fc" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Mentoring</div>
+          <div style="padding:8px 10px;font-size:10px;color:#e0f0fc;display:flex;gap:8px;align-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e0f0fc" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> Tugas</div>
+        </div>
+      </div>
+
+      <!-- Konten jadi grid 2 kolom -->
+      <div style="flex:1;padding:20px;background:#f8fafb;overflow:hidden">
+        <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px">
+          <!-- Kiri: sesi besar -->
+          <div>
+            <div style="background:#0072CE;border-radius:14px;padding:20px;color:#fff">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="width:8px;height:8px;background:#8AC208;border-radius:50%"></span><span style="font-size:10px;font-weight:700;letter-spacing:.5px">SESI BERLANGSUNG</span></div>
+              <div style="font-size:18px;font-weight:700;font-family:'Poppins',sans-serif">Kelas Malam — 19:00-22:00</div>
+              <div style="font-size:11px;opacity:.85;margin-top:2px">Materi: React Fundamentals</div>
+              <button style="margin-top:14px;background:#fff;color:#0072CE;border:none;border-radius:10px;padding:10px 20px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0072CE" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> Scan QR Hadir (pakai HP)</button>
+              <div style="margin-top:8px;font-size:9px;opacity:.7">Buka kamera HP untuk scan — QR tidak bisa di-scan dari layar sendiri</div>
+            </div>
+            <div style="margin-top:14px;background:#fff;border:1px solid #e2e2e0;border-radius:14px;padding:16px">
+              <div style="font-size:11px;font-weight:700;color:#243C4B;margin-bottom:8px">Progres Bootcamp Kamu</div>
+              <div style="display:flex;gap:12px">
+                <div style="flex:1;text-align:center"><div style="font-size:18px;font-weight:700;color:#0072CE">18/20</div><div style="font-size:9px;color:#666">Presensi</div></div>
+                <div style="flex:1;text-align:center"><div style="font-size:18px;font-weight:700;color:#ED632F">3/4</div><div style="font-size:9px;color:#666">Tugas Harian</div></div>
+                <div style="flex:1;text-align:center"><div style="font-size:18px;font-weight:700;color:#8AC208">1/2</div><div style="font-size:9px;color:#666">Mentoring</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kanan: 2 kartu -->
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="background:#fff;border:1px solid #e2e2e0;border-radius:14px;padding:14px">
+              <div style="display:flex;gap:10px;align-items:center">
+                <div style="width:36px;height:36px;border-radius:10px;background:#eaf6fb;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#58CAE7" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+                <div><div style="font-size:9px;color:#999;font-weight:600">MENTORING TERDEKAT</div><div style="font-size:12px;font-weight:700;color:#243C4B">Kamis, 20 Nov • 16:00</div><div style="font-size:10px;color:#666">dengan Mentor Rama</div></div>
+              </div>
+            </div>
+            <div style="background:#fff8f5;border:1px solid #fde1d3;border-radius:14px;padding:14px">
+              <div style="display:flex;gap:10px;align-items:center">
+                <div style="width:36px;height:36px;border-radius:10px;background:#fee8de;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ED632F" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+                <div><div style="font-size:9px;color:#ED632F;font-weight:700">DEADLINE BESOK, 23:59</div><div style="font-size:12px;font-weight:700;color:#243C4B">Tugas 4 — State Management</div></div>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px dashed #d9d9d6;border-radius:14px;padding:14px;text-align:center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5" style="margin:0 auto 4px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <div style="font-size:9px;color:#666">Sisa jatah mentoring: <b>1 slot</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:14px">
+  <p class="label">Perubahan mobile → desktop:</p>
+  <ul style="font-size:13px;line-height:1.7;color:#333">
+    <li>Bottom tab bar → jadi <b>sidebar kiri</b> (biru primer, ikon sama, tanpa scroll)</li>
+    <li>Konten 1 kolom → jadi <b>grid 2 kolom</b>: kartu Sesi Berlangsung lebih besar di kiri + progres ringkasan, kartu Mentoring/Tugas di kanan</li>
+    <li><b>Scan QR tetap wajib pakai kamera HP</b> — di desktop tombolnya mengarahkan "buka kamera HP untuk scan" (karena webcam desktop tidak praktis untuk QR presensi), atau alternatif: tampilkan kode/token manual untuk diketik</li>
+    <li>Breakpoint: di bawah ~768px pakai layout mobile app (bottom nav), di atas itu otomatis ke layout desktop (sidebar)</li>
+  </ul>
+</div>
+
+<div class="options" style="margin-top:12px">
+  <div class="option" data-choice="approve-siswa-desktop" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>Layout desktop ini sudah pas</h3></div>
+  </div>
+  <div class="option" data-choice="revise-siswa-desktop" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content"><h3>Masih ada yang mau diubah</h3></div>
+  </div>
+</div>

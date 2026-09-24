@@ -1,0 +1,73 @@
+<h2>Desain Jadwal + Presensi — Revisi chip filter</h2>
+<p class="subtitle">Chip Online/Offline sebelumnya putih + border #e2e2e0 jadi nyaru. Sekarang dibikin kontras pakai palet resmi.</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">SEBELUM — susah terlihat</div>
+    <div class="mockup-body" style="display:flex;justify-content:center;background:#f0f0f0;padding:16px">
+      <div style="display:flex;gap:8px;padding:10px;background:#fff;border-radius:10px">
+        <div style="flex:1;background:#0072CE;color:#fff;border-radius:20px;padding:6px;text-align:center;font-size:9px;font-weight:700">Semua</div>
+        <div style="flex:1;background:#fff;border:1px solid #e2e2e0;border-radius:20px;padding:6px;text-align:center;font-size:9px;color:#999">Online</div>
+        <div style="flex:1;background:#fff;border:1px solid #e2e2e0;border-radius:20px;padding:6px;text-align:center;font-size:9px;color:#999">Offline</div>
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">SESUDAH — revisi (pakai warna palet)</div>
+    <div class="mockup-body" style="display:flex;justify-content:center;background:#fff;padding:16px">
+      <div style="display:flex;gap:8px;padding:10px;background:#fff;border-radius:10px">
+        <div style="flex:1;background:#0072CE;color:#fff;border-radius:20px;padding:6px 10px;text-align:center;font-size:9px;font-weight:700;font-family:'Poppins',sans-serif">Semua</div>
+        <div style="flex:1;background:#d9d9d6;color:#243C4B;border-radius:20px;padding:6px 10px;text-align:center;font-size:9px;font-weight:600">Online</div>
+        <div style="flex:1;background:#d9d9d6;color:#243C4B;border-radius:20px;padding:6px 10px;text-align:center;font-size:9px;font-weight:600">Offline</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px">
+  <div class="mockup-header">Preview lengkap — Tab Jadwal dengan chip baru</div>
+  <div class="mockup-body" style="display:flex;justify-content:center;background:#eef1f4;padding:16px">
+    <div style="width:260px;background:#fff;border-radius:24px;border:1px solid #e2e2e0;overflow:hidden;font-family:Arial,sans-serif">
+      <div style="display:flex;gap:8px;padding:12px;border-bottom:1px solid #eee">
+        <div style="flex:1;background:#0072CE;color:#fff;border-radius:20px;padding:7px;text-align:center;font-size:9px;font-weight:700;font-family:'Poppins',sans-serif">Semua</div>
+        <div style="flex:1;background:#d9d9d6;color:#243C4B;border-radius:20px;padding:7px;text-align:center;font-size:9px;font-weight:600">Online</div>
+        <div style="flex:1;background:#d9d9d6;color:#243C4B;border-radius:20px;padding:7px;text-align:center;font-size:9px;font-weight:600">Offline</div>
+      </div>
+      <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+        <div style="border:2px solid #0072CE;border-radius:12px;padding:10px;background:#e6f2fb">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:8px;font-weight:700;color:#0072CE;letter-spacing:.4px">HARI INI • ONLINE</span><span style="font-size:7px;background:#8AC208;color:#fff;padding:3px 6px;border-radius:10px;font-weight:700">BERLANGSUNG</span></div>
+          <div style="font-size:11px;font-weight:700;margin-top:4px;font-family:'Poppins',sans-serif;color:#243C4B">React Fundamentals</div>
+          <div style="font-size:9px;color:#666;margin-top:2px">19:00-22:00 • Zoom • Mentor Dina</div>
+          <div style="margin-top:8px;background:#0072CE;border-radius:8px;padding:7px;text-align:center;font-size:9px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> Scan QR Hadir</div>
+        </div>
+        <div style="border:1px solid #d9d9d6;border-radius:12px;padding:10px;background:#fff">
+          <div style="font-size:8px;color:#243C4B;font-weight:600">BESOK • OFFLINE</div>
+          <div style="font-size:11px;font-weight:700;color:#243C4B">UI/UX Workshop</div>
+          <div style="font-size:9px;color:#666">09:00-12:00 • Kampus Semarang</div>
+          <div style="margin-top:6px;font-size:8px;color:#666;background:#d9d9d6;border-radius:6px;padding:5px;text-align:center">QR dibuka admin saat sesi</div>
+        </div>
+      </div>
+      <div style="display:flex;border-top:1px solid #eee;padding:8px 0 10px"><div style="flex:1;text-align:center;font-size:8px;color:#999">Home</div><div style="flex:1;text-align:center;font-size:8px;color:#0072CE;font-weight:700">Jadwal</div><div style="flex:1;text-align:center;font-size:8px;color:#999">Mentoring</div><div style="flex:1;text-align:center;font-size:8px;color:#999">Tugas</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:14px">
+  <p class="label">Apa yang diubah:</p>
+  <ul style="font-size:13px;line-height:1.7;color:#333">
+    <li>Chip aktif: tetap <code>#0072CE</code> (primer) + teks putih Poppins Bold</li>
+    <li>Chip non-aktif: <code>#d9d9d6</code> (netral) + teks <code>#243C4B</code> (alternatif) — kontras, tidak nyatu dengan background putih</li>
+    <li>Border dihapus — pakai solid fill biar terlihat sebagai tombol pill yang jelas</li>
+  </ul>
+</div>
+
+<div class="options" style="margin-top:12px">
+  <div class="option" data-choice="approve-jadwal-v2" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>Sudah kelihatan, lanjut ke Mentoring</h3></div>
+  </div>
+  <div class="option" data-choice="revise-jadwal-v2" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content"><h3>Masih mau adjust lagi</h3></div>
+  </div>
+</div>

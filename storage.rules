@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Seluruh upload dan unduh file privat divalidasi oleh backend server
+    // All private uploads and downloads are validated by backend server
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,86 @@
+<h2>Navigasi Mobile App — Mana yang cocok?</h2>
+<p class="subtitle">3 menu utama: Jadwal, Mentoring, Tugas. Ini opsi struktur navigasinya.</p>
+
+<div class="cards">
+  <!-- OPSI A -->
+  <div class="card" data-choice="a-bottom-nav" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f4f4f5">
+      <div style="width:220px;margin:0 auto;background:#fff;border-radius:24px;border:2px solid #d9d9d6;overflow:hidden">
+        <div style="padding:14px 14px 8px;background:#0072CE;color:#fff">
+          <div style="font-size:9px;opacity:.8">Bootcamp InnovAItion</div>
+          <div style="font-size:12px;font-weight:bold">Halo, Budi 👋</div>
+        </div>
+        <div style="padding:10px 14px;min-height:150px">
+          <div style="background:#e6f2fb;border-radius:8px;padding:8px;margin-bottom:6px;font-size:9px;color:#0072CE"><b>SESI HARI INI 19:00</b> — Web Programming</div>
+          <div style="background:#f4f4f5;border-radius:8px;padding:8px;font-size:9px;color:#666">Presensi: 6/10 sesi</div>
+          <div style="margin-top:8px;background:#FFD500;border-radius:8px;padding:8px;font-size:9px"><b>⏰ Deadline</b> Tugas 4 — besok</div>
+        </div>
+        <div style="display:flex;border-top:1px solid #eee;background:#fff">
+          <div style="flex:1;text-align:center;padding:8px 0;font-size:9px;color:#0072CE;font-weight:bold">📅 Jadwal</div>
+          <div style="flex:1;text-align:center;padding:8px 0;font-size:9px;color:#999">👥 Mentoring</div>
+          <div style="flex:1;text-align:center;padding:8px 0;font-size:9px;color:#999">📝 Tugas</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Bottom Tab Bar (3 tab)</h3>
+      <p>Standar aplikasi mobile. 3 menu selalu terlihat di bawah, jempol-friendly. Ada header greeting + ringkasan sesi hari ini di atas.</p>
+    </div>
+  </div>
+
+  <!-- OPSI B -->
+  <div class="card" data-choice="b-home-fab" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f4f4f5">
+      <div style="width:220px;margin:0 auto;background:#fff;border-radius:24px;border:2px solid #d9d9d6;overflow:hidden;position:relative">
+        <div style="padding:14px 14px 8px;background:#243C4B;color:#fff">
+          <div style="font-size:9px;opacity:.8">Bootcamp InnovAItion</div>
+          <div style="font-size:12px;font-weight:bold">Beranda</div>
+        </div>
+        <div style="padding:10px 14px;min-height:150px">
+          <div style="background:#e6f2fb;border-radius:8px;padding:8px;margin-bottom:6px;font-size:9px;color:#0072CE"><b>SESI 19:00</b> — QR Hadir</div>
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <div style="flex:1;background:#f4f4f5;border-radius:8px;padding:8px;font-size:9px;text-align:center"><b>6</b><br>Presensi</div>
+            <div style="flex:1;background:#f4f4f5;border-radius:8px;padding:8px;font-size:9px;text-align:center"><b>1</b><br>Mentoring</div>
+            <div style="flex:1;background:#f4f4f5;border-radius:8px;padding:8px;font-size:9px;text-align:center"><b>3</b><br>Tugas</div>
+          </div>
+          <div style="background:#ED632F;border-radius:20px;padding:8px 12px;font-size:9px;color:#fff;text-align:center">＋ Presensi QR</div>
+        </div>
+        <div style="display:flex;border-top:1px solid #eee">
+          <div style="flex:1;text-align:center;padding:8px 0;font-size:9px;color:#0072CE;font-weight:bold">🏠 Home</div>
+          <div style="flex:1;text-align:center;padding:8px 0;font-size:9px;color:#999">📅</div>
+          <div style="flex:1;text-align:center;padding:8px 0;font-size:9px;color:#999">👥</div>
+          <div style="flex:1;text-align:center;padding:8px 0;font-size:9px;color:#999">📝</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Home + 4 tab</h3>
+      <p>Ada halaman Home (ringkasan semua: presensi, mentoring, deadline) + tombol cepat "Presensi QR". Home berguna, tapi nambah 1 tab.</p>
+    </div>
+  </div>
+
+  <!-- OPSI C -->
+  <div class="card" data-choice="c-dashboard" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f4f4f5">
+      <div style="width:220px;margin:0 auto;background:#fff;border-radius:24px;border:2px solid #d9d9d6;overflow:hidden">
+        <div style="padding:14px 14px 8px;background:#0072CE;color:#fff">
+          <div style="font-size:12px;font-weight:bold">Bootcamp InnovAItion</div>
+        </div>
+        <div style="padding:10px 14px;min-height:150px">
+          <div style="border:1px solid #0072CE;border-radius:10px;padding:8px;margin-bottom:6px;font-size:9px"><b>📅 Jadwal & Presensi</b><br><span style="color:#999">Sesi 19:00 — tombol Hadir</span></div>
+          <div style="border:1px solid #58CAE7;border-radius:10px;padding:8px;margin-bottom:6px;font-size:9px"><b>👥 Mentoring</b><br><span style="color:#999">Booking 1-on-1 (2x jatah)</span></div>
+          <div style="border:1px solid #ED632F;border-radius:10px;padding:8px;font-size:9px"><b>📝 Tugas & Capstone</b><br><span style="color:#999">3 tugas, 1 capstone terkunci</span></div>
+        </div>
+        <div style="padding:6px 0;border-top:1px solid #eee;text-align:center;font-size:8px;color:#999">scroll — tanpa tab bar</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Satu layar, kartu menu</h3>
+      <p>Semua menu jadi kartu besar di 1 layar scroll. Sederhana, tapi kalau fitur nambah jadi sesak dan tanpa shortcut cepat.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px">
+  <p class="subtitle">💡 Rekomendasi: <b>Opsi A</b> — 3 menu persis seperti maumu, paling mobile-native. Rekomendasi saya A, tapi klik yang kamu suka.</p>
+</div>

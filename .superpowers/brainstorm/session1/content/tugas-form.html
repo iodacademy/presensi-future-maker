@@ -1,0 +1,95 @@
+<h2>Detail Tugas — Form Pengumpulan + File Brief</h2>
+<p class="subtitle">Di halaman detail tiap tugas, ada File Brief yang bisa diunduh dulu sebelum upload. Tombol "Download" jelas, lalu area kumpul tugas (Drive link / file).</p>
+
+<div class="split">
+  <!-- KIRI: Sebelum kumpul -->
+  <div class="mockup">
+    <div class="mockup-header">Halaman Detail — Belum kumpul</div>
+    <div class="mockup-body" style="display:flex;justify-content:center;background:#eef1f4;padding:14px">
+      <div style="width:260px;background:#fff;border-radius:24px;border:1px solid #e2e2e0;overflow:hidden;font-family:Arial,sans-serif">
+        <div style="display:flex;align-items:center;gap:8px;padding:12px;border-bottom:1px solid #eee">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#243C4B" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          <div style="font-size:11px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">Tugas 4 — State Management</div>
+        </div>
+        <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:6px">
+            <span style="font-size:7px;background:#ED632F;color:#fff;padding:3px 7px;border-radius:10px;font-weight:700">DEADLINE BESOK 23:59</span>
+            <span style="font-size:7px;background:#d9d9d6;color:#243C4B;padding:3px 7px;border-radius:10px">Belum kumpul</span>
+          </div>
+          <div style="font-size:10px;color:#666;line-height:1.6">Buat aplikasi to-do dengan state management (Zustand/Redux). Minimal 3 fitur: tambah, hapus, filter.</div>
+
+          <!-- FILE BRIEF -->
+          <div style="border:1px solid #0072CE;border-radius:10px;padding:10px;background:#e6f2fb">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div style="width:32px;height:32px;border-radius:8px;background:#0072CE;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg></div>
+              <div style="flex:1"><div style="font-size:9px;font-weight:700;color:#243C4B">File Brief Tugas</div><div style="font-size:8px;color:#0072CE">Brief_Tugas4_State_Management.pdf • 1.2 MB</div></div>
+            </div>
+            <div style="margin-top:8px;background:#fff;border:1px solid #0072CE;border-radius:8px;padding:8px;display:flex;align-items:center;justify-content:space-between">
+              <div style="font-size:8px;color:#243C4B"><span style="font-weight:700">Unduh Brief Tugas Berikut:</span> Download</div>
+              <div style="background:#0072CE;color:#fff;border-radius:7px;padding:6px 10px;font-size:8px;font-weight:700;display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> Download</div>
+            </div>
+          </div>
+
+          <!-- FORM KUMPUL -->
+          <div style="border:1px solid #e2e2e0;border-radius:10px;padding:10px">
+            <div style="font-size:9px;font-weight:700;color:#243C4B">Kumpulkan Tugas</div>
+            <div style="margin-top:8px;border:1px dashed #0072CE;border-radius:8px;padding:14px;text-align:center;background:#f8fbff">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0072CE" stroke-width="1.5" style="margin:0 auto 4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+              <div style="font-size:8px;color:#0072CE;font-weight:600">Tarik file atau tap untuk pilih</div>
+              <div style="font-size:7px;color:#999">PDF, ZIP, JPG • Max 10MB • atau pakai Link Drive</div>
+            </div>
+            <div style="margin-top:8px;display:flex;gap:6px;align-items:center"><div style="flex:1;height:1px;background:#e2e2e0"></div><span style="font-size:7px;color:#999">ATAU</span><div style="flex:1;height:1px;background:#e2e2e0"></div></div>
+            <div style="margin-top:8px;border:1px solid #d9d9d6;border-radius:8px;padding:8px;display:flex;gap:8px;align-items:center;background:#fff"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#58CAE7" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><input placeholder="Tempel Link Google Drive di sini" style="flex:1;border:none;font-size:8px;outline:none" /></div>
+            <div style="margin-top:8px;background:#0072CE;color:#fff;border-radius:8px;padding:9px;text-align:center;font-size:9px;font-weight:700">Kirim Tugas</div>
+          </div>
+        </div>
+        <div style="height:8px;background:#f4f4f5"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KANAN: Sudah kumpul + feedback -->
+  <div class="mockup">
+    <div class="mockup-header">Halaman Detail — Sudah kumpul & dinilai</div>
+    <div class="mockup-body" style="display:flex;justify-content:center;background:#eef1f4;padding:14px">
+      <div style="width:260px;background:#fff;border-radius:24px;border:1px solid #e2e2e0;overflow:hidden;font-family:Arial,sans-serif">
+        <div style="display:flex;align-items:center;gap:8px;padding:12px;border-bottom:1px solid #eee">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#243C4B" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          <div style="font-size:11px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">Tugas 3 — Components</div>
+        </div>
+        <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:6px"><span style="font-size:7px;background:#8AC208;color:#fff;padding:3px 7px;border-radius:10px;font-weight:700">DINILAI • 85</span><span style="font-size:7px;background:#d9d9d6;color:#243C4B;padding:3px 7px;border-radius:10px">Dikumpul 10 Sep 20:14</span></div>
+
+          <div style="border:1px solid #e2e2e0;border-radius:10px;padding:10px;background:#f4f4f5;display:flex;gap:8px;align-items:center">
+            <div style="width:28px;height:28px;border-radius:8px;background:#0072CE;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+            <div style="flex:1"><div style="font-size:8px;font-weight:700;color:#243C4B">Brief_Tugas3.pdf</div><div style="font-size:7px;color:#666">File Brief</div></div>
+            <div style="background:#fff;border:1px solid #0072CE;border-radius:6px;padding:5px 8px;font-size:7px;font-weight:600;color:#0072CE;display:flex;align-items:center;gap:4px">Download <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0072CE" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></div>
+          </div>
+
+          <div style="border:1px solid #8AC208;border-radius:10px;padding:10px;background:#f0f9e8">
+            <div style="font-size:8px;font-weight:700;color:#2d5a0a">File kamu:</div>
+            <div style="margin-top:6px;background:#fff;border:1px solid #d9d9d6;border-radius:8px;padding:8px;display:flex;gap:8px;align-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8AC208" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><div style="flex:1"><div style="font-size:8px;font-weight:700;color:#243C4B">drive.google.com/.../tugas3</div><div style="font-size:7px;color:#666">Dikirim 10 Sep 20:14</div></div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg></div>
+            <button style="margin-top:8px;width:100%;background:#fff;border:1px solid #d9d9d6;border-radius:7px;padding:7px;font-size:8px;font-weight:600;color:#243C4B">Ganti File</button>
+          </div>
+
+          <div style="border:1px solid #0072CE;border-radius:10px;padding:10px;background:#e6f2fb">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:8px;font-weight:700;color:#0072CE">FEEDBACK & NILAI</span><span style="font-size:10px;font-weight:700;color:#0072CE">85 / 100</span></div>
+            <div style="font-size:9px;color:#243C4B;margin-top:6px;line-height:1.6">“Bagus, props sudah benar. Cek lagi key di list dan tambahkan loading state.”</div>
+            <div style="font-size:7px;color:#666;margin-top:4px">Dinilai oleh Admin • 11 Sep 09:00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:14px">
+  <div class="option" data-choice="approve-form" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>Form ini sudah pas</h3><p>Lanjut ke ringkasan desain</p></div>
+  </div>
+  <div class="option" data-choice="revise-form" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content"><h3>Masih ada yang mau diubah di form</h3></div>
+  </div>
+</div>

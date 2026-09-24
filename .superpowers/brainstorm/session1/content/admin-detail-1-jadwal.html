@@ -1,0 +1,132 @@
+<h2>Menu 1 — Jadwal & Presensi (Detail Layar)</h2>
+<p class="subtitle">3 state: (A) List jadwal + tombol tambah, (B) Form tambah pertemuan, (C) Sesi aktif dengan QR + monitor + ekspor.</p>
+
+<div style="display:flex;flex-direction:column;gap:16px">
+
+  <!-- STATE A: LIST -->
+  <div class="mockup">
+    <div class="mockup-header">A — List Jadwal (per Kota+Kelas)</div>
+    <div class="mockup-body" style="padding:0;background:#f4f4f5">
+      <div style="display:flex;height:340px;font-family:Arial,sans-serif;max-width:900px;margin:0 auto;border:1px solid #e2e2e0">
+        <div style="width:170px;background:#243C4B;color:#fff;padding:12px;flex-shrink:0">
+          <div style="font-size:8px;opacity:.6">BOOTCAMP INNOVAITION</div>
+          <div style="font-size:10px;font-weight:700;font-family:'Poppins',sans-serif;margin-bottom:10px">Admin Panel</div>
+          <div style="display:flex;flex-direction:column;gap:3px;font-size:9px">
+            <div style="background:#0072CE;border-radius:6px;padding:6px 8px;font-weight:600">Jadwal & Presensi</div>
+            <div style="padding:6px 8px;color:#c9d8e0">Mentoring</div>
+            <div style="padding:6px 8px;color:#c9d8e0">Tugas</div>
+            <div style="padding:6px 8px;color:#c9d8e0">Peserta & Mentor</div>
+          </div>
+        </div>
+        <div style="flex:1;background:#fff;display:flex;flex-direction:column">
+          <div style="padding:10px 14px;border-bottom:1px solid #e2e2e0;display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:11px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">Jadwal & Presensi</div><div style="font-size:8px;color:#666">Web Programming • Semarang</div></div>
+            <div style="display:flex;gap:6px">
+              <div style="font-size:8px;background:#d9d9d6;color:#243C4B;padding:5px 8px;border-radius:20px">Jakarta</div>
+              <div style="font-size:8px;background:#0072CE;color:#fff;padding:5px 8px;border-radius:20px">Semarang</div>
+              <div style="background:#0072CE;color:#fff;border-radius:7px;padding:5px 10px;font-size:8px;font-weight:700;margin-left:8px">+ Tambah Pertemuan</div>
+            </div>
+          </div>
+          <div style="padding:10px;display:flex;flex-direction:column;gap:6px;flex:1;overflow:hidden">
+            <div style="display:flex;gap:8px;align-items:center;border:2px solid #0072CE;background:#e6f2fb;border-radius:8px;padding:8px">
+              <span style="width:8px;height:8px;background:#8AC208;border-radius:50%;flex-shrink:0"></span>
+              <div style="flex:1"><div style="font-size:9px;font-weight:700;color:#243C4B">React Fundamentals</div><div style="font-size:8px;color:#666">Hari ini • 19:00-22:00 • Online</div></div>
+              <span style="font-size:7px;background:#8AC208;color:#fff;padding:3px 7px;border-radius:10px;font-weight:700">QR AKTIF</span>
+              <div style="background:#0072CE;color:#fff;border-radius:6px;padding:5px 9px;font-size:8px;font-weight:700">Lihat QR</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;border:1px solid #e2e2e0;border-radius:8px;padding:8px">
+              <div style="flex:1"><div style="font-size:9px;font-weight:700;color:#243C4B">UI/UX Workshop</div><div style="font-size:8px;color:#666">Besok • 09:00-12:00 • Offline • Kampus Semarang</div></div>
+              <span style="font-size:7px;background:#d9d9d6;color:#243C4B;padding:3px 7px;border-radius:10px">Terjadwal</span>
+              <div style="border:1px solid #d9d9d6;border-radius:6px;padding:5px 9px;font-size:8px">Edit</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;border:1px solid #e2e2e0;border-radius:8px;padding:8px;opacity:.6">
+              <div style="flex:1"><div style="font-size:9px;font-weight:700;color:#243C4B">State Management</div><div style="font-size:8px;color:#666">Jum, 14 Nov • Selesai • 18/20 hadir</div></div>
+              <span style="font-size:7px;background:#999;color:#fff;padding:3px 7px;border-radius:10px">Selesai</span>
+            </div>
+            <div style="margin-top:auto;padding-top:8px;border-top:1px solid #eee;display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:8px;color:#666">Rekap presensi: 18/20 rata-rata kehadiran</span>
+              <div style="background:#243C4B;color:#fff;border-radius:6px;padding:6px 10px;font-size:8px;font-weight:700;display:flex;align-items:center;gap:5px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> Ekspor Rekap Presensi (CSV)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATE B: FORM -->
+  <div class="mockup">
+    <div class="mockup-header">B — Form Tambah Pertemuan (jadi = jadi presensi otomatis)</div>
+    <div class="mockup-body" style="display:flex;justify-content:center;background:#eef1f4;padding:16px">
+      <div style="width:360px;background:#fff;border-radius:12px;border:1px solid #e2e2e0;padding:16px;font-family:Arial,sans-serif">
+        <div style="font-size:11px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">Tambah Pertemuan Baru</div>
+        <div style="font-size:8px;color:#666;margin-top:2px">Web Programming • Semarang</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+          <div><div style="font-size:8px;color:#999;font-weight:600">JUDUL MATERI</div><div style="border:1px solid #d9d9d6;border-radius:6px;padding:7px;font-size:9px;color:#243C4B;margin-top:3px">State Management Lanjutan</div></div>
+          <div style="display:flex;gap:6px">
+            <div style="flex:1"><div style="font-size:8px;color:#999;font-weight:600">TANGGAL</div><div style="border:1px solid #d9d9d6;border-radius:6px;padding:7px;font-size:9px;margin-top:3px">21 Nov 2025</div></div>
+            <div style="flex:1"><div style="font-size:8px;color:#999;font-weight:600">JAM</div><div style="border:1px solid #d9d9d6;border-radius:6px;padding:7px;font-size:9px;margin-top:3px">19:00 - 22:00</div></div>
+          </div>
+          <div><div style="font-size:8px;color:#999;font-weight:600">MODE</div>
+            <div style="display:flex;gap:6px;margin-top:3px">
+              <div style="flex:1;background:#0072CE;color:#fff;border-radius:6px;padding:7px;text-align:center;font-size:9px;font-weight:700">Online (Zoom)</div>
+              <div style="flex:1;background:#d9d9d6;color:#243C4B;border-radius:6px;padding:7px;text-align:center;font-size:9px">Offline</div>
+            </div>
+          </div>
+          <div style="background:#FFD500;border-radius:7px;padding:8px;font-size:8px;color:#7c2d12">Karena Online: presensi akan <b>otomatis buka 19:00 & tutup 22:00</b>, QR aktif sepanjang jam itu. Tidak perlu setting tambahan.</div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <div style="flex:1;border:1px solid #d9d9d6;border-radius:7px;padding:8px;text-align:center;font-size:9px;font-weight:600">Batal</div>
+            <div style="flex:1;background:#0072CE;color:#fff;border-radius:7px;padding:8px;text-align:center;font-size:9px;font-weight:700">Simpan & Buat Presensi</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATE C: QR MONITOR -->
+  <div class="mockup">
+    <div class="mockup-header">C — Sesi Aktif: QR + Monitor Live</div>
+    <div class="mockup-body" style="display:flex;justify-content:center;background:#eef1f4;padding:16px">
+      <div style="width:420px;background:#fff;border-radius:12px;border:1px solid #e2e2e0;padding:16px;font-family:Arial,sans-serif">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-size:11px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">React Fundamentals</div><div style="font-size:8px;color:#666">Online • 19:00-22:00 • Auto tutup dalam 1j 40m</div></div>
+          <span style="font-size:8px;background:#8AC208;color:#fff;padding:4px 8px;border-radius:10px;font-weight:700">PRESENSI AKTIF</span>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:12px">
+          <div style="width:110px;height:110px;background:#fff;border:2px solid #0072CE;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#0072CE" stroke-width="1.2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 14v3M14 19h3"/></svg></div>
+          <div style="flex:1">
+            <div style="font-size:9px;color:#666">QR refresh tiap 30 detik (anti screenshot)</div>
+            <div style="display:flex;gap:6px;margin-top:8px">
+              <div style="flex:1;background:#e6f2fb;border-radius:8px;padding:8px;text-align:center"><div style="font-size:14px;font-weight:700;color:#0072CE">14</div><div style="font-size:7px;color:#666">Hadir</div></div>
+              <div style="flex:1;background:#f4f4f5;border-radius:8px;padding:8px;text-align:center"><div style="font-size:14px;font-weight:700;color:#999">6</div><div style="font-size:7px;color:#666">Belum</div></div>
+              <div style="flex:1;background:#f0f9e8;border-radius:8px;padding:8px;text-align:center"><div style="font-size:14px;font-weight:700;color:#2d5a0a">70%</div><div style="font-size:7px;color:#666">Kehadiran</div></div>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:8px">
+              <div style="flex:1;background:#0072CE;color:#fff;border-radius:6px;padding:6px;text-align:center;font-size:8px;font-weight:700">Perbesar QR (Projector)</div>
+              <div style="flex:1;border:1px solid #d9d9d6;border-radius:6px;padding:6px;text-align:center;font-size:8px;font-weight:600">Tutup Manual</div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:10px;border-top:1px solid #eee;padding-top:8px">
+          <div style="font-size:8px;font-weight:700;color:#243C4B;margin-bottom:4px">Daftar Hadir (live)</div>
+          <div style="display:flex;flex-direction:column;gap:3px;max-height:70px;overflow:hidden">
+            <div style="display:flex;justify-content:space-between;font-size:8px;padding:3px 0"><span>Budi Santoso</span><span style="color:#8AC208">19:03 • via Scan</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:8px;padding:3px 0"><span>Sinta Dewi</span><span style="color:#8AC208">19:05 • via Kamera</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:8px;padding:3px 0;color:#999"><span>+ 12 lainnya...</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="options" style="margin-top:14px">
+  <div class="option" data-choice="approve-detail-jadwal" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>Menu Jadwal & Presensi sudah pas</h3><p>Lanjut ke detail Mentoring</p></div>
+  </div>
+  <div class="option" data-choice="revise-detail-jadwal" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content"><h3>Ada yang mau diubah di layar ini</h3></div>
+  </div>
+</div>

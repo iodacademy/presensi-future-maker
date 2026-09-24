@@ -1,0 +1,108 @@
+<h2>Admin Web — IA Lengkap: Menu, Fitur, & Flow</h2>
+<p class="subtitle">7 menu utama. Tiap menu: fitur yang ada + flow step-by-step. Ini peta lengkap sebelum kita detailkan tiap layar.</p>
+
+<!-- SIDEBAR PREVIEW -->
+<div class="mockup">
+  <div class="mockup-header">Struktur Navigasi Admin (Sidebar Desktop)</div>
+  <div class="mockup-body" style="padding:14px;background:#f4f4f5">
+    <div style="display:flex;gap:0;max-width:900px;margin:0 auto;border-radius:10px;overflow:hidden;border:1px solid #e2e2e0">
+      <div style="width:180px;background:#243C4B;color:#fff;padding:12px;font-family:Arial,sans-serif">
+        <div style="font-size:8px;opacity:.6">BOOTCAMP INNOVAITION</div>
+        <div style="font-size:10px;font-weight:700;font-family:'Poppins',sans-serif;margin-bottom:10px">Admin Panel</div>
+        <div style="display:flex;flex-direction:column;gap:3px;font-size:9px">
+          <div style="background:#0072CE;border-radius:6px;padding:6px 8px;font-weight:600">1. Dashboard</div>
+          <div style="padding:6px 8px;color:#c9d8e0">2. Jadwal Kelas</div>
+          <div style="padding:6px 8px;color:#c9d8e0">3. Mentoring</div>
+          <div style="padding:6px 8px;color:#c9d8e0">4. Presensi</div>
+          <div style="padding:6px 8px;color:#c9d8e0">5. Tugas</div>
+          <div style="padding:6px 8px;color:#c9d8e0">6. Peserta & Mentor</div>
+          <div style="padding:6px 8px;color:#c9d8e0">7. Ekspor & Laporan</div>
+        </div>
+      </div>
+      <div style="flex:1;background:#fff;padding:14px;font-family:Arial,sans-serif;font-size:10px;color:#999;display:flex;align-items:center;justify-content:center">Konten menu aktif tampil di sini →</div>
+    </div>
+  </div>
+</div>
+
+<!-- MENU DETAIL GRID -->
+<div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+
+  <div style="border:1px solid #0072CE;border-radius:10px;padding:14px;background:#fff">
+    <div style="font-size:12px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">1. Dashboard</div>
+    <div style="font-size:10px;color:#666;margin-top:4px">Ringkasan semua Kota+Kelas: sesi berlangsung, tingkat kehadiran, tugas menunggu nilai, slot mentoring terisi.</div>
+    <div style="margin-top:8px;font-size:9px;color:#0072CE;font-weight:700">FLOW</div>
+    <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;font-size:9px">
+      <span style="background:#e6f2fb;padding:4px 8px;border-radius:6px">Login admin</span>→<span style="background:#e6f2fb;padding:4px 8px;border-radius:6px">Pilih Kota+Kelas (filter)</span>→<span style="background:#e6f2fb;padding:4px 8px;border-radius:6px">Lihat ringkasan angka</span>→<span style="background:#e6f2fb;padding:4px 8px;border-radius:6px">Klik kartu → lompat ke menu terkait</span>
+    </div>
+  </div>
+
+  <div style="border:1px solid #58CAE7;border-radius:10px;padding:14px;background:#fff">
+    <div style="font-size:12px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">2. Jadwal Kelas Bootcamp</div>
+    <div style="font-size:10px;color:#666;margin-top:4px">Fitur: buat/edit jadwal kelas per Kota+Kelas (berlaku semua mentor di kelas itu), atur Online/Offline, jam, materi per pertemuan.</div>
+    <div style="margin-top:8px;font-size:9px;color:#0072CE;font-weight:700">FLOW</div>
+    <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;font-size:9px">
+      <span style="background:#eaf6fb;padding:4px 8px;border-radius:6px">Pilih Kota</span>→<span style="background:#eaf6fb;padding:4px 8px;border-radius:6px">Pilih Kelas (Web Programming dll)</span>→<span style="background:#eaf6fb;padding:4px 8px;border-radius:6px">Tambah pertemuan: tanggal, jam, Online/Offline, materi</span>→<span style="background:#eaf6fb;padding:4px 8px;border-radius:6px">Simpan → otomatis ini yang jadi acuan QR presensi</span>
+    </div>
+  </div>
+
+  <div style="border:1px solid #9900FF;border-radius:10px;padding:14px;background:#fff">
+    <div style="font-size:12px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">3. Mentoring</div>
+    <div style="font-size:10px;color:#666;margin-top:4px">Fitur: generate slot massal (40 slot/bulan), pilih Fase Bootcamp/Magang, lihat siapa booking, quota 2x/siswa, batalkan/reschedule slot.</div>
+    <div style="margin-top:8px;font-size:9px;color:#0072CE;font-weight:700">FLOW</div>
+    <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;font-size:9px">
+      <span style="background:#f3e8ff;padding:4px 8px;border-radius:6px">Pilih Kota+Kelas</span>→<span style="background:#f3e8ff;padding:4px 8px;border-radius:6px">Mentor auto-terisi (1 orang)</span>→<span style="background:#f3e8ff;padding:4px 8px;border-radius:6px">Pilih Fase</span>→<span style="background:#f3e8ff;padding:4px 8px;border-radius:6px">Isi rentang tanggal + jam + durasi</span>→<span style="background:#f3e8ff;padding:4px 8px;border-radius:6px">Generate slot, cek bentrok</span>→<span style="background:#f3e8ff;padding:4px 8px;border-radius:6px">Publish</span>→<span style="background:#f3e8ff;padding:4px 8px;border-radius:6px">Sistem trigger Calendar+Meet saat siswa booking</span>
+    </div>
+  </div>
+
+  <div style="border:1px solid #FFD500;border-radius:10px;padding:14px;background:#fff">
+    <div style="font-size:12px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">4. Presensi</div>
+    <div style="font-size:10px;color:#666;margin-top:4px">Fitur: buka/tutup QR (auto online, manual offline), monitor kehadiran real-time, riwayat presensi per peserta.</div>
+    <div style="margin-top:8px;font-size:9px;color:#0072CE;font-weight:700">FLOW</div>
+    <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;font-size:9px">
+      <span style="background:#fff8e5;padding:4px 8px;border-radius:6px">Pilih sesi (dari Jadwal Kelas)</span>→<span style="background:#fff8e5;padding:4px 8px;border-radius:6px">Online: auto buka 19:00 / Offline: tap Buka</span>→<span style="background:#fff8e5;padding:4px 8px;border-radius:6px">QR tampil, refresh 30s</span>→<span style="background:#fff8e5;padding:4px 8px;border-radius:6px">Monitor counter hadir live</span>→<span style="background:#fff8e5;padding:4px 8px;border-radius:6px">Auto tutup 22:00 / tap Tutup</span>→<span style="background:#fff8e5;padding:4px 8px;border-radius:6px">Data masuk Firestore</span>
+    </div>
+  </div>
+
+  <div style="border:1px solid #ED632F;border-radius:10px;padding:14px;background:#fff">
+    <div style="font-size:12px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">5. Tugas</div>
+    <div style="font-size:10px;color:#666;margin-top:4px">Fitur: upload/edit Brief per tugas, lihat submission (Harian & Capstone), beri nilai 0-100 + feedback, lihat status lock Capstone per siswa.</div>
+    <div style="margin-top:8px;font-size:9px;color:#0072CE;font-weight:700">FLOW</div>
+    <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;font-size:9px">
+      <span style="background:#fff8f5;padding:4px 8px;border-radius:6px">Buat tugas baru + upload Brief PDF + deadline</span>→<span style="background:#fff8f5;padding:4px 8px;border-radius:6px">Peserta kumpul (link Drive)</span>→<span style="background:#fff8f5;padding:4px 8px;border-radius:6px">Admin buka link submission</span>→<span style="background:#fff8f5;padding:4px 8px;border-radius:6px">Input nilai + feedback</span>→<span style="background:#fff8f5;padding:4px 8px;border-radius:6px">Simpan → peserta lihat hasil</span>
+    </div>
+  </div>
+
+  <div style="border:1px solid #243C4B;border-radius:10px;padding:14px;background:#fff">
+    <div style="font-size:12px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">6. Peserta & Mentor</div>
+    <div style="font-size:10px;color:#666;margin-top:4px">Fitur: kelola daftar peserta per Kota+Kelas, lihat mentor yang ter-assign (1 per kelas), lihat progres tiap peserta (presensi %, tugas, mentoring terpakai).</div>
+    <div style="margin-top:8px;font-size:9px;color:#0072CE;font-weight:700">FLOW</div>
+    <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;font-size:9px">
+      <span style="background:#eef1f4;padding:4px 8px;border-radius:6px">Pilih Kota+Kelas</span>→<span style="background:#eef1f4;padding:4px 8px;border-radius:6px">Lihat list peserta + mentor assigned</span>→<span style="background:#eef1f4;padding:4px 8px;border-radius:6px">Klik peserta → detail progres individu</span>→<span style="background:#eef1f4;padding:4px 8px;border-radius:6px">Tambah/hapus peserta jika perlu</span>
+    </div>
+  </div>
+
+  <div style="border:1px solid #d9d9d6;border-radius:10px;padding:14px;background:#fff">
+    <div style="font-size:12px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">7. Ekspor & Laporan</div>
+    <div style="font-size:10px;color:#666;margin-top:4px">Fitur: ekspor CSV presensi (dari Firestore) dan tugas (link+nilai) per Kota+Kelas atau semua sekaligus, untuk laporan ke Plan Indonesia.</div>
+    <div style="margin-top:8px;font-size:9px;color:#0072CE;font-weight:700">FLOW</div>
+    <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;font-size:9px">
+      <span style="background:#f4f4f5;padding:4px 8px;border-radius:6px">Pilih jenis data (Presensi/Tugas/Keduanya)</span>→<span style="background:#f4f4f5;padding:4px 8px;border-radius:6px">Pilih Kota+Kelas atau Semua</span>→<span style="background:#f4f4f5;padding:4px 8px;border-radius:6px">Pilih rentang tanggal</span>→<span style="background:#f4f4f5;padding:4px 8px;border-radius:6px">Generate CSV</span>→<span style="background:#f4f4f5;padding:4px 8px;border-radius:6px">Download</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:16px">
+  <p class="label">Ini peta lengkapnya. Konfirmasi dulu sebelum saya buat mockup layar detail untuk tiap menu (biar tidak bolak-balik revisi lagi):</p>
+</div>
+
+<div class="options" style="margin-top:8px">
+  <div class="option" data-choice="approve-ia-lengkap" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>Menu & flow ini sudah benar dan lengkap</h3><p>Lanjut bikinkan mockup layar detail tiap menu</p></div>
+  </div>
+  <div class="option" data-choice="revise-ia-lengkap" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content"><h3>Ada menu/fitur/flow yang salah atau kurang</h3><p>Sebutkan di terminal</p></div>
+  </div>
+</div>

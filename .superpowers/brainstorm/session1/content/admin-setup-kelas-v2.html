@@ -1,0 +1,66 @@
+<h2>Alur Setup Kota & Kelas — Perjelas Step 3 (Assign Mentor)</h2>
+<p class="subtitle">Step 3 diperjelas: admin pilih mentor yang bertanggung jawab dari daftar mentor yang tersedia (belum terpakai di kelas lain), bisa juga tambah mentor baru.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Form Buat Kelas — Step 3 diperbesar</div>
+  <div class="mockup-body" style="display:flex;justify-content:center;background:#eef1f4;padding:16px">
+    <div style="width:400px;background:#fff;border-radius:12px;border:1px solid #e2e2e0;padding:16px;font-family:Arial,sans-serif">
+      <div style="font-size:11px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">Buat Kelas Baru</div>
+      <div style="font-size:8px;color:#999;margin-top:2px">Web Programming • Semarang</div>
+
+      <div style="margin-top:14px;display:flex;gap:8px;align-items:center"><div style="width:18px;height:18px;border-radius:50%;background:#8AC208;color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center">✓</div><div style="font-size:9px;font-weight:700;color:#243C4B">Kota: Semarang</div></div>
+      <div style="margin-top:6px;display:flex;gap:8px;align-items:center"><div style="width:18px;height:18px;border-radius:50%;background:#8AC208;color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center">✓</div><div style="font-size:9px;font-weight:700;color:#243C4B">Kelas: Web Programming</div></div>
+
+      <div style="margin-top:14px;display:flex;gap:8px;align-items:center"><div style="width:18px;height:18px;border-radius:50%;background:#0072CE;color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center">3</div><div style="font-size:9px;font-weight:700;color:#243C4B">Pilih Mentor yang Bertanggung Jawab</div></div>
+      <div style="margin-left:26px;margin-top:6px;display:flex;flex-direction:column;gap:6px">
+
+        <div style="border:2px solid #0072CE;border-radius:8px;padding:8px;background:#e6f2fb;display:flex;gap:8px;align-items:center">
+          <div style="width:28px;height:28px;border-radius:50%;background:#0072CE;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">R</div>
+          <div style="flex:1"><div style="font-size:9px;font-weight:700;color:#243C4B">Rama Wijaya</div><div style="font-size:7px;color:#666">rama@planindonesia.org • Belum ada kelas lain</div></div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0072CE" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+
+        <div style="border:1px solid #e2e2e0;border-radius:8px;padding:8px;display:flex;gap:8px;align-items:center;opacity:.55">
+          <div style="width:28px;height:28px;border-radius:50%;background:#d9d9d6;color:#666;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">I</div>
+          <div style="flex:1"><div style="font-size:9px;font-weight:700;color:#243C4B">Ilham Pratama</div><div style="font-size:7px;color:#999">Sudah handle: Digital Marketing Surabaya (11 org)</div></div>
+        </div>
+
+        <div style="border:1px solid #e2e2e0;border-radius:8px;padding:8px;display:flex;gap:8px;align-items:center;opacity:.55">
+          <div style="width:28px;height:28px;border-radius:50%;background:#d9d9d6;color:#666;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">W</div>
+          <div style="flex:1"><div style="font-size:9px;font-weight:700;color:#243C4B">Wahyu Nugroho</div><div style="font-size:7px;color:#999">Sudah handle: Data Analyst Jakarta (10 org)</div></div>
+        </div>
+
+        <div style="border:1px dashed #999;border-radius:8px;padding:8px;text-align:center;font-size:8px;color:#666">+ Tambah Mentor Baru (nama, email)</div>
+      </div>
+
+      <div style="margin-top:10px;background:#fff8e5;border-radius:7px;padding:7px;font-size:8px;color:#7c2d12">Mentor lain ditampilkan abu-abu (sudah handle kelas lain) — tetap bisa dipilih kalau memang mau dobel tanggung jawab, tapi Rama disarankan karena masih kosong.</div>
+
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <div style="flex:1;border:1px solid #d9d9d6;border-radius:7px;padding:8px;text-align:center;font-size:9px;font-weight:600">Kembali</div>
+        <div style="flex:1;background:#0072CE;color:#fff;border-radius:7px;padding:8px;text-align:center;font-size:9px;font-weight:700">Lanjut: Tambah Peserta →</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:14px">
+  <p class="label">Jadi alurnya:</p>
+  <ul style="font-size:12px;line-height:1.7;color:#333">
+    <li>Saat bikin Kota+Kelas baru, admin lihat <b>daftar semua mentor</b> yang ada di sistem</li>
+    <li>Mentor yang masih kosong (belum handle kelas manapun) ditonjolkan/direkomendasikan</li>
+    <li>Mentor yang sudah handle kelas lain tetap muncul (opsional dipilih dobel) tapi ditandai sudah sibuk</li>
+    <li>Bisa juga langsung tambah mentor baru dari sini kalau belum ada di sistem</li>
+    <li>1 mentor terpilih → jadi <b>penanggung jawab tunggal</b> untuk kombinasi Kota+Kelas itu (dipakai di Jadwal, Mentoring, presensi, dll)</li>
+  </ul>
+</div>
+
+<div class="options" style="margin-top:8px">
+  <div class="option" data-choice="approve-assign-mentor" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>Ini yang saya maksud, sudah benar</h3><p>Lanjut ke detail Mentoring</p></div>
+  </div>
+  <div class="option" data-choice="revise-assign-mentor" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content"><h3>Masih ada yang mau diubah</h3></div>
+  </div>
+</div>

@@ -1,0 +1,70 @@
+<h2>Ringkasan Desain — Bootcamp InnovAItion</h2>
+<p class="subtitle">Rekap semua yang sudah kita kunci: navigasi, Home, Jadwal+QR, Mentoring 1 mentor, Tugas 2 tab + Form Brief. Tinggal visual system.</p>
+
+<div class="section">
+  <h3>Visual System (dari file Warna)</h3>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
+    <div style="flex:1;min-width:180px;background:#fff;border:1px solid #e2e2e0;border-radius:10px;padding:12px">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.4px;color:#999">WARNA PRIMER</div>
+      <div style="display:flex;gap:6px;margin-top:6px;align-items:center"><span style="width:20px;height:20px;background:#0072CE;border-radius:6px;display:inline-block"></span><code style="font-size:11px">#0072CE</code><span style="font-size:9px;color:#666">— header, CTA, aktif</span></div>
+      <div style="font-size:9px;font-weight:700;letter-spacing:.4px;color:#999;margin-top:10px">SEKUNDER</div>
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+        <span style="display:flex;align-items:center;gap:4px;font-size:9px"><span style="width:14px;height:14px;background:#58CAE7;border-radius:4px;display:inline-block"></span>#58CAE7</span>
+        <span style="display:flex;align-items:center;gap:4px;font-size:9px"><span style="width:14px;height:14px;background:#ED632F;border-radius:4px;display:inline-block"></span>#ED632F</span>
+        <span style="display:flex;align-items:center;gap:4px;font-size:9px"><span style="width:14px;height:14px;background:#FFD500;border-radius:4px;display:inline-block"></span>#FFD500</span>
+        <span style="display:flex;align-items:center;gap:4px;font-size:9px"><span style="width:14px;height:14px;background:#9900FF;border-radius:4px;display:inline-block"></span>#9900FF</span>
+      </div>
+      <div style="font-size:9px;font-weight:700;letter-spacing:.4px;color:#999;margin-top:10px">NETRAL</div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <span style="width:14px;height:14px;background:#000;border-radius:4px;display:inline-block"></span><code style="font-size:9px">#000</code>
+        <span style="width:14px;height:14px;background:#d9d9d6;border-radius:4px;display:inline-block;border:1px solid #999"></span><code style="font-size:9px">#d9d9d6</code>
+        <span style="width:14px;height:14px;background:#fff;border-radius:4px;display:inline-block;border:1px solid #999"></span><code style="font-size:9px">#fff</code>
+      </div>
+    </div>
+    <div style="flex:1;min-width:180px;background:#fff;border:1px solid #e2e2e0;border-radius:10px;padding:12px">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.4px;color:#999">TIPOGRAFI</div>
+      <div style="margin-top:6px;font-size:12px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">Poppins Bold — Judul</div>
+      <div style="font-size:8px;color:#999">Weight 700, untuk header & angka besar</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:600;font-family:'Poppins',sans-serif;color:#243C4B">Poppins — Subjudul</div>
+      <div style="margin-top:8px;font-size:10px;font-family:Arial,sans-serif;color:#333">Arial — Body / deskripsi</div>
+      <div style="font-size:9px;font-weight:700;letter-spacing:.4px;color:#999;margin-top:10px">IKON</div>
+      <div style="font-size:9px;color:#666">SVG outline 1.5-2px, tidak pakai emoji. Stroke = warna primer / netral.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px">
+  <h3>Rekap Full Flow (4 tab mobile)</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+    <div style="background:#e6f2fb;border:1px solid #0072CE;border-radius:10px;padding:10px">
+      <div style="font-size:9px;font-weight:700;color:#0072CE">HOME — Alt 1 Stack (header A)</div>
+      <div style="font-size:10px;color:#333;margin-top:4px;line-height:1.6">• Header compact: label kecil + Halo + badge pill kelas/kota<br>• Sesi Berlangsung (biru, tombol Scan QR Hadir) — hanya saat ada sesi<br>• Mentoring Terdekat + Tugas Terdekat (selalu tampil kalau ada booking/deadline)</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e2e0;border-radius:10px;padding:10px">
+      <div style="font-size:9px;font-weight:700;color:#243C4B">JADWAL — Gabung presensi + QR</div>
+      <div style="font-size:10px;color:#333;margin-top:4px;line-height:1.6">• Filter Semua/Online/Offline (chip #d9d9d6, aktif #0072CE)<br>• Kartu per sesi, 2 jalur hadir: via tombol Hadir → scan QR, atau langsung scan kamera → deep link<br>• Online 19-22 auto buka/tutup, offline manual admin, QR refresh 30s</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e2e0;border-radius:10px;padding:10px">
+      <div style="font-size:9px;font-weight:700;color:#243C4B">MENTORING — 1 mentor per kelas/daerah</div>
+      <div style="font-size:10px;color:#333;margin-top:4px;line-height:1.6">• Fase Bootcamp / Magang, header profil 1 mentor (Rama dsb)<br>• 40 slot (1-30 Sep), 12 siswa rebutan, jatah 2x (warning kalau ambil 2 di minggu 1)<br>• Booking → Google Calendar + Meet invite dari akun penyelenggara</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e2e0;border-radius:10px;padding:10px">
+      <div style="font-size:9px;font-weight:700;color:#243C4B">TUGAS — 2 tab + Form Brief</div>
+      <div style="font-size:10px;color:#333;margin-top:4px;line-height:1.6">• Tab Harian vs Capstone (Capstone lock sampai semua Harian terkumpul, progress 3/4)<br>• Detail → File Brief + "Unduh Brief Tugas Berikut: Download"<br>• Kumpul via Drive link / file, deadline, feedback & nilai 0-100, eksport CSV</div>
+    </div>
+  </div>
+  <div style="background:#f4f4f5;border-radius:10px;padding:12px;margin-top:10px;font-size:10px;color:#333;line-height:1.7">
+    <b>Admin & Data:</b> Admin isi slot mentoring per Kota+Kelas (jadwal kelas sama untuk semua mentor di kelas itu), jadwal bootcamp sama per kota/kelas (Semarang WP ≠ Surabaya WP). Penyimpanan tugas = link Drive (hemat), presensi = Firestore. Admin eksport presensi & tugas CSV. <b>Mobile app style, bottom nav 4 tab: Home | Jadwal | Mentoring | Tugas.</b>
+  </div>
+</div>
+
+<div class="options" style="margin-top:14px">
+  <div class="option" data-choice="approve-ringkasan" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>Semua sudah pas — tulis design doc</h3><p>Lanjut ke figma-cli</p></div>
+  </div>
+  <div class="option" data-choice="revise-ringkasan" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content"><h3>Ada yang mau diubah di ringkasan</h3></div>
+  </div>
+</div>

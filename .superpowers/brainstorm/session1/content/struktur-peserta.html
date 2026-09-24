@@ -1,0 +1,76 @@
+<h2>Struktur: Peserta Cuma Ada di SATU Tempat</h2>
+<p class="subtitle">Jawaban: TIDAK ADA "tambah peserta" di menu Jadwal. Peserta cuma dikelola di 1 tempat — detail Kota+Kelas dalam menu "Peserta & Mentor". Menu lain cuma MEMILIH Kota+Kelas dan otomatis pakai data yang sudah ada di sana.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Diagram Alur — Wizard dipangkas, 1 sumber data peserta</div>
+  <div class="mockup-body" style="padding:20px;background:#fff;font-family:Arial,sans-serif">
+
+    <!-- WIZARD BARU (dipangkas) -->
+    <div style="border:1px solid #0072CE;border-radius:10px;padding:12px;margin-bottom:16px;background:#e6f2fb">
+      <div style="font-size:9px;font-weight:700;color:#0072CE;letter-spacing:.4px">WIZARD "BUAT KELAS BARU" — DIPANGKAS, BERHENTI DI MENTOR</div>
+      <div style="display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap;font-size:9px">
+        <span style="background:#fff;border:1px solid #0072CE;padding:5px 10px;border-radius:6px;font-weight:600">1. Pilih Kota</span>→
+        <span style="background:#fff;border:1px solid #0072CE;padding:5px 10px;border-radius:6px;font-weight:600">2. Pilih Kelas</span>→
+        <span style="background:#fff;border:1px solid #0072CE;padding:5px 10px;border-radius:6px;font-weight:600">3. Pilih Mentor(s)</span>→
+        <span style="background:#0072CE;color:#fff;padding:5px 10px;border-radius:6px;font-weight:700">SIMPAN</span>
+      </div>
+      <div style="font-size:8px;color:#666;margin-top:6px">Selesai di sini. Tidak ada step peserta. Card Kota+Kelas langsung muncul di list.</div>
+    </div>
+
+    <!-- PANAH KE BAWAH -->
+    <div style="text-align:center;color:#999;font-size:16px;margin:4px 0">↓ klik card yang baru dibuat</div>
+
+    <!-- DETAIL KELAS = SATU-SATUNYA TEMPAT PESERTA -->
+    <div style="border:2px solid #8AC208;border-radius:10px;padding:12px;margin-top:8px;background:#f0f9e8">
+      <div style="font-size:9px;font-weight:700;color:#2d5a0a;letter-spacing:.4px">HALAMAN DETAIL "Web Programming • Semarang" (di menu Peserta & Mentor)</div>
+      <div style="font-size:8px;color:#2d5a0a;margin-top:4px">Ini SATU-SATUNYA tempat kelola peserta. Ada 3 bagian:</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <div style="flex:1;background:#fff;border-radius:8px;padding:8px"><div style="font-size:8px;font-weight:700;color:#243C4B">Info Kelas</div><div style="font-size:7px;color:#666;margin-top:2px">Kota, nama kelas, edit/hapus</div></div>
+        <div style="flex:1;background:#fff;border-radius:8px;padding:8px"><div style="font-size:8px;font-weight:700;color:#243C4B">Mentor</div><div style="font-size:7px;color:#666;margin-top:2px">Rama, Ilham — tambah/hapus mentor</div></div>
+        <div style="flex:1;background:#fff;border-radius:8px;padding:8px;border:2px solid #8AC208"><div style="font-size:8px;font-weight:700;color:#2d5a0a">Peserta ← DI SINI</div><div style="font-size:7px;color:#2d5a0a;margin-top:2px">Import/tambah, assign ke Rama/Ilham</div></div>
+      </div>
+    </div>
+
+    <!-- PANAH KE BAWAH -->
+    <div style="text-align:center;color:#999;font-size:16px;margin:4px 0">↓ dipakai (read-only) oleh menu lain</div>
+
+    <!-- MENU LAIN CUMA BACA -->
+    <div style="display:flex;gap:10px">
+      <div style="flex:1;border:1px solid #d9d9d6;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:9px;font-weight:700;color:#243C4B">Jadwal & Presensi</div>
+        <div style="font-size:7px;color:#666;margin-top:4px">Pilih Kota+Kelas dari dropdown → daftar peserta otomatis ikut (buat presensi). <b style="color:#ED632F">Tidak ada tombol tambah peserta di sini.</b></div>
+      </div>
+      <div style="flex:1;border:1px solid #d9d9d6;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:9px;font-weight:700;color:#243C4B">Mentoring</div>
+        <div style="font-size:7px;color:#666;margin-top:4px">Pilih Kota+Kelas → peserta yang sudah di-assign ke tiap mentor otomatis muncul untuk booking. <b style="color:#ED632F">Tidak ada tambah peserta.</b></div>
+      </div>
+      <div style="flex:1;border:1px solid #d9d9d6;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:9px;font-weight:700;color:#243C4B">Tugas</div>
+        <div style="font-size:7px;color:#666;margin-top:4px">Pilih Kota+Kelas → list peserta yang perlu dinilai otomatis muncul. <b style="color:#ED632F">Tidak ada tambah peserta.</b></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section" style="margin-top:14px">
+  <p class="label">Ringkas jawabannya:</p>
+  <ul style="font-size:13px;line-height:1.8;color:#333">
+    <li><b>Wizard "Buat Kelas"</b> sekarang cuma sampai Step 3 (pilih mentor) → Simpan. Tidak ada step peserta di wizard.</li>
+    <li>Setelah simpan, card Kota+Kelas muncul di list menu <b>Peserta & Mentor</b>. Klik card → masuk halaman detail kelas itu.</li>
+    <li>Di halaman detail itu ada 3 bagian: <b>Info Kelas, Mentor, dan Peserta</b> — peserta di-import/tambah & di-assign ke mentor <u>di sini saja</u>.</li>
+    <li>Menu <b>Jadwal, Mentoring, Tugas</b> tidak punya fitur tambah peserta sendiri — mereka cuma pilih Kota+Kelas dari dropdown, lalu otomatis pakai data peserta yang sudah ada dari menu Peserta & Mentor.</li>
+    <li>Jadi tidak ada duplikasi: peserta = 1 sumber data, dipakai bersama oleh semua menu.</li>
+  </ul>
+</div>
+
+<div class="options" style="margin-top:8px">
+  <div class="option" data-choice="approve-struktur-peserta" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>Sekarang jelas, ini yang saya mau</h3><p>Lanjut bikin mockup halaman detail Kota+Kelas</p></div>
+  </div>
+  <div class="option" data-choice="revise-struktur-peserta" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content"><h3>Masih belum pas / mau tanya lagi</h3></div>
+  </div>
+</div>

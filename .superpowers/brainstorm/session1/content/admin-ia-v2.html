@@ -1,0 +1,82 @@
+<h2>Admin Web — IA Revisi (4 menu)</h2>
+<p class="subtitle">Dashboard dihapus. Jadwal Kelas + Presensi digabung jadi 1 menu (bikin jadwal = otomatis QR presensi terbuat). Menu Ekspor & Laporan dihapus — tombol ekspor pindah ke masing-masing halaman.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Struktur Navigasi Admin — Revisi</div>
+  <div class="mockup-body" style="padding:14px;background:#f4f4f5">
+    <div style="display:flex;gap:0;max-width:900px;margin:0 auto;border-radius:10px;overflow:hidden;border:1px solid #e2e2e0">
+      <div style="width:180px;background:#243C4B;color:#fff;padding:12px;font-family:Arial,sans-serif">
+        <div style="font-size:8px;opacity:.6">BOOTCAMP INNOVAITION</div>
+        <div style="font-size:10px;font-weight:700;font-family:'Poppins',sans-serif;margin-bottom:10px">Admin Panel</div>
+        <div style="display:flex;flex-direction:column;gap:3px;font-size:9px">
+          <div style="background:#0072CE;border-radius:6px;padding:6px 8px;font-weight:600">1. Jadwal & Presensi</div>
+          <div style="padding:6px 8px;color:#c9d8e0">2. Mentoring</div>
+          <div style="padding:6px 8px;color:#c9d8e0">3. Tugas</div>
+          <div style="padding:6px 8px;color:#c9d8e0">4. Peserta & Mentor</div>
+        </div>
+      </div>
+      <div style="flex:1;background:#fff;padding:14px;font-family:Arial,sans-serif;font-size:10px;color:#999;display:flex;align-items:center;justify-content:center">Konten menu aktif tampil di sini →</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+
+  <div style="border:1px solid #0072CE;border-radius:10px;padding:14px;background:#fff">
+    <div style="font-size:12px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">1. Jadwal & Presensi (gabung)</div>
+    <div style="font-size:10px;color:#666;margin-top:4px">Buat jadwal kelas per Kota+Kelas → <b>otomatis jadi sesi presensi dengan QR</b>. Tidak ada langkah terpisah untuk "aktifkan presensi" — begitu jadwal dibuat, slot presensinya sudah ada.</div>
+    <div style="margin-top:8px;font-size:9px;color:#0072CE;font-weight:700">FLOW</div>
+    <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;font-size:9px">
+      <span style="background:#e6f2fb;padding:4px 8px;border-radius:6px">Pilih Kota+Kelas</span>→<span style="background:#e6f2fb;padding:4px 8px;border-radius:6px">Tambah pertemuan: tanggal, jam, Online/Offline, materi</span>→<span style="background:#e6f2fb;padding:4px 8px;border-radius:6px">Simpan → sesi otomatis muncul di list dengan tombol QR</span>→<span style="background:#e6f2fb;padding:4px 8px;border-radius:6px">Saat waktunya: Online auto-buka 19:00 / Offline tap Buka</span>→<span style="background:#e6f2fb;padding:4px 8px;border-radius:6px">QR tampil, monitor hadir live</span>→<span style="background:#e6f2fb;padding:4px 8px;border-radius:6px">Auto/manual tutup</span>→<span style="background:#e6f2fb;padding:4px 8px;border-radius:6px"><b>Ekspor rekap presensi (CSV)</b> di halaman ini</span>
+    </div>
+  </div>
+
+  <div style="border:1px solid #9900FF;border-radius:10px;padding:14px;background:#fff">
+    <div style="font-size:12px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">2. Mentoring</div>
+    <div style="font-size:10px;color:#666;margin-top:4px">Generate slot massal, Fase Bootcamp/Magang, monitor booking, quota 2x/siswa.</div>
+    <div style="margin-top:8px;font-size:9px;color:#0072CE;font-weight:700">FLOW</div>
+    <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;font-size:9px">
+      <span style="background:#f3e8ff;padding:4px 8px;border-radius:6px">Pilih Kota+Kelas (mentor auto)</span>→<span style="background:#f3e8ff;padding:4px 8px;border-radius:6px">Pilih Fase</span>→<span style="background:#f3e8ff;padding:4px 8px;border-radius:6px">Isi tanggal+jam+durasi → generate slot</span>→<span style="background:#f3e8ff;padding:4px 8px;border-radius:6px">Publish</span>→<span style="background:#f3e8ff;padding:4px 8px;border-radius:6px">Siswa booking → Calendar+Meet auto</span>→<span style="background:#f3e8ff;padding:4px 8px;border-radius:6px"><b>Ekspor rekap booking (CSV)</b> di halaman ini</span>
+    </div>
+  </div>
+
+  <div style="border:1px solid #ED632F;border-radius:10px;padding:14px;background:#fff">
+    <div style="font-size:12px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">3. Tugas</div>
+    <div style="font-size:10px;color:#666;margin-top:4px">Upload Brief, lihat submission Harian & Capstone, beri nilai+feedback.</div>
+    <div style="margin-top:8px;font-size:9px;color:#0072CE;font-weight:700">FLOW</div>
+    <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;font-size:9px">
+      <span style="background:#fff8f5;padding:4px 8px;border-radius:6px">Buat tugas + upload Brief PDF + deadline</span>→<span style="background:#fff8f5;padding:4px 8px;border-radius:6px">Siswa kumpul (link Drive)</span>→<span style="background:#fff8f5;padding:4px 8px;border-radius:6px">Admin nilai + feedback</span>→<span style="background:#fff8f5;padding:4px 8px;border-radius:6px">Simpan</span>→<span style="background:#fff8f5;padding:4px 8px;border-radius:6px"><b>Ekspor rekap tugas+nilai (CSV)</b> di halaman ini</span>
+    </div>
+  </div>
+
+  <div style="border:1px solid #243C4B;border-radius:10px;padding:14px;background:#fff">
+    <div style="font-size:12px;font-weight:700;font-family:'Poppins',sans-serif;color:#243C4B">4. Peserta & Mentor</div>
+    <div style="font-size:10px;color:#666;margin-top:4px">Kelola daftar peserta per Kota+Kelas, mentor ter-assign, progres individu.</div>
+    <div style="margin-top:8px;font-size:9px;color:#0072CE;font-weight:700">FLOW</div>
+    <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;font-size:9px">
+      <span style="background:#eef1f4;padding:4px 8px;border-radius:6px">Pilih Kota+Kelas</span>→<span style="background:#eef1f4;padding:4px 8px;border-radius:6px">Lihat list peserta + mentor</span>→<span style="background:#eef1f4;padding:4px 8px;border-radius:6px">Klik peserta → progres individu (presensi %, tugas, mentoring)</span>→<span style="background:#eef1f4;padding:4px 8px;border-radius:6px">Tambah/hapus peserta</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:14px">
+  <p class="label">Perubahan dari versi sebelumnya:</p>
+  <ul style="font-size:12px;line-height:1.7;color:#333">
+    <li>Dashboard dihapus total</li>
+    <li>Jadwal Kelas Bootcamp + Presensi → jadi 1 menu, presensi otomatis tercipta saat jadwal dibuat</li>
+    <li>Menu Ekspor & Laporan dihapus — tombol Ekspor CSV kini melekat di halaman Jadwal&Presensi, Mentoring, dan Tugas masing-masing</li>
+    <li>Sisa 4 menu: Jadwal & Presensi, Mentoring, Tugas, Peserta & Mentor</li>
+  </ul>
+</div>
+
+<div class="options" style="margin-top:8px">
+  <div class="option" data-choice="approve-ia-v2" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>Sudah benar, lanjut bikin mockup layar detail</h3></div>
+  </div>
+  <div class="option" data-choice="revise-ia-v2" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content"><h3>Masih ada yang salah/kurang</h3></div>
+  </div>
+</div>

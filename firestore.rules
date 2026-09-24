@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Seluruh operasi data dilakukan melalui backend server Next.js (Admin SDK)
+    // All data operations are server-mediated through Next.js backend (Admin SDK)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

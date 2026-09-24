@@ -1,0 +1,120 @@
+// Inisialisasi singleton Firebase Admin SDK / Firebase Admin SDK singleton initialization
+import { getApps, initializeApp, cert, type App } from 'firebase-admin/app';
+import { getAuth, type Auth } from 'firebase-admin/auth';
+import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { getEnv } from '../env';
+import fs from 'fs';
+import path from 'path';
+
+let adminApp: App | null = null;
+let adminAuth: Auth | null = null;
+let adminDb: Firestore | null = null;
+
+/**
+ * Mengambil atau menginisialisasi singleton instance Firebase Admin App.
+ *
+ * Retrieves or initializes the singleton Firebase Admin App instance.
+ */
+export function getAdminApp(): App {
+  if (adminApp) return adminApp;
+
+  const existingApps = getApps();
+  if (existingApps.length > 0) {
+    adminApp = existingApps[0];
+    return adminApp;
+  }
+
+  // 1. Cek apakah ada file service-account.json di root proyek / Check if service-account.json exists in root
+  const serviceAccountPath = path.resolve(process.cwd(), 'service-account.json');
+  if (fs.existsSync(serviceAccountPath)) {
+    try {
+      const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf-8'));
+      adminApp = initializeApp({
+        credential: cert(serviceAccount),
+        projectId: serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID,
+      });
+      return adminApp;
+    } catch (err) {
+      console.warn('Gagal membaca service-account.json, beralih ke env variables:', err);
+    }
+  }
+
+  const env = getEnv();
+
+  // 2. Jika berjalan di emulator atau mode test / If running in emulator or test mode
+  if (process.env.FIRESTORE_EMULATOR_HOST || process.env.NODE_ENV === 'test') {
+    adminApp = initializeApp({
+      projectId: env.projectId,
+    });
+    return adminApp;
+  }
+
+  // 3. Jika FIREBASE_PRIVATE_KEY tersedia di env / If FIREBASE_PRIVATE_KEY is present
+  if (env.privateKey && env.privateKey.includes('PRIVATE KEY')) {
+    adminApp = initializeApp({
+      credential: cert({
+        projectId: env.projectId,
+        clientEmail: env.clientEmail,
+        privateKey: env.privateKey,
+      }),
+      projectId: env.projectId,
+    });
+    return adminApp;
+  }
+
+  // 4. Periksa file gcloud Application Default Credentials di Windows
+  // Check gcloud Application Default Credentials on Windows
+  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && process.env.APPDATA) {
+    const adcPath = path.join(process.env.APPDATA, 'gcloud', 'application_default_credentials.json');
+    if (fs.existsSync(adcPath)) {
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = adcPath;
+    }
+  }
+
+  // 5. Fallback ke Application Default Credentials dari Google Cloud / Fallback to Google Cloud ADC
+  //
+  // Di produksi tidak ada service-account.json (disk host ditimpa tiap deploy)
+  // dan tidak ada ADC. Tanpa penjagaan ini aplikasi tetap menyala lalu gagal
+  // pada permintaan pertama dengan galat kredensial yang menyesatkan; lebih
+  // baik berhenti saat boot dengan menyebut variabel yang kurang.
+  //
+  // In production there is no service-account.json (the host disk is
+  // overwritten on every deploy) and no ADC. Without this guard the app boots
+  // and then fails on the first request with a misleading credential error;
+  // better to stop at boot naming the missing variable.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'Kredensial Firebase Admin tidak ditemukan. Isi FIREBASE_PRIVATE_KEY dan FIREBASE_CLIENT_EMAIL di environment variables.'
+    );
+  }
+
+  adminApp = initializeApp({
+    projectId: env.projectId,
+  });
+
+  return adminApp;
+}
+
+/**
+ * Mendapatkan instance Firebase Admin Auth.
+ *
+ * Gets the Firebase Admin Auth instance.
+ */
+export function getAdminAuth(): Auth {
+  if (!adminAuth) {
+    adminAuth = getAuth(getAdminApp());
+  }
+  return adminAuth;
+}
+
+/**
+ * Mendapatkan instance Firebase Admin Firestore.
+ *
+ * Gets the Firebase Admin Firestore instance.
+ */
+export function getAdminDb(): Firestore {
+  if (!adminDb) {
+    adminDb = getFirestore(getAdminApp());
+  }
+  return adminDb;
+}
