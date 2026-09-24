@@ -94,11 +94,19 @@ steps:
       # without an automatic Meet link. Add them to this line once both secrets
       # hold real values.
       - --set-secrets=QR_TOKEN_SECRET=qr-token-secret:latest
-      # Satu instance selalu hidup: tanpa ini pengguna pertama tiap pagi
-      # menunggu cold start.
-      # One instance always warm: without this the first user each morning waits
-      # through a cold start.
-      - --min-instances=1
+      # Nol instance saat sepi. Instance yang menyala 24 jam menghabiskan
+      # ~2,6 juta vCPU-detik sebulan, jauh melampaui kuota gratis 180.000,
+      # sedangkan pemakaian bootcamp yang sesungguhnya masuk kuota itu dengan
+      # lapang. Harganya: pengguna pertama setelah masa sepi menunggu sekitar
+      # tiga detik (terukur 2,77 detik). Naikkan ke 1 pada hari sesi
+      # berlangsung bila jeda itu mengganggu.
+      #
+      # Zero instances while idle. An always-on instance burns ~2.6M vCPU
+      # seconds a month, far past the 180k free quota, while the bootcamp's
+      # actual traffic fits inside it comfortably. The price: the first user
+      # after an idle spell waits about three seconds (measured 2.77s). Raise
+      # this to 1 on session days if that pause gets in the way.
+      - --min-instances=0
       - --max-instances=10
       - --memory=1Gi
       - --cpu=1
