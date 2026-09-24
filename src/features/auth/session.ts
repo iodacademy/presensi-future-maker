@@ -18,15 +18,20 @@ export async function createSessionCookieFromIdToken(idToken: string): Promise<s
 
 // Cache actor per proses server berumur pendek supaya navigasi beruntun (klik
 // menu berkali-kali dalam beberapa detik) tidak menembak Firestore tiap kali.
-// Firestore ada di region US (nam5) -- satu read ~700-1000ms -- jadi fungsi ini
-// dipanggil di 57+ tempat (tiap halaman + tiap API route) dan sebelumnya jadi
-// leher botol utama loading, bukan query data itu sendiri.
+// Fungsi ini dipanggil di 57+ tempat (tiap halaman + tiap API route), jadi
+// tanpa cache satu klik menu bisa berarti belasan read berulang untuk data
+// yang sama.
+//
+// Firestore berada di asia-southeast2, satu region dengan Cloud Run: read
+// pertama tiap proses ~400ms (termasuk handshake), berikutnya ~80ms.
 //
 // Short-lived per-process actor cache so rapid navigation (clicking multiple
-// menus within seconds) doesn't hit Firestore every time. Firestore is in the
-// US region (nam5) -- one read is ~700-1000ms -- and this function is called
-// from 57+ places (every page + every API route), so it was the main loading
-// bottleneck before, not the data queries themselves.
+// menus within seconds) doesn't hit Firestore every time. This function is
+// called from 57+ places (every page + every API route), so without the cache
+// a single menu click could mean a dozen repeated reads of the same data.
+//
+// Firestore sits in asia-southeast2, the same region as Cloud Run: the first
+// read per process is ~400ms (handshake included), subsequent ones ~80ms.
 const actorCache = new Map<string, { actor: Actor; expiresAt: number }>();
 const ACTOR_CACHE_TTL_MS = 30_000;
 
