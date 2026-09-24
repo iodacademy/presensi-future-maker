@@ -37,7 +37,7 @@ interface Finding {
   fixable: boolean;
 }
 
-async function scan(): Promise<Finding[]> {
+async function scan(): Promise<{ findings: Finding[]; scanned: number }> {
   const db = getAdminDb();
   const snapshot = await db.collection('users').get();
   const findings: Finding[] = [];
@@ -106,7 +106,7 @@ async function scan(): Promise<Finding[]> {
     }
   }
 
-  return findings;
+  return { findings, scanned: snapshot.size };
 }
 
 async function repair(findings: Finding[]): Promise<number> {
@@ -140,12 +140,34 @@ async function repair(findings: Finding[]): Promise<number> {
 async function main() {
   const apply = process.argv.includes('--apply');
 
-  const findings = await scan();
+  const { findings, scanned } = await scan();
 
-  if (findings.length === 0) {
-    console.log('Seluruh akun sudah terindeks dengan benar. Tidak ada yang perlu diperbaiki.');
+  // Koleksi kosong berarti tidak ada yang dipindai, bukan semuanya sehat.
+  // Membedakan keduanya penting: akun yang dibuat di menu Authentication
+  // Firebase Console tidak pernah muncul di Firestore, sehingga laporan
+  // "semua benar" justru menyesatkan orang yang tidak bisa login.
+  //
+  // An empty collection means nothing was scanned, not that everything is
+  // healthy. The distinction matters: accounts created under the Firebase
+  // Console's Authentication section never appear in Firestore, so an
+  // "all correct" report misleads the very person who cannot log in.
+  if (scanned === 0) {
+    console.log('\nKoleksi `users` di Firestore KOSONG -- tidak ada akun untuk diperiksa.');
+    console.log('');
+    console.log('Login membaca Firestore, bukan menu Authentication di Firebase Console.');
+    console.log('Akun yang dibuat di menu Authentication tidak akan terbaca di sini.');
+    console.log('');
+    console.log('Buat admin pertama dengan:');
+    console.log('  npm run bootstrap-admin -- --email=alamat@anda.id --name="Nama Anda"\n');
     return;
   }
+
+  if (findings.length === 0) {
+    console.log(`\n${scanned} akun diperiksa, seluruhnya terindeks dengan benar.\n`);
+    return;
+  }
+
+  console.log(`\n${scanned} akun diperiksa.`);
 
   const fixable = findings.filter((f) => f.fixable);
   const manual = findings.filter((f) => !f.fixable);
