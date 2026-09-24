@@ -99,33 +99,34 @@ describe('data jadwal', () => {
 
 describe('lokasi luring', () => {
   it('setiap tautan Maps berupa HTTPS', () => {
+    // Tautan ini dirender sebagai href pada halaman peserta; skema selain
+    // HTTPS membuat peramban memperingatkan konten tidak aman.
+    //
+    // These links render as an href on the participant page; a non-HTTPS
+    // scheme makes the browser warn about insecure content.
     for (const [kota, venue] of Object.entries(VENUES)) {
-      expect(venue.mapsUrl, kota).toMatch(/^https:\/\/www\.google\.com\/maps\//);
+      expect(venue.mapsUrl, kota).toMatch(/^https:\/\//);
     }
   });
 
-  it('setiap tautan menunjuk koordinat di wilayah Indonesia', () => {
-    // Bujur dan lintang yang tertukar menaruh pin di Samudra Hindia, dan
-    // tandanya yang terbalik menaruhnya di belahan bumi lain -- keduanya
-    // terlihat wajar sebagai angka, tetapi mengirim peserta ke tempat yang
-    // sama sekali keliru.
+  it('setiap tautan berbeda satu sama lain', () => {
+    // Menyalin tautan antar-kota tidak menimbulkan galat apa pun, tetapi
+    // mengirim satu rombongan peserta ke kota yang keliru.
     //
-    // Swapped latitude and longitude put the pin in the Indian Ocean, and a
-    // flipped sign puts it in another hemisphere -- both look plausible as
-    // numbers while sending participants somewhere entirely wrong.
+    // Copying a link between cities raises no error at all, yet sends a whole
+    // group of participants to the wrong city.
+    const urls = Object.values(VENUES).map((v) => v.mapsUrl);
+    expect(new Set(urls).size).toBe(urls.length);
+  });
+
+  it('memakai tautan pendek resmi Google Maps', () => {
+    // Bentuk maps.app.goo.gl adalah tautan yang diperiksa penyelenggara sendiri
+    // di aplikasi Maps. Domain lain menandakan tautan tertukar saat penyuntingan.
+    //
+    // The maps.app.goo.gl form is the link the organisers checked themselves in
+    // the Maps app. Any other domain signals a link swapped in during editing.
     for (const [kota, venue] of Object.entries(VENUES)) {
-      const match = venue.mapsUrl.match(/query=(-?\d+\.\d+)%2C(-?\d+\.\d+)/);
-      expect(match, `${kota} tidak memuat koordinat`).not.toBeNull();
-
-      const lat = parseFloat(match![1]);
-      const lng = parseFloat(match![2]);
-
-      // Indonesia membentang kira-kira 6°LU-11°LS dan 95°-141°BT.
-      // Indonesia spans roughly 6°N-11°S and 95°-141°E.
-      expect(lat, `${kota} lintang`).toBeGreaterThan(-11);
-      expect(lat, `${kota} lintang`).toBeLessThan(6);
-      expect(lng, `${kota} bujur`).toBeGreaterThan(95);
-      expect(lng, `${kota} bujur`).toBeLessThan(141);
+      expect(venue.mapsUrl, kota).toMatch(/^https:\/\/maps\.app\.goo\.gl\/[A-Za-z0-9]+$/);
     }
   });
 
