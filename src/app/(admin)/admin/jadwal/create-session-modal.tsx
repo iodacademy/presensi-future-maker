@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, FileUp, Video, MapPin } from 'lucide-react';
 import type { SessionMode, SessionDocument } from '@/features/attendance/types';
 
@@ -42,8 +42,43 @@ export function CreateSessionModal({
   const [zoomUrl, setZoomUrl] = useState(editSession?.zoomUrl ?? '');
   const [address, setAddress] = useState(editSession?.address ?? '');
   const [mapsUrl, setMapsUrl] = useState(editSession?.mapsUrl ?? '');
+  // Kelas lain yang ikut sesi ini. Onboarding dihadiri beberapa kelas dalam
+  // satu ruang Zoom, sehingga satu kode QR harus berlaku bagi semuanya.
+  //
+  // Other classes joining this session. Onboarding is attended by several
+  // classes in one Zoom room, so a single QR code must work for all of them.
+  const [extraClassIds, setExtraClassIds] = useState<string[]>(
+    (editSession?.classIds ?? []).filter((id) => id !== classId)
+  );
+  const [otherClasses, setOtherClasses] = useState<{ id: string; canonicalName: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Hook dipanggil sebelum early return: memanggilnya setelah akan mengubah
+  // jumlah hook antar-render dan React menolaknya.
+  //
+  // The hook runs before the early return: calling it after would change the
+  // hook count between renders and React refuses that.
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    fetch('/api/classes')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled || !d) return;
+        setOtherClasses((d.classes ?? []).filter((c: { id: string }) => c.id !== classId));
+      })
+      .catch(() => {
+        // Gagal memuat daftar kelas tidak boleh menghalangi pembuatan sesi
+        // biasa; pilihan kelas tambahan hanya tidak muncul.
+        //
+        // Failing to load the class list must not block creating an ordinary
+        // session; the additional-class picker simply does not appear.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, classId]);
 
   if (!isOpen) return null;
 
@@ -57,7 +92,7 @@ export function CreateSessionModal({
         method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          classId, title, date, startTime, endTime, mode,
+          classId, classIds: extraClassIds, title, date, startTime, endTime, mode,
           zoomUrl: mode === 'online' ? zoomUrl : null,
           address: mode === 'offline' ? address : null,
           mapsUrl: mode === 'offline' ? mapsUrl : null,
@@ -172,6 +207,44 @@ export function CreateSessionModal({
                 </button>
               </div>
             </div>
+
+            {otherClasses.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={labelStyle}>KELAS LAIN YANG IKUT (OPSIONAL)</label>
+                <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', margin: 0 }}>
+                  Untuk sesi gabungan seperti onboarding. Satu kode QR berlaku bagi seluruh kelas yang dipilih.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '140px', overflowY: 'auto' }}>
+                  {otherClasses.map((c) => {
+                    const checked = extraClassIds.includes(c.id);
+                    return (
+                      <label
+                        key={c.id}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px',
+                          borderRadius: '8px', cursor: 'pointer', fontSize: '11px',
+                          border: checked ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
+                          backgroundColor: checked ? 'var(--color-primary-light)' : '#ffffff',
+                          color: checked ? 'var(--color-primary)' : 'var(--color-text-main)',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) =>
+                            setExtraClassIds((prev) =>
+                              e.target.checked ? [...prev, c.id] : prev.filter((id) => id !== c.id)
+                            )
+                          }
+                          style={{ margin: 0 }}
+                        />
+                        {c.canonicalName}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {mode === 'online' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

@@ -18,7 +18,8 @@
     "seed-schedule": "tsx scripts/seed-schedule.ts",
     "rename-class-city": "tsx scripts/rename-class-city.ts",
     "seed-mentors": "tsx scripts/seed-mentors.ts",
-    "seed-students": "tsx scripts/seed-students.ts"
+    "seed-students": "tsx scripts/seed-students.ts",
+    "merge-session": "tsx scripts/merge-shared-session.ts"
   },
   "dependencies": {
     "firebase": "^12.18.0",

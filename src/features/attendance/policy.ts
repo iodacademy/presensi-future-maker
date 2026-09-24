@@ -174,3 +174,34 @@ export function validateRecordingUrl(raw: string | null | undefined): string | n
     throw new Error('Tautan rekaman harus berupa URL HTTPS yang valid / Recording link must be a valid HTTPS URL');
   }
 }
+
+/**
+ * Mengembalikan seluruh kelas yang mengikuti sebuah sesi.
+ *
+ * Sesi onboarding dihadiri beberapa kelas dalam satu ruang Zoom, sehingga
+ * keanggotaan tidak dapat diperiksa hanya terhadap classId. Sesi lama tidak
+ * memuat classIds; ketiadaannya berarti hanya kelas penyelenggara yang ikut.
+ *
+ * Returns every class attending a session.
+ *
+ * An onboarding session is attended by several classes in one Zoom room, so
+ * membership cannot be checked against classId alone. Older sessions carry no
+ * classIds; its absence means only the owning class attends.
+ */
+export function sessionClassIds(session: Pick<SessionDocument, 'classId' | 'classIds'>): string[] {
+  const extra = session.classIds ?? [];
+  return Array.from(new Set([session.classId, ...extra].filter(Boolean)));
+}
+
+/**
+ * Menentukan apakah sebuah kelas mengikuti sesi tersebut.
+ *
+ * Determines whether a class attends that session.
+ */
+export function sessionIncludesClass(
+  session: Pick<SessionDocument, 'classId' | 'classIds'>,
+  classId: string | null | undefined
+): boolean {
+  if (!classId) return false;
+  return sessionClassIds(session).includes(classId);
+}

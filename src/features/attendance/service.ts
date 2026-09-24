@@ -21,6 +21,8 @@ import {
   validateSessionInput,
   isSessionAttendanceActive,
   validateRecordingUrl,
+  sessionClassIds,
+  sessionIncludesClass,
 } from './policy';
 import {
   generateQrToken,
@@ -82,9 +84,31 @@ export async function createSession(actor: Actor, input: CreateSessionInput): Pr
   const endsAt = toUtcIso(validated.date, validated.endTime);
   const now = new Date().toISOString();
 
+  // Kelas tambahan diperiksa keberadaannya lebih dulu. ID kelas yang tidak ada
+  // membuat pesertanya tidak pernah muncul pada daftar hadir, tanpa galat apa
+  // pun yang memberi tahu admin.
+  //
+  // Additional classes are verified to exist first. A class ID that does not
+  // exist leaves its participants absent from the attendance list, with no
+  // error telling the admin.
+  const extraClassIds = Array.from(
+    new Set((input.classIds ?? []).map((id) => id.trim()).filter((id) => id && id !== validated.classId))
+  );
+
+  if (extraClassIds.length > 0) {
+    const extraDocs = await Promise.all(
+      extraClassIds.map((id) => db.collection('classes').doc(id).get())
+    );
+    const missing = extraClassIds.filter((_, i) => !extraDocs[i].exists);
+    if (missing.length > 0) {
+      throw new Error(`Kelas tambahan tidak ditemukan: ${missing.join(', ')}`);
+    }
+  }
+
   const sessionDoc: SessionDocument = {
     id: sessionId,
     classId: validated.classId,
+    classIds: [validated.classId, ...extraClassIds],
     className: classData.canonicalName,
     title: validated.title,
     date: validated.date,
@@ -115,11 +139,29 @@ export async function createSession(actor: Actor, input: CreateSessionInput): Pr
  */
 export async function listSessionsForClass(classId: string): Promise<SessionDocument[]> {
   const db = getAdminDb();
-  const snapshot = await db.collection('sessions')
-    .where('classId', '==', classId)
-    .get();
 
-  const sessions = snapshot.docs.map((d) => d.data() as SessionDocument);
+  // Dua kueri, bukan satu: Firestore tidak dapat memeriksa kesamaan field dan
+  // keanggotaan array sekaligus dengan operator OR, sehingga sesi milik kelas
+  // ini dan sesi bersama yang mencantumkannya diambil terpisah lalu digabung.
+  // Tanpa kueri kedua, sesi onboarding bersama hilang dari jadwal kelas yang
+  // bukan penyelenggaranya.
+  //
+  // Two queries rather than one: Firestore cannot check a field equality and an
+  // array membership together under OR, so sessions owned by this class and
+  // shared sessions listing it are fetched separately and merged. Without the
+  // second query, a shared onboarding session vanishes from the schedule of
+  // every class that does not own it.
+  const [ownedSnap, sharedSnap] = await Promise.all([
+    db.collection('sessions').where('classId', '==', classId).get(),
+    db.collection('sessions').where('classIds', 'array-contains', classId).get(),
+  ]);
+
+  const byId = new Map<string, SessionDocument>();
+  for (const doc of [...ownedSnap.docs, ...sharedSnap.docs]) {
+    byId.set(doc.id, doc.data() as SessionDocument);
+  }
+
+  const sessions = Array.from(byId.values());
   const nowIso = new Date().toISOString();
 
   // Urutkan: Sesi yang sedang aktif ditampilkan paling atas (Frame B1 & B2), lalu berdasarkan tanggal
@@ -206,9 +248,20 @@ export async function updateSession(actor: Actor, input: UpdateSessionInput): Pr
   const startsAt = toUtcIso(validated.date, validated.startTime);
   const endsAt = toUtcIso(validated.date, validated.endTime);
 
+  // Daftar kelas peserta dapat diubah, misalnya ketika satu kelas ternyata
+  // tidak jadi bergabung. Kelas penyelenggara selalu tercantum.
+  //
+  // The attending class list can be changed, for instance when one class turns
+  // out not to join after all. The owning class is always listed.
+  const nextClassIds =
+    input.classIds !== undefined
+      ? Array.from(new Set([current.classId, ...input.classIds.filter(Boolean)]))
+      : undefined;
+
   await sessionRef.update({
     title: validated.title,
     date: validated.date,
+    ...(nextClassIds ? { classIds: nextClassIds } : {}),
     startTime: validated.startTime,
     endTime: validated.endTime,
     startsAt,
@@ -439,8 +492,14 @@ export async function recordStudentAttendance(
     throw new Error('Sesi presensi tidak ditemukan');
   }
 
-  // Validasi keanggotaan kelas siswa / Validate student class membership
-  if (session.classId !== actor.classId) {
+  // Sesi onboarding dihadiri beberapa kelas dalam satu ruang Zoom, sehingga
+  // keanggotaan diperiksa terhadap seluruh kelas yang terdaftar pada sesi itu,
+  // bukan hanya kelas penyelenggaranya.
+  //
+  // An onboarding session is attended by several classes in one Zoom room, so
+  // membership is checked against every class listed on that session, not just
+  // the owning one.
+  if (!sessionIncludesClass(session, actor.classId)) {
     throw new Error('Sesi presensi ini bukan untuk kelas Anda');
   }
 
@@ -487,7 +546,14 @@ export async function recordStudentAttendance(
       id: attendanceId,
       sessionId,
       sessionTitle: session.title,
-      classId: session.classId,
+      // Kelas peserta, bukan kelas penyelenggara sesi. Rekap kehadiran dan
+      // ekspor disaring menurut kelas peserta; menyimpan kelas penyelenggara
+      // akan menyembunyikan kehadiran peserta dari rekap kelasnya sendiri.
+      //
+      // The participant's class, not the session's owning class. Attendance
+      // reports and exports filter by the participant's class; storing the
+      // owning class would hide their attendance from their own class report.
+      classId: actor.classId!,
       studentId: actor.uid,
       studentName: actor.name,
       sessionEndsAt: session.endsAt,
@@ -598,7 +664,7 @@ export async function setAttendanceStatus(actor: Actor, input: SetAttendanceInpu
   }
   const student = studentDoc.data() as UserDocument;
 
-  if (student.classId !== session.classId) {
+  if (!sessionIncludesClass(session, student.classId)) {
     throw new Error('Peserta ini bukan anggota kelas pada pertemuan tersebut');
   }
 
@@ -636,7 +702,12 @@ export async function setAttendanceStatus(actor: Actor, input: SetAttendanceInpu
         id: attendanceRef.id,
         sessionId: input.sessionId,
         sessionTitle: session.title,
-        classId: session.classId,
+        // Kelas peserta, bukan kelas penyelenggara: rekap dan ekspor disaring
+        // menurut kelas peserta.
+        //
+        // The participant's class, not the session's owner: reports and
+        // exports filter by the participant's class.
+        classId: student.classId!,
         studentId: input.studentId,
         studentName: student.name,
         sessionEndsAt: session.endsAt,
@@ -706,12 +777,20 @@ export async function listSessionAttendance(
   }
 
   const db = getAdminDb();
+  // Sesi yang dihadiri beberapa kelas menampilkan peserta seluruhnya. Firestore
+  // membatasi klausa 'in' pada 30 nilai; jumlah kelas dalam satu sesi jauh di
+  // bawah itu.
+  //
+  // A session attended by several classes lists every participant. Firestore
+  // caps an 'in' clause at 30 values; the number of classes in one session is
+  // far below that.
+  const attendingClassIds = sessionClassIds(session);
   const [studentsSnap, attendanceSnap] = await Promise.all([
     db
       .collection('users')
-      .where('classId', '==', session.classId)
+      .where('classId', 'in', attendingClassIds)
       .where('role', '==', 'student')
-      .select('uid', 'name')
+      .select('uid', 'name', 'classId')
       .get(),
     db.collection('attendance').where('sessionId', '==', sessionId).get(),
   ]);

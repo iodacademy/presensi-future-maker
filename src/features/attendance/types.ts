@@ -12,7 +12,30 @@ export interface SessionRecording {
 
 export interface SessionDocument {
   id: string;
+  /**
+   * Kelas penyelenggara. Dipertahankan agar sesi yang sudah tersimpan tetap
+   * terbaca tanpa migrasi, dan tetap menjadi kelas yang memiliki sesi ini pada
+   * halaman jadwal admin.
+   *
+   * The owning class. Kept so existing sessions stay readable without a
+   * migration, and it remains the class this session belongs to on the admin
+   * schedule page.
+   */
   classId: string;
+  /**
+   * Seluruh kelas yang mengikuti sesi ini, termasuk kelas penyelenggara.
+   *
+   * Onboarding dihadiri beberapa kelas sekaligus dalam satu ruang Zoom,
+   * sehingga satu kode QR harus berlaku bagi semuanya. Sesi lama tidak memuat
+   * field ini; ketiadaannya berarti hanya classId yang berlaku.
+   *
+   * Every class attending this session, including the owning class.
+   *
+   * Onboarding is attended by several classes at once in one Zoom room, so a
+   * single QR code must work for all of them. Older sessions lack this field;
+   * its absence means classId alone applies.
+   */
+  classIds?: string[];
   className?: string;
   title: string;
   date: string; // YYYY-MM-DD
@@ -102,6 +125,8 @@ export interface SetAttendanceInput {
 
 export interface CreateSessionInput {
   classId: string;
+  /** Kelas tambahan yang ikut sesi ini / Additional classes joining this session */
+  classIds?: string[];
   title: string;
   date: string;
   startTime: string;
@@ -114,6 +139,7 @@ export interface CreateSessionInput {
 
 export interface UpdateSessionInput {
   sessionId: string;
+  classIds?: string[];
   title?: string;
   date?: string;
   startTime?: string;

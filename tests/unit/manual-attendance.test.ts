@@ -68,8 +68,13 @@ describe('setAttendanceStatus', () => {
     expect(body).toMatch(/recordedAt: before\?\.recordedAt \?\? now/);
   });
 
-  it('menolak peserta dari kelas lain', () => {
-    expect(body).toMatch(/student\.classId !== session\.classId/);
+  it('menolak peserta dari kelas yang tidak mengikuti sesi', () => {
+    // Sesi bersama dihadiri beberapa kelas, sehingga keanggotaan diperiksa
+    // terhadap seluruh kelas yang tercantum, bukan kelas penyelenggara saja.
+    //
+    // A shared session is attended by several classes, so membership is
+    // checked against every listed class, not the owning one alone.
+    expect(body).toContain('sessionIncludesClass(session, student.classId)');
   });
 
   it('membaca seluruhnya sebelum menulis di dalam transaksi', () => {
@@ -89,9 +94,12 @@ describe('listSessionAttendance', () => {
   const body = block('listSessionAttendance');
 
   it('menampilkan seluruh peserta kelas, bukan hanya yang tercatat', () => {
-    // Yang dicari admin justru siapa yang belum tercatat.
-    // What an admin looks for is precisely who is still unaccounted for.
-    expect(body).toMatch(/where\('classId', '==', session\.classId\)/);
+    // Yang dicari admin justru siapa yang belum tercatat. Pada sesi bersama,
+    // peserta seluruh kelas yang ikut ditampilkan.
+    //
+    // What an admin looks for is precisely who is still unaccounted for. On a
+    // shared session, participants of every attending class are listed.
+    expect(body).toMatch(/where\('classId', 'in', attendingClassIds\)/);
     expect(body).toMatch(/where\('role', '==', 'student'\)/);
   });
 
