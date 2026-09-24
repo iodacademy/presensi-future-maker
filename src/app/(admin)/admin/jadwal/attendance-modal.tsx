@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { formatTimeWib } from '@/lib/time';
 import { ATTENDANCE_STATUS_LABELS, type AttendanceStatus, type SessionDocument } from '@/features/attendance/types';
 
 interface Entry {
@@ -178,7 +179,7 @@ export function AttendanceModal({ sessionId, onClose }: AttendanceModalProps) {
                     <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-main)' }}>{entry.studentName}</div>
                     <div style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>
                       {entry.recordedAt
-                        ? `${entry.recordedAt.slice(11, 16)} WIB · ${entry.source === 'manual' ? 'dicatat admin' : 'scan QR'}`
+                        ? `${formatTimeWib(entry.recordedAt)} WIB · ${entry.source === 'manual' ? 'dicatat admin' : 'scan QR'}`
                         : 'belum tercatat'}
                       {entry.note ? ` · ${entry.note}` : ''}
                     </div>

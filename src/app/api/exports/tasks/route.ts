@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionActor } from '@/features/auth/session';
 import { listSubmissionsForAdmin } from '@/features/tasks/submission-service';
+import { formatDateTimeWib } from '@/lib/time';
 
 // Endpoint ekspor CSV rekap nilai tugas / CSV export endpoint for task submissions & grades
 export async function GET(request: Request) {
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
         sanitize(s.taskTitle),
         sanitize(s.taskKind),
         sanitize(s.url || s.fileName || ''),
-        sanitize(s.submittedAt),
+        sanitize(formatDateTimeWib(s.submittedAt)),
         sanitize(s.late ? 'YA' : 'TIDAK'),
         sanitize(s.score !== null ? s.score : 'BELUM DINILAI'),
         sanitize(s.feedbackPreview || ''),

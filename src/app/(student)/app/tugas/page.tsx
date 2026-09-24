@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Lock } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import type { StudentTaskItem } from '@/features/tasks/submission-types';
+import { formatDateWib } from '@/lib/time';
 
 export default function StudentTasksPage() {
   const [items, setItems] = useState<StudentTaskItem[]>([]);
@@ -136,7 +137,7 @@ export default function StudentTasksPage() {
                         </div>
                         <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)', margin: '8px 0 4px' }}>{task.title}</h3>
                         <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', margin: 0 }}>
-                          {isSubmitted ? `Dikumpulkan ${submission.submittedAt.slice(0, 10)}` : task.description}
+                          {isSubmitted ? `Dikumpulkan ${formatDateWib(submission.submittedAt)}` : task.description}
                         </p>
                         {feedback && (
                           <div style={{ marginTop: '8px', backgroundColor: 'var(--color-primary-light)', borderRadius: '8px', padding: '8px' }}>

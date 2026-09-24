@@ -5,6 +5,7 @@ import { AppShell } from '@/components/app-shell';
 import { Input } from '@/components/ui/input';
 import type { SubmissionDocument } from '@/features/tasks/submission-types';
 import type { ClassSummary } from '@/features/classes/types';
+import { formatDateWib } from '@/lib/time';
 
 export default function AdminTugasPage() {
   const [submissions, setSubmissions] = useState<SubmissionDocument[]>([]);
@@ -154,7 +155,7 @@ export default function AdminTugasPage() {
                 <span style={{ width: '16%', fontSize: '9px', color: 'var(--color-text-muted)' }}>{sub.className || '-'}</span>
                 <span style={{ width: '20%', fontSize: '10px', color: 'var(--color-text-main)' }}>{sub.taskTitle || sub.taskId}</span>
                 <span style={{ width: '14%', fontSize: '9px', color: 'var(--color-text-muted)' }}>
-                  {sub.submittedAt.slice(0, 10)}
+                  {formatDateWib(sub.submittedAt)}
                   {sub.late && <span style={{ color: 'var(--color-warning)', display: 'block', fontWeight: 700 }}>(Terlambat)</span>}
                 </span>
                 <span style={{ width: '14%' }}>

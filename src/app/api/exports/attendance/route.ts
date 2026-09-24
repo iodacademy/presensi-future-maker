@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionActor } from '@/features/auth/session';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { ATTENDANCE_STATUS_LABELS, type AttendanceDocument } from '@/features/attendance/types';
+import { formatDateTimeWib } from '@/lib/time';
 
 export async function GET(request: Request) {
   const actor = await getSessionActor();
@@ -50,7 +51,12 @@ export async function GET(request: Request) {
         sanitize(r.studentName),
         sanitize(r.sessionTitle),
         sanitize(status),
-        sanitize(r.recordedAt),
+        // Kolom ini berjudul "Waktu Hadir (WIB)"; nilai ISO UTC mentah akan
+        // meleset tujuh jam dari jam yang dilihat peserta saat memindai.
+        //
+        // This column reads "Waktu Hadir (WIB)"; a raw ISO UTC value would be
+        // seven hours off from the clock a participant read while scanning.
+        sanitize(formatDateTimeWib(r.recordedAt)),
         sanitize(method),
         sanitize(r.note ?? ''),
       ].join(',');

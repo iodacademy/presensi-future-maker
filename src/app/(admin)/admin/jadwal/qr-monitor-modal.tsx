@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import QRCode from 'qrcode';
 import { Maximize2 } from 'lucide-react';
 import type { QrMonitorData } from '@/features/attendance/types';
+import { formatTimeWib } from '@/lib/time';
 
 interface QrMonitorModalProps {
   sessionId: string;
@@ -205,7 +206,7 @@ export function QrMonitorModal({ sessionId, onClose, totalStudents: totalStudent
                   <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '10px', color: 'var(--color-text-main)' }}>{att.studentName}</span>
                     <span style={{ fontSize: '9px', color: 'var(--color-success)' }}>
-                      {att.recordedAt.slice(11, 16)} - via {att.source === 'camera' ? 'Kamera' : 'Scan'}
+                      {formatTimeWib(att.recordedAt)} - via {att.source === 'camera' ? 'Kamera' : 'Scan'}
                     </span>
                   </div>
                 ))

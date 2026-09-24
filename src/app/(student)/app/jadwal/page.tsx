@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { QrCode, Info, Video } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
+import { formatTimeWib } from '@/lib/time';
 import type { SessionDocument, AttendanceDocument } from '@/features/attendance/types';
 
 type FilterMode = 'all' | 'online' | 'offline' | 'rekaman';
@@ -186,7 +187,7 @@ export default function StudentJadwalPage() {
                   <div style={{ marginTop: '10px' }}>
                     {isAttended ? (
                       <div style={{ padding: '9px', borderRadius: '8px', backgroundColor: 'var(--color-success-light)', color: 'var(--color-success)', textAlign: 'center', fontSize: '11px', fontWeight: 700 }}>
-                        Hadir {attendance?.recordedAt.slice(11, 16)}
+                        Hadir {formatTimeWib(attendance?.recordedAt)}
                       </div>
                     ) : (
                       <Link href="/app/presensi/scan" style={{ textDecoration: 'none' }}>
@@ -212,7 +213,7 @@ export default function StudentJadwalPage() {
                   </span>
                   {isAttended && (
                     <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--color-success)' }}>
-                      Hadir {attendance?.recordedAt.slice(11, 16)}
+                      Hadir {formatTimeWib(attendance?.recordedAt)}
                     </span>
                   )}
                 </div>
