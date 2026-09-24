@@ -100,7 +100,12 @@ export function validateSessionInput(input: CreateSessionInput): {
  *
  * Checks if online attendance window is active (19:00 - 22:00 WIB on session date).
  */
-export function isOnlineWindowActive(sessionDate: string, currentIsoOrWibString: string): boolean {
+export function isOnlineWindowActive(
+  sessionDate: string,
+  currentIsoOrWibString: string,
+  startTime = '19:00',
+  endTime = '22:00'
+): boolean {
   const dateObj = new Date(currentIsoOrWibString);
   if (isNaN(dateObj.getTime())) return false;
 
@@ -108,15 +113,29 @@ export function isOnlineWindowActive(sessionDate: string, currentIsoOrWibString:
   const wibTime = new Date(dateObj.getTime() + 7 * 60 * 60 * 1000);
   const wibIso = wibTime.toISOString(); // e.g. "2026-09-10T19:15:00.000Z"
   const currentDateWIB = wibIso.slice(0, 10);
-  const currentHourWIB = parseInt(wibIso.slice(11, 13), 10);
+  const currentTimeWIB = wibIso.slice(11, 16); // "19:15"
 
   // Periksa kesamaan tanggal / Check date equality
   if (currentDateWIB !== sessionDate) {
     return false;
   }
 
-  // Rentang jam [19:00, 22:00) / Range [19, 22)
-  return currentHourWIB >= 19 && currentHourWIB < 22;
+  // Jendela mengikuti jam sesi, bukan 19.00-22.00 yang dipaku. Sesi gabungan
+  // dan sesi pagi memiliki jam sendiri; rentang tetap membuat presensinya tidak
+  // pernah terbuka secara otomatis, sehingga admin harus membukanya manual
+  // setiap kali.
+  //
+  // Perbandingan dilakukan sebagai string "HH:mm", yang urut secara leksikal
+  // sama dengan urutan waktunya.
+  //
+  // The window follows the session's own hours rather than a fixed 19:00-22:00.
+  // A merged or morning session has its own times; a fixed range would leave
+  // its attendance never opening on its own, forcing an admin to open it by
+  // hand every time.
+  //
+  // The comparison runs on "HH:mm" strings, whose lexical order matches their
+  // chronological order.
+  return currentTimeWIB >= startTime && currentTimeWIB < endTime;
 }
 
 /**
@@ -139,7 +158,7 @@ export function isSessionAttendanceActive(session: SessionDocument, currentIsoSt
   }
 
   if (session.mode === 'online') {
-    return isOnlineWindowActive(session.date, currentIsoString);
+    return isOnlineWindowActive(session.date, currentIsoString, session.startTime, session.endTime);
   }
 
   // Offline default auto adalah belum buka sebelum dibuka admin

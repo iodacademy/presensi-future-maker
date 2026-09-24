@@ -93,6 +93,27 @@ export function QrMonitorModal({ sessionId, onClose, totalStudents: totalStudent
     } finally { setClosing(false); }
   }
 
+  /**
+   * Mengembalikan presensi ke jadwal sesinya.
+   *
+   * Sekali dibuka atau ditutup manual, presensi menetap pada keadaan itu sampai
+   * diubah lagi; tanpa jalan kembali, sesi yang pernah disentuh admin tidak akan
+   * pernah mengikuti jam sesinya sendiri lagi.
+   *
+   * Returns attendance to the session's own schedule.
+   *
+   * Once opened or closed by hand, attendance stays that way until changed
+   * again; with no way back, a session an admin has touched would never follow
+   * its own hours again.
+   */
+  async function handleAuto() {
+    setClosing(true);
+    try {
+      await fetch(`/api/sessions/${sessionId}/monitor`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ override: 'auto' }) });
+      fetchMonitor();
+    } finally { setClosing(false); }
+  }
+
   const session = data?.session;
   const isOnline = session?.mode === 'online';
   const attendeeCount = data?.attendeeCount || 0;
@@ -161,6 +182,37 @@ export function QrMonitorModal({ sessionId, onClose, totalStudents: totalStudent
                     <div style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>Kehadiran</div>
                   </div>
                 </div>
+
+                {/* Keadaan presensi ditampilkan apa adanya. Tanpa itu admin
+                    tidak dapat membedakan presensi yang tertutup karena jadwal
+                    dari yang ditutup manual, padahal keduanya memerlukan
+                    tindakan berbeda.
+
+                    The attendance state is shown as it is. Without it an admin
+                    cannot tell attendance closed by schedule apart from
+                    attendance closed by hand, though the two call for different
+                    action. */}
+                {session && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', borderRadius: '8px', backgroundColor: 'var(--color-bg-app)' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
+                      {session.attendanceOverride === 'open'
+                        ? 'Dibuka manual oleh admin'
+                        : session.attendanceOverride === 'closed'
+                          ? 'Ditutup manual oleh admin'
+                          : `Mengikuti jadwal sesi (${session.startTime}-${session.endTime} WIB)`}
+                    </span>
+                    {session.attendanceOverride !== 'auto' && (
+                      <button
+                        type="button"
+                        onClick={handleAuto}
+                        disabled={closing}
+                        style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: '#ffffff', fontSize: '9px', fontWeight: 700, cursor: 'pointer', color: 'var(--color-text-main)', whiteSpace: 'nowrap' }}
+                      >
+                        Ikuti jadwal
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Tombol Perbesar QR + Tutup/Buka Manual (node 10:1915) */}
                 <div style={{ display: 'flex', gap: '8px' }}>
