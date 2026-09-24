@@ -67,9 +67,22 @@ steps:
       - --set-env-vars=FIREBASE_PROJECT_ID=${_NEXT_PUBLIC_FIREBASE_PROJECT_ID}
       # Rahasia sungguhan diambil dari Secret Manager saat runtime, bukan
       # dibekukan ke dalam image.
+      #
+      # GOOGLE_CALENDAR_GAS_* belum disertakan: Secret Manager menolak payload
+      # kosong, dan Workspace bootcamp belum tersambung. Klien kalender memang
+      # dirancang berjalan tanpa keduanya -- mentoring tetap dapat dipesan,
+      # hanya tanpa tautan Meet otomatis. Tambahkan ke baris ini setelah kedua
+      # secret berisi nilai sungguhan.
+      #
       # Real secrets are read from Secret Manager at runtime, not baked into the
       # image.
-      - --set-secrets=QR_TOKEN_SECRET=qr-token-secret:latest,GOOGLE_CALENDAR_GAS_URL=gas-url:latest,GOOGLE_CALENDAR_GAS_SECRET=gas-secret:latest
+      #
+      # GOOGLE_CALENDAR_GAS_* is not included yet: Secret Manager rejects an
+      # empty payload, and the bootcamp Workspace is not connected. The calendar
+      # client is designed to run without both -- mentoring stays bookable, just
+      # without an automatic Meet link. Add them to this line once both secrets
+      # hold real values.
+      - --set-secrets=QR_TOKEN_SECRET=qr-token-secret:latest
       # Satu instance selalu hidup: tanpa ini pengguna pertama tiap pagi
       # menunggu cold start.
       # One instance always warm: without this the first user each morning waits
