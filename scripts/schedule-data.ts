@@ -38,18 +38,24 @@ export interface Venue {
 }
 
 /**
- * Tautan Maps memakai pencarian berdasarkan nama dan alamat, bukan koordinat
- * yang dipasang sendiri. Pin yang meleset mengirim peserta ke gedung yang
- * salah, sedangkan tautan pencarian selalu mendarat pada tempat yang benar
- * meski butuh satu ketuk tambahan.
+ * Menyusun tautan Maps dari koordinat tempat.
  *
- * Maps links use a name-and-address search rather than hand-placed
- * coordinates. A pin that misses sends participants to the wrong building,
- * while a search link always lands on the right place even if it costs one
- * extra tap.
+ * Koordinatnya diambil dari tautan maps.app.goo.gl yang diberikan penyelenggara
+ * lalu ditelusuri ke URL panjangnya, sehingga nama tempat pada tiap titik sudah
+ * dipastikan. Bentuk panjang dipakai, bukan tautan pendeknya: tautan pendek
+ * bergantung pada layanan pemendek Google yang dapat berubah, dan tujuannya
+ * tidak terbaca saat meninjau kode.
+ *
+ * Builds a Maps link from a venue's coordinates.
+ *
+ * The coordinates come from the maps.app.goo.gl links the organisers supplied,
+ * resolved to their long URLs so the place name behind each pin is confirmed.
+ * The long form is used rather than the short link: short links depend on
+ * Google's shortener, which can change, and their destination is unreadable
+ * when reviewing the code.
  */
-function mapsSearch(query: string): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+function mapsPin(lat: number, lng: number): string {
+  return `https://www.google.com/maps/search/?api=1&query=${lat}%2C${lng}`;
 }
 
 export const VENUES: Record<string, Venue> = {
@@ -57,25 +63,35 @@ export const VENUES: Record<string, Venue> = {
     name: 'BBPVP Semarang',
     address:
       'Jalan Brigjen Sudiarto No. 118, Palebon, Kecamatan Pedurungan, Kota Semarang, Jawa Tengah 50246',
-    mapsUrl: mapsSearch('BBPVP Semarang, Jalan Brigjen Sudiarto No. 118, Palebon, Pedurungan, Semarang, Jawa Tengah 50246'),
+    // Balai Besar Pelatihan Vokasi & Produktivitas Semarang
+    mapsUrl: mapsPin(-7.0090772, 110.4673831),
   },
   Surabaya: {
     name: 'Disnaker Provinsi Jawa Timur',
     address:
       'Jalan Dukuh Menanggal Selatan No. 124-126, Dukuh Menanggal, Kecamatan Gayungan, Surabaya, Jawa Timur 60234',
-    mapsUrl: mapsSearch('Dinas Tenaga Kerja Provinsi Jawa Timur, Jalan Dukuh Menanggal Selatan No. 124-126, Gayungan, Surabaya, Jawa Timur 60234'),
+    // Dinas Tenaga Kerja dan Transmigrasi Provinsi Jawa Timur
+    mapsUrl: mapsPin(-7.3417593, 112.7194662),
   },
   Yogyakarta: {
     name: 'BPO Yogyakarta',
     address:
       'Ndalem Ngadiwinatan, Suryoputran KT II No. 23, Panembahan, Kecamatan Kraton, Kota Yogyakarta, Daerah Istimewa Yogyakarta 55133',
-    mapsUrl: mapsSearch('Ndalem Ngadiwinatan, Suryoputran KT II No. 23, Panembahan, Kraton, Yogyakarta 55133'),
+    // Tercatat di Maps sebagai "Youth And Sports Hall DIY (BPO DIY)", bukan
+    // nama bangunan cagar budayanya. Koordinatnya berada di Panembahan, Kraton,
+    // sesuai alamat yang diberikan penyelenggara.
+    //
+    // Listed on Maps as "Youth And Sports Hall DIY (BPO DIY)" rather than the
+    // heritage building's name. The coordinates sit in Panembahan, Kraton,
+    // matching the address the organisers gave.
+    mapsUrl: mapsPin(-7.7920581, 110.3990689),
   },
   'DKI Jakarta': {
     name: 'Poltek APP Jakarta',
     address:
       'Jalan Timbul No. 34, RT.6/RW.5, Cipedak, Kecamatan Jagakarsa, Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12630',
-    mapsUrl: mapsSearch('Politeknik APP Jakarta, Jalan Timbul No. 34, Cipedak, Jagakarsa, Jakarta Selatan 12630'),
+    // Politeknik APP Jakarta
+    mapsUrl: mapsPin(-6.3501724, 106.8095635),
   },
 };
 

@@ -104,14 +104,33 @@ describe('lokasi luring', () => {
     }
   });
 
-  it('tautan memuat nama tempat yang ter-encode', () => {
-    // Tautan pencarian dipakai alih-alih koordinat yang dipasang sendiri: pin
-    // yang meleset mengirim peserta ke gedung yang salah.
+  it('setiap tautan menunjuk koordinat di wilayah Indonesia', () => {
+    // Bujur dan lintang yang tertukar menaruh pin di Samudra Hindia, dan
+    // tandanya yang terbalik menaruhnya di belahan bumi lain -- keduanya
+    // terlihat wajar sebagai angka, tetapi mengirim peserta ke tempat yang
+    // sama sekali keliru.
     //
-    // A search link is used rather than hand-placed coordinates: a pin that
-    // misses sends participants to the wrong building.
+    // Swapped latitude and longitude put the pin in the Indian Ocean, and a
+    // flipped sign puts it in another hemisphere -- both look plausible as
+    // numbers while sending participants somewhere entirely wrong.
     for (const [kota, venue] of Object.entries(VENUES)) {
-      expect(venue.mapsUrl, kota).toContain('query=');
+      const match = venue.mapsUrl.match(/query=(-?\d+\.\d+)%2C(-?\d+\.\d+)/);
+      expect(match, `${kota} tidak memuat koordinat`).not.toBeNull();
+
+      const lat = parseFloat(match![1]);
+      const lng = parseFloat(match![2]);
+
+      // Indonesia membentang kira-kira 6°LU-11°LS dan 95°-141°BT.
+      // Indonesia spans roughly 6°N-11°S and 95°-141°E.
+      expect(lat, `${kota} lintang`).toBeGreaterThan(-11);
+      expect(lat, `${kota} lintang`).toBeLessThan(6);
+      expect(lng, `${kota} bujur`).toBeGreaterThan(95);
+      expect(lng, `${kota} bujur`).toBeLessThan(141);
+    }
+  });
+
+  it('memuat nama dan alamat tempat', () => {
+    for (const [kota, venue] of Object.entries(VENUES)) {
       expect(venue.name.length, kota).toBeGreaterThan(0);
       expect(venue.address.length, kota).toBeGreaterThan(20);
     }
