@@ -6,16 +6,66 @@ import { QrCode, Info, Video } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import type { SessionDocument, AttendanceDocument } from '@/features/attendance/types';
 
+type FilterMode = 'all' | 'online' | 'offline' | 'rekaman';
+
 interface SessionItem {
   session: SessionDocument;
   attendance: AttendanceDocument | null;
   isActive: boolean;
 }
 
+/**
+ * Daftar tautan rekaman sebuah pertemuan.
+ *
+ * Dipakai oleh kartu sesi berlangsung maupun kartu sesi selesai: sesi panjang
+ * dapat sudah memiliki rekaman sebagian sebelum pertemuannya berakhir, dan
+ * peserta yang mencarinya tidak perlu menunggu kartunya berubah bentuk.
+ *
+ * The list of a meeting's recording links.
+ *
+ * Used by both the in-progress and the finished session card: a long session
+ * may already have partial recordings before it ends, and a participant looking
+ * for them should not have to wait for the card to change shape.
+ */
+function RecordingLinks({ session }: { session: SessionDocument }) {
+  const recordings = session.recordings ?? [];
+  if (recordings.length === 0) return null;
+
+  return (
+    <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+      {recordings.map((r) => (
+        <a
+          key={r.id}
+          href={r.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px',
+            borderRadius: '8px', backgroundColor: 'var(--color-primary-light)',
+            textDecoration: 'none',
+          }}
+        >
+          <Video size={12} color="var(--color-primary)" strokeWidth={2} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-primary)' }}>
+            Rekaman - {r.label}
+          </span>
+        </a>
+      ))}
+    </div>
+  );
+}
+
 export default function StudentJadwalPage() {
   const [items, setItems] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterMode, setFilterMode] = useState<'all' | 'online' | 'offline'>('all');
+  // 'rekaman' menyaring pertemuan yang rekamannya sudah diunggah. Tanpa filter
+  // ini rekaman terkubur di dalam kartu masing-masing pertemuan dan peserta
+  // harus menggulir seluruh jadwal untuk menemukannya.
+  //
+  // 'rekaman' filters to meetings whose recordings are up. Without it,
+  // recordings sit buried inside each meeting's card and participants must
+  // scroll the whole schedule to find them.
+  const [filterMode, setFilterMode] = useState<FilterMode>('all');
 
   useEffect(() => {
     async function loadSessions() {
@@ -34,9 +84,14 @@ export default function StudentJadwalPage() {
 
   const onlineCount = items.filter((i) => i.session.mode === 'online').length;
   const offlineCount = items.filter((i) => i.session.mode === 'offline').length;
-  const filteredItems = items.filter((i) => filterMode === 'all' || i.session.mode === filterMode);
+  const recordedCount = items.filter((i) => (i.session.recordings?.length ?? 0) > 0).length;
+  const filteredItems = items.filter((i) => {
+    if (filterMode === 'all') return true;
+    if (filterMode === 'rekaman') return (i.session.recordings?.length ?? 0) > 0;
+    return i.session.mode === filterMode;
+  });
 
-  const filterChip = (mode: 'all' | 'online' | 'offline', label: string) => {
+  const filterChip = (mode: FilterMode, label: string) => {
     const active = filterMode === mode;
     return (
       <button
@@ -55,7 +110,7 @@ export default function StudentJadwalPage() {
     );
   };
 
-  const filterChipDesktop = (mode: 'all' | 'online' | 'offline', label: string) => {
+  const filterChipDesktop = (mode: FilterMode, label: string) => {
     const active = filterMode === mode;
     return (
       <button
@@ -78,24 +133,28 @@ export default function StudentJadwalPage() {
     <StudentShell userName="Peserta">
       {/* Header biru mobile (node 11:2870) */}
       <div className="student-mobile-header" style={{ backgroundColor: 'var(--color-primary)', padding: '24px 16px 18px' }}>
-        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: '#ffffff', margin: 0 }}>Jadwal</h1>
-        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+          Jadwal dan Rekaman
+        </h1>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', overflowX: 'auto', paddingBottom: '2px' }}>
           {filterChip('all', 'Semua')}
           {filterChip('online', 'Online')}
           {filterChip('offline', 'Offline')}
+          {recordedCount > 0 && filterChip('rekaman', 'Rekaman')}
         </div>
       </div>
 
       {/* Topbar desktop (node 15:157) */}
       <div className="student-topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--color-student-border)', padding: '18px 28px', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: 'var(--color-text-main)' }}>Jadwal Kelas</h1>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: 'var(--color-text-main)' }}>Jadwal dan Rekaman</h1>
           <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>Future Innovators Bootcamp</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           {filterChipDesktop('all', `Semua (${items.length})`)}
           {filterChipDesktop('online', `Online (${onlineCount})`)}
           {filterChipDesktop('offline', `Offline (${offlineCount})`)}
+          {recordedCount > 0 && filterChipDesktop('rekaman', `Rekaman (${recordedCount})`)}
         </div>
       </div>
 
@@ -104,7 +163,7 @@ export default function StudentJadwalPage() {
           <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Memuat jadwal kelas...</div>
         ) : filteredItems.length === 0 ? (
           <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid var(--color-border)', padding: '48px', textAlign: 'center', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)' }}>
-            Tidak ada jadwal pertemuan
+            {filterMode === 'rekaman' ? 'Belum ada rekaman yang diunggah' : 'Tidak ada jadwal pertemuan'}
           </div>
         ) : (
           filteredItems.map(({ session, attendance, isActive }) => {
@@ -138,6 +197,7 @@ export default function StudentJadwalPage() {
                       </Link>
                     )}
                   </div>
+                  <RecordingLinks session={session} />
                 </div>
               );
             }
@@ -167,33 +227,7 @@ export default function StudentJadwalPage() {
                   </div>
                 )}
 
-                {/* Rekaman muncul setelah admin menambahkannya; satu sesi dapat
-                    memuat beberapa rekaman bila dipecah ke breakout room.
-
-                    Recordings appear once an admin adds them; one session may
-                    hold several when it splits into breakout rooms. */}
-                {(session.recordings?.length ?? 0) > 0 && (
-                  <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    {session.recordings!.map((r) => (
-                      <a
-                        key={r.id}
-                        href={r.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px',
-                          borderRadius: '8px', backgroundColor: 'var(--color-primary-light)',
-                          textDecoration: 'none',
-                        }}
-                      >
-                        <Video size={12} color="var(--color-primary)" strokeWidth={2} style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-primary)' }}>
-                          Rekaman - {r.label}
-                        </span>
-                      </a>
-                    ))}
-                  </div>
-                )}
+                <RecordingLinks session={session} />
               </div>
             );
           })
