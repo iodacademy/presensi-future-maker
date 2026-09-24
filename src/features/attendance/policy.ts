@@ -40,6 +40,11 @@ export function validateSessionInput(input: CreateSessionInput): {
     throw new Error('Jam selesai harus lebih akhir dari jam mulai / End time must be after start time');
   }
 
+  // Pola validasi HTTPS ini dipakai di beberapa tempat; lihat validateRecordingUrl
+  // di bawah untuk bentuk yang dapat dipanggil ulang.
+  //
+  // This HTTPS validation shape recurs in several places; see
+  // validateRecordingUrl below for the reusable form.
   if (mode === 'online') {
     if (!zoomUrl) {
       throw new Error('Sesi Online wajib menyertakan Link Zoom HTTPS / Online session requires HTTPS Zoom link');
@@ -134,4 +139,32 @@ export function isSessionAttendanceActive(session: SessionDocument, currentIsoSt
   // Offline default auto adalah belum buka sebelum dibuka admin
   // Offline default auto is closed until manually opened
   return false;
+}
+
+/**
+ * Memvalidasi tautan rekaman sesi. Nilai kosong berarti rekaman dihapus,
+ * sehingga dikembalikan sebagai null alih-alih ditolak.
+ *
+ * HTTPS diwajibkan karena tautan ini dibuka peserta dari halaman aplikasi:
+ * tautan http membuat peramban memperingatkan konten tidak aman, dan tautan
+ * javascript: akan dieksekusi di peramban mereka.
+ *
+ * Validates a session recording link. An empty value means the recording is
+ * being cleared, so it returns null rather than being rejected.
+ *
+ * HTTPS is required because participants open this link from inside the app: an
+ * http link makes the browser warn about insecure content, and a javascript:
+ * link would execute in their browser.
+ */
+export function validateRecordingUrl(raw: string | null | undefined): string | null {
+  const value = (raw ?? '').trim();
+  if (!value) return null;
+
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== 'https:') throw new Error();
+    return value;
+  } catch {
+    throw new Error('Tautan rekaman harus berupa URL HTTPS yang valid / Recording link must be a valid HTTPS URL');
+  }
 }

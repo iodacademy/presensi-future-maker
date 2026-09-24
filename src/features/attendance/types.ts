@@ -13,7 +13,16 @@ export interface SessionDocument {
   startsAt: string; // ISO UTC
   endsAt: string; // ISO UTC
   mode: SessionMode;
+  // Tautan bergabung ke sesi, dipakai sebelum dan selama sesi berlangsung
+  // Join link for the session, used before and during the meeting
   zoomUrl: string | null;
+  // Tautan rekaman, diisi admin setelah sesi selesai. Berbeda dari zoomUrl:
+  // tautan bergabung tidak memutar apa pun setelah sesi berakhir.
+  //
+  // Recording link, filled in by an admin after the session ends. Distinct from
+  // zoomUrl: a join link plays nothing once the meeting is over.
+  recordingUrl?: string | null;
+  recordingNote?: string | null;
   address: string | null;
   mapsUrl: string | null;
   attendanceOverride: AttendanceOverride;
@@ -45,6 +54,12 @@ export interface CreateSessionInput {
   zoomUrl?: string | null;
   address?: string | null;
   mapsUrl?: string | null;
+}
+
+export interface SetRecordingInput {
+  sessionId: string;
+  recordingUrl: string | null;
+  recordingNote?: string | null;
 }
 
 export interface QrMonitorData {

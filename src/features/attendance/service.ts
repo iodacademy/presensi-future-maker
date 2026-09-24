@@ -9,11 +9,13 @@ import type {
   CreateSessionInput,
   AttendanceOverride,
   QrMonitorData,
+  SetRecordingInput,
 } from './types';
 import type { ClassDocument } from '../classes/types';
 import {
   validateSessionInput,
   isSessionAttendanceActive,
+  validateRecordingUrl,
 } from './policy';
 import {
   generateQrToken,
@@ -125,6 +127,39 @@ export async function listSessionsForClass(classId: string): Promise<SessionDocu
     if (!aActive && bActive) return 1;
 
     return a.startsAt.localeCompare(b.startsAt);
+  });
+}
+
+/**
+ * Admin menyimpan atau menghapus tautan rekaman sebuah sesi.
+ *
+ * Tautan diisi setelah sesi berlangsung, sehingga terpisah dari zoomUrl yang
+ * dipakai untuk bergabung. Nilai kosong menghapus rekaman, bukan ditolak.
+ *
+ * Admin stores or clears a session's recording link.
+ *
+ * The link is filled in after the session has run, so it is kept separate from
+ * zoomUrl, which is used to join. An empty value clears the recording rather
+ * than being rejected.
+ */
+export async function setSessionRecording(actor: Actor, input: SetRecordingInput): Promise<void> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan mengisi rekaman sesi');
+  }
+
+  const url = validateRecordingUrl(input.recordingUrl);
+  const note = (input.recordingNote ?? '').trim().slice(0, 200) || null;
+
+  const db = getAdminDb();
+  const sessionRef = db.collection('sessions').doc(input.sessionId);
+  if (!(await sessionRef.get()).exists) {
+    throw new Error('Sesi tidak ditemukan');
+  }
+
+  await sessionRef.update({
+    recordingUrl: url,
+    recordingNote: note,
+    updatedAt: new Date().toISOString(),
   });
 }
 
