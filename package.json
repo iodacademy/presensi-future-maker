@@ -14,7 +14,8 @@
     "bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
     "repair-index": "tsx scripts/repair-email-index.ts",
     "diagnose-accounts": "tsx scripts/diagnose-accounts.ts",
-    "check-login": "tsx scripts/check-login.ts"
+    "check-login": "tsx scripts/check-login.ts",
+    "seed-schedule": "tsx scripts/seed-schedule.ts"
   },
   "dependencies": {
     "firebase": "^12.18.0",

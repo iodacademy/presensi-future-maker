@@ -175,10 +175,10 @@ export function CreateSessionModal({
 
             {mode === 'online' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={labelStyle}>LINK ZOOM</label>
+                <label style={labelStyle}>LINK ZOOM (OPSIONAL)</label>
                 <div style={{ position: 'relative' }}>
                   <Video size={13} color="var(--color-primary)" strokeWidth={2} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
-                  <input style={{ ...inputStyle, paddingLeft: '32px' }} type="url" placeholder="https://zoom.us/j/1234567890" value={zoomUrl} onChange={(e) => setZoomUrl(e.target.value)} required />
+                  <input style={{ ...inputStyle, paddingLeft: '32px' }} type="url" placeholder="https://zoom.us/j/1234567890" value={zoomUrl} onChange={(e) => setZoomUrl(e.target.value)} />
                 </div>
               </div>
             ) : (

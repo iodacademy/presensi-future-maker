@@ -45,15 +45,21 @@ export function validateSessionInput(input: CreateSessionInput): {
   //
   // This HTTPS validation shape recurs in several places; see
   // validateRecordingUrl below for the reusable form.
+  // Tautan Zoom bersifat opsional: jadwal umumnya disusun jauh sebelum tautan
+  // rapatnya terbit, dan mewajibkannya memaksa admin mengisi nilai karangan
+  // yang kemudian harus dibersihkan. Bila diisi, tetap wajib HTTPS.
+  //
+  // The Zoom link is optional: schedules are usually drawn up well before the
+  // meeting link exists, and requiring it forces admins to enter a made-up
+  // value they must clean up later. When present, HTTPS is still required.
   if (mode === 'online') {
-    if (!zoomUrl) {
-      throw new Error('Sesi Online wajib menyertakan Link Zoom HTTPS / Online session requires HTTPS Zoom link');
-    }
-    try {
-      const u = new URL(zoomUrl);
-      if (u.protocol !== 'https:') throw new Error();
-    } catch {
-      throw new Error('Link Zoom harus berupa URL HTTPS yang valid / Zoom link must be valid HTTPS');
+    if (zoomUrl) {
+      try {
+        const u = new URL(zoomUrl);
+        if (u.protocol !== 'https:') throw new Error();
+      } catch {
+        throw new Error('Link Zoom harus berupa URL HTTPS yang valid / Zoom link must be valid HTTPS');
+      }
     }
     address = null;
     mapsUrl = null;

@@ -11,7 +11,25 @@ import {
 
 describe('Attendance Policy', () => {
   it('validates manual session creation input for online mode', () => {
-    // Online tanpa link zoom / Online without zoom link
+    // Online tanpa link zoom diterima: jadwal umumnya disusun jauh sebelum
+    // tautan rapatnya terbit, dan mewajibkannya memaksa admin mengisi nilai
+    // karangan yang kemudian harus dibersihkan.
+    //
+    // Online without a zoom link is accepted: schedules are usually drawn up
+    // well before the meeting link exists, and requiring it forces admins to
+    // enter a made-up value they must clean up later.
+    const onlineTanpaZoom = validateSessionInput({
+      classId: 'c1',
+      title: 'React Fundamentals',
+      date: '2026-09-10',
+      startTime: '19:00',
+      endTime: '22:00',
+      mode: 'online',
+      zoomUrl: '',
+    });
+    expect(onlineTanpaZoom.zoomUrl).toBeNull();
+
+    // Tautan yang diisi tetap wajib HTTPS / A link that is present must still be HTTPS
     expect(() =>
       validateSessionInput({
         classId: 'c1',
@@ -20,9 +38,9 @@ describe('Attendance Policy', () => {
         startTime: '19:00',
         endTime: '22:00',
         mode: 'online',
-        zoomUrl: '',
+        zoomUrl: 'http://zoom.us/j/123',
       })
-    ).toThrowError(/Sesi Online wajib menyertakan Link Zoom HTTPS/);
+    ).toThrowError(/Link Zoom harus berupa URL HTTPS/);
 
     // Online valid
     const validOnline = validateSessionInput({
