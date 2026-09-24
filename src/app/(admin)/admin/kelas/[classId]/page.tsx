@@ -285,6 +285,14 @@ export default function CourseBuilderPage({
   const dailyTasks = tasks.filter((t) => t.kind === 'daily');
   const capstoneTask = tasks.find((t) => t.kind === 'capstone');
   const isDraft = classData?.status === 'draft';
+  // Tugas kini dapat disusun setelah kelas aktif; hanya kelas terarsip yang
+  // terkunci. Kelas diaktifkan berbekal jadwal saja agar peserta dapat melihat
+  // jadwalnya lebih dulu.
+  //
+  // Tasks can now be written after a class goes active; only archived classes
+  // are closed. A class activates on its schedule alone so participants can see
+  // that schedule first.
+  const canEditTasks = classData?.status !== 'archived';
   const assignedMentors = mentors.filter((m) => classData?.mentorIds?.includes(m.uid));
   const mentorNames = assignedMentors.length > 0 ? assignedMentors.map((m) => m.name.split(' ')[0]).join(', ') : 'Belum ada mentor';
 
@@ -484,7 +492,7 @@ export default function CourseBuilderPage({
           <div style={{ flex: '1 1 480px', minWidth: '360px', display: tab === 'tugas' ? 'flex' : 'none', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>Instruksi Tugas Harian</h2>
-              {isDraft && (
+              {canEditTasks && (
                 <button
                   type="button"
                   onClick={() => { setKind('daily'); setIsModalOpen(true); }}
@@ -506,7 +514,7 @@ export default function CourseBuilderPage({
                   Belum ada Tugas Harian
                 </div>
                 <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', maxWidth: '360px', margin: '0 auto 16px' }}>
-                  Minimal harus ada 1 tugas harian sebelum kelas dapat diaktifkan.
+                  Tugas dapat ditambahkan kapan saja, termasuk setelah kelas aktif.
                 </p>
               </div>
             ) : (
@@ -552,7 +560,7 @@ export default function CourseBuilderPage({
           <div style={{ flex: '1 1 340px', minWidth: '320px', display: tab === 'capstone' ? 'flex' : 'none', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>Instruksi Capstone</h2>
-              {isDraft && !capstoneTask && (
+              {canEditTasks && !capstoneTask && (
                 <button
                   type="button"
                   onClick={() => { setKind('capstone'); setIsModalOpen(true); }}
@@ -589,9 +597,9 @@ export default function CourseBuilderPage({
                   Belum ada Capstone Project
                 </div>
                 <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', maxWidth: '300px', margin: '0 auto 16px' }}>
-                  Wajib ada tepat 1 instruksi Capstone sebelum kelas diaktifkan.
+                  Capstone dapat disusun kapan saja, termasuk setelah kelas aktif.
                 </p>
-                {isDraft && (
+                {canEditTasks && (
                   <Button variant="primary" onClick={() => { setKind('capstone'); setIsModalOpen(true); }}>
                     + Susun Capstone Project
                   </Button>

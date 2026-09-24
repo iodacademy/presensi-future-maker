@@ -27,8 +27,8 @@ export async function createTask(actor: Actor, input: CreateTaskInput): Promise<
   }
 
   const classData = classDoc.data() as ClassDocument;
-  if (classData.status !== 'draft') {
-    throw new Error('Tugas hanya dapat ditambahkan pada kelas yang berstatus draft');
+  if (classData.status === 'archived') {
+    throw new Error('Tugas tidak dapat ditambahkan pada kelas yang diarsipkan');
   }
 
   if (validated.kind === 'capstone' && (classData.capstoneTaskCount || 0) >= 1) {
@@ -47,7 +47,14 @@ export async function createTask(actor: Actor, input: CreateTaskInput): Promise<
     dueAt: validated.dueAt,
     briefUrl: validated.briefUrl,
     briefFileName: validated.briefFileName,
-    published: false,
+    // Tugas pada kelas yang sudah aktif langsung terbit; peserta sudah berada
+    // di dalam kelas dan menunggu tugasnya. Pada kelas draft, penerbitan
+    // menunggu aktivasi.
+    //
+    // A task on an already-active class publishes at once; participants are
+    // inside the class and waiting for it. On a draft class, publishing waits
+    // for activation.
+    published: classData.status === 'active',
     version: 1,
     createdAt: now,
     updatedAt: now,
@@ -67,8 +74,27 @@ export async function createTask(actor: Actor, input: CreateTaskInput): Promise<
   const deltaField = validated.kind === 'daily' ? 'dailyTaskCount' : 'capstoneTaskCount';
   const currentCount = classData[deltaField] || 0;
 
+  // Snapshot tugas wajib ikut diperbarui pada kelas yang sudah aktif. Capstone
+  // terbuka hanya bila setiap ID dalam snapshot itu sudah dikumpulkan, sehingga
+  // tugas baru yang tidak tercatat di sana tidak pernah dihitung -- dan tugas
+  // yang tidak tercatat tidak menghalangi Capstone, tetapi tugas yang tercatat
+  // tanpa pernah terbit akan mengunci Capstone selamanya.
+  //
+  // The required-task snapshot is updated too on an already-active class. The
+  // Capstone unlocks only when every ID in that snapshot has been submitted, so
+  // a new task missing from it is never counted -- and while an unlisted task
+  // does not block the Capstone, a listed task that never publishes would lock
+  // it forever.
+  const joinsSnapshot = validated.kind === 'daily' && classData.status === 'active';
+
   batch.update(classRef, {
     [deltaField]: currentCount + 1,
+    ...(joinsSnapshot
+      ? { requiredDailyTaskIds: [...(classData.requiredDailyTaskIds || []), taskId] }
+      : {}),
+    ...(validated.kind === 'capstone' && classData.status === 'active'
+      ? { capstoneTaskId: taskId }
+      : {}),
     updatedAt: now,
   });
 
@@ -152,40 +178,41 @@ export async function activateClass(actor: Actor, classId: string): Promise<void
 
   const classData = classDoc.data() as ClassDocument;
 
-  // Evaluasi kelayakan aktivasi / Evaluate activation eligibility
+  const sessionsSnap = await db.collection('sessions').where('classId', '==', classId).count().get();
+
   const check = canActivateClass({
     status: classData.status,
-    mentorCount: classData.mentorCount || classData.mentorIds?.length || 0,
-    dailyTaskCount: classData.dailyTaskCount || 0,
-    capstoneTaskCount: classData.capstoneTaskCount || 0,
+    sessionCount: sessionsSnap.data().count,
   });
 
   if (!check.canActivate) {
     throw new Error(`Kelas belum dapat diaktifkan: ${check.reason}`);
   }
 
-  // Ambil semua tugas untuk merekam snapshot ID tugas harian wajib
-  // Fetch all tasks to record the snapshot of required daily tasks
   const tasksSnap = await db.collection('tasks').where('classId', '==', classId).get();
   const tasks = tasksSnap.docs.map((d) => d.data() as TaskDocument);
 
   const dailyTasks = tasks.filter((t) => t.kind === 'daily').sort((a, b) => a.order - b.order);
   const capstoneTask = tasks.find((t) => t.kind === 'capstone');
 
-  if (!capstoneTask) {
-    throw new Error('Instruksi Capstone Project tidak ditemukan');
-  }
-
   const requiredDailyTaskIds = dailyTasks.map((t) => t.id);
   const now = new Date().toISOString();
 
   const batch = db.batch();
 
-  // Kunci snapshot di dokumen kelas / Lock snapshot on class document
+  // Snapshot tugas wajib tidak lagi terkunci di sini. Kelas dapat diaktifkan
+  // tanpa satu pun tugas, dan tugas yang ditambahkan kemudian bergabung ke
+  // snapshot lewat createTask; bila daftarnya dibekukan saat ini, Capstone
+  // tidak akan pernah terbuka pada kelas yang tugasnya disusun belakangan.
+  //
+  // The required-task snapshot is no longer frozen here. A class may be
+  // activated with no tasks at all, and tasks added later join the snapshot via
+  // createTask; freezing the list now would leave the Capstone permanently shut
+  // on any class whose tasks are written afterwards.
   batch.update(classRef, {
     status: 'active',
     requiredDailyTaskIds,
-    capstoneTaskId: capstoneTask.id,
+    capstoneTaskId: capstoneTask?.id ?? null,
     updatedAt: now,
   });
 

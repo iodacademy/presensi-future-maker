@@ -51,55 +51,21 @@ describe('Tasks Policy', () => {
   });
 
   it('checks class activation requirements', () => {
-    // Kurang mentor / Missing mentor
-    expect(
-      canActivateClass({
-        status: 'draft',
-        mentorCount: 0,
-        dailyTaskCount: 2,
-        capstoneTaskCount: 1,
-      }).canActivate
-    ).toBe(false);
+    // Hanya jadwal yang diwajibkan. Mentor, tugas harian, dan Capstone disusun
+    // selama program berjalan, sehingga menuntutnya di muka menahan peserta
+    // dari melihat jadwal yang sudah pasti.
+    //
+    // Only the schedule is required. Mentors, daily tasks, and the Capstone are
+    // assembled as the programme runs, so demanding them upfront keeps
+    // participants from seeing a schedule that is already settled.
+    expect(canActivateClass({ status: 'draft', sessionCount: 0 }).canActivate).toBe(false);
+    expect(canActivateClass({ status: 'draft', sessionCount: 1 }).canActivate).toBe(true);
+    expect(canActivateClass({ status: 'draft', sessionCount: 13 }).canActivate).toBe(true);
 
-    // Kurang tugas harian / Missing daily tasks
-    expect(
-      canActivateClass({
-        status: 'draft',
-        mentorCount: 1,
-        dailyTaskCount: 0,
-        capstoneTaskCount: 1,
-      }).canActivate
-    ).toBe(false);
-
-    // Kurang capstone / Missing capstone
-    expect(
-      canActivateClass({
-        status: 'draft',
-        mentorCount: 1,
-        dailyTaskCount: 4,
-        capstoneTaskCount: 0,
-      }).canActivate
-    ).toBe(false);
-
-    // Lebih dari 1 capstone / More than 1 capstone
-    expect(
-      canActivateClass({
-        status: 'draft',
-        mentorCount: 1,
-        dailyTaskCount: 4,
-        capstoneTaskCount: 2,
-      }).canActivate
-    ).toBe(false);
-
-    // Siap aktivasi / Ready to activate
-    expect(
-      canActivateClass({
-        status: 'draft',
-        mentorCount: 2,
-        dailyTaskCount: 4,
-        capstoneTaskCount: 1,
-      }).canActivate
-    ).toBe(true);
+    // Kelas yang sudah aktif atau diarsipkan tidak diaktifkan ulang.
+    // An already-active or archived class is not reactivated.
+    expect(canActivateClass({ status: 'active', sessionCount: 13 }).canActivate).toBe(false);
+    expect(canActivateClass({ status: 'archived', sessionCount: 13 }).canActivate).toBe(false);
   });
 
   it('determines if Capstone is unlocked for a student', () => {
@@ -111,7 +77,19 @@ describe('Tasks Policy', () => {
     // Sudah kumpul semua 4 / All 4 submitted
     expect(isCapstoneUnlocked(required, ['task-1', 'task-2', 'task-3', 'task-4'])).toBe(true);
 
-    // Syarat kosong tidak membuka capstone / Empty requirements do not unlock
-    expect(isCapstoneUnlocked([], [])).toBe(false);
+    // Tanpa tugas harian, tidak ada yang perlu diselesaikan lebih dulu sehingga
+    // Capstone terbuka. Mengunci di sini akan menutup Capstone selamanya pada
+    // kelas yang diaktifkan sebelum tugasnya disusun -- keadaan yang tidak
+    // dapat dipulihkan peserta maupun admin.
+    //
+    // With no daily tasks there is nothing to finish first, so the Capstone is
+    // open. Locking here would shut the Capstone permanently on a class
+    // activated before its tasks were written -- a state neither participant
+    // nor admin could recover from.
+    expect(isCapstoneUnlocked([], [])).toBe(true);
+
+    // Tugas yang belum tercatat di snapshot tidak menghalangi / A task absent
+    // from the snapshot does not block
+    expect(isCapstoneUnlocked(['task-1'], ['task-1', 'task-baru'])).toBe(true);
   });
 });

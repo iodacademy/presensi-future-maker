@@ -73,24 +73,21 @@ export function validateTaskInput(input: CreateTaskInput): {
  */
 export function canActivateClass(params: {
   status: ClassStatus;
-  mentorCount: number;
-  dailyTaskCount: number;
-  capstoneTaskCount: number;
+  sessionCount: number;
 }): ClassActivationResult {
   if (params.status !== 'draft') {
     return { canActivate: false, reason: 'Kelas sudah aktif atau diarsipkan' };
   }
 
-  if (params.mentorCount < 1) {
-    return { canActivate: false, reason: 'Kelas harus memiliki minimal 1 mentor terdaftar' };
-  }
-
-  if (params.dailyTaskCount < 1) {
-    return { canActivate: false, reason: 'Kelas harus memiliki minimal 1 tugas harian' };
-  }
-
-  if (params.capstoneTaskCount !== 1) {
-    return { canActivate: false, reason: 'Kelas harus memiliki tepat 1 tugas Capstone' };
+  // Hanya jadwal yang diwajibkan. Mentor, tugas harian, dan Capstone disusun
+  // selama program berjalan, sehingga menuntutnya di muka menahan peserta dari
+  // melihat jadwal yang sudah pasti.
+  //
+  // Only the schedule is required. Mentors, daily tasks, and the Capstone are
+  // assembled as the programme runs, so demanding them upfront keeps
+  // participants from seeing a schedule that is already settled.
+  if (params.sessionCount < 1) {
+    return { canActivate: false, reason: 'Kelas harus memiliki minimal 1 jadwal pertemuan' };
   }
 
   return { canActivate: true };
@@ -106,8 +103,17 @@ export function isCapstoneUnlocked(
   requiredDailyTaskIds: string[],
   submittedDailyTaskIds: string[]
 ): boolean {
+  // Tanpa tugas harian, tidak ada yang perlu diselesaikan lebih dulu sehingga
+  // Capstone terbuka. Mengembalikan false di sini akan mengunci Capstone
+  // selamanya pada kelas yang diaktifkan sebelum tugasnya disusun -- keadaan
+  // yang tidak dapat dipulihkan peserta maupun admin.
+  //
+  // With no daily tasks there is nothing to finish first, so the Capstone is
+  // open. Returning false here would shut the Capstone permanently on a class
+  // activated before its tasks were written -- a state neither participant nor
+  // admin could recover from.
   if (!requiredDailyTaskIds || requiredDailyTaskIds.length === 0) {
-    return false;
+    return true;
   }
 
   const submittedSet = new Set(submittedDailyTaskIds);
