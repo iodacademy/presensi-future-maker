@@ -24,14 +24,36 @@ async function main() {
   const date = process.argv[2];
   const apply = process.argv.includes('--apply');
 
+  // Penyaring jam memisahkan sesi yang benar-benar berlangsung bersamaan dari
+  // sesi lain pada tanggal yang sama. Onboarding daring malam dan sesi luring
+  // pagi jatuh pada tanggal yang sama tetapi bukan pertemuan yang sama;
+  // menggabungkan keduanya akan menampilkan judul dan alamat sesi pagi pada
+  // jadwal kelas yang hadir lewat Zoom malam hari.
+  //
+  // The time filter separates sessions that genuinely run together from other
+  // sessions on the same date. An evening online onboarding and a morning
+  // offline session share a date but are not the same meeting; merging them
+  // would put the morning session's title and venue on the schedule of classes
+  // attending by Zoom that evening.
+  const timeArg = process.argv.find((a) => a.startsWith('--time='));
+  const timeFilter = timeArg ? timeArg.slice('--time='.length) : null;
+
   if (!date) {
     console.error('Sebutkan tanggal sesi yang digabungkan (YYYY-MM-DD).');
-    console.error('  npm run merge-session -- 2026-09-25\n');
+    console.error('  npm run merge-session -- 2026-09-25');
+    console.error('  npm run merge-session -- 2026-09-25 --time=19:00\n');
     process.exit(1);
   }
 
   const db = getAdminDb();
-  const snap = await db.collection('sessions').where('date', '==', date).get();
+  const allOnDate = await db.collection('sessions').where('date', '==', date).get();
+  const snap = {
+    size: 0,
+    docs: allOnDate.docs.filter(
+      (d) => !timeFilter || (d.data() as SessionDocument).startTime === timeFilter
+    ),
+  };
+  snap.size = snap.docs.length;
 
   const classes = new Map<string, string>();
   for (const doc of (await db.collection('classes').get()).docs) {
@@ -39,7 +61,23 @@ async function main() {
   }
 
   if (snap.size < 2) {
-    console.log(`\nHanya ${snap.size} sesi pada ${date}; tidak ada yang perlu digabungkan.`);
+    const keterangan = timeFilter ? `${date} jam ${timeFilter}` : date;
+    console.log(`\nHanya ${snap.size} sesi pada ${keterangan}; tidak ada yang perlu digabungkan.`);
+
+    // Bila penyaring jam menyisihkan sesi lain, itulah yang perlu diketahui
+    // lebih dulu -- bukan sebaran seluruh kelas.
+    //
+    // When the time filter set other sessions aside, that is what needs to be
+    // known first -- not the spread across every class.
+    if (timeFilter && allOnDate.size > snap.size) {
+      console.log(`\n${allOnDate.size} sesi pada ${date} dengan jam berbeda:`);
+      for (const doc of allOnDate.docs) {
+        const other = doc.data() as SessionDocument;
+        console.log(`  ${other.startTime}-${other.endTime} ${classes.get(other.classId) ?? other.classId}`);
+      }
+      console.log('');
+      return;
+    }
 
     // Menyebut jumlahnya saja tidak cukup: sesi yang gagal tersimpan dan sesi
     // yang tanggalnya tersimpan berbeda menghasilkan laporan yang sama.
@@ -74,7 +112,17 @@ async function main() {
 
   const sessions = snap.docs.map((d) => d.data() as SessionDocument);
 
-  console.log(`\n${sessions.length} sesi pada ${date}:`);
+  // Jumlah sesi lain pada tanggal itu disebut agar penggabungan yang lebih luas
+  // dari maksud admin terlihat sebelum dijalankan.
+  //
+  // The count of other sessions on that date is named so a merge broader than
+  // the admin intended shows before it runs.
+  const sisanya = allOnDate.size - sessions.length;
+  console.log(
+    `\n${sessions.length} sesi pada ${date}${timeFilter ? ` jam ${timeFilter}` : ''}` +
+      (sisanya > 0 ? ` (${sisanya} sesi lain pada tanggal itu tidak disertakan)` : '') +
+      ':'
+  );
   for (const s of sessions) {
     const att = await db.collection('attendance').where('sessionId', '==', s.id).count().get();
     console.log(`  ${classes.get(s.classId) ?? s.classId} - ${s.startTime}-${s.endTime} (${att.data().count} kehadiran)`);
