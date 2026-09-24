@@ -284,8 +284,24 @@ export async function recordStudentAttendance(
   let alreadyRecorded = false;
   let recordedTime = now;
 
+  const sessionRef = db.collection('sessions').doc(sessionId);
+  const progressRef = db.collection('studentProgress').doc(actor.uid);
+
   await db.runTransaction(async (transaction) => {
-    const doc = await transaction.get(attendanceRef);
+    // Firestore mewajibkan seluruh pembacaan selesai sebelum penulisan pertama;
+    // satu transaction.get setelah transaction.set membatalkan seluruh
+    // transaksi. Ketiganya dibaca sekaligus di sini, bukan berselang-seling
+    // dengan penulisan di bawah.
+    //
+    // Firestore requires every read to complete before the first write; a
+    // single transaction.get after a transaction.set aborts the whole
+    // transaction. All three are read together here rather than interleaved
+    // with the writes below.
+    const [doc, sessionSnapshot, progressSnap] = await Promise.all([
+      transaction.get(attendanceRef),
+      transaction.get(sessionRef),
+      transaction.get(progressRef),
+    ]);
 
     if (doc.exists) {
       alreadyRecorded = true;
@@ -308,22 +324,16 @@ export async function recordStudentAttendance(
     transaction.set(attendanceRef, attendanceDoc);
 
     // Perbarui counter hadir di sesi / Update attendee count in session
-    const sessionRef = db.collection('sessions').doc(sessionId);
-    const sessionSnapshot = await transaction.get(sessionRef);
-    const currentCount = sessionSnapshot.data()?.attendeeCount || 0;
     transaction.update(sessionRef, {
-      attendeeCount: currentCount + 1,
+      attendeeCount: (sessionSnapshot.data()?.attendeeCount || 0) + 1,
       updatedAt: now,
     });
 
     // Perbarui counter hadir di profil siswa / Update student progress
-    const progressRef = db.collection('studentProgress').doc(actor.uid);
-    const progressSnap = await transaction.get(progressRef);
-    const currentStudentCount = progressSnap.exists ? (progressSnap.data()?.attendanceCount || 0) : 0;
     transaction.set(
       progressRef,
       {
-        attendanceCount: currentStudentCount + 1,
+        attendanceCount: (progressSnap.exists ? progressSnap.data()?.attendanceCount || 0 : 0) + 1,
         updatedAt: now,
       },
       { merge: true }

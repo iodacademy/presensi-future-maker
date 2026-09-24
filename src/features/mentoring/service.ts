@@ -372,6 +372,14 @@ export async function cancelBookingByAdmin(actor: Actor, bookingId: string): Pro
   const quotaRef = db.collection('mentoringQuotas').doc(`${booking.studentId}_${booking.phase}`);
 
   await db.runTransaction(async (transaction) => {
+    // Kuota dibaca lebih dulu: Firestore membatalkan transaksi bila ada
+    // pembacaan setelah penulisan pertama, dan sebelumnya pembacaan ini berada
+    // di bawah ketiga update.
+    //
+    // The quota is read first: Firestore aborts a transaction on any read after
+    // the first write, and this read previously sat below all three updates.
+    const quotaSnap = await transaction.get(quotaRef);
+
     transaction.update(bookingRef, {
       status: 'cancelled',
       cancelledAt: now,
@@ -394,7 +402,6 @@ export async function cancelBookingByAdmin(actor: Actor, bookingId: string): Pro
       updatedAt: now,
     });
 
-    const quotaSnap = await transaction.get(quotaRef);
     const current = quotaSnap.exists ? (quotaSnap.data()?.count || 1) : 1;
     transaction.update(quotaRef, {
       count: Math.max(0, current - 1),
