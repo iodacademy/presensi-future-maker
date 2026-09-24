@@ -8,8 +8,19 @@
 # the trigger is created; those values ship to the browser anyway, so they are
 # not secrets.
 
+# Region Singapura, bukan Jakarta: asia-southeast2 menolak pemetaan domain
+# ("Creating domain mappings is not allowed in asia-southeast2"), sehingga
+# innovators.iodacademy.id tidak dapat dipasang di sana. Firestore tetap di
+# Jakarta -- query menyeberang region, tetapi pengukuran menunjukkan jalur ke
+# Singapura justru lebih pendek dari Indonesia.
+#
+# Singapore rather than Jakarta: asia-southeast2 refuses domain mappings
+# ("Creating domain mappings is not allowed in asia-southeast2"), so
+# innovators.iodacademy.id cannot be attached there. Firestore stays in Jakarta
+# -- queries cross regions, but measurements show the path to Singapore is
+# actually shorter from Indonesia.
 substitutions:
-  _REGION: asia-southeast2
+  _REGION: asia-southeast1
   _SERVICE: presensi-future-maker
   _REPO: containers
   _NEXT_PUBLIC_FIREBASE_PROJECT_ID: ''
