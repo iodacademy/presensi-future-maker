@@ -18,8 +18,14 @@ describe('LoginPage', () => {
     expect(screen.queryByLabelText(/password/i)).toBeNull();
   });
 
-  it('renders branding title Bootcamp Future Makers 2026', () => {
+  it('renders branding title Future Innovators Bootcamp', () => {
     render(<LoginPage />);
-    expect(screen.getByText(/Bootcamp Future Makers 2026/i)).toBeDefined();
+    expect(screen.getByText(/Future Innovators Bootcamp/i)).toBeDefined();
+  });
+
+  it('menampilkan logo Plan International saja', () => {
+    render(<LoginPage />);
+    expect(screen.getByAltText('Plan International')).toBeDefined();
+    expect(screen.queryByAltText(/Futuremakers/i)).toBeNull();
   });
 });

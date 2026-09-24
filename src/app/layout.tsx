@@ -20,8 +20,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Bootcamp Future Makers 2026',
-  description: 'Aplikasi Manajemen Bootcamp Future Makers 2026',
+  title: 'Future Innovators Bootcamp',
+  description: 'Aplikasi Manajemen Future Innovators Bootcamp',
 };
 
 // Layout akar aplikasi / Application root layout

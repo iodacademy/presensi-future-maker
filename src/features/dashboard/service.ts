@@ -21,7 +21,7 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
   const db = getAdminDb();
   const defaultData: StudentHomeData = {
     studentName: actor.name || 'Peserta',
-    className: 'Bootcamp Future Makers 2026',
+    className: 'Future Innovators Bootcamp',
     activeSession: null,
     nextSession: null,
     nearestMentoring: null,

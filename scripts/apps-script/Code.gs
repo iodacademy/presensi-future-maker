@@ -1,12 +1,12 @@
 /**
- * Jembatan Google Calendar untuk aplikasi Bootcamp Future Makers.
+ * Jembatan Google Calendar untuk aplikasi Future Innovators Bootcamp.
  *
  * Skrip ini dijalankan sebagai akun Google Workspace bootcamp, sehingga event
  * dan tautan Google Meet dibuat oleh pengguna berlisensi. Itu sebabnya aplikasi
  * tidak perlu domain-wide delegation: tanpa jalur ini, service account tidak
  * boleh mengisi daftar peserta sama sekali.
  *
- * Google Calendar bridge for the Bootcamp Future Makers app.
+ * Google Calendar bridge for the Future Innovators Bootcamp app.
  *
  * This script runs as the bootcamp Google Workspace account, so events and
  * Google Meet links are created by a licensed user. That is why the app needs

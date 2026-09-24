@@ -92,13 +92,11 @@ export default function LoginPage() {
         }}
       >
         <div style={{ marginBottom: '28px', textAlign: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
             <Image src="/logos/plan-international.png" alt="Plan International" width={100} height={72} style={{ objectFit: 'contain', height: '48px', width: 'auto' }} priority />
-            <div style={{ width: '1px', height: '32px', backgroundColor: 'var(--color-border)' }} />
-            <Image src="/logos/futuremakers.png" alt="Futuremakers by Standard Chartered" width={130} height={72} style={{ objectFit: 'contain', height: '40px', width: 'auto' }} priority />
           </div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '20px', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '8px' }}>
-            Bootcamp Future Makers 2026
+            Future Innovators Bootcamp
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
             Masukkan email terdaftar Anda untuk masuk ke sistem

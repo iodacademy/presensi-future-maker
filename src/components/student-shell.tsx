@@ -71,8 +71,8 @@ export function StudentShell({ userName, children }: StudentShellProps) {
             B
           </span>
           <div>
-            <div style={{ fontFamily: 'var(--font-heading)', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-main)' }}>Future Makers</div>
-            <div style={{ fontSize: '8px', color: 'var(--color-text-faint)' }}>2026</div>
+            <div style={{ fontFamily: 'var(--font-heading)', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-main)' }}>Future Innovators</div>
+            <div style={{ fontSize: '8px', color: 'var(--color-text-faint)' }}>Bootcamp</div>
           </div>
         </div>
 

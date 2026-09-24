@@ -90,7 +90,7 @@ export default function StudentJadwalPage() {
       <div className="student-topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--color-student-border)', padding: '18px 28px', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: 'var(--color-text-main)' }}>Jadwal Kelas</h1>
-          <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>Bootcamp Future Makers 2026</p>
+          <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>Future Innovators Bootcamp</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           {filterChipDesktop('all', `Semua (${items.length})`)}

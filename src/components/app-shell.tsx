@@ -84,7 +84,7 @@ export function AppShell({ role, userName, classNameTitle, children }: AppShellP
               color: isAdmin ? '#ffffff' : 'var(--color-primary)',
             }}
           >
-            BOOTCAMP FUTURE MAKERS 2026
+            FUTURE INNOVATORS BOOTCAMP
           </div>
           <div
             style={{
