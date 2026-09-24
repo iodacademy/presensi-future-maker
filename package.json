@@ -16,7 +16,8 @@
     "diagnose-accounts": "tsx scripts/diagnose-accounts.ts",
     "check-login": "tsx scripts/check-login.ts",
     "seed-schedule": "tsx scripts/seed-schedule.ts",
-    "rename-class-city": "tsx scripts/rename-class-city.ts"
+    "rename-class-city": "tsx scripts/rename-class-city.ts",
+    "seed-mentors": "tsx scripts/seed-mentors.ts"
   },
   "dependencies": {
     "firebase": "^12.18.0",
