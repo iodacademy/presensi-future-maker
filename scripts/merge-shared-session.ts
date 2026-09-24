@@ -33,16 +33,46 @@ async function main() {
   const db = getAdminDb();
   const snap = await db.collection('sessions').where('date', '==', date).get();
 
-  if (snap.size < 2) {
-    console.log(`\nHanya ${snap.size} sesi pada ${date}; tidak ada yang perlu digabungkan.\n`);
-    return;
-  }
-
-  const sessions = snap.docs.map((d) => d.data() as SessionDocument);
   const classes = new Map<string, string>();
   for (const doc of (await db.collection('classes').get()).docs) {
     classes.set(doc.id, (doc.data() as ClassDocument).canonicalName);
   }
+
+  if (snap.size < 2) {
+    console.log(`\nHanya ${snap.size} sesi pada ${date}; tidak ada yang perlu digabungkan.`);
+
+    // Menyebut jumlahnya saja tidak cukup: sesi yang gagal tersimpan dan sesi
+    // yang tanggalnya tersimpan berbeda menghasilkan laporan yang sama.
+    // Sebaran per kelas menunjukkan mana di antara keduanya.
+    //
+    // Naming the count alone is not enough: a session that failed to save and
+    // one whose date was stored differently produce the same report. A
+    // per-class breakdown shows which of the two it is.
+    const all = await db.collection('sessions').get();
+    const perClass = new Map<string, string[]>();
+    for (const doc of all.docs) {
+      const s = doc.data() as SessionDocument;
+      const key = classes.get(s.classId) ?? s.classId;
+      if (!perClass.has(key)) perClass.set(key, []);
+      perClass.get(key)!.push(s.date);
+    }
+
+    console.log(`\nTotal ${all.size} sesi di seluruh kelas:`);
+    for (const [name, dates] of [...perClass].sort()) {
+      const sorted = [...dates].sort();
+      console.log(`  ${name}: ${dates.length} sesi (${sorted[0]} s.d. ${sorted[sorted.length - 1]})`);
+    }
+
+    const kelasTanpaSesi = [...classes.values()].filter((n) => !perClass.has(n));
+    if (kelasTanpaSesi.length > 0) {
+      console.log(`\nKelas tanpa sesi sama sekali: ${kelasTanpaSesi.join(', ')}`);
+      console.log('Jalankan: npm run seed-schedule -- --apply');
+    }
+    console.log('');
+    return;
+  }
+
+  const sessions = snap.docs.map((d) => d.data() as SessionDocument);
 
   console.log(`\n${sessions.length} sesi pada ${date}:`);
   for (const s of sessions) {
