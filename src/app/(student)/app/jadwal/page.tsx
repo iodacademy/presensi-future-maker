@@ -132,7 +132,7 @@ export default function StudentJadwalPage() {
   return (
     <StudentShell userName="Peserta">
       {/* Header biru mobile (node 11:2870) */}
-      <div className="student-mobile-header" style={{ backgroundColor: 'var(--color-primary)', padding: '24px 16px 18px' }}>
+      <div className="student-mobile-header" style={{ backgroundColor: 'var(--color-primary)', padding: '24px 16px 18px', paddingRight: '120px' }}>
         <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: '#ffffff', margin: 0 }}>
           Jadwal dan Rekaman
         </h1>
@@ -145,7 +145,7 @@ export default function StudentJadwalPage() {
       </div>
 
       {/* Topbar desktop (node 15:157) */}
-      <div className="student-topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--color-student-border)', padding: '18px 28px', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="student-topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--color-student-border)', padding: '18px 28px', paddingRight: '150px', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: 'var(--color-text-main)' }}>Jadwal dan Rekaman</h1>
           <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>Future Innovators Bootcamp</p>

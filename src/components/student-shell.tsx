@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, Calendar, Users, FileText, BookOpen, LogOut } from 'lucide-react';
+import { ProfileMenu } from '@/components/ui/profile-menu';
 
 interface NavItem {
   label: string;
@@ -115,7 +116,33 @@ export function StudentShell({ userName, children }: StudentShellProps) {
       </aside>
 
       {/* Kolom konten: berisi topbar desktop (diisi tiap halaman) + children */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, paddingBottom: '73px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, paddingBottom: '73px', position: 'relative' }}>
+        {/* Menu akun diletakkan di shell, bukan pada tiap halaman: lima halaman
+            peserta menyusun headernya masing-masing, sehingga menaruhnya di sana
+            berarti lima salinan yang harus dijaga tetap sama.
+
+            Posisinya mengambang di sudut kanan atas agar menumpang di atas
+            header biru mobile maupun topbar putih desktop -- keduanya saling
+            bergantian tampil menurut lebar layar.
+
+            The account menu lives in the shell rather than in each page: five
+            participant pages build their own headers, so placing it there would
+            mean five copies to keep in step.
+
+            It floats at the top-right so it rides over both the blue mobile
+            header and the white desktop topbar -- which alternate by screen
+            width. */}
+        <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 30 }}>
+          {/* Varian terang dipakai untuk seluruh halaman. Latar di belakangnya
+              berbeda-beda -- header biru, topbar putih, dan header putih pada
+              halaman mentoring -- sedangkan pil putih bergaris tetap terbaca di
+              atas ketiganya.
+
+              The light variant is used on every page. The backdrop varies --
+              blue header, white topbar, and the white header on the mentoring
+              page -- while a bordered white pill stays legible over all three. */}
+          <ProfileMenu userName={userName || 'Peserta'} roleLabel="Peserta" />
+        </div>
         {children}
       </div>
 

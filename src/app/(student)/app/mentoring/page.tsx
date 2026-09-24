@@ -93,7 +93,7 @@ export default function StudentMentoringPage() {
   return (
     <StudentShell userName="Peserta">
       {/* Header mobile (node 11:2992) */}
-      <div className="student-mobile-header" style={{ padding: '24px 16px 16px', borderBottom: '1px solid #eeeeee' }}>
+      <div className="student-mobile-header" style={{ padding: '24px 16px 16px', paddingRight: '120px', borderBottom: '1px solid #eeeeee' }}>
         <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: 'var(--color-text-main)', margin: 0 }}>Mentoring</h1>
         {assignedMentor && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', padding: '10px', borderRadius: '10px', backgroundColor: 'var(--color-primary-light)' }}>
@@ -116,7 +116,7 @@ export default function StudentMentoringPage() {
       </div>
 
       {/* Topbar desktop (node 15:249) */}
-      <div className="student-topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--color-student-border)', padding: '18px 28px', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="student-topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--color-student-border)', padding: '18px 28px', paddingRight: '150px', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: 'var(--color-text-main)' }}>Sesi Mentoring 1-on-1</h1>
           <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>Pilih slot waktu yang tersedia untuk sesi privat dengan mentormu</p>

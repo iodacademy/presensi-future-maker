@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutGrid, Calendar, Users, FileText, Contact, LogOut } from 'lucide-react';
 import type { Role } from '@/features/auth/types';
+import { ProfileMenu } from '@/components/ui/profile-menu';
 
 interface NavItem {
   label: string;
@@ -21,9 +22,16 @@ interface AppShellProps {
 
 // Nilai sidebar (lebar, padding, gap) diambil presisi dari node Figma 10:1229
 // Sidebar values (width, padding, gap) extracted precisely from Figma node 10:1229
+const ROLE_LABELS: Record<Role, string> = {
+  admin: 'Administrator',
+  mentor: 'Mentor',
+  student: 'Peserta',
+};
+
 export function AppShell({ role, userName, classNameTitle, children }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const roleLabel = ROLE_LABELS[role];
 
   async function handleLogout() {
     try {
@@ -206,6 +214,25 @@ export function AppShell({ role, userName, classNameTitle, children }: AppShellP
 
       {/* Main: padding=24, itemSpacing=16 (node 10:1268) */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* Header berisi menu akun. Tombol keluar sebelumnya hanya ada pada
+            sidebar, yang tersembunyi di layar sempit -- sehingga pengguna
+            ponsel tidak memiliki jalan keluar sama sekali.
+
+            The header carries the account menu. The sign-out button previously
+            lived only in the sidebar, which is hidden on narrow screens --
+            leaving phone users with no way out at all. */}
+        <header
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            padding: '12px 24px',
+            borderBottom: '1px solid var(--color-border)',
+            backgroundColor: '#ffffff',
+          }}
+        >
+          <ProfileMenu userName={userName || 'Pengguna'} roleLabel={roleLabel} />
+        </header>
         <main style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>{children}</main>
       </div>
     </div>

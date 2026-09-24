@@ -65,7 +65,7 @@ export default function StudentTasksPage() {
   return (
     <StudentShell userName="Peserta">
       {/* Header mobile (node 11:3057) */}
-      <div className="student-mobile-header" style={{ backgroundColor: 'var(--color-primary)', padding: '24px 16px 16px' }}>
+      <div className="student-mobile-header" style={{ backgroundColor: 'var(--color-primary)', padding: '24px 16px 16px', paddingRight: '120px' }}>
         <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: '#ffffff', margin: 0 }}>Tugas</h1>
         <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
           {tabButton('daily', `Tugas Harian - ${totalDailyCount}`, true)}
@@ -74,7 +74,7 @@ export default function StudentTasksPage() {
       </div>
 
       {/* Topbar desktop (node 15:356) */}
-      <div className="student-topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--color-student-border)', padding: '18px 28px', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="student-topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--color-student-border)', padding: '18px 28px', paddingRight: '150px', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: 'var(--color-text-main)' }}>Tugas & Capstone</h1>
           <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>Kumpulkan tugas tepat waktu untuk membuka akses Capstone Project</p>

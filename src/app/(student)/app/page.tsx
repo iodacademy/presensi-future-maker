@@ -39,7 +39,7 @@ export default function StudentHomePage() {
           nilai Figma 56 memperhitungkan status bar native yang tidak berlaku di web browser
           Blue mobile header (node 11:2724/2799) -- top padding reduced from 56 to 24,
           Figma's 56 accounts for native status bar which doesn't apply in a web browser */}
-      <div className="student-mobile-header" style={{ backgroundColor: 'var(--color-primary)', color: '#ffffff', padding: '24px 20px 22px' }}>
+      <div className="student-mobile-header" style={{ backgroundColor: 'var(--color-primary)', color: '#ffffff', padding: '24px 20px 22px', paddingRight: '120px' }}>
         <div style={{ fontSize: '11px', fontFamily: 'var(--font-body)' }}>FUTURE INNOVATORS BOOTCAMP</div>
         <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: '#ffffff', margin: '6px 0 0' }}>Halo, {studentName}</h1>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', padding: '4px 10px', borderRadius: '20px', backgroundColor: 'var(--color-header-pill)' }}>
@@ -49,7 +49,7 @@ export default function StudentHomePage() {
       </div>
 
       {/* Topbar desktop (node 15:46) */}
-      <div className="student-topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--color-student-border)', padding: '18px 28px', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="student-topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--color-student-border)', padding: '18px 28px', paddingRight: '150px', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: 'var(--color-text-main)' }}>Halo, {studentName}</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
