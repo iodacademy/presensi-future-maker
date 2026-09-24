@@ -22,7 +22,7 @@ export function validateTaskInput(input: CreateTaskInput): {
   const description = input.description ? input.description.trim() : '';
   const kind = input.kind;
   const order = typeof input.order === 'number' && input.order > 0 ? input.order : 1;
-  const dueAt = input.dueAt ? input.dueAt.trim() : null;
+  const dueAt = parseDueAt(input.dueDate, input.dueTime);
   const briefFileName = input.briefFileName ? input.briefFileName.trim() : null;
   let briefUrl = input.briefUrl ? input.briefUrl.trim() : null;
 
@@ -34,8 +34,17 @@ export function validateTaskInput(input: CreateTaskInput): {
     throw new Error('Judul tugas wajib diisi / Task title is required');
   }
 
-  if (kind !== 'daily' && kind !== 'capstone') {
-    throw new Error('Jenis tugas harus daily atau capstone / Task kind must be daily or capstone');
+  if (kind !== 'daily' && kind !== 'capstone' && kind !== 'working-paper') {
+    throw new Error('Jenis tugas harus daily, capstone, atau working-paper / Task kind must be daily, capstone, or working-paper');
+  }
+
+  // Working paper melekat pada satu pertemuan; tanpa sesi induknya, peserta
+  // tidak punya tempat menemukannya dan batas waktunya kehilangan acuan.
+  //
+  // A working paper hangs off one meeting; with no parent session, participants
+  // have nowhere to find it and its deadline loses its reference.
+  if (kind === 'working-paper' && !input.sessionId) {
+    throw new Error('Working paper harus terikat pada satu pertemuan / A working paper must be tied to one meeting');
   }
 
   if (briefUrl) {
@@ -118,4 +127,53 @@ export function isCapstoneUnlocked(
 
   const submittedSet = new Set(submittedDailyTaskIds);
   return requiredDailyTaskIds.every((id) => submittedSet.has(id));
+}
+
+/**
+ * Menyusun batas pengumpulan dari tanggal dan jam WIB menjadi ISO UTC.
+ *
+ * Batas waktu sebelumnya disimpan sebagai teks bebas seperti "30 September
+ * 2026, 23:59 WIB". Date tidak dapat mengurainya, sehingga perbandingan
+ * keterlambatan selalu menghasilkan NaN dan tidak ada pengumpulan yang pernah
+ * ditandai terlambat.
+ *
+ * Jam dikosongkan berarti akhir hari: batas "30 September" yang diperlakukan
+ * sebagai 00.00 akan menolak seluruh pengumpulan pada hari itu juga.
+ *
+ * Builds a deadline from a WIB date and time into ISO UTC.
+ *
+ * Deadlines were previously stored as free text such as "30 September 2026,
+ * 23:59 WIB". Date cannot parse that, so the lateness comparison always
+ * produced NaN and no submission was ever marked late.
+ *
+ * An empty time means end of day: a deadline of "30 September" treated as
+ * 00:00 would reject every submission made on that very day.
+ */
+export function parseDueAt(
+  dueDate: string | null | undefined,
+  dueTime: string | null | undefined
+): string | null {
+  const date = (dueDate ?? '').trim();
+  if (!date) return null;
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error('Tanggal batas harus berformat YYYY-MM-DD / Deadline date must be YYYY-MM-DD');
+  }
+
+  const time = (dueTime ?? '').trim() || '23:59';
+  if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(time)) {
+    throw new Error('Jam batas harus berformat HH:mm / Deadline time must be HH:mm');
+  }
+
+  // Penanda +07:00 membuat penguraiannya tidak bergantung pada zona waktu
+  // server, yang di Cloud Run berjalan pada UTC.
+  //
+  // The +07:00 marker makes parsing independent of the server's timezone,
+  // which on Cloud Run runs in UTC.
+  const parsed = new Date(`${date}T${time}:00+07:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error('Batas pengumpulan tidak dapat dibaca / The deadline could not be read');
+  }
+
+  return parsed.toISOString();
 }

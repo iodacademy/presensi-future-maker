@@ -2,7 +2,7 @@
 import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
-import type { TaskDocument, TaskDetailDocument, CreateTaskInput, UpdateTaskInput, TaskSummary } from './types';
+import type { MaterialLink, AddMaterialInput, TaskDocument, TaskDetailDocument, CreateTaskInput, UpdateTaskInput, TaskSummary } from './types';
 import type { ClassDocument } from '../classes/types';
 import { validateTaskInput, canActivateClass } from './policy';
 
@@ -42,6 +42,7 @@ export async function createTask(actor: Actor, input: CreateTaskInput): Promise<
     id: taskId,
     classId: validated.classId,
     kind: validated.kind,
+    sessionId: input.sessionId ?? null,
     title: validated.title,
     order: validated.order,
     dueAt: validated.dueAt,
@@ -71,8 +72,20 @@ export async function createTask(actor: Actor, input: CreateTaskInput): Promise<
   batch.set(db.collection('tasks').doc(taskId), taskDoc);
   batch.set(db.collection('taskDetails').doc(taskId), taskDetail);
 
-  const deltaField = validated.kind === 'daily' ? 'dailyTaskCount' : 'capstoneTaskCount';
-  const currentCount = classData[deltaField] || 0;
+  // Working paper tidak menambah penghitung mana pun: keduanya mengukur tugas
+  // harian dan capstone, yang menentukan kesiapan kelas dan syarat Capstone.
+  // Memasukkan working paper ke dalamnya akan mengubah arti angka itu.
+  //
+  // A working paper increments neither counter: both measure daily tasks and
+  // the capstone, which decide class readiness and the Capstone requirement.
+  // Folding working papers in would change what those numbers mean.
+  const deltaField =
+    validated.kind === 'daily'
+      ? 'dailyTaskCount'
+      : validated.kind === 'capstone'
+        ? 'capstoneTaskCount'
+        : null;
+  const currentCount = deltaField ? classData[deltaField] || 0 : 0;
 
   // Snapshot tugas wajib ikut diperbarui pada kelas yang sudah aktif. Capstone
   // terbuka hanya bila setiap ID dalam snapshot itu sudah dikumpulkan, sehingga
@@ -88,7 +101,7 @@ export async function createTask(actor: Actor, input: CreateTaskInput): Promise<
   const joinsSnapshot = validated.kind === 'daily' && classData.status === 'active';
 
   batch.update(classRef, {
-    [deltaField]: currentCount + 1,
+    ...(deltaField ? { [deltaField]: currentCount + 1 } : {}),
     ...(joinsSnapshot
       ? { requiredDailyTaskIds: [...(classData.requiredDailyTaskIds || []), taskId] }
       : {}),
@@ -225,4 +238,121 @@ export async function activateClass(actor: Actor, classId: string): Promise<void
   }
 
   await batch.commit();
+}
+
+/**
+ * Menebak jenis berkas dari tautannya.
+ *
+ * Dipakai hanya untuk memilih ikon dan keterangan; tebakan yang meleset tidak
+ * menghalangi peserta membuka tautannya.
+ *
+ * Guesses a file's kind from its link.
+ *
+ * Used only to pick an icon and caption; a wrong guess does not stop a
+ * participant opening the link.
+ */
+function guessMaterialKind(url: string): MaterialLink['kind'] {
+  const lower = url.toLowerCase();
+  if (lower.includes('/presentation/') || lower.endsWith('.ppt') || lower.endsWith('.pptx')) return 'slide';
+  if (lower.includes('/spreadsheets/') || lower.endsWith('.xls') || lower.endsWith('.xlsx') || lower.endsWith('.csv')) return 'sheet';
+  if (lower.includes('/document/') || lower.endsWith('.doc') || lower.endsWith('.docx')) return 'doc';
+  if (lower.endsWith('.pdf')) return 'pdf';
+  return 'other';
+}
+
+/**
+ * Admin menambahkan satu bahan praktik pada sebuah tugas.
+ *
+ * Transaksi dipakai, bukan pembaruan larik biasa: dua admin yang menambah bahan
+ * hampir bersamaan sama-sama membaca daftar lama, dan yang menulis belakangan
+ * menghapus bahan yang baru saja ditambahkan yang lain.
+ *
+ * An admin adds one practice material to a task.
+ *
+ * A transaction is used rather than a plain array update: two admins adding
+ * materials at nearly the same time both read the old list, and whoever writes
+ * last erases the material the other just added.
+ */
+export async function addTaskMaterial(actor: Actor, input: AddMaterialInput): Promise<void> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan menambah bahan praktik');
+  }
+
+  const url = (input.url ?? '').trim();
+  if (!url) {
+    throw new Error('Tautan bahan wajib diisi');
+  }
+
+  // HTTPS diwajibkan karena tautan ini dirender sebagai href pada halaman
+  // peserta: tautan javascript: akan dieksekusi di peramban mereka.
+  //
+  // HTTPS is required because this link renders as an href on the participant
+  // page: a javascript: link would execute in their browser.
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') throw new Error();
+  } catch {
+    throw new Error('Tautan bahan harus berupa URL HTTPS yang valid');
+  }
+
+  const label = (input.label ?? '').trim().slice(0, 80) || 'Bahan praktik';
+  const db = getAdminDb();
+  const taskRef = db.collection('tasks').doc(input.taskId);
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(taskRef);
+    if (!snap.exists) {
+      throw new Error('Tugas tidak ditemukan');
+    }
+
+    const existing = ((snap.data() as TaskDocument).materials || []) as MaterialLink[];
+    if (existing.some((m) => m.url === url)) {
+      throw new Error('Tautan ini sudah ditambahkan pada tugas tersebut');
+    }
+
+    tx.update(taskRef, {
+      materials: [
+        ...existing,
+        {
+          id: crypto.randomUUID(),
+          label,
+          url,
+          kind: input.kind ?? guessMaterialKind(url),
+          addedAt: new Date().toISOString(),
+        },
+      ],
+      updatedAt: new Date().toISOString(),
+    });
+  });
+}
+
+/**
+ * Admin menghapus satu bahan praktik dari sebuah tugas.
+ *
+ * An admin removes one practice material from a task.
+ */
+export async function removeTaskMaterial(
+  actor: Actor,
+  taskId: string,
+  materialId: string
+): Promise<void> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan menghapus bahan praktik');
+  }
+
+  const db = getAdminDb();
+  const taskRef = db.collection('tasks').doc(taskId);
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(taskRef);
+    if (!snap.exists) {
+      throw new Error('Tugas tidak ditemukan');
+    }
+
+    const existing = ((snap.data() as TaskDocument).materials || []) as MaterialLink[];
+    tx.update(taskRef, {
+      materials: existing.filter((m) => m.id !== materialId),
+      updatedAt: new Date().toISOString(),
+    });
+  });
 }

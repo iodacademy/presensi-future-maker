@@ -25,7 +25,7 @@ describe('Tasks Policy', () => {
         description: 'Desc',
         order: 1,
       })
-    ).toThrowError(/Jenis tugas harus daily atau capstone/);
+    ).toThrowError(/Jenis tugas harus daily, capstone, atau working-paper/);
 
     expect(() =>
       validateTaskInput({

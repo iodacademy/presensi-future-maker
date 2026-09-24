@@ -1,4 +1,6 @@
 // Tipe data agregat beranda siswa / Student home dashboard data types
+import type { TaskKind } from '../tasks/types';
+
 export interface StudentHomeSession {
   id: string;
   title: string;
@@ -21,7 +23,7 @@ export interface StudentHomeMentoring {
 export interface StudentHomeTask {
   id: string;
   title: string;
-  kind: 'daily' | 'capstone';
+  kind: TaskKind;
   dueAt: string | null;
   isUrgent: boolean;
   deadlineLabel: string;
