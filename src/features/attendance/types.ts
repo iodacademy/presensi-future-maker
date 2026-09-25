@@ -185,6 +185,20 @@ export interface QrMonitorData {
   currentToken: string | null;
   nextToken: string | null;
   currentExpiresAt: string | null;
+  /**
+   * Kode presensi statis sesi ini, misalnya "K7M2QX".
+   *
+   * Tetap selama sesi dibuka, sehingga QR-nya dapat difoto sekali lalu
+   * ditayangkan di layar, dan kodenya dapat diketik peserta yang kameranya
+   * tidak dapat membaca QR dari jauh.
+   *
+   * This session's static attendance code, e.g. "K7M2QX".
+   *
+   * It holds while the session is open, so its QR can be photographed once and
+   * put on screen, and the code can be typed by participants whose camera
+   * cannot read the QR from a distance.
+   */
+  sessionCode: string | null;
   attendeeCount: number;
   recentAttendees: { studentName: string; recordedAt: string; source: string }[];
 }

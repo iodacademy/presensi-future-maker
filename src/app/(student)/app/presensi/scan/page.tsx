@@ -28,7 +28,7 @@ export default function StudentScanCameraPage() {
     e.preventDefault();
     const token = extractToken(manualToken);
     if (!token) {
-      setError('Format token atau URL tidak valid');
+      setError('Masukkan kode presensi atau tautan QR');
       return;
     }
     setError(null);
@@ -71,7 +71,7 @@ export default function StudentScanCameraPage() {
       <div style={{ padding: '0 20px 32px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '12px', borderRadius: '12px', backgroundColor: '#1a1a22', marginBottom: '14px' }}>
           <Info size={14} color="var(--color-info)" strokeWidth={2} style={{ flexShrink: 0, marginTop: '1px' }} />
-          <span style={{ fontSize: '9px', color: '#d4d4d8' }}>QR akan berubah tiap 30 detik. Pastikan kode masih aktif saat scan.</span>
+          <span style={{ fontSize: '9px', color: '#d4d4d8' }}>Kamera tidak terbaca? Ketik saja kode 6 karakter yang ditampilkan admin.</span>
         </div>
 
         {error && (
@@ -80,9 +80,17 @@ export default function StudentScanCameraPage() {
 
         <form onSubmit={handleManualSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <Input
-            placeholder="Atau tempelkan kode token QR / link di sini..."
+            placeholder="Kode presensi, misal K7M2QX"
             value={manualToken}
-            onChange={(e) => setManualToken(e.target.value)}
+            // Kode ditampilkan admin dalam huruf kapital; peserta yang
+            // mengetiknya kecil di ponsel akan tetap cocok.
+            //
+            // The code is shown in capitals; a participant typing it lower
+            // case on a phone still matches.
+            onChange={(e) => setManualToken(e.target.value.toUpperCase())}
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
             style={{ backgroundColor: '#1a1a22', color: '#ffffff', border: '1px solid #333333' }}
           />
           <Button type="submit" variant="primary" disabled={loading} style={{ width: '100%' }}>

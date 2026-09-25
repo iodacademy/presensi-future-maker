@@ -28,6 +28,9 @@ import {
 import {
   generateQrToken,
   verifyQrToken,
+  generateSessionCode,
+  verifySessionCode,
+  isSessionCodeShaped,
   QR_ROTATION_INTERVAL_MS,
 } from './qr';
 
@@ -424,8 +427,17 @@ export async function getQrMonitorData(actor: Actor, sessionId: string): Promise
   let currentToken: string | null = null;
   let nextToken: string | null = null;
   let currentExpiresAt: string | null = null;
+  let sessionCode: string | null = null;
 
   if (isActive) {
+    // Kode statis sesi. Tidak ikut berotasi, sehingga QR-nya dapat difoto
+    // sekali lalu ditayangkan sepanjang sesi, dan kodenya dapat dibacakan saat
+    // onboarding daring.
+    //
+    // The session's static code. It does not rotate, so its QR can be
+    // photographed once and shown for the whole session, and the code can be
+    // read out during remote onboarding.
+    sessionCode = generateSessionCode(sessionId, session.qrRevision, getQrSecret());
     currentToken = generateQrToken(sessionId, session.qrRevision, getQrSecret(), nowMs);
     nextToken = generateQrToken(sessionId, session.qrRevision, getQrSecret(), nowMs + QR_ROTATION_INTERVAL_MS);
     const windowStart = Math.floor(nowMs / QR_ROTATION_INTERVAL_MS) * QR_ROTATION_INTERVAL_MS;
@@ -455,6 +467,7 @@ export async function getQrMonitorData(actor: Actor, sessionId: string): Promise
     currentToken,
     nextToken,
     currentExpiresAt,
+    sessionCode,
     attendeeCount: session.attendeeCount || 0,
     recentAttendees,
   };
@@ -504,8 +517,27 @@ export async function recordStudentAttendance(
     throw new Error('Sesi presensi ini bukan untuk kelas Anda');
   }
 
-  // Verifikasi keabsahan token QR / Verify token validity
-  const verification = verifyQrToken(token, sessionId, session.qrRevision, getQrSecret(), Date.now());
+  // Sesi harus dibuka admin. Token berotasi sudah memuat jendela waktunya
+  // sendiri, tetapi kode statis tidak: tanpa pemeriksaan ini kode yang difoto
+  // peserta tetap berlaku berhari-hari setelah sesinya usai.
+  //
+  // The session must be open. A rotating token carries its own time window but
+  // a static code does not: without this check a code a participant
+  // photographed would still work days after the session ended.
+  if (!isSessionAttendanceActive(session, new Date().toISOString())) {
+    throw new Error('Presensi sesi ini sedang ditutup. Hubungi admin kelas Anda.');
+  }
+
+  // Kode statis panjangnya tetap dan hurufnya terbatas; token berotasi adalah
+  // base64url yang jauh lebih panjang. Bentuknya sendiri yang memilih jalur
+  // pemeriksaan, jadi peserta tidak perlu menyatakan memakai yang mana.
+  //
+  // A static code has a fixed length and a limited alphabet; a rotating token
+  // is much longer base64url. The shape itself picks the check, so a
+  // participant never has to declare which one they are using.
+  const verification = isSessionCodeShaped(token)
+    ? verifySessionCode(token, sessionId, session.qrRevision, getQrSecret())
+    : verifyQrToken(token, sessionId, session.qrRevision, getQrSecret(), Date.now());
   if (!verification.isValid) {
     throw new Error(verification.reason || 'Token QR tidak valid');
   }

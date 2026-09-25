@@ -18,11 +18,27 @@ export function QrMonitorModal({ sessionId, onClose, totalStudents: totalStudent
   const [data, setData] = useState<QrMonitorData | null>(null);
   const [loading, setLoading] = useState(true);
   const [closing, setClosing] = useState(false);
-  const [countdown, setCountdown] = useState(30);
   const [isZoomed, setIsZoomed] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const zoomCanvasRef = useRef<HTMLCanvasElement>(null);
 
+  /**
+   * QR memuat kode statis sesi, bukan token berotasi.
+   *
+   * QR yang berubah tiap 30 detik tidak dapat difoto lalu ditayangkan di layar,
+   * dan peserta yang memotret layar dari jauh sering mendapati kodenya sudah
+   * kedaluwarsa sebelum terbaca. Jendela presensi -- bukan perputaran kode --
+   * yang menjaganya: menutup sesi menaikkan qrRevision dan mematikan seluruh
+   * kode lama.
+   *
+   * The QR carries the session's static code, not a rotating token.
+   *
+   * A QR that changes every 30 seconds cannot be photographed and shown on a
+   * screen, and participants shooting the screen from a distance often find
+   * the code expired before it is read. The attendance window -- not rotation
+   * -- is what protects it: closing the session raises qrRevision and kills
+   * every old code.
+   */
   function renderQrTo(canvas: HTMLCanvasElement | null, token: string, size: number) {
     if (!canvas) return;
     const appUrl = window.location.origin;
@@ -40,9 +56,10 @@ export function QrMonitorModal({ sessionId, onClose, totalStudents: totalStudent
         const monitorData: QrMonitorData = await res.json();
         setData(monitorData);
 
-        if (monitorData.currentToken) {
-          renderQrTo(canvasRef.current, monitorData.currentToken, 100);
-          renderQrTo(zoomCanvasRef.current, monitorData.currentToken, 320);
+        const payload = monitorData.sessionCode ?? monitorData.currentToken;
+        if (payload) {
+          renderQrTo(canvasRef.current, payload, 100);
+          renderQrTo(zoomCanvasRef.current, payload, 320);
         }
       }
     } catch (e) {
@@ -54,14 +71,11 @@ export function QrMonitorModal({ sessionId, onClose, totalStudents: totalStudent
 
   useEffect(() => {
     fetchMonitor();
-    const interval = setInterval(() => { fetchMonitor(); setCountdown(30); }, 25000);
+    // Muat ulang untuk menyegarkan daftar hadir; kodenya sendiri tidak berubah.
+    // Refresh to update the attendee list; the code itself does not change.
+    const interval = setInterval(fetchMonitor, 25000);
     return () => clearInterval(interval);
   }, [sessionId]);
-
-  useEffect(() => {
-    const timer = setInterval(() => setCountdown((prev) => (prev > 1 ? prev - 1 : 30)), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Canvas zoom baru muncul di DOM setelah isZoomed jadi true, jadi perlu
   // digambar ulang di sini -- efek fetchMonitor sebelumnya sudah lewat saat
@@ -70,8 +84,9 @@ export function QrMonitorModal({ sessionId, onClose, totalStudents: totalStudent
   // needs to be redrawn here -- the earlier fetchMonitor effect already ran
   // before this element existed.
   useEffect(() => {
-    if (isZoomed && data?.currentToken) {
-      renderQrTo(zoomCanvasRef.current, data.currentToken, 320);
+    const payload = data?.sessionCode ?? data?.currentToken;
+    if (isZoomed && payload) {
+      renderQrTo(zoomCanvasRef.current, payload, 320);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isZoomed]);
@@ -163,8 +178,29 @@ export function QrMonitorModal({ sessionId, onClose, totalStudents: totalStudent
 
               {/* Kanan: caption + 3 kartu statistik + tombol aksi (node 10:1903) */}
               <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-                  QR refresh tiap 30 detik (anti screenshot) - {countdown}s
+                {data?.isActive && data.sessionCode ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>KODE PRESENSI</div>
+                      <div style={{ fontFamily: 'monospace', fontSize: '26px', fontWeight: 700, letterSpacing: '4px', color: 'var(--color-primary)' }}>
+                        {data.sessionCode}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard?.writeText(data.sessionCode!)}
+                      style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: '#ffffff', cursor: 'pointer', fontSize: '10px', fontWeight: 600 }}
+                    >
+                      Salin
+                    </button>
+                  </div>
+                ) : (
+                  <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
+                    Presensi belum dibuka
+                  </span>
+                )}
+                <span style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>
+                  Kode dan QR tetap selama presensi dibuka, jadi dapat di-screenshot dan ditayangkan. Menutup presensi mematikannya.
                 </span>
 
                 {/* 3 kartu statistik (node 10:1905): Hadir(biru) / Belum(abu) / Kehadiran%(hijau) */}
@@ -292,7 +328,12 @@ export function QrMonitorModal({ sessionId, onClose, totalStudents: totalStudent
           <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
             <canvas ref={zoomCanvasRef} />
             <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)' }}>{session?.title}</span>
-            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Refresh tiap 30 detik - {countdown}s - Tap di mana saja untuk tutup</span>
+            {data?.sessionCode && (
+              <div style={{ fontFamily: 'monospace', fontSize: '40px', fontWeight: 700, letterSpacing: '8px', color: 'var(--color-primary)' }}>
+                {data.sessionCode}
+              </div>
+            )}
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Scan QR atau ketik kodenya - Tap di mana saja untuk tutup</span>
           </div>
         </div>
       )}

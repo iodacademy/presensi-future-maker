@@ -49,11 +49,40 @@ export function extractToken(raw: string): string | null {
  * localhost) -- elsewhere the browser refuses getUserMedia and the user must
  * fall back to the manual field.
  */
+interface ZoomRange {
+  min: number;
+  max: number;
+  step: number;
+}
+
 export default function QrCamera({ onToken }: QrCameraProps) {
   const [error, setError] = useState<string | null>(null);
+  // Tanpa zoom, QR yang ditayangkan di layar proyektor terlalu kecil di frame
+  // untuk terbaca dari tempat duduk peserta; mereka harus maju ke depan.
+  //
+  // Without zoom a QR shown on a projector is too small in frame to decode
+  // from where participants sit; they have to walk up to it.
+  const [zoomRange, setZoomRange] = useState<ZoomRange | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const trackRef = useRef<MediaStreamTrack | null>(null);
   const handledRef = useRef(false);
   const onTokenRef = useRef(onToken);
   onTokenRef.current = onToken;
+
+  function applyZoom(value: number) {
+    setZoom(value);
+    const track = trackRef.current;
+    if (!track) return;
+    // Zoom bukan bagian dari tipe baku MediaTrackConstraintSet; hanya sebagian
+    // perangkat mendukungnya dan penolakannya tidak boleh menghentikan
+    // pemindaian.
+    //
+    // Zoom is not part of the standard MediaTrackConstraintSet; only some
+    // devices support it and a rejection must not stop scanning.
+    track
+      .applyConstraints({ advanced: [{ zoom: value }] } as unknown as MediaTrackConstraints)
+      .catch(() => {});
+  }
 
   useEffect(() => {
     let scanner: { stop: () => Promise<void>; clear: () => void } | null = null;
@@ -87,6 +116,33 @@ export default function QrCamera({ onToken }: QrCameraProps) {
             // Frame with no readable QR -- normal, not an error.
           }
         );
+
+        if (cancelled) return;
+
+        // Kemampuan zoom baru terbaca setelah stream berjalan; sebelum itu
+        // track-nya belum ada.
+        //
+        // Zoom capability is only readable once the stream runs; before that
+        // there is no track to ask.
+        const track = document
+          .querySelector<HTMLVideoElement>(`#${ELEMENT_ID} video`)
+          ?.srcObject instanceof MediaStream
+          ? (document.querySelector<HTMLVideoElement>(`#${ELEMENT_ID} video`)!
+              .srcObject as MediaStream).getVideoTracks()[0]
+          : null;
+
+        if (track) {
+          trackRef.current = track;
+          const caps = track.getCapabilities?.() as { zoom?: ZoomRange } | undefined;
+          if (caps?.zoom && caps.zoom.max > caps.zoom.min) {
+            setZoomRange({
+              min: caps.zoom.min,
+              max: caps.zoom.max,
+              step: caps.zoom.step || 0.1,
+            });
+            setZoom(caps.zoom.min);
+          }
+        }
       } catch (err) {
         if (cancelled) return;
         setError(
@@ -106,6 +162,7 @@ export default function QrCamera({ onToken }: QrCameraProps) {
     // on and the device keeps holding the resource.
     return () => {
       cancelled = true;
+      trackRef.current = null;
       scanner?.stop().then(() => scanner?.clear()).catch(() => {});
     };
   }, []);
@@ -124,6 +181,25 @@ export default function QrCamera({ onToken }: QrCameraProps) {
           backgroundColor: '#1a1a22',
         }}
       />
+      {zoomRange && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '280px', maxWidth: '70vw' }}>
+          <span style={{ fontSize: '11px', color: '#d4d4d8', flexShrink: 0 }}>Zoom</span>
+          <input
+            type="range"
+            min={zoomRange.min}
+            max={zoomRange.max}
+            step={zoomRange.step}
+            value={zoom}
+            onChange={(e) => applyZoom(Number(e.target.value))}
+            aria-label="Perbesar kamera"
+            style={{ flex: 1 }}
+          />
+          <span style={{ fontSize: '11px', color: '#d4d4d8', flexShrink: 0, minWidth: '34px', textAlign: 'right' }}>
+            {zoom.toFixed(1)}x
+          </span>
+        </div>
+      )}
+
       {error && (
         <div
           role="alert"
