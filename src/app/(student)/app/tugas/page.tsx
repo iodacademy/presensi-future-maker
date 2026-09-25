@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Lock } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import type { StudentTaskItem } from '@/features/tasks/submission-types';
-import { formatDateWib } from '@/lib/time';
+import { formatDateWib, formatDateTimeWib } from '@/lib/time';
 
 export default function StudentTasksPage() {
   const [items, setItems] = useState<StudentTaskItem[]>([]);
@@ -28,7 +28,7 @@ export default function StudentTasksPage() {
     loadTasks();
   }, []);
 
-  const dailyItems = items.filter((i) => i.task.kind === 'daily');
+  const dailyItems = items.filter((i) => i.task.kind === 'daily' || i.task.kind === 'working-paper');
   const capstoneItem = items.find((i) => i.task.kind === 'capstone');
   const completedDailyCount = dailyItems.filter((i) => i.submission !== null).length;
   const totalDailyCount = dailyItems.length;
@@ -132,7 +132,7 @@ export default function StudentTasksPage() {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '9px', fontWeight: 700, color: isUrgent ? '#ffffff' : 'var(--color-text-main)', backgroundColor: isUrgent ? 'var(--color-warning)' : 'transparent', padding: isUrgent ? '3px 8px' : 0, borderRadius: '10px' }}>
-                            {isGraded ? `DINILAI ${submission?.score}` : isSubmitted ? 'TERKUMPUL' : task.dueAt ? `DEADLINE ${task.dueAt}` : 'BELUM KUMPUL'}
+                            {isGraded ? `DINILAI ${submission?.score}` : isSubmitted ? 'TERKUMPUL' : task.dueAt ? `DEADLINE ${formatDateTimeWib(task.dueAt)}` : 'BELUM KUMPUL'}
                           </span>
                         </div>
                         <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)', margin: '8px 0 4px' }}>{task.title}</h3>

@@ -3,6 +3,7 @@
 import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor, UserDocument } from '../auth/types';
+import type { MaterialLink } from '../tasks/types';
 import type {
   SessionDocument,
   AttendanceDocument,
@@ -604,10 +605,35 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
 
   // Daftar sesi dan presensi siswa independen satu sama lain -- jalankan paralel.
   // Session list and student attendance are independent -- run in parallel.
-  const [sessions, attendanceSnap] = await Promise.all([
+  // Working paper diambil bersama sesinya: peserta mencari berdasarkan
+  // pertemuan, sehingga rekaman, bahan, dan tugas sesinya perlu tiba bersamaan
+  // alih-alih memaksa halaman memanggil dua endpoint.
+  //
+  // Working papers are fetched alongside the sessions: participants look by
+  // meeting, so recordings, materials, and the session's task need to arrive
+  // together rather than forcing the page to call two endpoints.
+  const [sessions, attendanceSnap, papersSnap] = await Promise.all([
     listSessionsForClass(actor.classId),
     db.collection('attendance').where('classId', '==', actor.classId).where('studentId', '==', actor.uid).get(),
+    db
+      .collection('tasks')
+      .where('classId', '==', actor.classId)
+      .where('kind', '==', 'working-paper')
+      .get(),
   ]);
+
+  const papersBySession = new Map<string, { id: string; title: string; dueAt: string | null }[]>();
+  for (const doc of papersSnap.docs) {
+    const t = doc.data() as { id: string; title: string; dueAt: string | null; sessionId?: string | null; published?: boolean };
+    // Tugas yang belum terbit tidak boleh tampil; peserta akan melihat tugas
+    // yang belum siap dibuka.
+    //
+    // Unpublished tasks must not show; participants would see a task that is
+    // not ready to open.
+    if (!t.sessionId || t.published === false) continue;
+    if (!papersBySession.has(t.sessionId)) papersBySession.set(t.sessionId, []);
+    papersBySession.get(t.sessionId)!.push({ id: t.id, title: t.title, dueAt: t.dueAt ?? null });
+  }
 
   const attendMap = new Map<string, AttendanceDocument>();
   for (const doc of attendanceSnap.docs) {
@@ -621,6 +647,7 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
     session: s,
     attendance: attendMap.get(s.id) || null,
     isActive: isSessionAttendanceActive(s, nowIso),
+    workingPapers: papersBySession.get(s.id) ?? [],
   }));
 }
 
@@ -818,4 +845,124 @@ export async function listSessionAttendance(
     .sort((a, b) => a.studentName.localeCompare(b.studentName, 'id'));
 
   return { session, entries };
+}
+
+/**
+ * Menebak jenis berkas dari tautannya, untuk memilih ikon dan keterangan.
+ *
+ * Guesses a file's kind from its link, to pick an icon and caption.
+ */
+function guessMaterialKind(url: string): MaterialLink['kind'] {
+  const lower = url.toLowerCase();
+  if (lower.includes('/presentation/') || lower.endsWith('.ppt') || lower.endsWith('.pptx')) return 'slide';
+  if (lower.includes('/spreadsheets/') || lower.endsWith('.xls') || lower.endsWith('.xlsx') || lower.endsWith('.csv')) return 'sheet';
+  if (lower.includes('/document/') || lower.endsWith('.doc') || lower.endsWith('.docx')) return 'doc';
+  if (lower.endsWith('.pdf')) return 'pdf';
+  return 'other';
+}
+
+/**
+ * Admin menambahkan satu bahan praktik pada sebuah pertemuan.
+ *
+ * Bahan melekat pada sesi, bukan pada tugas: peserta mencari berdasarkan
+ * pertemuan, sehingga rekaman dan bahannya perlu berada di satu tempat.
+ *
+ * Transaksi dipakai, bukan pembaruan larik biasa: dua admin yang menambah bahan
+ * hampir bersamaan sama-sama membaca daftar lama, dan yang menulis belakangan
+ * menghapus bahan yang baru saja ditambahkan yang lain.
+ *
+ * An admin adds one practice material to a meeting.
+ *
+ * Materials hang off the session rather than a task: participants look by
+ * meeting, so a recording and its materials belong in one place.
+ *
+ * A transaction is used rather than a plain array update: two admins adding
+ * materials at nearly the same time both read the old list, and whoever writes
+ * last erases the material the other just added.
+ */
+export async function addSessionMaterial(
+  actor: Actor,
+  input: { sessionId: string; label: string; url: string; kind?: MaterialLink['kind'] }
+): Promise<void> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan menambah bahan praktik');
+  }
+
+  const url = (input.url ?? '').trim();
+  if (!url) {
+    throw new Error('Tautan bahan wajib diisi');
+  }
+
+  // HTTPS diwajibkan karena tautan ini dirender sebagai href pada halaman
+  // peserta: skema javascript: akan dieksekusi di peramban mereka.
+  //
+  // HTTPS is required because this link renders as an href on the participant
+  // page: a javascript: scheme would execute in their browser.
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') throw new Error();
+  } catch {
+    throw new Error('Tautan bahan harus berupa URL HTTPS yang valid');
+  }
+
+  const label = (input.label ?? '').trim().slice(0, 80) || 'Bahan praktik';
+  const db = getAdminDb();
+  const sessionRef = db.collection('sessions').doc(input.sessionId);
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(sessionRef);
+    if (!snap.exists) {
+      throw new Error('Sesi tidak ditemukan');
+    }
+
+    const existing = ((snap.data() as SessionDocument).materials || []) as MaterialLink[];
+    if (existing.some((m) => m.url === url)) {
+      throw new Error('Tautan ini sudah ditambahkan pada pertemuan tersebut');
+    }
+
+    tx.update(sessionRef, {
+      materials: [
+        ...existing,
+        {
+          id: crypto.randomUUID(),
+          label,
+          url,
+          kind: input.kind ?? guessMaterialKind(url),
+          addedAt: new Date().toISOString(),
+        },
+      ],
+      updatedAt: new Date().toISOString(),
+    });
+  });
+}
+
+/**
+ * Admin menghapus satu bahan praktik dari sebuah pertemuan.
+ *
+ * An admin removes one practice material from a meeting.
+ */
+export async function removeSessionMaterial(
+  actor: Actor,
+  sessionId: string,
+  materialId: string
+): Promise<void> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan menghapus bahan praktik');
+  }
+
+  const db = getAdminDb();
+  const sessionRef = db.collection('sessions').doc(sessionId);
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(sessionRef);
+    if (!snap.exists) {
+      throw new Error('Sesi tidak ditemukan');
+    }
+
+    const existing = ((snap.data() as SessionDocument).materials || []) as MaterialLink[];
+    tx.update(sessionRef, {
+      materials: existing.filter((m) => m.id !== materialId),
+      updatedAt: new Date().toISOString(),
+    });
+  });
 }

@@ -2,6 +2,8 @@
 export type SessionMode = 'online' | 'offline';
 export type AttendanceOverride = 'auto' | 'open' | 'closed';
 
+import type { MaterialLink } from '../tasks/types';
+
 export interface SessionRecording {
   id: string;
   /** Penanda ruang, misalnya "Kelas Utama" atau "Breakout 1" / Room label, e.g. "Main Room" or "Breakout 1" */
@@ -57,6 +59,21 @@ export interface SessionDocument {
   // separately. Distinct from zoomUrl: a join link plays nothing once the
   // meeting is over.
   recordings?: SessionRecording[];
+  /**
+   * Bahan praktik pertemuan ini: instruksi praktik, slide, berkas latihan.
+   *
+   * Melekat pada sesi, bukan pada tugas, sebab peserta mencari berdasarkan
+   * pertemuan. Menyimpannya pada tugas membuat rekaman dan bahannya berada di
+   * dua halaman berbeda untuk satu pertemuan yang sama.
+   *
+   * This meeting's practice materials: practice instructions, slides, exercise
+   * files.
+   *
+   * They hang off the session rather than a task, since participants look by
+   * meeting. Storing them on a task would put a meeting's recording and its
+   * materials on two different pages.
+   */
+  materials?: MaterialLink[];
   address: string | null;
   mapsUrl: string | null;
   attendanceOverride: AttendanceOverride;

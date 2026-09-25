@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { QrCode, Info, Video } from 'lucide-react';
+import { QrCode, Info, Video, FileText, Download, ClipboardList } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
-import { formatTimeWib } from '@/lib/time';
+import { formatTimeWib, formatDateTimeWib } from '@/lib/time';
 import type { SessionDocument, AttendanceDocument } from '@/features/attendance/types';
 
 type FilterMode = 'all' | 'online' | 'offline' | 'rekaman';
@@ -13,6 +13,7 @@ interface SessionItem {
   session: SessionDocument;
   attendance: AttendanceDocument | null;
   isActive: boolean;
+  workingPapers?: { id: string; title: string; dueAt: string | null }[];
 }
 
 /**
@@ -28,9 +29,16 @@ interface SessionItem {
  * may already have partial recordings before it ends, and a participant looking
  * for them should not have to wait for the card to change shape.
  */
-function RecordingLinks({ session }: { session: SessionDocument }) {
+function RecordingLinks({
+  session,
+  workingPapers = [],
+}: {
+  session: SessionDocument;
+  workingPapers?: { id: string; title: string; dueAt: string | null }[];
+}) {
   const recordings = session.recordings ?? [];
-  if (recordings.length === 0) return null;
+  const materials = session.materials ?? [];
+  if (recordings.length === 0 && materials.length === 0 && workingPapers.length === 0) return null;
 
   return (
     <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -51,6 +59,60 @@ function RecordingLinks({ session }: { session: SessionDocument }) {
             Rekaman - {r.label}
           </span>
         </a>
+      ))}
+
+      {/* Bahan praktik berdampingan dengan rekamannya: peserta mencari
+          berdasarkan pertemuan, bukan berdasarkan jenis berkas.
+
+          Practice materials sit beside the recordings: participants look by
+          meeting, not by file kind. */}
+      {materials.map((m) => (
+        <a
+          key={m.id}
+          href={m.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px',
+            borderRadius: '8px', border: '1px solid var(--color-border)',
+            backgroundColor: '#ffffff', textDecoration: 'none',
+          }}
+        >
+          <FileText size={12} color="var(--color-text-main)" strokeWidth={2} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, minWidth: 0, fontSize: '10px', fontWeight: 600, color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {m.label}
+          </span>
+          <Download size={11} color="var(--color-text-muted)" strokeWidth={2} style={{ flexShrink: 0 }} />
+        </a>
+      ))}
+
+      {/* Working paper pertemuan ini. Diletakkan bersama rekaman dan bahannya
+          sebab ketiganya melekat pada satu pertemuan; memisahkannya membuat
+          peserta memeriksa dua halaman untuk sesi yang sama.
+
+          This meeting's working paper. Placed with its recordings and materials
+          since all three belong to one meeting; separating them would have
+          participants check two pages for the same session. */}
+      {workingPapers.map((w) => (
+        <Link
+          key={w.id}
+          href={`/app/tugas/${w.id}`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px',
+            borderRadius: '8px', backgroundColor: 'var(--color-warning-light)',
+            textDecoration: 'none',
+          }}
+        >
+          <ClipboardList size={12} color="#7c2d12" strokeWidth={2} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, minWidth: 0, fontSize: '10px', fontWeight: 600, color: '#7c2d12', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            Working Paper - {w.title}
+          </span>
+          {w.dueAt && (
+            <span style={{ fontSize: '9px', color: '#7c2d12', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              {formatDateTimeWib(w.dueAt)}
+            </span>
+          )}
+        </Link>
       ))}
     </div>
   );
@@ -167,7 +229,7 @@ export default function StudentJadwalPage() {
             {filterMode === 'rekaman' ? 'Belum ada rekaman yang diunggah' : 'Tidak ada jadwal pertemuan'}
           </div>
         ) : (
-          filteredItems.map(({ session, attendance, isActive }) => {
+          filteredItems.map(({ session, attendance, isActive, workingPapers }) => {
             const isAttended = Boolean(attendance);
             const isOnline = session.mode === 'online';
 
@@ -198,7 +260,7 @@ export default function StudentJadwalPage() {
                       </Link>
                     )}
                   </div>
-                  <RecordingLinks session={session} />
+                  <RecordingLinks session={session} workingPapers={workingPapers} />
                 </div>
               );
             }
@@ -228,7 +290,7 @@ export default function StudentJadwalPage() {
                   </div>
                 )}
 
-                <RecordingLinks session={session} />
+                <RecordingLinks session={session} workingPapers={workingPapers} />
               </div>
             );
           })

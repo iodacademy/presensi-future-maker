@@ -14,7 +14,7 @@ describe('halaman jadwal peserta', () => {
     // A long session may already have partial recordings before it ends.
     // Previously recordings appeared only on the finished-session card, so a
     // participant looking mid-session found nothing.
-    const uses = page.match(/<RecordingLinks session=\{session\} \/>/g) ?? [];
+    const uses = page.match(/<RecordingLinks\s+session=\{session\}/g) ?? [];
     expect(uses.length).toBe(2);
   });
 

@@ -1,5 +1,5 @@
 // Definisi tipe data submission tugas dan penilaian / Task submission and grading type definitions
-import type { TaskKind } from './types';
+import type { TaskKind, MaterialLink } from './types';
 
 export interface SubmissionDocument {
   id: string; // ${taskId}_${studentId}
@@ -56,6 +56,10 @@ export interface StudentTaskItem {
     briefUrl: string | null;
     briefFileName?: string | null;
     description: string;
+    /** Bahan praktik yang dapat diunduh / Practice materials to download */
+    materials?: MaterialLink[];
+    /** Pertemuan induk bagi working paper / Parent meeting for a working paper */
+    sessionId?: string | null;
   };
   submission: SubmissionDocument | null;
   feedback?: string | null;

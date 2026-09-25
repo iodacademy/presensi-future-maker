@@ -206,6 +206,15 @@ export async function listStudentTasksWithSubmissions(actor: Actor): Promise<Stu
           briefUrl: t.briefUrl,
           briefFileName: t.briefFileName,
           description: t.description || '',
+          // Tanpa baris ini bahan praktik tersimpan tetapi tidak pernah sampai
+          // ke peserta, dan typecheck tidak menangkapnya sebab field ini
+          // opsional.
+          //
+          // Without this line practice materials are stored but never reach
+          // participants, and typecheck does not catch it since the field is
+          // optional.
+          materials: t.materials ?? [],
+          sessionId: t.sessionId ?? null,
         },
         submission: sub,
         feedback,

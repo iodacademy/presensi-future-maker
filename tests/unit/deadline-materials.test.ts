@@ -6,6 +6,14 @@ import { parseDueAt } from '../../src/features/tasks/policy';
 import { isSubmissionLate } from '../../src/features/tasks/submission-policy';
 
 const service = readFileSync(resolve(process.cwd(), 'src/features/tasks/service.ts'), 'utf-8');
+const attendance = readFileSync(resolve(process.cwd(), 'src/features/attendance/service.ts'), 'utf-8');
+
+function attendanceBlock(fnName: string): string {
+  const start = attendance.indexOf(`export async function ${fnName}`);
+  if (start === -1) throw new Error(`fungsi ${fnName} tidak ditemukan`);
+  const next = attendance.indexOf('\nexport ', start + 1);
+  return attendance.slice(start, next === -1 ? attendance.length : next);
+}
 
 function block(fnName: string): string {
   const start = service.indexOf(`export async function ${fnName}`);
@@ -121,7 +129,14 @@ describe('working paper', () => {
 });
 
 describe('bahan praktik', () => {
-  const body = block('addTaskMaterial');
+  // Bahan melekat pada pertemuan, bukan pada tugas: peserta mencari
+  // berdasarkan pertemuan, sehingga rekaman dan bahannya perlu berada di satu
+  // tempat alih-alih dua halaman berbeda.
+  //
+  // Materials hang off the meeting rather than a task: participants look by
+  // meeting, so a recording and its materials belong in one place instead of
+  // two different pages.
+  const body = attendanceBlock('addSessionMaterial');
 
   it('memakai transaksi, bukan pembaruan larik biasa', () => {
     // Dua admin yang menambah bahan hampir bersamaan sama-sama membaca daftar
@@ -131,7 +146,7 @@ describe('bahan praktik', () => {
     // Two admins adding materials at nearly the same time both read the old
     // list; whoever writes last erases the material the other just added.
     expect(body).toContain('runTransaction');
-    expect(body).toMatch(/tx\.get\(taskRef\)/);
+    expect(body).toMatch(/tx\.get\(sessionRef\)/);
   });
 
   it('membaca sebelum menulis di dalam transaksi', () => {
@@ -157,6 +172,6 @@ describe('bahan praktik', () => {
 
   it('menuntut peran admin pada penambahan dan penghapusan', () => {
     expect(body).toContain("actor.role !== 'admin'");
-    expect(block('removeTaskMaterial')).toContain("actor.role !== 'admin'");
+    expect(attendanceBlock('removeSessionMaterial')).toContain("actor.role !== 'admin'");
   });
 });

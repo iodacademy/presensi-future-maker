@@ -7,6 +7,9 @@ import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { SessionMaterials } from './session-materials';
+import { SessionWorkingPaper } from './session-working-paper';
+import { formatDateTimeWib } from '@/lib/time';
 import type { TaskSummary, TaskKind } from '@/features/tasks/types';
 import type { ClassDocument } from '@/features/classes/types';
 import type { SessionDocument } from '@/features/attendance/types';
@@ -21,7 +24,7 @@ interface Mentor {
 type BuilderTab = 'rekaman' | 'tugas' | 'capstone';
 
 const BUILDER_TABS: [BuilderTab, string][] = [
-  ['rekaman', 'Rekaman'],
+  ['rekaman', 'Materi Sesi'],
   ['tugas', 'Tugas'],
   ['capstone', 'Capstone'],
 ];
@@ -65,7 +68,14 @@ export default function CourseBuilderPage({
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<TaskKind>('daily');
   const [description, setDescription] = useState('');
-  const [dueAt, setDueAt] = useState('');
+  // Tanggal dan jam dipisah agar keduanya dapat diurai. Satu kolom teks bebas
+  // menghasilkan batas waktu yang tidak pernah berlaku.
+  //
+  // Date and time are separate so both can be parsed. A single free-text field
+  // produced deadlines that never took effect.
+  const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('23:59');
+  const [sessionId, setSessionId] = useState('');
   const [briefUrl, setBriefUrl] = useState('');
   const [briefFileName, setBriefFileName] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -194,7 +204,9 @@ export default function CourseBuilderPage({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title, kind, description,
-          dueAt: dueAt || null,
+          sessionId: kind === 'working-paper' ? sessionId : null,
+          dueDate: dueDate || null,
+          dueTime: dueTime || null,
           briefUrl: briefUrl || null,
           briefFileName: briefFileName || null,
           order,
@@ -207,7 +219,8 @@ export default function CourseBuilderPage({
       }
 
       setIsModalOpen(false);
-      setTitle(''); setDescription(''); setDueAt(''); setBriefUrl(''); setBriefFileName('');
+      setTitle(''); setDescription(''); setDueDate(''); setDueTime('23:59'); setSessionId('');
+      setBriefUrl(''); setBriefFileName('');
       setActionSuccess('Tugas berhasil ditambahkan ke kurikulum');
       loadTasks(); // hanya tasks yang berubah / only tasks changed
     } catch (err: any) {
@@ -283,6 +296,7 @@ export default function CourseBuilderPage({
   }
 
   const dailyTasks = tasks.filter((t) => t.kind === 'daily');
+  const workingPapers = tasks.filter((t) => t.kind === 'working-paper');
   const capstoneTask = tasks.find((t) => t.kind === 'capstone');
   const isDraft = classData?.status === 'draft';
   // Tugas kini dapat disusun setelah kelas aktif; hanya kelas terarsip yang
@@ -392,8 +406,8 @@ export default function CourseBuilderPage({
       ) : tab === 'rekaman' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', margin: 0 }}>
-            Daftar pertemuan diambil dari menu Jadwal. Satu pertemuan dapat memuat beberapa rekaman,
-            misalnya kelas utama dan tiap breakout room.
+            Daftar pertemuan diambil dari menu Jadwal. Tiap pertemuan memuat rekaman dan bahan
+            praktiknya di satu tempat, supaya peserta tidak mencarinya terpisah.
           </p>
 
           {sessions.length === 0 ? (
@@ -457,6 +471,8 @@ export default function CourseBuilderPage({
                     </div>
                   )}
 
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)' }}>REKAMAN</div>
+
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                     <input
                       value={draft.label}
@@ -481,6 +497,42 @@ export default function CourseBuilderPage({
                       {savingRecording === s.id ? 'Menyimpan...' : 'Tambah'}
                     </Button>
                   </div>
+
+                  <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
+
+                  {/* Bahan praktik melekat pada pertemuan, bukan pada tugas:
+                      peserta mencari berdasarkan pertemuan, sehingga rekaman
+                      dan bahannya perlu berada di satu tempat.
+
+                      Practice materials hang off the meeting rather than a
+                      task: participants look by meeting, so a recording and its
+                      materials belong in one place. */}
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)' }}>
+                    BAHAN PRAKTIK
+                  </div>
+                  <SessionMaterials session={s} onChanged={loadSessions} />
+
+                  <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
+
+                  {/* Working paper melekat pada pertemuan yang sama dengan
+                      rekaman dan bahannya; memisahkannya ke tab tersendiri
+                      membuat admin maupun peserta memeriksa dua tempat untuk
+                      sesi yang sama.
+
+                      The working paper belongs to the same meeting as its
+                      recordings and materials; a separate tab would make both
+                      admins and participants check two places for one
+                      session. */}
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)' }}>
+                    WORKING PAPER
+                  </div>
+                  <SessionWorkingPaper
+                    session={s}
+                    classId={classId}
+                    papers={tasks.filter((t) => t.kind === 'working-paper' && t.sessionId === s.id)}
+                    onChanged={loadTasks}
+                    onDelete={(t) => setPendingDelete({ endpoint: `/api/tasks/${t.id}`, label: t.title })}
+                  />
                 </div>
               );
             })
@@ -673,7 +725,28 @@ export default function CourseBuilderPage({
                   required
                 />
               </div>
-              <Input label="DEADLINE (OPSIONAL)" placeholder="Contoh: 30 September 2026, 23:59 WIB" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+                    TANGGAL BATAS (OPSIONAL)
+                  </label>
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '12px' }}
+                  />
+                </div>
+                <div style={{ width: '120px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>JAM WIB</label>
+                  <input
+                    type="time"
+                    value={dueTime}
+                    onChange={(e) => setDueTime(e.target.value)}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '12px' }}
+                  />
+                </div>
+              </div>
               <Input label="LINK BRIEF TUGAS (OPSIONAL - HTTPS)" type="url" placeholder="https://drive.google.com/... atau https://..." value={briefUrl} onChange={(e) => setBriefUrl(e.target.value)} />
               {briefUrl && (
                 <Input label="NAMA FILE TAMPILAN BRIEF" placeholder="Contoh: Brief_Tugas1.pdf" value={briefFileName} onChange={(e) => setBriefFileName(e.target.value)} />
