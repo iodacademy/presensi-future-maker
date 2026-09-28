@@ -99,7 +99,30 @@ describe('jadwal berada pada halaman mentornya', () => {
     // A separate slot page asked again which mentor was meant, although the
     // admin had just picked them.
     expect(mentorPage).toContain('<MentorSlots');
-    expect(mentorPage).toContain('PESERTA BIMBINGAN');
+    expect(mentorPage).toContain('Peserta Bimbingan');
+  });
+
+  it('memisahkan keduanya menjadi dua tab', () => {
+    // Daftar peserta sepanjang satu kelas mendorong jadwal jauh ke bawah
+    // layar, sehingga admin tidak tahu jadwalnya ada di situ.
+    //
+    // A class-long participant list pushed the schedule far below the fold, so
+    // an admin would not know it was there.
+    expect(mentorPage).toMatch(/useState<'peserta' \| 'jadwal'>/);
+    expect(mentorPage).toMatch(/tab === 'jadwal' && \(/);
+    expect(mentorPage).toMatch(/tab === 'peserta' &&/);
+  });
+
+  it('menandai tab aktif bagi pembaca layar', () => {
+    // Warna saja tidak terbaca pembaca layar.
+    // Colour alone is not announced by a screen reader.
+    expect(mentorPage).toContain("aria-current={tab === key ? 'page' : undefined}");
+  });
+
+  it('tidak mengulang judul jadwal di dalam panelnya', () => {
+    // Judul yang sama pada tab dan panel hanya mendorong isinya turun.
+    // The same heading on the tab and the panel only pushes content down.
+    expect(panel).not.toMatch(/>\s*Jadwal Mentoring\s*</);
   });
 
   it('tidak menyisakan halaman slot terpisah', () => {

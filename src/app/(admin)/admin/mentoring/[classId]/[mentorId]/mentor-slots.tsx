@@ -211,13 +211,13 @@ export function MentorSlots({ classId, mentorId, mentorName, phase }: MentorSlot
 
   return (
     <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid var(--color-border)', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <div>
-        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>
-          Jadwal Mentoring
-        </div>
-        <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-          Slot yang dibuka {mentorName}. Peserta bimbingannya memesan salah satunya.
-        </div>
+      {/* Judulnya sudah ada pada tab; mengulanginya di sini hanya menambah
+          baris yang mendorong isinya turun.
+
+          The heading is already on the tab; repeating it here only adds a line
+          that pushes the content down. */}
+      <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
+        Slot yang dibuka {mentorName}. Peserta bimbingannya memesan salah satunya.
       </div>
 
       {status && (

@@ -42,6 +42,7 @@ export default function MentorAssignmentPage({
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState('');
+  const [tab, setTab] = useState<'peserta' | 'jadwal'>('peserta');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -166,17 +167,38 @@ export default function MentorAssignmentPage({
         </div>
       )}
 
-      {/* Penugasan peserta dan jadwal mentoring berada pada satu halaman yang
-          sama; keduanya melekat pada mentor ini dan memisahkannya membuat admin
-          menyebut mentor yang sama dua kali.
+      {/* Penugasan dan jadwal tetap pada satu halaman karena keduanya melekat
+          pada mentor ini; dua halaman membuat admin menyebut mentor yang sama
+          dua kali. Tab memisahkan tampilannya tanpa memisahkan alurnya: daftar
+          peserta sepanjang satu kelas mendorong jadwal jauh ke bawah layar.
 
-          Assigning participants and setting the schedule live on one page; both
-          belong to this mentor, and separating them made an admin name the same
-          mentor twice. */}
-      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', marginTop: '4px' }}>
-        PESERTA BIMBINGAN
+          Assignment and scheduling stay on one page because both belong to this
+          mentor; two pages made an admin name the same mentor twice. Tabs split
+          the view without splitting the flow: a class-long participant list
+          pushed the schedule far below the fold. */}
+      <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+        {([
+          ['peserta', `Peserta Bimbingan${alreadyMine.size > 0 ? ` (${alreadyMine.size})` : ''}`],
+          ['jadwal', 'Jadwal Mentoring'],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTab(key)}
+            aria-current={tab === key ? 'page' : undefined}
+            style={{
+              padding: '8px 16px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+              fontSize: '11px', fontWeight: tab === key ? 700 : 600,
+              backgroundColor: tab === key ? 'var(--color-primary)' : 'var(--color-border)',
+              color: tab === key ? '#ffffff' : 'var(--color-text-main)',
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
+      {tab === 'peserta' && (
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: '#ffffff' }}>
         <Search size={13} color="var(--color-text-muted)" strokeWidth={2} />
         <input
@@ -187,8 +209,9 @@ export default function MentorAssignmentPage({
           style={{ border: 'none', outline: 'none', fontSize: '11px', flex: 1, color: 'var(--color-text-main)' }}
         />
       </div>
+      )}
 
-      {loading ? (
+      {tab === 'peserta' && (loading ? (
         <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
           Memuat daftar peserta...
         </div>
@@ -245,9 +268,9 @@ export default function MentorAssignmentPage({
             );
           })}
         </div>
-      )}
+      ))}
 
-      {!loading && students.length > 0 && (
+      {tab === 'peserta' && !loading && students.length > 0 && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
             {toAdd.length > 0
@@ -260,9 +283,9 @@ export default function MentorAssignmentPage({
         </div>
       )}
 
-      <div style={{ height: '1px', backgroundColor: 'var(--color-border)', margin: '6px 0' }} />
-
-      <MentorSlots classId={classId} mentorId={mentorId} mentorName={mentorName} phase={phase} />
+      {tab === 'jadwal' && (
+        <MentorSlots classId={classId} mentorId={mentorId} mentorName={mentorName} phase={phase} />
+      )}
     </AppShell>
   );
 }
