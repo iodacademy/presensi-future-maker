@@ -193,24 +193,13 @@ export default function MentoringClassPage({ params }: { params: Promise<{ class
             </div>
           )}
 
-          <Link
-            href={`/admin/mentoring/${classId}/slot?phase=${phase}`}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
-              padding: '14px', borderRadius: '12px', border: '1px solid var(--color-border)',
-              backgroundColor: '#ffffff', textDecoration: 'none', marginTop: '4px',
-            }}
-          >
-            <span>
-              <span style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>
-                Slot dan Jadwal Mentoring
-              </span>
-              <span style={{ display: 'block', fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                Buat slot, lihat pemesanan, dan batalkan sesi
-              </span>
-            </span>
-            <ChevronRight size={14} color="var(--color-primary)" strokeWidth={2} />
-          </Link>
+          {/* Tautan ke halaman slot terpisah dihapus: halaman itu menanyakan
+              ulang mentor mana yang dimaksud, padahal admin memilih mentornya
+              tepat di daftar atas. Jadwal kini berada pada halaman mentornya.
+
+              The link to a separate slot page is gone: that page asked again
+              which mentor was meant, although the admin picks the mentor right
+              in the list above. The schedule now lives on the mentor's page. */}
         </div>
       )}
     </AppShell>

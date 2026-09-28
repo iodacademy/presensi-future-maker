@@ -8,6 +8,7 @@ import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import type { ClassDocument } from '@/features/classes/types';
 import type { Phase } from '@/features/assignments/types';
+import { MentorSlots } from './mentor-slots';
 
 interface StudentRow {
   student: { uid: string; name: string; email: string };
@@ -165,6 +166,17 @@ export default function MentorAssignmentPage({
         </div>
       )}
 
+      {/* Penugasan peserta dan jadwal mentoring berada pada satu halaman yang
+          sama; keduanya melekat pada mentor ini dan memisahkannya membuat admin
+          menyebut mentor yang sama dua kali.
+
+          Assigning participants and setting the schedule live on one page; both
+          belong to this mentor, and separating them made an admin name the same
+          mentor twice. */}
+      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', marginTop: '4px' }}>
+        PESERTA BIMBINGAN
+      </div>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: '#ffffff' }}>
         <Search size={13} color="var(--color-text-muted)" strokeWidth={2} />
         <input
@@ -247,6 +259,10 @@ export default function MentorAssignmentPage({
           </Button>
         </div>
       )}
+
+      <div style={{ height: '1px', backgroundColor: 'var(--color-border)', margin: '6px 0' }} />
+
+      <MentorSlots classId={classId} mentorId={mentorId} mentorName={mentorName} phase={phase} />
     </AppShell>
   );
 }
