@@ -69,7 +69,7 @@ export default function StudentTasksPage() {
       <div className="student-mobile-header" style={{ backgroundColor: 'var(--color-primary)', padding: '24px 16px 16px', paddingRight: '120px' }}>
         <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: '#ffffff', margin: 0 }}>Tugas</h1>
         <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-          {tabButton('daily', `Tugas Harian - ${totalDailyCount}`, true)}
+          {tabButton('daily', `Praktik Mandiri - ${totalDailyCount}`, true)}
           {tabButton('capstone', 'Capstone', true)}
         </div>
       </div>
@@ -81,7 +81,7 @@ export default function StudentTasksPage() {
           <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>Kumpulkan tugas tepat waktu untuk membuka akses Capstone Project</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          {tabButton('daily', `Tugas Harian (${totalDailyCount})`, false)}
+          {tabButton('daily', `Tugas Praktik Mandiri (${totalDailyCount})`, false)}
           {tabButton('capstone', 'Capstone Project', false)}
         </div>
       </div>
@@ -162,7 +162,7 @@ export default function StudentTasksPage() {
                     <Lock size={18} color="var(--color-text-faint)" strokeWidth={2} />
                   </span>
                   <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)', margin: '10px 0 4px' }}>Capstone Terkunci</h2>
-                  <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', margin: 0 }}>Selesaikan semua Tugas Harian dulu</p>
+                  <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', margin: 0 }}>Selesaikan semua Tugas Praktik Mandiri dulu</p>
 
                   <div style={{ display: 'inline-flex', marginTop: '14px', padding: '5px 12px', borderRadius: '20px', border: '1px solid var(--color-border)', backgroundColor: '#ffffff' }}>
                     <span style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>Progress {completedDailyCount} / {totalDailyCount} tugas</span>

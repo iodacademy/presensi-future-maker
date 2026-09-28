@@ -204,7 +204,7 @@ export default function AdminKelasPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     {cls.dailyTaskCount > 0 ? (
                       <span style={{ fontSize: '9px', color: 'var(--color-success)' }}>
-                        {cls.dailyTaskCount} Tugas Harian - {cls.capstoneTaskCount} Capstone
+                        {cls.dailyTaskCount} Tugas Praktik Mandiri - {cls.capstoneTaskCount} Capstone
                       </span>
                     ) : (
                       <>

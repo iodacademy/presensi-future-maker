@@ -100,7 +100,7 @@ export default function AdminTugasPage() {
               color: activeTab === tab ? '#ffffff' : 'var(--color-text-main)',
             }}
           >
-            {tab === 'daily' ? 'Tugas Mandiri' : TASK_KIND_LABELS[tab]}
+            {TASK_KIND_LABELS[tab]}
           </button>
         ))}
       </div>

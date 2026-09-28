@@ -25,9 +25,24 @@ describe('Dashboard Home Policy', () => {
   });
 
   it('formats deadline badge label', () => {
-    expect(formatDeadlineLabel(true, '23:59')).toBe('DEADLINE SEGERA (23:59)');
-    expect(formatDeadlineLabel(false, '30 September')).toBe('DEADLINE: 30 September');
-    expect(formatDeadlineLabel(false, null)).toBe('TUGAS MANDIRI');
+    // dueAt kini ISO UTC, bukan teks bebas seperti "30 September". Label lama
+    // mencetaknya apa adanya, sehingga peserta membaca
+    // "DEADLINE: 2026-09-28T16:59:00.000Z".
+    //
+    // dueAt is now ISO UTC, not free text such as "30 September". The old
+    // label printed it as is, so participants read
+    // "DEADLINE: 2026-09-28T16:59:00.000Z".
+    expect(formatDeadlineLabel(false, '2026-09-28T16:59:00.000Z')).toBe('DEADLINE 28 Sep 2026, 23.59 WIB');
+    expect(formatDeadlineLabel(true, '2026-09-28T16:59:00.000Z')).toBe('DEADLINE SEGERA - 28 Sep 2026, 23.59 WIB');
+    expect(formatDeadlineLabel(false, null)).toBe('TANPA BATAS WAKTU');
+  });
+
+  it('tidak pernah membocorkan format ISO ke label', () => {
+    // Satu huruf T di antara tanggal dan jam adalah tandanya.
+    // A lone T between the date and the time is the giveaway.
+    for (const urgent of [true, false]) {
+      expect(formatDeadlineLabel(urgent, '2026-09-28T16:59:00.000Z')).not.toMatch(/\dT\d/);
+    }
   });
 
   it('formats progress ratios safely with fallback for zero divisor', () => {

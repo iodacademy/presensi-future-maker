@@ -10,6 +10,7 @@ import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { SessionMaterials } from './session-materials';
 import { SessionWorkingPaper } from './session-working-paper';
 import { SubmissionRoster } from './submission-roster';
+import { TASK_KIND_LABELS } from '@/features/tasks/types';
 import { formatDateTimeWib } from '@/lib/time';
 import type { TaskSummary, TaskKind } from '@/features/tasks/types';
 import type { ClassDocument } from '@/features/classes/types';
@@ -525,7 +526,7 @@ export default function CourseBuilderPage({
                       admins and participants check two places for one
                       session. */}
                   <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)' }}>
-                    WORKING PAPER
+                    HASIL PRAKTIK DI KELAS
                   </div>
                   <SessionWorkingPaper
                     session={s}
@@ -541,10 +542,10 @@ export default function CourseBuilderPage({
         </div>
       ) : (
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          {/* Instruksi Tugas Harian (node 10:1562) */}
+          {/* Instruksi Tugas Praktik Mandiri (node 10:1562) */}
           <div style={{ flex: '1 1 480px', minWidth: '360px', display: tab === 'tugas' ? 'flex' : 'none', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>Instruksi Tugas Harian</h2>
+              <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>Instruksi Tugas Praktik Mandiri</h2>
               {canEditTasks && (
                 <button
                   type="button"
@@ -564,7 +565,7 @@ export default function CourseBuilderPage({
             {dailyTasks.length === 0 ? (
               <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px dashed var(--color-border)', padding: '36px', textAlign: 'center' }}>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '8px' }}>
-                  Belum ada Tugas Harian
+                  Belum ada Tugas Praktik Mandiri
                 </div>
                 <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', maxWidth: '360px', margin: '0 auto 16px' }}>
                   Tugas dapat ditambahkan kapan saja, termasuk setelah kelas aktif.
@@ -711,7 +712,7 @@ export default function CourseBuilderPage({
             <div style={{ backgroundColor: 'var(--color-warning-light)', border: '1px solid #ffd500', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <div style={{ fontSize: '10px', fontWeight: 700, color: '#7c2d12' }}>Aturan Kunci Capstone</div>
               <div style={{ fontSize: '9px', color: '#7c2d12', lineHeight: 1.4 }}>
-                Capstone otomatis terkunci untuk peserta sampai keempat Tugas Harian di kelas ini terkumpul semua.
+                Capstone otomatis terkunci untuk peserta sampai seluruh Tugas Praktik Mandiri di kelas ini terkumpul.
               </div>
             </div>
           </div>
@@ -737,7 +738,7 @@ export default function CourseBuilderPage({
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', width: '100%', maxWidth: '520px', padding: '28px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
             <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>
-              Tambah {kind === 'daily' ? 'Tugas Harian' : 'Capstone Project'}
+              Tambah {TASK_KIND_LABELS[kind]}
             </h2>
             <form onSubmit={handleAddTask} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <Input label="JUDUL TUGAS" placeholder={kind === 'daily' ? 'Contoh: Tugas 1 - Intro React' : 'Contoh: Capstone Project - Final'} value={title} onChange={(e) => setTitle(e.target.value)} required />

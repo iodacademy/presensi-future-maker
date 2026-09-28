@@ -43,5 +43,19 @@ export interface StudentHomeData {
   nearestMentoring: StudentHomeMentoring | null;
   remainingMentoringQuota: number;
   nearestTask: StudentHomeTask | null;
+  /**
+   * Hasil praktik di kelas terdekat yang belum dikumpulkan.
+   *
+   * Terpisah dari nearestTask karena batasnya jatuh beberapa jam setelah
+   * pertemuannya: satu kartu yang sudah terisi tugas mandiri akan
+   * menyembunyikan justru yang paling mendesak.
+   *
+   * The nearest unsubmitted class practice result.
+   *
+   * Separate from nearestTask because its deadline falls hours after the
+   * meeting: a single card already holding a self-study task would hide the
+   * most urgent one.
+   */
+  nearestWorkingPaper: StudentHomeTask | null;
   progress: StudentHomeProgress;
 }

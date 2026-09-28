@@ -65,7 +65,7 @@ describe('seluruh isi pertemuan berada di satu tempat', () => {
     expect(adminPage).toContain('<SessionWorkingPaper');
     expect(adminPage).toContain('REKAMAN');
     expect(adminPage).toContain('BAHAN PRAKTIK');
-    expect(adminPage).toContain('WORKING PAPER');
+    expect(adminPage).toContain('HASIL PRAKTIK DI KELAS');
   });
 
   it('tidak ada lagi tab working paper terpisah', () => {
@@ -75,7 +75,7 @@ describe('seluruh isi pertemuan berada di satu tempat', () => {
 
   it('kartu pertemuan peserta memuat ketiganya', () => {
     expect(studentPage).toContain('Rekaman - ');
-    expect(studentPage).toContain('Working Paper - ');
+    expect(studentPage).toContain('Hasil Praktik - ');
     expect(studentPage).toMatch(/materials\.map/);
   });
 

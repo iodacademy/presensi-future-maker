@@ -1,5 +1,7 @@
 // Aturan format tanggal, urgensi deadline dan rasio progres dashboard
 // Policy for date formatting, deadline urgency, and progress ratios
+import { formatDateTimeWib } from '../../lib/time';
+
 export const URGENT_DEADLINE_MS = 24 * 60 * 60 * 1000; // 24 jam / 24 hours
 
 /**
@@ -23,15 +25,24 @@ export function isDeadlineUrgent(dueAtStr: string | null, nowMs: number = Date.n
  * Formats deadline badge label for home card.
  */
 export function formatDeadlineLabel(isUrgent: boolean, dueAtStr: string | null): string {
+  // dueAt kini ISO UTC. Sebelumnya berupa teks bebas seperti "30 September",
+  // sehingga mencetaknya apa adanya masih terbaca; kini label itu memberi
+  // "DEADLINE: 2026-09-28T16:59:00.000Z" kepada peserta.
+  //
+  // dueAt is now ISO UTC. It used to be free text such as "30 September", so
+  // printing it as is still read well; that label now hands participants
+  // "DEADLINE: 2026-09-28T16:59:00.000Z".
+  const waktu = dueAtStr ? formatDateTimeWib(dueAtStr) : null;
+
   if (isUrgent) {
-    return dueAtStr ? `DEADLINE SEGERA (${dueAtStr})` : 'DEADLINE BESOK, 23:59';
+    return waktu ? `DEADLINE SEGERA - ${waktu} WIB` : 'DEADLINE SEGERA';
   }
 
-  if (dueAtStr) {
-    return `DEADLINE: ${dueAtStr}`;
+  if (waktu) {
+    return `DEADLINE ${waktu} WIB`;
   }
 
-  return 'TUGAS MANDIRI';
+  return 'TANPA BATAS WAKTU';
 }
 
 /**

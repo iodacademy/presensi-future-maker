@@ -17,10 +17,23 @@
  */
 export type TaskKind = 'daily' | 'capstone' | 'working-paper';
 
+/**
+ * Nama yang dibaca pengguna.
+ *
+ * Kunci datanya tetap 'working-paper' dan 'daily': keduanya sudah tertulis
+ * pada dokumen tugas dan pengumpulan yang ada, sehingga menggantinya berarti
+ * memindahkan seluruh data lama hanya demi sebuah label.
+ *
+ * The names users read.
+ *
+ * The data keys stay 'working-paper' and 'daily': both are already written on
+ * existing task and submission documents, so renaming them would mean
+ * migrating all the old data merely for a label.
+ */
 export const TASK_KIND_LABELS: Record<TaskKind, string> = {
-  daily: 'Tugas Harian',
+  daily: 'Tugas Praktik Mandiri',
   capstone: 'Capstone Project',
-  'working-paper': 'Working Paper',
+  'working-paper': 'Hasil Praktik di Kelas',
 };
 
 /**

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { MapPin, QrCode, Users, FileText, ChevronRight } from 'lucide-react';
+import { MapPin, QrCode, Users, FileText, ClipboardList, ChevronRight } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import type { StudentHomeData } from '@/features/dashboard/types';
 
@@ -29,6 +29,7 @@ export default function StudentHomePage() {
   const nextSession = data?.nextSession;
   const nearestMentoring = data?.nearestMentoring;
   const nearestTask = data?.nearestTask;
+  const nearestWorkingPaper = data?.nearestWorkingPaper;
   const progress = data?.progress;
   const studentName = data?.studentName || 'Peserta';
   const className = data?.className || '-';
@@ -113,7 +114,7 @@ export default function StudentHomePage() {
                   </div>
                   <div>
                     <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-warning)' }}>{progress?.dailyTasksRatio || '0/0'}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Tugas Harian</div>
+                    <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Tugas Praktik Mandiri</div>
                   </div>
                   <div>
                     <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-success)' }}>{progress?.mentoringRatio || '0/2'}</div>
@@ -145,8 +146,44 @@ export default function StudentHomePage() {
                 </div>
               </Link>
 
+              {/* Hasil praktik di kelas dikartu tersendiri: batasnya jatuh
+                  beberapa jam setelah pertemuannya, jauh lebih cepat daripada
+                  tugas mandiri, sehingga satu kartu bersama akan menyembunyikan
+                  yang paling mendesak.
+
+                  Class practice results get their own card: the deadline falls
+                  hours after the meeting, far sooner than a self-study task, so
+                  one shared card would hide the most urgent item. */}
+              {nearestWorkingPaper && (
+                <Link href={`/app/tugas/${nearestWorkingPaper.id}`} style={{ textDecoration: 'none' }}>
+                  <div style={{ backgroundColor: nearestWorkingPaper.isUrgent ? '#fff8f5' : '#ffffff', borderRadius: '14px', border: nearestWorkingPaper.isUrgent ? '1px solid #fde1d3' : '1px solid var(--color-border)', padding: '13px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--color-warning-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <ClipboardList size={18} color="#7c2d12" strokeWidth={2} />
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '9px', fontWeight: 700, color: nearestWorkingPaper.isUrgent ? 'var(--color-warning)' : 'var(--color-text-faint)' }}>
+                        {nearestWorkingPaper.deadlineLabel}
+                      </div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {nearestWorkingPaper.title}
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
+                        Hasil Praktik di Kelas - belum dikumpulkan
+                      </div>
+                    </div>
+                    <ChevronRight size={16} color={nearestWorkingPaper.isUrgent ? 'var(--color-warning)' : 'var(--color-text-faint)'} strokeWidth={2} />
+                  </div>
+                </Link>
+              )}
+
               {/* Card Tugas Terdekat (node 11:2761) */}
-              <Link href={nearestTask ? `/app/tugas/${nearestTask.id}` : '/app/tugas'} style={{ textDecoration: 'none' }}>
+              {/* Tugas terdekat yang kebetulan hasil praktik sudah tampil di
+                  kartu atas; menampilkannya dua kali hanya mengulang hal sama.
+
+                  A nearest task that happens to be a practice result already
+                  appears on the card above; showing it twice only repeats
+                  itself. */}
+              <Link href={nearestTask && nearestTask.id !== nearestWorkingPaper?.id ? `/app/tugas/${nearestTask.id}` : '/app/tugas'} style={{ textDecoration: 'none' }}>
                 <div style={{ backgroundColor: nearestTask?.isUrgent ? '#fff8f5' : '#ffffff', borderRadius: '14px', border: nearestTask?.isUrgent ? '1px solid #fde1d3' : '1px solid var(--color-border)', padding: '13px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--color-danger-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <FileText size={18} color="var(--color-warning)" strokeWidth={2} />

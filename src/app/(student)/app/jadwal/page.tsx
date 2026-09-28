@@ -105,7 +105,7 @@ function RecordingLinks({
         >
           <ClipboardList size={12} color="#7c2d12" strokeWidth={2} style={{ flexShrink: 0 }} />
           <span style={{ flex: 1, minWidth: 0, fontSize: '10px', fontWeight: 600, color: '#7c2d12', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            Working Paper - {w.title}
+            Hasil Praktik - {w.title}
           </span>
           {w.dueAt && (
             <span style={{ fontSize: '9px', color: '#7c2d12', whiteSpace: 'nowrap', flexShrink: 0 }}>

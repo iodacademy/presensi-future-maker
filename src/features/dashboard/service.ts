@@ -27,6 +27,7 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
     nearestMentoring: null,
     remainingMentoringQuota: 2,
     nearestTask: null,
+    nearestWorkingPaper: null,
     progress: {
       attendanceRatio: '0/0',
       dailyTasksRatio: '0/0',
@@ -154,21 +155,33 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
       return a.order - b.order;
     });
 
-  let nearestTask: StudentHomeTask | null = null;
-  if (unsubmittedTasks.length > 0) {
-    const t = unsubmittedTasks[0];
+  function toHomeTask(t: TaskDocument): StudentHomeTask {
     const isUrgent = isDeadlineUrgent(t.dueAt, nowMs);
-    const deadlineLabel = formatDeadlineLabel(isUrgent, t.dueAt);
-
-    nearestTask = {
+    return {
       id: t.id,
       title: t.title,
       kind: t.kind,
       dueAt: t.dueAt,
       isUrgent,
-      deadlineLabel,
+      deadlineLabel: formatDeadlineLabel(isUrgent, t.dueAt),
     };
   }
+
+  const nearestTask: StudentHomeTask | null =
+    unsubmittedTasks.length > 0 ? toHomeTask(unsubmittedTasks[0]) : null;
+
+  // Hasil praktik di kelas ditonjolkan terpisah. Batasnya jatuh beberapa jam
+  // setelah pertemuannya, jauh lebih cepat daripada tugas mandiri, sehingga
+  // satu kartu "tugas terdekat" yang sudah terisi tugas lain menyembunyikan
+  // justru yang paling mendesak.
+  //
+  // Class practice results get their own highlight. Their deadline falls hours
+  // after the meeting, far sooner than a self-study task, so a single "nearest
+  // task" card already holding another task hides the most urgent one.
+  const nearestWorkingPaper: StudentHomeTask | null =
+    unsubmittedTasks.find((t) => t.kind === 'working-paper')
+      ? toHomeTask(unsubmittedTasks.find((t) => t.kind === 'working-paper')!)
+      : null;
 
   // Hitungan Rasio Progres Bootcamp (Frame 05) / Progress Ratios
   // Presensi: jumlah sesi yang dihadiri / total sesi yang sudah selesai
@@ -191,6 +204,7 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
     nearestMentoring,
     remainingMentoringQuota,
     nearestTask,
+    nearestWorkingPaper,
     progress: {
       attendanceRatio,
       dailyTasksRatio,

@@ -102,7 +102,7 @@ function PaperForm({
           id="wp-title"
           value={values.title}
           onChange={(e) => set('title', e.target.value)}
-          placeholder="Working Paper Praktik 2"
+          placeholder="Hasil Praktik Sesi 2"
           autoFocus
           style={field}
         />
@@ -221,7 +221,7 @@ export function SessionWorkingPaper({
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Gagal menyimpan working paper');
+      if (!res.ok) throw new Error(data.error || 'Gagal menyimpan hasil praktik');
       setAdding(false);
       setEditingId(null);
       onChanged();
@@ -315,7 +315,7 @@ export function SessionWorkingPaper({
 
               <button
                 type="button"
-                aria-label={`Ubah working paper ${p.title}`}
+                aria-label={`Ubah hasil praktik ${p.title}`}
                 onClick={() => { setEditingId(p.id); setExpandedId(p.id); setError(null); }}
                 style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}
               >
@@ -323,7 +323,7 @@ export function SessionWorkingPaper({
               </button>
               <button
                 type="button"
-                aria-label={`Hapus working paper ${p.title}`}
+                aria-label={`Hapus hasil praktik ${p.title}`}
                 onClick={() => onDelete(p)}
                 style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}
               >
@@ -409,7 +409,7 @@ export function SessionWorkingPaper({
         />
       ) : (
         <Button variant="secondary" onClick={() => setAdding(true)} style={{ fontSize: '11px', padding: '8px 14px', alignSelf: 'flex-start' }}>
-          Tambah Working Paper
+          Tambah Hasil Praktik
         </Button>
       )}
     </div>

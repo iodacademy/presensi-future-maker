@@ -142,7 +142,7 @@ describe('tampilan working paper admin', () => {
     // layar.
     //
     // An icon-only button has no text for a screen reader to announce.
-    for (const label of ['Ubah working paper', 'Hapus working paper', 'detail']) {
+    for (const label of ['Ubah hasil praktik', 'Hapus hasil praktik', 'detail']) {
       expect(ui).toContain(label);
     }
   });
