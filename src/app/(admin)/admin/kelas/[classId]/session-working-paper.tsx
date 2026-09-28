@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ClipboardList, Trash2, Calendar, ChevronDown, ChevronRight, Link2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatDateTimeWib } from '@/lib/time';
 import type { SessionDocument } from '@/features/attendance/types';
 import type { TaskSummary } from '@/features/tasks/types';
+import { SubmissionRoster } from './submission-roster';
 
 interface SessionWorkingPaperProps {
   session: SessionDocument;
@@ -351,6 +352,11 @@ export function SessionWorkingPaper({
                       Belum ada instruksi. Peserta hanya melihat judulnya.
                     </div>
                   )}
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#7c2d12', marginBottom: '4px' }}>PENGUMPULAN</div>
+                  <SubmissionRoster taskId={p.id} />
                 </div>
 
                 {p.briefUrl && (

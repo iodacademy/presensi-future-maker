@@ -307,3 +307,83 @@ export async function listSubmissionsForAdmin(
   const snapshot = await query.limit(50).get();
   return snapshot.docs.map((doc) => doc.data() as SubmissionDocument);
 }
+
+/**
+ * Rekap pengumpulan satu tugas: siapa sudah, siapa belum.
+ *
+ * Yang belum dikumpulkan tidak berbentuk dokumen apa pun, sehingga nama-nama
+ * itu hanya dapat muncul dengan membandingkan daftar peserta kelas terhadap
+ * pengumpulan yang ada. Keduanya dibaca sekali, bukan satu pembacaan per
+ * peserta: satu angkatan berisi puluhan orang.
+ *
+ * One task's submission roster: who has handed in and who has not.
+ *
+ * What has not been submitted is no document at all, so those names can only
+ * surface by comparing the class roster against the submissions that exist.
+ * Both are read once rather than once per participant: a cohort holds dozens.
+ */
+export async function getTaskSubmissionRoster(
+  actor: Actor,
+  taskId: string
+): Promise<{
+  submitted: { studentId: string; studentName: string; submittedAt: string; late: boolean; score: number | null; url: string | null }[];
+  pending: { studentId: string; studentName: string; email: string }[];
+}> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan melihat rekap pengumpulan');
+  }
+
+  const db = getAdminDb();
+  const taskDoc = await db.collection('tasks').doc(taskId).get();
+  if (!taskDoc.exists) {
+    throw new Error('Tugas tidak ditemukan');
+  }
+
+  const { classId } = taskDoc.data() as TaskDocument;
+
+  const [studentsSnap, submissionsSnap] = await Promise.all([
+    db
+      .collection('users')
+      .where('classId', '==', classId)
+      .where('role', '==', 'student')
+      // Peserta nonaktif tidak lagi mengikuti kelas; menampilkannya sebagai
+      // belum mengumpulkan membuat angka itu tidak pernah lunas.
+      //
+      // A deactivated participant no longer attends; showing them as pending
+      // would keep that number from ever reaching zero.
+      .where('active', '==', true)
+      .get(),
+    db.collection('submissions').where('taskId', '==', taskId).get(),
+  ]);
+
+  const submissions = new Map<string, SubmissionDocument>();
+  for (const doc of submissionsSnap.docs) {
+    const sub = doc.data() as SubmissionDocument;
+    submissions.set(sub.studentId, sub);
+  }
+
+  const submitted: { studentId: string; studentName: string; submittedAt: string; late: boolean; score: number | null; url: string | null }[] = [];
+  const pending: { studentId: string; studentName: string; email: string }[] = [];
+
+  for (const doc of studentsSnap.docs) {
+    const u = doc.data() as { uid: string; name: string; email: string };
+    const sub = submissions.get(u.uid);
+    if (sub) {
+      submitted.push({
+        studentId: u.uid,
+        studentName: u.name,
+        submittedAt: sub.submittedAt,
+        late: sub.late,
+        score: sub.score ?? null,
+        url: sub.url,
+      });
+    } else {
+      pending.push({ studentId: u.uid, studentName: u.name, email: u.email });
+    }
+  }
+
+  submitted.sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
+  pending.sort((a, b) => a.studentName.localeCompare(b.studentName, 'id'));
+
+  return { submitted, pending };
+}

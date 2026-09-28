@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { SessionMaterials } from './session-materials';
 import { SessionWorkingPaper } from './session-working-paper';
+import { SubmissionRoster } from './submission-roster';
 import { formatDateTimeWib } from '@/lib/time';
 import type { TaskSummary, TaskKind } from '@/features/tasks/types';
 import type { ClassDocument } from '@/features/classes/types';
@@ -602,6 +603,18 @@ export default function CourseBuilderPage({
                         <span style={{ fontSize: '9px', color: 'var(--color-primary)' }}>{t.briefFileName || 'Brief.pdf'}</span>
                       </a>
                     )}
+
+                    {/* Tugas yang belum terbit belum tampak oleh peserta, jadi
+                        angka "0 dari 19" hanya akan menyesatkan.
+
+                        An unpublished task is not visible to participants yet,
+                        so a "0 of 19" reading would only mislead. */}
+                    {t.published && (
+                      <>
+                        <div style={{ height: '1px', backgroundColor: 'var(--color-border)', margin: '4px 0' }} />
+                        <SubmissionRoster taskId={t.id} />
+                      </>
+                    )}
                   </div>
                 );
               })
@@ -674,8 +687,22 @@ export default function CourseBuilderPage({
                 {capstoneTask.dueAt && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Calendar size={11} color="var(--color-text-muted)" strokeWidth={2} />
-                    <span style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>Deadline: {capstoneTask.dueAt}</span>
+                    <span style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>
+                      {/* dueAt adalah ISO UTC; menampilkannya mentah memberi
+                          "2026-09-28T16:59:00.000Z" kepada admin.
+
+                          dueAt is ISO UTC; shown raw it hands the admin
+                          "2026-09-28T16:59:00.000Z". */}
+                      Deadline: {formatDateTimeWib(capstoneTask.dueAt)} WIB
+                    </span>
                   </div>
+                )}
+
+                {capstoneTask.published && (
+                  <>
+                    <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
+                    <SubmissionRoster taskId={capstoneTask.id} />
+                  </>
                 )}
               </div>
             )}
