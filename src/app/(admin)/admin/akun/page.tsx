@@ -22,6 +22,14 @@ export default function AdminAkunPage() {
   const [classes, setClasses] = useState<ClassSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  // Kosong berarti seluruh kelas. Pencarian teks sudah mencakup nama kelas,
+  // tetapi mengetiknya menuntut admin mengingat ejaan persisnya dan tetap
+  // memunculkan kelas lain yang namanya beririsan.
+  //
+  // Empty means every class. The text search already covers class names, but
+  // typing one requires the admin to recall its exact spelling and still
+  // surfaces other classes whose names overlap.
+  const [classFilter, setClassFilter] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [togglingUid, setTogglingUid] = useState<string | null>(null);
@@ -76,6 +84,7 @@ export default function AdminAkunPage() {
   const visible = users.filter(
     (u) =>
       u.role === tab &&
+      (classFilter === '' || u.classId === classFilter) &&
       (needle === '' ||
         u.name.toLowerCase().includes(needle) ||
         u.email.toLowerCase().includes(needle) ||
@@ -118,7 +127,17 @@ export default function AdminAkunPage() {
             <button
               key={value}
               type="button"
-              onClick={() => setTab(value)}
+              onClick={() => {
+                setTab(value);
+                // Penyaring kelas ikut dilepas: tab admin menyembunyikannya,
+                // sehingga penyaring yang tertinggal akan mengosongkan daftar
+                // tanpa kendali yang terlihat untuk mencabutnya.
+                //
+                // The class filter is cleared too: the admin tab hides it, so a
+                // filter left behind would empty the list with no visible
+                // control to lift it.
+                setClassFilter('');
+              }}
               aria-pressed={active}
               style={{
                 padding: '9px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '12px',
@@ -132,6 +151,36 @@ export default function AdminAkunPage() {
           );
         })}
       </div>
+
+      {/* Admin tidak terikat kelas, sehingga penyaringnya akan selalu
+          mengosongkan daftar pada tab itu.
+
+          An admin belongs to no class, so the filter would always empty the
+          list on that tab. */}
+      {tab !== 'admin' && classes.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-text-muted)' }}>Kelas:</span>
+          {[['', 'Semua'] as const, ...classes.map((c) => [c.id, c.canonicalName] as const)].map(([id, label]) => {
+            const active = classFilter === id;
+            return (
+              <button
+                key={id || 'semua'}
+                type="button"
+                onClick={() => setClassFilter(id)}
+                aria-pressed={active}
+                style={{
+                  padding: '5px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+                  fontSize: '9px', fontWeight: active ? 700 : 400,
+                  backgroundColor: active ? 'var(--color-primary)' : 'var(--color-border)',
+                  color: active ? '#ffffff' : 'var(--color-text-main)',
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: '#ffffff' }}>
         <Search size={13} color="var(--color-text-muted)" strokeWidth={2} />
@@ -151,7 +200,9 @@ export default function AdminAkunPage() {
       ) : visible.length === 0 ? (
         <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px dashed var(--color-border)', padding: '36px', textAlign: 'center' }}>
           <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-muted)' }}>
-            {needle ? 'Tidak ada akun yang cocok dengan pencarian' : `Belum ada akun ${TABS.find(([v]) => v === tab)?.[1].toLowerCase()}`}
+            {needle || classFilter
+              ? 'Tidak ada akun yang cocok dengan penyaring ini'
+              : `Belum ada akun ${TABS.find(([v]) => v === tab)?.[1].toLowerCase()}`}
           </div>
         </div>
       ) : (
