@@ -72,6 +72,82 @@ export function validateTaskInput(input: CreateTaskInput): {
 }
 
 /**
+ * Memvalidasi perubahan sebuah tugas.
+ *
+ * Hanya field yang dikirim yang diperiksa dan dikembalikan: mengubah judul
+ * tidak boleh ikut menghapus batas waktu atau tautannya hanya karena tidak
+ * disertakan.
+ *
+ * Validates a change to a task.
+ *
+ * Only the fields sent are checked and returned: changing a title must not
+ * also wipe the deadline or the link merely because they were not included.
+ */
+export function validateTaskUpdate(input: {
+  title?: string;
+  description?: string;
+  dueDate?: string | null;
+  dueTime?: string | null;
+  briefUrl?: string | null;
+}): {
+  title?: string;
+  description?: string;
+  dueAt?: string | null;
+  briefUrl?: string | null;
+} {
+  const patch: {
+    title?: string;
+    description?: string;
+    dueAt?: string | null;
+    briefUrl?: string | null;
+  } = {};
+
+  if (input.title !== undefined) {
+    const title = input.title.trim();
+    if (!title) {
+      throw new Error('Judul tugas wajib diisi / Task title is required');
+    }
+    patch.title = title;
+  }
+
+  if (input.description !== undefined) {
+    patch.description = input.description.trim();
+  }
+
+  // Tanggal kosong berarti batas dihapus, bukan tidak diubah; keduanya harus
+  // dapat dibedakan agar admin dapat mencabut batas yang salah.
+  //
+  // An empty date means the deadline is cleared, not left alone; the two must
+  // stay distinguishable so an admin can lift a wrong deadline.
+  if (input.dueDate !== undefined) {
+    patch.dueAt = parseDueAt(input.dueDate, input.dueTime);
+  }
+
+  if (input.briefUrl !== undefined) {
+    const url = input.briefUrl ? input.briefUrl.trim() : '';
+    if (!url) {
+      patch.briefUrl = null;
+    } else {
+      // Tautan ini dibuka peserta dari halaman aplikasi: tautan http memicu
+      // peringatan konten tidak aman, dan javascript: akan dieksekusi di
+      // peramban mereka.
+      //
+      // Participants open this link from an application page: an http link
+      // triggers an insecure-content warning, and javascript: would execute in
+      // their browser.
+      try {
+        if (new URL(url).protocol !== 'https:') throw new Error('bukan https');
+      } catch {
+        throw new Error('Tautan harus berupa URL HTTPS yang valid / The link must be a valid HTTPS URL');
+      }
+      patch.briefUrl = url;
+    }
+  }
+
+  return patch;
+}
+
+/**
  * Mengecek apakah sebuah kelas memenuhi syarat untuk diaktifkan:
  * 1. Status saat ini harus draft
  * 2. Memiliki minimal 1 mentor

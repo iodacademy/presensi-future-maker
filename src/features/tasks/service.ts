@@ -4,7 +4,7 @@ import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
 import type { MaterialLink, AddMaterialInput, TaskDocument, TaskDetailDocument, CreateTaskInput, UpdateTaskInput, TaskSummary } from './types';
 import type { ClassDocument } from '../classes/types';
-import { validateTaskInput, canActivateClass } from './policy';
+import { validateTaskInput, validateTaskUpdate, canActivateClass } from './policy';
 
 /**
  * Menambahkan tugas baru (Harian atau Capstone) ke dalam kelas yang masih berstatus draft.
@@ -114,6 +114,71 @@ export async function createTask(actor: Actor, input: CreateTaskInput): Promise<
   await batch.commit();
 
   return { id: taskId };
+}
+
+/**
+ * Mengubah sebuah tugas.
+ *
+ * Judul, batas, dan tautan tersimpan pada dokumen tugas sedangkan instruksinya
+ * pada dokumen detail terpisah; keduanya ditulis dalam satu batch agar tugas
+ * tidak pernah tampil dengan judul baru tetapi instruksi lama.
+ *
+ * Updates a task.
+ *
+ * The title, deadline, and link live on the task document while the
+ * instructions live on a separate detail document; both are written in one
+ * batch so a task never shows a new title with its old instructions.
+ */
+export async function updateTask(
+  actor: Actor,
+  taskId: string,
+  input: {
+    title?: string;
+    description?: string;
+    dueDate?: string | null;
+    dueTime?: string | null;
+    briefUrl?: string | null;
+  }
+): Promise<void> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan mengubah tugas');
+  }
+
+  const patch = validateTaskUpdate(input);
+  const db = getAdminDb();
+  const taskRef = db.collection('tasks').doc(taskId);
+  const doc = await taskRef.get();
+  if (!doc.exists) {
+    throw new Error('Tugas tidak ditemukan');
+  }
+
+  const now = new Date().toISOString();
+  const batch = db.batch();
+
+  const { description, ...taskFields } = patch;
+
+  if (Object.keys(taskFields).length > 0) {
+    // version dinaikkan agar peserta yang sedang membuka tugas tahu isinya
+    // berubah sejak terakhir dimuat.
+    //
+    // version is bumped so a participant with the task open knows its content
+    // changed since they loaded it.
+    batch.update(taskRef, {
+      ...taskFields,
+      version: (doc.data()?.version || 1) + 1,
+      updatedAt: now,
+    });
+  }
+
+  if (description !== undefined) {
+    batch.set(
+      db.collection('taskDetails').doc(taskId),
+      { id: taskId, description, updatedAt: now },
+      { merge: true }
+    );
+  }
+
+  await batch.commit();
 }
 
 /**
