@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionActor } from '@/features/auth/session';
+import type { TaskKind } from '@/features/tasks/types';
 import { listSubmissionsForAdmin } from '@/features/tasks/submission-service';
 
 export async function GET(request: Request) {
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const kind = searchParams.get('kind') as 'daily' | 'capstone' | null;
+  const kind = searchParams.get('kind') as TaskKind | null;
   const classId = searchParams.get('classId') || undefined;
 
   try {

@@ -5,13 +5,19 @@ import { AppShell } from '@/components/app-shell';
 import { Input } from '@/components/ui/input';
 import type { SubmissionDocument } from '@/features/tasks/submission-types';
 import type { ClassSummary } from '@/features/classes/types';
+import { TASK_KIND_LABELS, type TaskKind } from '@/features/tasks/types';
 import { formatDateWib } from '@/lib/time';
 
 export default function AdminTugasPage() {
   const [submissions, setSubmissions] = useState<SubmissionDocument[]>([]);
   const [classes, setClasses] = useState<ClassSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'daily' | 'capstone'>('daily');
+  // Tanpa tab working paper, pengumpulannya tersimpan tetapi tidak pernah
+  // terlihat: penyaring selalu terisi salah satu dari dua jenis lain.
+  //
+  // Without a working paper tab its submissions were stored but never
+  // visible: the filter always held one of the two other kinds.
+  const [activeTab, setActiveTab] = useState<TaskKind>('daily');
   const [selectedClassId, setSelectedClassId] = useState<string>('');
 
   const [gradingSubmission, setGradingSubmission] = useState<SubmissionDocument | null>(null);
@@ -83,7 +89,7 @@ export default function AdminTugasPage() {
 
       {/* Tab pill (node 10:2132): terisi biru vs abu netral, radius=20 */}
       <div style={{ display: 'flex', gap: '8px' }}>
-        {(['daily', 'capstone'] as const).map((tab) => (
+        {(['daily', 'working-paper', 'capstone'] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -94,7 +100,7 @@ export default function AdminTugasPage() {
               color: activeTab === tab ? '#ffffff' : 'var(--color-text-main)',
             }}
           >
-            {tab === 'daily' ? 'Tugas Mandiri' : 'Capstone'}
+            {tab === 'daily' ? 'Tugas Mandiri' : TASK_KIND_LABELS[tab]}
           </button>
         ))}
       </div>
@@ -125,8 +131,10 @@ export default function AdminTugasPage() {
         <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>Memuat submission siswa...</div>
       ) : submissions.length === 0 ? (
         <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid var(--color-border)', padding: '48px', textAlign: 'center' }}>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '8px' }}>Belum ada submission tugas yang dikumpulkan</div>
-          <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Daftar submission yang dikumpulkan siswa akan otomatis muncul di sini secara berurutan.</p>
+          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '8px' }}>
+            Belum ada {TASK_KIND_LABELS[activeTab].toLowerCase()} yang dikumpulkan
+          </div>
+          <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Pengumpulan peserta akan otomatis muncul di sini secara berurutan.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

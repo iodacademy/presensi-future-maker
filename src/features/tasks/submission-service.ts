@@ -2,6 +2,7 @@
 // Student task submission and admin grading service in Firestore
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
+import type { TaskKind } from './types';
 import type {
   SubmissionDocument,
   SubmissionFeedbackDocument,
@@ -280,7 +281,13 @@ export async function gradeSubmission(actor: Actor, input: GradeSubmissionInput)
  */
 export async function listSubmissionsForAdmin(
   actor: Actor,
-  filters: { kind?: 'daily' | 'capstone'; classId?: string }
+  // TaskKind, bukan dua jenis yang ditulis tangan: daftar tertutup di sini
+  // membuat working paper yang dikumpulkan tersimpan tetapi tidak pernah
+  // terlihat oleh admin mana pun.
+  //
+  // TaskKind rather than two hand-written kinds: a closed list here left
+  // submitted working papers stored but never visible to any admin.
+  filters: { kind?: TaskKind; classId?: string }
 ): Promise<SubmissionDocument[]> {
   if (actor.role !== 'admin') {
     throw new Error('Hanya admin yang diizinkan melihat rekap tugas siswa');
