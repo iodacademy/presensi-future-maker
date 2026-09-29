@@ -20,7 +20,8 @@
     "seed-mentors": "tsx scripts/seed-mentors.ts",
     "seed-students": "tsx scripts/seed-students.ts",
     "merge-session": "tsx scripts/merge-shared-session.ts",
-    "set-session-classes": "tsx scripts/set-session-classes.ts"
+    "set-session-classes": "tsx scripts/set-session-classes.ts",
+    "diagnose-attendance": "tsx scripts/diagnose-attendance.ts"
   },
   "dependencies": {
     "firebase": "^12.18.0",

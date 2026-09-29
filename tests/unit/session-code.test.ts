@@ -124,10 +124,24 @@ describe('presensi memeriksa jendela sesi', () => {
     expect(body).toContain('isSessionAttendanceActive(session');
   });
 
-  it('memeriksa jendela sebelum memeriksa kodenya', () => {
-    expect(body.indexOf('isSessionAttendanceActive(session')).toBeLessThan(
-      body.indexOf('isSessionCodeShaped(token)')
+  it('memeriksa jendela sebelum memverifikasi kodenya', () => {
+    // isSessionCodeShaped kini muncul lebih dulu untuk memilih jalur pencarian
+    // sesi; yang harus tetap sesudah jendela adalah verifikasi kodenya.
+    //
+    // isSessionCodeShaped now appears earlier to pick the session lookup path;
+    // what must still follow the window check is verifying the code itself.
+    expect(body.indexOf('isSessionAttendanceActive(session, new Date()')).toBeLessThan(
+      body.indexOf('const verification =')
     );
+  });
+
+  it('menolak kode yang tidak cocok dengan sesi terbuka mana pun', () => {
+    // Pencarian sendiri sudah menyaring sesi yang tertutup, sehingga kode
+    // untuk sesi kemarin tidak menemukan apa pun.
+    //
+    // The lookup itself already filters closed sessions, so a code for
+    // yesterday's session finds nothing.
+    expect(body).toContain('tidak cocok dengan sesi mana pun yang sedang dibuka');
   });
 });
 

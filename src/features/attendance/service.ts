@@ -479,6 +479,51 @@ export async function getQrMonitorData(actor: Actor, sessionId: string): Promise
  *
  * Student scans QR code to record attendance idempotently.
  */
+/**
+ * Mencari sesi yang kode presensinya cocok.
+ *
+ * Kode statis tidak memuat sessionId, sehingga sesinya hanya dapat ditemukan
+ * dengan menghitung ulang kode tiap sesi yang sedang terbuka lalu
+ * membandingkannya. Pencarian dibatasi pada sesi hari ini yang memuat kelas
+ * peserta: tanpa batas itu kode satu kelas dapat mencocoki sesi kelas lain
+ * yang kebetulan berkode sama, dan seluruh koleksi sesi ikut terbaca setiap
+ * kali seseorang memindai.
+ *
+ * Finds the session a given attendance code belongs to.
+ *
+ * A static code carries no sessionId, so its session can only be found by
+ * recomputing each open session's code and comparing. The search is limited to
+ * today's sessions that include the participant's class: without that limit
+ * one class's code could match another class's session that happens to share
+ * it, and every scan would read the entire sessions collection.
+ */
+async function findOpenSessionByCode(
+  code: string,
+  classId: string | null | undefined
+): Promise<SessionDocument | null> {
+  if (!classId) return null;
+
+  const db = getAdminDb();
+  const nowIso = new Date().toISOString();
+  const today = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Jakarta',
+  }).format(new Date());
+
+  const snap = await db.collection('sessions').where('date', '==', today).get();
+  const secret = getQrSecret();
+
+  for (const doc of snap.docs) {
+    const session = doc.data() as SessionDocument;
+    if (!sessionIncludesClass(session, classId)) continue;
+    if (!isSessionAttendanceActive(session, nowIso)) continue;
+
+    const verification = verifySessionCode(code, session.id, session.qrRevision, secret);
+    if (verification.isValid) return session;
+  }
+
+  return null;
+}
+
 export async function recordStudentAttendance(
   actor: Actor,
   token: string,
@@ -492,19 +537,39 @@ export async function recordStudentAttendance(
     throw new Error('Token QR presensi wajib disertakan');
   }
 
-  // Ekstrak sessionId dari token / Extract sessionId from token
-  let sessionId = '';
-  try {
-    const raw = Buffer.from(token, 'base64url').toString('utf-8');
-    sessionId = raw.split(':')[0];
-  } catch {
-    throw new Error('Format token QR tidak valid');
+  // Token berotasi memuat sessionId di dalam dirinya; kode statis enam
+  // karakter tidak. Membongkar kode statis sebagai base64url menghasilkan
+  // byte sampah, dan potongan sebelum ':' menjadi id yang tidak pernah ada --
+  // seluruh presensi lewat kode ditolak dengan "Sesi presensi tidak
+  // ditemukan".
+  //
+  // A rotating token carries its sessionId inside it; a six-character static
+  // code does not. Decoding a static code as base64url yields junk bytes, and
+  // the part before ':' becomes an id that never exists -- every code-based
+  // check-in was refused with "session not found".
+  let session: SessionDocument | null = null;
+
+  if (isSessionCodeShaped(token)) {
+    session = await findOpenSessionByCode(token, actor.classId);
+    if (!session) {
+      throw new Error('Kode presensi tidak cocok dengan sesi mana pun yang sedang dibuka untuk kelas Anda.');
+    }
+  } else {
+    let sessionId = '';
+    try {
+      const raw = Buffer.from(token, 'base64url').toString('utf-8');
+      sessionId = raw.split(':')[0];
+    } catch {
+      throw new Error('Format token QR tidak valid');
+    }
+
+    session = await getSessionById(sessionId);
+    if (!session) {
+      throw new Error('Sesi presensi tidak ditemukan');
+    }
   }
 
-  const session = await getSessionById(sessionId);
-  if (!session) {
-    throw new Error('Sesi presensi tidak ditemukan');
-  }
+  const sessionId = session.id;
 
   // Sesi onboarding dihadiri beberapa kelas dalam satu ruang Zoom, sehingga
   // keanggotaan diperiksa terhadap seluruh kelas yang terdaftar pada sesi itu,
