@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { UserPlus, Search } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
+import { EditUserModal } from './edit-user-modal';
 import { AddUserModal } from './add-user-modal';
 import type { ClassSummary } from '@/features/classes/types';
 import type { Role } from '@/features/auth/types';
@@ -33,6 +34,7 @@ export default function AdminAkunPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [togglingUid, setTogglingUid] = useState<string | null>(null);
+  const [editing, setEditing] = useState<UserListItem | null>(null);
 
   async function loadUsers() {
     const res = await fetch('/api/users');
@@ -248,6 +250,19 @@ export default function AdminAkunPage() {
                   session check. */}
               <button
                 type="button"
+                onClick={() => setEditing(user)}
+                aria-label={`Ubah akun ${user.name}`}
+                style={{
+                  padding: '5px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 700, cursor: 'pointer',
+                  border: '1px solid var(--color-border)', backgroundColor: 'transparent',
+                  color: 'var(--color-text-main)', whiteSpace: 'nowrap',
+                }}
+              >
+                Ubah
+              </button>
+
+              <button
+                type="button"
                 onClick={() => handleToggleActive(user)}
                 disabled={togglingUid === user.uid}
                 style={{
@@ -263,6 +278,19 @@ export default function AdminAkunPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {editing && (
+        <EditUserModal
+          user={editing}
+          classes={classes}
+          onClose={() => setEditing(null)}
+          onSaved={(text) => {
+            setEditing(null);
+            setStatus({ type: 'success', text });
+            loadUsers();
+          }}
+        />
       )}
 
       {isAddOpen && (

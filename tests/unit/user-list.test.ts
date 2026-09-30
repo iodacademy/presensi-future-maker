@@ -71,7 +71,13 @@ describe('endpoint /api/users', () => {
   });
 
   it('memeriksa bentuk masukan sebelum menulis', () => {
-    expect(route).toMatch(/typeof body\.uid !== 'string' \|\| typeof body\.active !== 'boolean'/);
+    // active kini opsional: badan tanpa active berarti penyuntingan akun,
+    // bukan sakelar aktif. Yang tetap wajib hanyalah uid.
+    //
+    // active is now optional: a body without it means an account edit rather
+    // than the active switch. Only uid stays required.
+    expect(route).toMatch(/typeof body\.uid !== 'string'/);
+    expect(route).toMatch(/if \(typeof body\.active === 'boolean'\)/);
   });
 });
 

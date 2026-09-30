@@ -1,6 +1,7 @@
 // Daftar pengguna untuk panel admin / User listing for the admin panel
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor, Role, UserDocument } from '../auth/types';
+import { normalizeEmail, getEmailHash } from '../auth/policy';
 import type { ClassDocument } from '../classes/types';
 
 export interface UserListItem {
@@ -118,4 +119,153 @@ export async function setUserActive(actor: Actor, uid: string, active: boolean):
   }
 
   await ref.update({ active, updatedAt: new Date().toISOString() });
+}
+
+/**
+ * Mengubah nama, surel, atau kelas sebuah akun.
+ *
+ * Surel disimpan pada dokumen pengguna sekaligus sebagai kunci dokumen
+ * emailIndex, yang dinamai menurut hash surelnya. Mengganti surel berarti
+ * memindahkan dokumen indeks itu, bukan menyuntingnya: indeks lama harus
+ * dihapus agar surel lama tidak lagi membuka akun ini, dan yang baru dibuat
+ * agar surel barunya dikenali saat masuk.
+ *
+ * Changes an account's name, email, or class.
+ *
+ * The email lives on the user document and doubles as the key of an emailIndex
+ * document, which is named after the email's hash. Changing the email means
+ * moving that index document rather than editing it: the old index must be
+ * removed so the old address no longer opens this account, and a new one
+ * written so the new address is recognised at sign-in.
+ */
+export async function updateUserAccount(
+  actor: Actor,
+  uid: string,
+  input: { name?: string; email?: string; classId?: string | null }
+): Promise<void> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan mengubah akun');
+  }
+
+  const db = getAdminDb();
+  const userRef = db.collection('users').doc(uid);
+  const userSnap = await userRef.get();
+  if (!userSnap.exists) {
+    throw new Error('Akun tidak ditemukan');
+  }
+
+  const user = userSnap.data() as UserDocument;
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> = { updatedAt: now };
+
+  if (input.name !== undefined) {
+    const name = input.name.trim();
+    if (!name) throw new Error('Nama wajib diisi');
+    patch.name = name;
+  }
+
+  let oldHash: string | null = null;
+  let newHash: string | null = null;
+
+  if (input.email !== undefined) {
+    const email = normalizeEmail(input.email);
+    if (!email || !email.includes('@')) {
+      throw new Error('Surel tidak valid');
+    }
+
+    if (email !== normalizeEmail(user.email)) {
+      newHash = getEmailHash(email);
+      // Surel adalah satu-satunya cara masuk, sehingga surel yang sudah
+      // dipakai akun lain akan membuat dua akun berebut satu identitas.
+      //
+      // The email is the only way in, so one already used by another account
+      // would leave two accounts contesting a single identity.
+      const bentrok = await db.collection('emailIndex').doc(newHash).get();
+      if (bentrok.exists && bentrok.data()?.uid !== uid) {
+        throw new Error('Surel ini sudah dipakai akun lain');
+      }
+      oldHash = getEmailHash(user.email);
+      patch.email = email;
+      patch.normalizedEmail = email;
+    }
+  }
+
+  // Kelas hanya berlaku bagi peserta. Mentor terhubung ke kelas lewat
+  // mentorIds pada dokumen kelasnya, dan admin tidak terikat kelas mana pun.
+  //
+  // A class only applies to participants. Mentors are linked through their
+  // class's mentorIds, and an admin belongs to no class.
+  const classChanged =
+    input.classId !== undefined && user.role === 'student' && (input.classId || null) !== (user.classId || null);
+
+  if (classChanged) {
+    patch.classId = input.classId || null;
+  }
+
+  // Seluruh pembacaan diselesaikan sebelum batch disusun. Batch memang tidak
+  // menuntutnya seperti transaction, tetapi await yang berselang-seling dengan
+  // penulisan membuat urutan operasinya sulit ditelusuri saat salah satunya
+  // gagal.
+  //
+  // Every read completes before the batch is assembled. A batch does not
+  // require this the way a transaction does, but awaits interleaved with
+  // writes make the order of operations hard to follow when one of them fails.
+  const kelasSnapshots: { ref: FirebaseFirestore.DocumentReference; current: number; delta: number }[] = [];
+  let assignmentDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+
+  if (classChanged) {
+    const perubahanKelas: [string | null, number][] = [
+      [user.classId ?? null, -1],
+      [(patch.classId as string | null) ?? null, 1],
+    ];
+
+    for (const [classId, delta] of perubahanKelas) {
+      if (!classId) continue;
+      const ref = db.collection('classes').doc(classId);
+      const snap = await ref.get();
+      if (!snap.exists) continue;
+      kelasSnapshots.push({ ref, current: (snap.data()?.studentCount as number) || 0, delta });
+    }
+
+    assignmentDocs = (await db.collection('assignments').where('studentId', '==', uid).get()).docs;
+  }
+
+  const batch = db.batch();
+  batch.update(userRef, patch);
+
+  if (oldHash && newHash) {
+    batch.delete(db.collection('emailIndex').doc(oldHash));
+    batch.set(db.collection('emailIndex').doc(newHash), {
+      uid,
+      normalizedEmail: patch.email,
+      role: user.role,
+      createdAt: now,
+    });
+  }
+
+  if (classChanged) {
+    // studentCount dipakai sebagai pembagi pada rekap kehadiran dan
+    // pengumpulan; membiarkannya membuat kelas asal tampak kekurangan peserta
+    // selamanya dan kelas tujuan tampak kelebihan.
+    //
+    // studentCount is the divisor in attendance and submission reports;
+    // leaving it makes the source class look permanently short and the
+    // destination long.
+    for (const { ref, current, delta } of kelasSnapshots) {
+      batch.update(ref, { studentCount: Math.max(0, current + delta), updatedAt: now });
+    }
+
+    // Penugasan mentoring terikat pada kelas lamanya. Dibiarkan, peserta
+    // tercatat dibimbing mentor kelas lain dan muncul pada daftar bimbingan
+    // yang bukan kelasnya.
+    //
+    // Mentoring assignments are tied to the old class. Left alone, the
+    // participant stays listed under a mentor from another class and appears
+    // on a guidance list that is not theirs.
+    for (const doc of assignmentDocs) {
+      batch.delete(doc.ref);
+    }
+  }
+
+  await batch.commit();
 }
