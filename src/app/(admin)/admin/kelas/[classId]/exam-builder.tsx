@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { ClipboardCheck, Trash2, ChevronDown, ChevronRight, Plus, Check, Clock, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ImportQuestions } from './import-questions';
 import { formatDateTimeWib } from '@/lib/time';
 import {
   EXAM_KIND_LABELS,
@@ -360,6 +361,14 @@ export function ExamBuilder({ classId, sessionId, sessionTitle, kind }: ExamBuil
       if (!res.ok) throw new Error(data.error || 'Gagal membuat ujian');
       setTitle('');
       setCreating(false);
+      // Ujian baru langsung terbuka. Kartu yang tertutup menyembunyikan
+      // formulir soalnya, sehingga ujian yang baru dibuat tampak seperti
+      // sudah selesai padahal belum memuat satu soal pun.
+      //
+      // A new exam opens at once. A closed card hides its question form, so a
+      // freshly created exam looks finished although it holds no question yet.
+      setOpenId(data.id);
+      setQuestions((prev) => ({ ...prev, [data.id]: [] }));
       load();
     } catch (e) {
       setError((e as Error).message);
@@ -494,6 +503,24 @@ export function ExamBuilder({ classId, sessionId, sessionTitle, kind }: ExamBuil
                     </div>
                   </div>
                 ))}
+
+                {/* Ujian yang belum bersoal menyebut langkah berikutnya.
+                    Kartu kosong tanpa keterangan tidak memberi tahu admin
+                    bahwa formulir di bawahnya adalah tempat menambah soal.
+
+                    An exam with no questions states the next step. An empty
+                    card with no note does not tell an admin that the form
+                    below it is where questions are added. */}
+                {soal.length === 0 && (
+                  <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+                    Belum ada soal. Unggah berkas Excel, atau isi formulir di bawah untuk menambah satu per satu.
+                  </div>
+                )}
+
+                <ImportQuestions
+                  examId={exam.id}
+                  onImported={() => Promise.all([load(), loadQuestions(exam.id)])}
+                />
 
                 <QuestionEditor
                   examId={exam.id}

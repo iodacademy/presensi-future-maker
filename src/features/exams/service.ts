@@ -190,6 +190,91 @@ export async function createQuestion(
   return { id };
 }
 
+/**
+ * Menambahkan banyak soal sekaligus dari berkas yang diunggah.
+ *
+ * Seluruh soal ditulis dalam satu batch, bukan satu per satu: dua puluh
+ * pemanggilan berurutan dapat berhenti di tengah dan menyisakan ujian yang
+ * memuat sebagian soal tanpa admin tahu bagian mana yang gagal.
+ *
+ * Adds many questions at once from an uploaded sheet.
+ *
+ * Every question is written in one batch rather than one at a time: twenty
+ * sequential calls can stop halfway and leave an exam holding some of its
+ * questions with no way for the admin to tell which ones failed.
+ */
+export async function importQuestions(
+  actor: Actor,
+  examId: string,
+  parsed: {
+    kind: QuestionKind;
+    text: string;
+    options: { text: string }[];
+    correctIndex: number;
+    explanation: string;
+  }[]
+): Promise<{ imported: number }> {
+  requireAdmin(actor);
+
+  if (parsed.length === 0) {
+    throw new Error('Tidak ada soal yang dapat diimpor');
+  }
+
+  const db = getAdminDb();
+  const examRef = db.collection('exams').doc(examId);
+  const examSnap = await examRef.get();
+  if (!examSnap.exists) throw new Error('Ujian tidak ditemukan');
+
+  const exam = examSnap.data() as ExamDocument;
+  const now = new Date().toISOString();
+  const batch = db.batch();
+
+  parsed.forEach((p, i) => {
+    const options = p.options.map((o) => ({ id: crypto.randomUUID(), text: o.text.trim() }));
+    const correct = options[p.correctIndex];
+
+    // Divalidasi ulang di sini meski pembacanya sudah memeriksa: berkas
+    // dibaca di peramban, dan muatan yang dikirim ke endpoint ini dapat
+    // diubah sebelum tiba.
+    //
+    // Revalidated here although the parser already checked: the sheet is read
+    // in the browser, and the payload sent to this endpoint can be altered
+    // before it arrives.
+    validateQuestion({
+      kind: p.kind,
+      text: p.text,
+      options,
+      correctOptionId: correct?.id ?? '',
+    });
+
+    const id = crypto.randomUUID();
+
+    batch.set(db.collection('examQuestions').doc(id), {
+      id,
+      examId,
+      kind: p.kind,
+      text: p.text.trim(),
+      options,
+      order: exam.questionCount + i + 1,
+      createdAt: now,
+      updatedAt: now,
+    } satisfies QuestionDocument);
+
+    batch.set(db.collection('examAnswerKeys').doc(id), {
+      id,
+      examId,
+      correctOptionId: correct.id,
+      explanation: p.explanation.trim(),
+      updatedAt: now,
+    } satisfies AnswerKeyDocument);
+  });
+
+  batch.update(examRef, { questionCount: exam.questionCount + parsed.length, updatedAt: now });
+  await batch.commit();
+
+  return { imported: parsed.length };
+}
+
 export async function deleteQuestion(actor: Actor, questionId: string): Promise<void> {
   requireAdmin(actor);
 
