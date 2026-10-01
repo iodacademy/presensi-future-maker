@@ -50,26 +50,46 @@ export interface SurveyQuestion {
 }
 
 /**
- * Formulir survei, satu untuk seluruh kelas dan seluruh pertemuan.
+ * Cakupan sebuah formulir: kelas dan pertemuan mana yang memakainya.
  *
- * Satu formulir, bukan satu per sesi: pertanyaannya sama di tiap pertemuan,
- * dan menyalinnya ke tiap sesi berarti menyunting lima puluh lima salinan
- * setiap kali satu kata berubah. Sesi mana yang dinilai dicatat pada
- * jawabannya, bukan pada formulirnya.
+ * Daftar kosong berarti seluruhnya. Menyimpan seluruh id kelas saat admin
+ * memilih "semua kelas" akan membuat kelas yang dibuat kemudian terlewat,
+ * sebab daftarnya dibekukan pada saat formulir disimpan.
  *
- * The survey form, one for every class and every meeting.
+ * A form's scope: which classes and meetings use it.
  *
- * One form rather than one per session: the questions are the same at every
- * meeting, and copying them into each session would mean editing fifty-five
- * copies each time one word changes. Which session is being rated is recorded
- * on the response, not on the form.
+ * An empty list means all of them. Storing every class id when an admin picks
+ * "all classes" would miss classes created later, since the list would be
+ * frozen at the moment the form was saved.
+ */
+export interface SurveyScope {
+  /** Kosong berarti seluruh kelas / Empty means every class */
+  classIds: string[];
+  /** Kosong berarti seluruh pertemuan / Empty means every meeting */
+  sessionIds: string[];
+}
+
+/**
+ * Formulir survei.
+ *
+ * Beberapa formulir dapat berdampingan, masing-masing dengan cakupannya
+ * sendiri: survei pembukaan hanya untuk pertemuan pertama, survei mingguan
+ * untuk seluruhnya. Pertemuan mana yang dinilai tetap dicatat pada jawabannya,
+ * bukan dengan menyalin pertanyaannya ke tiap sesi.
+ *
+ * A survey form.
+ *
+ * Several forms can stand side by side, each with its own scope: an opening
+ * survey for the first meeting only, a weekly one for all of them. Which
+ * meeting is being rated is still recorded on the response rather than by
+ * copying the questions into each session.
  */
 export interface SurveyFormDocument {
-  /** Selalu 'default': hanya ada satu formulir / Always 'default': there is only one form */
   id: string;
   title: string;
   description: string;
   questions: SurveyQuestion[];
+  scope: SurveyScope;
   /**
    * Formulir yang belum terbit tidak diminta dari peserta.
    *
@@ -94,22 +114,23 @@ export interface SurveyFormDocument {
    * questions from the new ones.
    */
   version: number;
+  createdAt: string;
   updatedAt: string;
 }
 
 /**
  * Jawaban satu pertanyaan, beserta salinan pertanyaannya.
  *
- * Teks pertanyaannya ikut disalin, bukan hanya id-nya. Formulirnya satu dan
- * dipakai berbulan-bulan, sehingga pertanyaannya pasti berubah di tengah
- * jalan; tanpa salinan ini, jawaban lama akan tampil di bawah pertanyaan yang
- * tidak pernah dibaca orang yang menjawabnya.
+ * Teks pertanyaannya ikut disalin, bukan hanya id-nya. Formulirnya dipakai
+ * berbulan-bulan, sehingga pertanyaannya pasti berubah di tengah jalan; tanpa
+ * salinan ini, jawaban lama akan tampil di bawah pertanyaan yang tidak pernah
+ * dibaca orang yang menjawabnya.
  *
  * One question's answer, with a copy of the question.
  *
- * The question text is copied, not just its id. There is one form used over
- * months, so its questions will change partway through; without this copy, an
- * old answer would appear beneath a question its author never read.
+ * The question text is copied, not just its id. A form is used over months, so
+ * its questions will change partway through; without this copy, an old answer
+ * would appear beneath a question its author never read.
  */
 export interface SurveyAnswer {
   questionId: string;
@@ -120,7 +141,22 @@ export interface SurveyAnswer {
 }
 
 export interface SurveyResponseDocument {
-  id: string; // ${sessionId}_${studentId}
+  id: string; // ${formId}_${sessionId}_${studentId}
+  /**
+   * Formulir yang dijawab.
+   *
+   * Dicatat sejak beberapa formulir dapat berdampingan: tanpa ini, rekap
+   * sebuah formulir akan ikut menghitung jawaban atas formulir lain yang
+   * kebetulan mengenai pertemuan yang sama.
+   *
+   * The form that was answered.
+   *
+   * Recorded now that several forms can coexist: without it, one form's report
+   * would count answers to another form that happened to cover the same
+   * meeting.
+   */
+  formId: string;
+  formTitle: string;
   sessionId: string;
   sessionTitle: string;
   sessionDate: string;
@@ -134,10 +170,10 @@ export interface SurveyResponseDocument {
   submittedAt: string;
 }
 
-/** Survei sebuah pertemuan sebagaimana tampil pada kartu peserta / A meeting's survey as it appears on a participant's card */
+/** Satu survei sebagaimana tampil pada kartu pertemuan peserta / One survey as it appears on a participant's meeting card */
 export interface SessionSurveyState {
-  /** Null berarti belum ada formulir terbit / Null means no published form */
-  formTitle: string | null;
+  formId: string;
+  formTitle: string;
   questionCount: number;
   submitted: boolean;
 }

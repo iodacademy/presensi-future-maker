@@ -15,7 +15,7 @@ interface SessionItem {
   isActive: boolean;
   workingPapers?: { id: string; title: string; dueAt: string | null }[];
   exams?: { id: string; title: string; questionCount: number; durationMinutes: number | null; score: number | null; passed: boolean; attemptsLeft: number }[];
-  survey?: { formTitle: string; questionCount: number; submitted: boolean } | null;
+  surveys?: { formId: string; formTitle: string; questionCount: number; submitted: boolean }[];
 }
 
 /**
@@ -35,16 +35,16 @@ function RecordingLinks({
   session,
   workingPapers = [],
   exams = [],
-  survey = null,
+  surveys = [],
 }: {
   session: SessionDocument;
   workingPapers?: { id: string; title: string; dueAt: string | null }[];
   exams?: { id: string; title: string; questionCount: number; durationMinutes: number | null; score: number | null; passed: boolean; attemptsLeft: number }[];
-  survey?: { formTitle: string; questionCount: number; submitted: boolean } | null;
+  surveys?: { formId: string; formTitle: string; questionCount: number; submitted: boolean }[];
 }) {
   const recordings = session.recordings ?? [];
   const materials = session.materials ?? [];
-  if (recordings.length === 0 && materials.length === 0 && workingPapers.length === 0 && exams.length === 0 && !survey) return null;
+  if (recordings.length === 0 && materials.length === 0 && workingPapers.length === 0 && exams.length === 0 && surveys.length === 0) return null;
 
   return (
     <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -155,24 +155,25 @@ function RecordingLinks({
 
           This meeting's survey. The server sends it only once attendance is
           recorded, so the row never appears for someone who did not attend. */}
-      {survey && (
+      {surveys.map((sv) => (
         <Link
-          href={`/app/survei/${session.id}`}
+          key={sv.formId}
+          href={`/app/survei/${sv.formId}/${session.id}`}
           style={{
             display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px',
             borderRadius: '8px', textDecoration: 'none',
-            backgroundColor: survey.submitted ? 'var(--color-success-light)' : 'var(--color-warning-light)',
+            backgroundColor: sv.submitted ? 'var(--color-success-light)' : 'var(--color-warning-light)',
           }}
         >
-          <MessageSquare size={12} color={survey.submitted ? 'var(--color-success)' : '#7c2d12'} strokeWidth={2} style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1, minWidth: 0, fontSize: '10px', fontWeight: 600, color: survey.submitted ? 'var(--color-success)' : '#7c2d12', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {survey.formTitle}
+          <MessageSquare size={12} color={sv.submitted ? 'var(--color-success)' : '#7c2d12'} strokeWidth={2} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, minWidth: 0, fontSize: '10px', fontWeight: 600, color: sv.submitted ? 'var(--color-success)' : '#7c2d12', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {sv.formTitle}
           </span>
-          <span style={{ fontSize: '9px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0, color: survey.submitted ? 'var(--color-success)' : '#7c2d12' }}>
-            {survey.submitted ? 'Terisi' : 'Wajib diisi'}
+          <span style={{ fontSize: '9px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0, color: sv.submitted ? 'var(--color-success)' : '#7c2d12' }}>
+            {sv.submitted ? 'Terisi' : 'Wajib diisi'}
           </span>
         </Link>
-      )}
+      ))}
     </div>
   );
 }
@@ -288,7 +289,7 @@ export default function StudentJadwalPage() {
             {filterMode === 'rekaman' ? 'Belum ada rekaman yang diunggah' : 'Tidak ada jadwal pertemuan'}
           </div>
         ) : (
-          filteredItems.map(({ session, attendance, isActive, workingPapers, exams, survey }) => {
+          filteredItems.map(({ session, attendance, isActive, workingPapers, exams, surveys }) => {
             const isAttended = Boolean(attendance);
             const isOnline = session.mode === 'online';
 
@@ -319,7 +320,7 @@ export default function StudentJadwalPage() {
                       </Link>
                     )}
                   </div>
-                  <RecordingLinks session={session} workingPapers={workingPapers} exams={exams} survey={survey} />
+                  <RecordingLinks session={session} workingPapers={workingPapers} exams={exams} surveys={surveys} />
                 </div>
               );
             }
@@ -349,7 +350,7 @@ export default function StudentJadwalPage() {
                   </div>
                 )}
 
-                <RecordingLinks session={session} workingPapers={workingPapers} exams={exams} survey={survey} />
+                <RecordingLinks session={session} workingPapers={workingPapers} exams={exams} surveys={surveys} />
               </div>
             );
           })

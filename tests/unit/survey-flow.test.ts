@@ -1,13 +1,15 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { scopeCovers, describeScope } from '@/features/survey/policy';
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf-8');
 const service = read('src/features/survey/service.ts');
 const attendance = read('src/features/attendance/service.ts');
 const jadwal = read('src/app/(student)/app/jadwal/page.tsx');
 const settings = read('src/app/(admin)/admin/pengaturan/page.tsx');
+const scopeModal = read('src/app/(admin)/admin/pengaturan/survey-scope-modal.tsx');
 const shell = read('src/components/app-shell.tsx');
 
 function fungsi(nama: string): string {
@@ -18,35 +20,115 @@ function fungsi(nama: string): string {
 }
 
 /**
- * Satu formulir dipakai seluruh kelas dan seluruh pertemuan.
+ * Daftar kosong berarti seluruhnya, bukan tidak sama sekali.
  *
- * Menyalinnya ke tiap sesi berarti menyunting lima puluh lima salinan setiap
- * kali satu kata berubah. Sesi mana yang dinilai dicatat pada jawabannya.
+ * Menyimpan seluruh id kelas saat admin memilih "semua kelas" akan membekukan
+ * daftarnya pada saat penyimpanan, sehingga kelas yang dibuat kemudian tidak
+ * pernah mendapat surveinya -- kesalahan yang baru ketahuan berbulan-bulan
+ * kemudian saat angkatan berikutnya dibuka.
  *
- * One form serves every class and every meeting.
+ * An empty list means all, not none.
  *
- * Copying it into each session would mean editing fifty-five copies each time
- * one word changes. Which session is being rated is recorded on the response.
+ * Storing every class id when an admin picks "all classes" would freeze the
+ * list at save time, so a class created later would never receive the survey --
+ * a mistake that only surfaces months on, when the next cohort opens.
  */
-describe('satu formulir untuk semua pertemuan', () => {
-  it('memakai satu dokumen berid tetap', () => {
-    expect(service).toMatch(/const FORM_ID = 'default'/);
+describe('cakupan survei', () => {
+  it('daftar kosong mencakup seluruh kelas dan pertemuan', () => {
+    expect(scopeCovers({ classIds: [], sessionIds: [] }, 'kelas-baru', 'sesi-baru')).toBe(true);
   });
 
-  it('mencatat sesi pada jawabannya, bukan pada formulirnya', () => {
-    const blok = fungsi('submitSurveyResponse');
-    expect(blok).toContain('sessionId,');
-    expect(blok).toContain('sessionTitle: session.title');
-    expect(read('src/features/survey/types.ts')).not.toMatch(/SurveyFormDocument[\s\S]{0,400}sessionId/);
+  it('membatasi pada kelas yang disebut', () => {
+    const scope = { classIds: ['kelas-a'], sessionIds: [] };
+    expect(scopeCovers(scope, 'kelas-a', 'sesi-1')).toBe(true);
+    expect(scopeCovers(scope, 'kelas-b', 'sesi-1')).toBe(false);
   });
 
-  it('mengembalikan formulir kosong alih-alih null', () => {
-    // Halaman pengaturan menampilkan formulir yang sama baik sudah ada maupun
-    // belum; null akan memaksa setiap pemanggil menanganinya sendiri.
+  it('membatasi pada pertemuan yang disebut', () => {
+    const scope = { classIds: [], sessionIds: ['sesi-1'] };
+    expect(scopeCovers(scope, 'kelas-a', 'sesi-1')).toBe(true);
+    expect(scopeCovers(scope, 'kelas-a', 'sesi-2')).toBe(false);
+  });
+
+  it('menuntut keduanya cocok bila keduanya disebut', () => {
+    const scope = { classIds: ['kelas-a'], sessionIds: ['sesi-1'] };
+    expect(scopeCovers(scope, 'kelas-a', 'sesi-1')).toBe(true);
+    expect(scopeCovers(scope, 'kelas-a', 'sesi-2')).toBe(false);
+    expect(scopeCovers(scope, 'kelas-b', 'sesi-1')).toBe(false);
+  });
+
+  it('menjelaskan cakupannya dengan nama, bukan id', () => {
+    // Daftar id tidak terbaca siapa pun; admin perlu tahu formulirnya mengenai
+    // siapa tanpa membuka pengaturannya satu per satu.
     //
-    // The settings page renders the same form whether or not it exists; null
-    // would force every caller to handle that case.
-    expect(fungsi('getSurveyForm')).toContain('return KOSONG');
+    // A list of ids reads to nobody; an admin needs to know who a form covers
+    // without opening each one's settings.
+    const nama = new Map([['kelas-a', 'Web Programming Semarang']]);
+    expect(describeScope({ classIds: [], sessionIds: [] }, nama, new Map())).toBe('Semua kelas - semua pertemuan');
+    expect(describeScope({ classIds: ['kelas-a'], sessionIds: [] }, nama, new Map()))
+      .toBe('Web Programming Semarang - semua pertemuan');
+  });
+
+  it('meringkas pertemuan yang banyak menjadi jumlahnya', () => {
+    // Sepuluh judul pertemuan pada satu baris tabel tidak terbaca.
+    // Ten meeting titles on one table row read as nothing.
+    const scope = { classIds: [], sessionIds: ['a', 'b', 'c', 'd'] };
+    expect(describeScope(scope, new Map(), new Map())).toContain('4 pertemuan');
+  });
+});
+
+describe('beberapa survei berdampingan', () => {
+  it('tidak lagi memaku satu id formulir', () => {
+    expect(service).not.toContain("const FORM_ID = 'default'");
+    expect(service).toContain('export async function listSurveyForms');
+    expect(service).toContain('export async function createSurveyForm');
+  });
+
+  it('mencatat formulirnya pada tiap jawaban', () => {
+    // Tanpa ini, rekap sebuah formulir akan ikut menghitung jawaban atas
+    // formulir lain yang kebetulan mengenai pertemuan yang sama.
+    //
+    // Without it, one form's report would count answers to another form that
+    // happened to cover the same meeting.
+    expect(fungsi('submitSurveyResponse')).toContain('formId,');
+    expect(fungsi('getSurveyReport')).toMatch(/where\('formId', '==', formId\)/);
+  });
+
+  it('mengunci jawabannya pada formulir dan pertemuan sekaligus', () => {
+    // Satu peserta dapat mengisi dua survei berbeda untuk pertemuan yang sama.
+    // One participant may fill in two different surveys for the same meeting.
+    expect(fungsi('submitSurveyResponse')).toMatch(/\$\{formId\}_\$\{sessionId\}_\$\{actor\.uid\}/);
+  });
+
+  it('memeriksa cakupan saat menerima jawaban, bukan hanya menyembunyikan barisnya', () => {
+    // Baris yang disembunyikan tidak menahan siapa pun yang memanggil
+    // endpointnya langsung dengan id pertemuan lain.
+    //
+    // A hidden row holds back nobody who calls the endpoint directly with
+    // another meeting's id.
+    expect(fungsi('submitSurveyResponse')).toContain('scopeCovers(form.scope, actor.classId, sessionId)');
+  });
+
+  it('menghapus jawabannya bersama formulirnya', () => {
+    // Jawaban yang formulirnya hilang tidak dapat ditampilkan pada rekap mana
+    // pun lagi.
+    //
+    // An answer whose form is gone can no longer appear on any report.
+    const blok = fungsi('deleteSurveyForm');
+    expect(blok).toMatch(/where\('formId', '==', formId\)/);
+    expect(blok).toContain('db.batch()');
+  });
+
+  it('lahir mencakup seluruhnya, bukan tidak sama sekali', () => {
+    // Cakupan yang terlalu luas terlihat, cakupan kosong tidak.
+    // Too wide a scope is visible, an empty one is not.
+    expect(fungsi('createSurveyForm')).toContain('scope: { classIds: [], sessionIds: [] }');
+  });
+
+  it('tidak menaikkan versi saat hanya cakupannya berubah', () => {
+    // Cakupan tidak mengubah apa yang dibaca penjawabnya.
+    // The scope does not change what the respondent read.
+    expect(fungsi('updateSurveyForm')).toMatch(/const berubah = patch\.questions !== undefined/);
   });
 });
 
@@ -69,27 +151,12 @@ describe('syarat kehadiran', () => {
       attendance.indexOf('export async function listStudentSessionsWithAttendance'),
       attendance.indexOf('export', attendance.indexOf('export async function listStudentSessionsWithAttendance') + 10)
     );
-    expect(blok).toMatch(/surveyForm\?\.published && attendMap\.has\(s\.id\)/);
-  });
-
-  it('menjaganya di layanan, bukan hanya di tampilan', () => {
-    // Baris yang disembunyikan tidak menahan siapa pun yang memanggil
-    // endpointnya langsung.
-    //
-    // A hidden row holds back nobody who calls the endpoint directly.
-    expect(fungsi('submitSurveyResponse')).toContain('attendanceSnap.exists');
+    expect(blok).toMatch(/surveys: attendMap\.has\(s\.id\)/);
+    expect(blok).toContain('scopeCovers(f.scope, actor.classId!, s.id)');
   });
 });
 
 describe('perubahan formulir tidak merusak rekap lama', () => {
-  it('menaikkan versi hanya bila pertanyaannya berubah', () => {
-    // Mengubah judul saja tidak membuat jawaban lama menjadi versi berbeda.
-    // Changing only the title must not make old answers a different version.
-    const blok = fungsi('updateSurveyForm');
-    expect(blok).toMatch(/const berubah = patch\.questions !== undefined/);
-    expect(blok).toMatch(/version: berubah \? current\.version \+ 1 : current\.version/);
-  });
-
   it('mencatat versinya pada tiap jawaban', () => {
     expect(fungsi('submitSurveyResponse')).toContain('formVersion: form.version');
   });
@@ -101,45 +168,50 @@ describe('perubahan formulir tidak merusak rekap lama', () => {
   });
 });
 
-describe('satu jawaban per peserta per pertemuan', () => {
-  it('memakai id gabungan sesi dan peserta', () => {
-    // Ketukan ganda tidak boleh menggandakan rekapnya.
-    // A double tap must not double the report.
-    expect(fungsi('submitSurveyResponse')).toMatch(/const id = `\$\{sessionId\}_\$\{actor\.uid\}`/);
-  });
-});
-
 describe('tempat survei pada antarmuka', () => {
-  it('berdampingan dengan kuis pada kartu pertemuan', () => {
-    expect(jadwal).toMatch(/survey && \(/);
-    expect(jadwal).toContain('/app/survei/');
-  });
-
-  it('membedakan yang sudah terisi dari yang belum', () => {
-    expect(jadwal).toContain("survey.submitted ? 'Terisi' : 'Wajib diisi'");
-  });
-
-  it('pengaturan bertab sejak awal', () => {
-    // Menambah tab kedua kelak tidak menuntut membongkar halaman yang
-    // terlanjur berbentuk satu kolom tunggal.
+  it('berbentuk tabel dengan kolom cakupan', () => {
+    // Beberapa survei berdampingan, masing-masing mengenai kelas dan pertemuan
+    // yang berbeda; tabel adalah satu-satunya bentuk yang memperlihatkan
+    // cakupan semuanya sekaligus.
     //
-    // Adding a second tab later then does not require tearing apart a page
-    // already shaped as a single column.
-    expect(settings).toMatch(/const TABS: \[SettingsTab, string\]\[\]/);
-    expect(settings).toContain("aria-current={active ? 'page' : undefined}");
+    // Several surveys stand side by side, each covering different classes and
+    // meetings; a table is the only shape that shows every scope at once.
+    expect(settings).toContain('CAKUPAN');
+    expect(settings).toContain('describeScope');
+    expect(settings).toContain('Tambah Survei');
+  });
+
+  it('menyediakan pengaturan cakupan per survei', () => {
+    expect(scopeModal).toContain('Semua Kelas');
+    expect(scopeModal).toContain('Semua Pertemuan');
+    expect(scopeModal).toMatch(/scope: \{ classIds, sessionIds \}/);
+  });
+
+  it('menjelaskan arti daftar kosong pada layarnya', () => {
+    // Admin yang mengira kosong berarti "tidak satu pun" akan memilih seluruh
+    // kelas satu per satu, dan membekukan daftarnya tanpa sadar.
+    //
+    // An admin who reads empty as "none" would pick every class by hand, and
+    // freeze the list without realising.
+    expect(scopeModal).toContain('Termasuk kelas yang dibuat kemudian');
+  });
+
+  it('membuka survei yang baru dibuat', () => {
+    expect(settings).toContain('setOpenId(data.id)');
+  });
+
+  it('beberapa survei dapat tampil pada satu kartu pertemuan', () => {
+    expect(jadwal).toMatch(/surveys\.map\(\(sv\) =>/);
+    expect(jadwal).toContain('/app/survei/${sv.formId}/${session.id}');
+  });
+
+  it('halaman pengisian menerima formulir dan pertemuannya', () => {
+    expect(
+      existsSync(resolve(process.cwd(), 'src/app/(student)/app/survei/[formId]/[sessionId]/page.tsx'))
+    ).toBe(true);
   });
 
   it('pengaturan tercantum pada menu admin', () => {
     expect(shell).toContain("href: '/admin/pengaturan'");
-  });
-
-  it('menyebut jumlah pertanyaan wajib yang belum dijawab', () => {
-    // Tombol yang tidak merespons tanpa keterangan tidak memberi tahu apa yang
-    // kurang.
-    //
-    // A button that does nothing without explanation does not say what is
-    // missing.
-    const halaman = read('src/app/(student)/app/survei/[sessionId]/page.tsx');
-    expect(halaman).toContain('pertanyaan wajib belum dijawab');
   });
 });

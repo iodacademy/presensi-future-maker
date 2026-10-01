@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
 import { getSessionActor } from '@/features/auth/session';
-import { getSurveyForm, updateSurveyForm, addSurveyQuestion } from '@/features/survey/service';
+import { listSurveyForms, createSurveyForm } from '@/features/survey/service';
 
 /**
- * Formulir survei.
+ * Daftar formulir survei.
  *
  * Peserta ikut membacanya untuk mengisi, sehingga tidak dibatasi admin. Tidak
  * ada yang perlu disembunyikan: survei tidak punya jawaban benar.
  *
- * The survey form.
+ * The survey forms.
  *
- * Participants read it to fill it in, so it is not admin-only. There is
+ * Participants read them to fill them in, so this is not admin-only. There is
  * nothing to withhold: a survey has no correct answers.
  */
 export async function GET() {
@@ -20,21 +20,7 @@ export async function GET() {
   }
 
   try {
-    return NextResponse.json({ form: await getSurveyForm() });
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
-  }
-}
-
-export async function PATCH(request: Request) {
-  const actor = await getSessionActor();
-  if (!actor || actor.role !== 'admin') {
-    return NextResponse.json({ error: 'Hanya admin yang diizinkan' }, { status: 403 });
-  }
-
-  try {
-    await updateSurveyForm(actor, await request.json());
-    return NextResponse.json({ updated: true });
+    return NextResponse.json({ forms: await listSurveyForms() });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }
@@ -47,8 +33,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await addSurveyQuestion(actor, await request.json());
-    return NextResponse.json({ added: true });
+    return NextResponse.json(await createSurveyForm(actor, await request.json()));
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }

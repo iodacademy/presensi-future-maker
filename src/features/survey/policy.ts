@@ -1,5 +1,5 @@
 // Aturan formulir survei / Survey form rules
-import { NUMERIC_KINDS, type SurveyAnswer, type SurveyQuestion, type SurveyQuestionKind } from './types';
+import { NUMERIC_KINDS, type SurveyAnswer, type SurveyQuestion, type SurveyQuestionKind, type SurveyScope } from './types';
 
 /** Nilai yang sah untuk pertanyaan skala / Valid values for a scale question */
 export const SCALE_MIN = 1;
@@ -173,4 +173,57 @@ export function summariseAnswers(answers: SurveyAnswer[]): {
 
     return { questionText, kind, count: list.length, average, distribution, texts: [] };
   });
+}
+
+/**
+ * Memeriksa apakah sebuah formulir berlaku bagi satu pertemuan.
+ *
+ * Daftar kosong berarti seluruhnya. Menyimpan seluruh id kelas saat admin
+ * memilih "semua kelas" akan membekukan daftarnya pada saat penyimpanan,
+ * sehingga kelas yang dibuat kemudian tidak pernah mendapat surveinya --
+ * kesalahan yang baru ketahuan berbulan-bulan kemudian saat angkatan
+ * berikutnya dibuka.
+ *
+ * Checks whether a form applies to one meeting.
+ *
+ * An empty list means all of them. Storing every class id when an admin picks
+ * "all classes" would freeze the list at save time, so a class created later
+ * would never receive the survey -- a mistake that only surfaces months on,
+ * when the next cohort opens.
+ */
+export function scopeCovers(scope: SurveyScope, classId: string, sessionId: string): boolean {
+  const kelasCocok = scope.classIds.length === 0 || scope.classIds.includes(classId);
+  const sesiCocok = scope.sessionIds.length === 0 || scope.sessionIds.includes(sessionId);
+  return kelasCocok && sesiCocok;
+}
+
+/**
+ * Menjelaskan cakupan sebuah formulir dalam satu kalimat.
+ *
+ * Daftar id tidak terbaca siapa pun; admin perlu tahu formulirnya mengenai
+ * siapa tanpa membuka pengaturannya satu per satu.
+ *
+ * Describes a form's scope in one sentence.
+ *
+ * A list of ids reads to nobody; an admin needs to know who a form covers
+ * without opening each one's settings.
+ */
+export function describeScope(
+  scope: SurveyScope,
+  classNames: Map<string, string>,
+  sessionTitles: Map<string, string>
+): string {
+  const kelas =
+    scope.classIds.length === 0
+      ? 'Semua kelas'
+      : scope.classIds.map((id) => classNames.get(id) ?? id).join(', ');
+
+  const sesi =
+    scope.sessionIds.length === 0
+      ? 'semua pertemuan'
+      : scope.sessionIds.length <= 2
+        ? scope.sessionIds.map((id) => sessionTitles.get(id) ?? id).join(', ')
+        : `${scope.sessionIds.length} pertemuan`;
+
+  return `${kelas} - ${sesi}`;
 }

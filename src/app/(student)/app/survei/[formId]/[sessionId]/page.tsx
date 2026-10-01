@@ -19,8 +19,12 @@ import type { SurveyFormDocument } from '@/features/survey/types';
  * There is one form for every class; which meeting is being rated comes from
  * the page's address and is recorded on the response, not on the form.
  */
-export default function SurveyPage({ params }: { params: Promise<{ sessionId: string }> }) {
-  const { sessionId } = React.use(params);
+export default function SurveyPage({
+  params,
+}: {
+  params: Promise<{ formId: string; sessionId: string }>;
+}) {
+  const { formId, sessionId } = React.use(params);
   const router = useRouter();
 
   const [form, setForm] = useState<SurveyFormDocument | null>(null);
@@ -31,18 +35,18 @@ export default function SurveyPage({ params }: { params: Promise<{ sessionId: st
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/survey/form')
+    fetch(`/api/survey/forms/${formId}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (!cancelled) setForm(d?.form ?? null); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, []);
+  }, [formId]);
 
   async function submit() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/survey/responses/${sessionId}`, {
+      const res = await fetch(`/api/survey/responses/${formId}/${sessionId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ answers }),

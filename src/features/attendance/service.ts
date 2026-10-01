@@ -4,6 +4,8 @@ import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor, UserDocument } from '../auth/types';
 import type { MaterialLink } from '../tasks/types';
+import { scopeCovers } from '../survey/policy';
+import type { SurveyFormDocument } from '../survey/types';
 import type {
   SessionDocument,
   AttendanceDocument,
@@ -739,15 +741,31 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
     // survey belongs to the same meeting as its recordings and quiz, and a
     // second endpoint for one row per card adds a round trip for data already
     // in flight.
-    db.collection('surveyForms').doc('default').get(),
+    db.collection('surveyForms').get(),
     db.collection('surveyResponses').where('studentId', '==', actor.uid).get(),
   ]);
 
-  const surveyForm = surveyFormSnap.exists
-    ? (surveyFormSnap.data() as { title: string; questions: unknown[]; published: boolean })
-    : null;
+  // Beberapa survei dapat mengenai satu pertemuan, masing-masing dengan
+  // cakupannya sendiri. Yang belum terbit dan yang belum berpertanyaan
+  // dilewatkan: keduanya menagih peserta mengisi layar kosong.
+  //
+  // Several surveys can cover one meeting, each with its own scope. Unpublished
+  // ones and ones without questions are skipped: both would ask participants to
+  // fill in an empty screen.
+  const surveyForms = surveyFormSnap.docs
+    .map((d) => d.data() as SurveyFormDocument)
+    .filter((f) => f.published && f.questions.length > 0);
+
+  // Dikunci pada formulir dan pertemuannya sekaligus: satu peserta dapat
+  // mengisi dua survei berbeda untuk pertemuan yang sama.
+  //
+  // Keyed on form and meeting together: one participant may fill in two
+  // different surveys for the same meeting.
   const surveyDone = new Set(
-    surveyResponseSnap.docs.map((d) => (d.data() as { sessionId: string }).sessionId)
+    surveyResponseSnap.docs.map((d) => {
+      const r = d.data() as { formId: string; sessionId: string };
+      return `${r.formId}_${r.sessionId}`;
+    })
   );
 
   const bestByExam = new Map<string, { score: number; passed: boolean }>();
@@ -813,14 +831,16 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
     // The survey appears only once attendance is recorded. Someone who did not
     // attend has no experience of that meeting to rate, and asking them leaves
     // a demand they can never satisfy.
-    survey:
-      surveyForm?.published && attendMap.has(s.id)
-        ? {
-            formTitle: surveyForm.title,
-            questionCount: surveyForm.questions.length,
-            submitted: surveyDone.has(s.id),
-          }
-        : null,
+    surveys: attendMap.has(s.id)
+      ? surveyForms
+          .filter((f) => scopeCovers(f.scope, actor.classId!, s.id))
+          .map((f) => ({
+            formId: f.id,
+            formTitle: f.title,
+            questionCount: f.questions.length,
+            submitted: surveyDone.has(`${f.id}_${s.id}`),
+          }))
+      : [],
   }));
 }
 

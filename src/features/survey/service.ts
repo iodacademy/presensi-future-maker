@@ -2,16 +2,20 @@
 import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
-import { canPublishForm, summariseAnswers, validateResponses, validateSurveyQuestion } from './policy';
+import {
+  canPublishForm,
+  scopeCovers,
+  summariseAnswers,
+  validateResponses,
+  validateSurveyQuestion,
+} from './policy';
 import type {
   SurveyFormDocument,
   SurveyQuestion,
   SurveyQuestionKind,
   SurveyResponseDocument,
+  SurveyScope,
 } from './types';
-
-/** Hanya ada satu formulir; id-nya tetap / There is only one form; its id is fixed */
-const FORM_ID = 'default';
 
 function requireAdmin(actor: Actor): void {
   if (actor.role !== 'admin') {
@@ -19,34 +23,60 @@ function requireAdmin(actor: Actor): void {
   }
 }
 
-const KOSONG: SurveyFormDocument = {
-  id: FORM_ID,
-  title: 'Umpan Balik Pertemuan',
-  description: 'Masukan Anda dipakai untuk memperbaiki pertemuan berikutnya.',
-  questions: [],
-  published: false,
-  version: 1,
-  updatedAt: '',
-};
+export async function listSurveyForms(): Promise<SurveyFormDocument[]> {
+  const db = getAdminDb();
+  const snap = await db.collection('surveyForms').get();
+  return snap.docs
+    .map((d) => d.data() as SurveyFormDocument)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function getSurveyForm(formId: string): Promise<SurveyFormDocument | null> {
+  const db = getAdminDb();
+  const snap = await db.collection('surveyForms').doc(formId).get();
+  return snap.exists ? (snap.data() as SurveyFormDocument) : null;
+}
 
 /**
- * Mengambil formulir survei, atau bentuk kosongnya bila belum pernah disusun.
+ * Membuat formulir baru dalam keadaan belum terbit dan tanpa pertanyaan.
  *
- * Mengembalikan bentuk kosong alih-alih null: halaman pengaturan menampilkan
- * formulir yang sama baik sudah ada maupun belum, dan null akan memaksa setiap
- * pemanggil menanganinya sendiri.
+ * Cakupannya kosong, yang berarti seluruh kelas dan seluruh pertemuan. Bawaan
+ * yang paling longgar dipilih agar formulir baru tidak diam-diam tidak
+ * mengenai siapa pun; cakupan yang terlalu luas terlihat, cakupan kosong
+ * tidak.
  *
- * Reads the survey form, or an empty one if it has never been written.
+ * Creates a new form, unpublished and without questions.
  *
- * Returns an empty form rather than null: the settings page renders the same
- * form whether or not it exists yet, and null would force every caller to
- * handle that case itself.
+ * Its scope is empty, meaning every class and every meeting. The widest default
+ * is chosen so a new form does not quietly cover nobody; too wide a scope is
+ * visible, an empty one is not.
  */
-export async function getSurveyForm(): Promise<SurveyFormDocument> {
-  const db = getAdminDb();
-  const snap = await db.collection('surveyForms').doc(FORM_ID).get();
-  if (!snap.exists) return KOSONG;
-  return snap.data() as SurveyFormDocument;
+export async function createSurveyForm(
+  actor: Actor,
+  input: { title: string; description?: string }
+): Promise<{ id: string }> {
+  requireAdmin(actor);
+
+  const title = input.title.trim();
+  if (!title) throw new Error('Judul survei wajib diisi');
+
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  const form: SurveyFormDocument = {
+    id,
+    title,
+    description: (input.description ?? '').trim(),
+    questions: [],
+    scope: { classIds: [], sessionIds: [] },
+    published: false,
+    version: 1,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await getAdminDb().collection('surveyForms').doc(id).set(form);
+  return { id };
 }
 
 /**
@@ -54,20 +84,32 @@ export async function getSurveyForm(): Promise<SurveyFormDocument> {
  *
  * Versi dinaikkan setiap kali pertanyaannya berubah, dan dicatat pada tiap
  * jawaban agar rekapnya dapat memisahkan jawaban atas pertanyaan lama dari
- * yang baru.
+ * yang baru. Mengubah judul atau cakupan tidak menaikkannya: keduanya tidak
+ * mengubah apa yang dibaca penjawabnya.
  *
- * Saves a change to the form.
+ * Saves a change to a form.
  *
  * The version rises whenever the questions change, and is recorded on every
  * response so a report can separate answers to the old questions from the new.
+ * Changing the title or scope does not raise it: neither changes what the
+ * respondent read.
  */
 export async function updateSurveyForm(
   actor: Actor,
-  patch: { title?: string; description?: string; questions?: SurveyQuestion[]; published?: boolean }
+  formId: string,
+  patch: {
+    title?: string;
+    description?: string;
+    questions?: SurveyQuestion[];
+    scope?: SurveyScope;
+    published?: boolean;
+  }
 ): Promise<void> {
   requireAdmin(actor);
 
-  const current = await getSurveyForm();
+  const current = await getSurveyForm(formId);
+  if (!current) throw new Error('Survei tidak ditemukan');
+
   const questions = patch.questions ?? current.questions;
 
   if (patch.published === true) {
@@ -81,22 +123,25 @@ export async function updateSurveyForm(
     title: patch.title?.trim() || current.title,
     description: patch.description !== undefined ? patch.description.trim() : current.description,
     questions,
+    scope: patch.scope ?? current.scope,
     published: patch.published ?? current.published,
     version: berubah ? current.version + 1 : current.version,
     updatedAt: new Date().toISOString(),
   };
 
-  await getAdminDb().collection('surveyForms').doc(FORM_ID).set(next);
+  await getAdminDb().collection('surveyForms').doc(formId).set(next);
 }
 
 export async function addSurveyQuestion(
   actor: Actor,
+  formId: string,
   input: { kind: SurveyQuestionKind; text: string; options: string[]; required: boolean }
 ): Promise<void> {
   requireAdmin(actor);
 
   const validated = validateSurveyQuestion(input);
-  const current = await getSurveyForm();
+  const current = await getSurveyForm(formId);
+  if (!current) throw new Error('Survei tidak ditemukan');
 
   const question: SurveyQuestion = {
     id: crypto.randomUUID(),
@@ -105,13 +150,19 @@ export async function addSurveyQuestion(
     order: current.questions.length + 1,
   };
 
-  await updateSurveyForm(actor, { questions: [...current.questions, question] });
+  await updateSurveyForm(actor, formId, { questions: [...current.questions, question] });
 }
 
-export async function removeSurveyQuestion(actor: Actor, questionId: string): Promise<void> {
+export async function removeSurveyQuestion(
+  actor: Actor,
+  formId: string,
+  questionId: string
+): Promise<void> {
   requireAdmin(actor);
 
-  const current = await getSurveyForm();
+  const current = await getSurveyForm(formId);
+  if (!current) throw new Error('Survei tidak ditemukan');
+
   const questions = current.questions
     .filter((q) => q.id !== questionId)
     .map((q, i) => ({ ...q, order: i + 1 }));
@@ -121,10 +172,66 @@ export async function removeSurveyQuestion(actor: Actor, questionId: string): Pr
   //
   // A form that loses its last question must not stay published: participants
   // would be asked to fill in an empty screen.
-  await updateSurveyForm(actor, {
+  await updateSurveyForm(actor, formId, {
     questions,
     ...(questions.length === 0 ? { published: false } : {}),
   });
+}
+
+/**
+ * Menghapus sebuah formulir beserta jawabannya.
+ *
+ * Jawabannya ikut dihapus: jawaban yang formulirnya hilang tidak dapat
+ * ditampilkan pada rekap mana pun lagi, dan membiarkannya hanya menyisakan
+ * dokumen yang tidak pernah terbaca.
+ *
+ * Deletes a form together with its responses.
+ *
+ * The responses go too: an answer whose form is gone can no longer appear on
+ * any report, and keeping it only leaves a document nothing ever reads.
+ */
+export async function deleteSurveyForm(actor: Actor, formId: string): Promise<void> {
+  requireAdmin(actor);
+
+  const db = getAdminDb();
+  const responses = await db.collection('surveyResponses').where('formId', '==', formId).get();
+
+  const batch = db.batch();
+  for (const d of responses.docs) batch.delete(d.ref);
+  batch.delete(db.collection('surveyForms').doc(formId));
+  await batch.commit();
+}
+
+/**
+ * Formulir yang berlaku bagi satu pertemuan, beserta keadaan pengisiannya.
+ *
+ * The forms that apply to one meeting, with whether each has been filled in.
+ */
+export async function listSurveysForSession(
+  studentId: string,
+  classId: string,
+  sessionId: string
+): Promise<{ formId: string; formTitle: string; questionCount: number; submitted: boolean }[]> {
+  const forms = (await listSurveyForms()).filter(
+    (f) => f.published && f.questions.length > 0 && scopeCovers(f.scope, classId, sessionId)
+  );
+  if (forms.length === 0) return [];
+
+  const db = getAdminDb();
+  const snap = await db
+    .collection('surveyResponses')
+    .where('studentId', '==', studentId)
+    .where('sessionId', '==', sessionId)
+    .get();
+
+  const sudah = new Set(snap.docs.map((d) => (d.data() as SurveyResponseDocument).formId));
+
+  return forms.map((f) => ({
+    formId: f.id,
+    formTitle: f.title,
+    questionCount: f.questions.length,
+    submitted: sudah.has(f.id),
+  }));
 }
 
 /**
@@ -142,6 +249,7 @@ export async function removeSurveyQuestion(actor: Actor, questionId: string): Pr
  */
 export async function submitSurveyResponse(
   actor: Actor,
+  formId: string,
   sessionId: string,
   raw: Record<string, string>
 ): Promise<void> {
@@ -151,34 +259,47 @@ export async function submitSurveyResponse(
 
   const db = getAdminDb();
   const [formSnap, sessionSnap, attendanceSnap] = await Promise.all([
-    db.collection('surveyForms').doc(FORM_ID).get(),
+    db.collection('surveyForms').doc(formId).get(),
     db.collection('sessions').doc(sessionId).get(),
     db.collection('attendance').doc(`${sessionId}_${actor.uid}`).get(),
   ]);
 
-  if (!formSnap.exists) throw new Error('Formulir survei belum tersedia');
+  if (!formSnap.exists) throw new Error('Survei tidak ditemukan');
   const form = formSnap.data() as SurveyFormDocument;
-  if (!form.published) throw new Error('Formulir survei belum dibuka');
+  if (!form.published) throw new Error('Survei ini belum dibuka');
 
   if (!sessionSnap.exists) throw new Error('Pertemuan tidak ditemukan');
   const session = sessionSnap.data() as { title: string; date: string; className?: string };
+
+  // Cakupannya diperiksa di sini, bukan hanya dengan menyembunyikan barisnya:
+  // baris yang disembunyikan tidak menahan siapa pun yang memanggil
+  // endpointnya langsung dengan id pertemuan lain.
+  //
+  // The scope is checked here rather than only by hiding the row: a hidden row
+  // holds back nobody who calls the endpoint directly with another meeting's
+  // id.
+  if (!scopeCovers(form.scope, actor.classId, sessionId)) {
+    throw new Error('Survei ini tidak berlaku untuk pertemuan tersebut');
+  }
 
   if (!attendanceSnap.exists) {
     throw new Error('Survei terbuka setelah kehadiran Anda pada pertemuan ini tercatat');
   }
 
   const answers = validateResponses(form.questions, raw);
-  const id = `${sessionId}_${actor.uid}`;
-
-  // Satu jawaban per peserta per pertemuan. Id gabungan membuat pengiriman
-  // ulang menimpa jawabannya sendiri alih-alih menambah baris kedua, sehingga
-  // ketukan ganda tidak menggandakan rekapnya.
+  // Satu jawaban per formulir per peserta per pertemuan. Id gabungan membuat
+  // pengiriman ulang menimpa jawabannya sendiri alih-alih menambah baris
+  // kedua, sehingga ketukan ganda tidak menggandakan rekapnya.
   //
-  // One response per participant per meeting. The compound id makes a resend
-  // overwrite their own answer rather than add a second row, so a double tap
-  // does not double the report.
+  // One response per form per participant per meeting. The compound id makes a
+  // resend overwrite their own answer rather than add a second row, so a double
+  // tap does not double the report.
+  const id = `${formId}_${sessionId}_${actor.uid}`;
+
   const response: SurveyResponseDocument = {
     id,
+    formId,
+    formTitle: form.title,
     sessionId,
     sessionTitle: session.title,
     sessionDate: session.date,
@@ -195,12 +316,13 @@ export async function submitSurveyResponse(
 }
 
 /**
- * Rekap jawaban survei, disaring menurut kelas atau pertemuan.
+ * Rekap jawaban sebuah formulir, dapat disaring menurut kelas atau pertemuan.
  *
- * The survey report, filterable by class or meeting.
+ * One form's report, filterable by class or meeting.
  */
 export async function getSurveyReport(
   actor: Actor,
+  formId: string,
   filters: { classId?: string; sessionId?: string } = {}
 ): Promise<{
   responseCount: number;
@@ -210,7 +332,13 @@ export async function getSurveyReport(
   requireAdmin(actor);
 
   const db = getAdminDb();
-  let query = db.collection('surveyResponses') as FirebaseFirestore.Query;
+  // Disaring menurut formulirnya lebih dulu. Tanpa itu, rekap sebuah formulir
+  // akan ikut menghitung jawaban atas formulir lain yang kebetulan mengenai
+  // pertemuan yang sama.
+  //
+  // Filtered by form first. Without it, one form's report would count answers
+  // to another form that happened to cover the same meeting.
+  let query = db.collection('surveyResponses').where('formId', '==', formId) as FirebaseFirestore.Query;
   if (filters.sessionId) query = query.where('sessionId', '==', filters.sessionId);
   else if (filters.classId) query = query.where('classId', '==', filters.classId);
 

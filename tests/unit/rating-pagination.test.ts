@@ -74,7 +74,7 @@ describe('rating bintang', () => {
     //
     // Five numbered buttons ask a participant to work out that 5 means good; a
     // star already means that without explanation.
-    const halaman = read('src/app/(student)/app/survei/[sessionId]/page.tsx');
+    const halaman = read('src/app/(student)/app/survei/[formId]/[sessionId]/page.tsx');
     expect(halaman).toMatch(/q\.kind === 'rating' && \(/);
     expect(halaman).toMatch(/<Star/);
     expect(halaman).toContain('bintang`}');
@@ -86,7 +86,7 @@ describe('rating bintang', () => {
     //
     // A single filled star in the fourth position does not read as four out of
     // five.
-    const halaman = read('src/app/(student)/app/survei/[sessionId]/page.tsx');
+    const halaman = read('src/app/(student)/app/survei/[formId]/[sessionId]/page.tsx');
     expect(halaman).toMatch(/Number\(answers\[q\.id\] \?\? 0\) >= nilai/);
   });
 });
