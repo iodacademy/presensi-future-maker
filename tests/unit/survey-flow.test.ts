@@ -196,10 +196,6 @@ describe('tempat survei pada antarmuka', () => {
     expect(scopeModal).toContain('Termasuk kelas yang dibuat kemudian');
   });
 
-  it('membuka survei yang baru dibuat', () => {
-    expect(settings).toContain('setOpenId(data.id)');
-  });
-
   it('beberapa survei dapat tampil pada satu kartu pertemuan', () => {
     expect(jadwal).toMatch(/surveys\.map\(\(sv\) =>/);
     expect(jadwal).toContain('/app/survei/${sv.formId}/${session.id}');
@@ -213,5 +209,128 @@ describe('tempat survei pada antarmuka', () => {
 
   it('pengaturan tercantum pada menu admin', () => {
     expect(shell).toContain("href: '/admin/pengaturan'");
+  });
+});
+
+/**
+ * Penyuntingan pindah ke halaman tersendiri.
+ *
+ * Dua puluh empat pertanyaan tidak muat pada baris tabel yang melebar, dan
+ * menyunting teks panjang di dalam ruang selebar kolom membuat kalimatnya
+ * tidak terbaca utuh saat diperiksa.
+ *
+ * Editing moved to a page of its own.
+ *
+ * Twenty-four questions do not fit in an expanding table row, and editing long
+ * text in a column's width leaves the sentence unreadable while it is being
+ * checked.
+ */
+describe('penyunting survei berhalaman sendiri', () => {
+  const editor = read('src/app/(admin)/admin/pengaturan/survei/[formId]/page.tsx');
+  const table = read('src/app/(admin)/admin/pengaturan/page.tsx');
+
+  it('tabel hanya mendaftar, tidak menyunting', () => {
+    expect(table).toContain('/admin/pengaturan/survei/');
+    expect(table).not.toContain('AddQuestion');
+    expect(table).not.toMatch(/questions\/\$\{/);
+  });
+
+  it('survei baru langsung masuk ke penyuntingnya', () => {
+    // Survei baru tidak punya pertanyaan, dan kembali ke tabel berarti admin
+    // harus menekan Ubah untuk melanjutkan apa yang baru saja ia mulai.
+    //
+    // A new survey has no questions, and returning to the table would have the
+    // admin press Edit to continue what they just started.
+    expect(table).toMatch(/router\.push\(`\/admin\/pengaturan\/survei\/\$\{data\.id\}`\)/);
+  });
+
+  it('judul dan pengantar dapat diubah', () => {
+    // Keduanya dibaca peserta sebelum mengisi, dan sebelumnya hanya dapat
+    // ditetapkan sekali saat dibuat.
+    //
+    // Both are read by participants before filling in, and could previously
+    // only be set once at creation.
+    expect(editor).toContain('aria-label="Judul survei"');
+    expect(editor).toContain('aria-label="Pengantar survei"');
+    expect(editor).toMatch(/patchForm\(\{ title, description \}/);
+  });
+
+  it('memakai satu formulir untuk tambah dan ubah pertanyaan', () => {
+    // Dua formulir berarti dua tempat memperbaiki setiap kali fieldnya
+    // berubah.
+    //
+    // Two forms would mean two places to fix whenever a field changes.
+    expect(editor.match(/<QuestionForm/g)?.length).toBe(2);
+    expect(editor.match(/function QuestionForm/g)?.length).toBe(1);
+  });
+
+  it('mengisi formulirnya dengan isi pertanyaan yang disunting', () => {
+    // Formulir kosong saat menyunting menuntut admin mengetik ulang seluruh
+    // kalimatnya hanya untuk memperbaiki satu kata.
+    //
+    // An empty form when editing makes an admin retype the whole sentence just
+    // to fix one word.
+    expect(editor).toMatch(/function startEdit\(q: SurveyQuestion\)/);
+    expect(editor).toMatch(/text: q\.text/);
+  });
+
+  it('memindahkan pertanyaan dengan tombol, bukan seret', () => {
+    // Seret menuntut kursor dan tidak terjangkau dari papan ketik maupun layar
+    // sentuh yang sempit.
+    //
+    // Dragging demands a pointer and is out of reach from a keyboard or a
+    // narrow touch screen.
+    expect(editor).toContain('Naikkan pertanyaan');
+    expect(editor).toContain('Turunkan pertanyaan');
+    expect(editor).not.toContain('draggable');
+  });
+
+  it('menonaktifkan naik pada yang pertama dan turun pada yang terakhir', () => {
+    expect(editor).toMatch(/disabled=\{i === 0\}/);
+    expect(editor).toMatch(/disabled=\{i === arr\.length - 1\}/);
+  });
+});
+
+describe('layanan ubah dan pindah pertanyaan', () => {
+  it('mempertahankan id saat pertanyaannya diubah', () => {
+    // Jawaban yang sudah masuk tetap menunjuk pertanyaan yang sama, dan
+    // teksnya sendiri sudah disalin ke tiap jawaban saat dikirim.
+    //
+    // Responses already in still point at the same question, and the text
+    // itself was copied onto each response when it was submitted.
+    const blok = fungsi('updateSurveyQuestion');
+    expect(blok).toMatch(/q\.id === questionId \? \{ \.\.\.q, \.\.\.validated/);
+  });
+
+  it('menolak pertanyaan yang tidak ada', () => {
+    expect(fungsi('updateSurveyQuestion')).toContain('Pertanyaan tidak ditemukan');
+  });
+
+  it('menulis ulang seluruh urutan setelah bertukar', () => {
+    // Nomor urut yang bolong setelah penghapusan membuat pertukaran berikutnya
+    // melompati posisi.
+    //
+    // Gaps left by a deletion would make the next swap skip a position.
+    expect(fungsi('moveSurveyQuestion')).toMatch(/urut\.map\(\(q, n\) => \(\{ \.\.\.q, order: n \+ 1 \}\)\)/);
+  });
+
+  it('mengabaikan pemindahan di luar batas, bukan menolaknya', () => {
+    // Tombol naik pada pertanyaan pertama sudah dinonaktifkan di layar, dan
+    // menolaknya di sini hanya memunculkan pesan galat untuk ketukan yang
+    // tidak berakibat.
+    //
+    // The up button on the first question is already disabled on screen, and
+    // refusing here would only raise an error for a tap that changes nothing.
+    expect(fungsi('moveSurveyQuestion')).toMatch(/if \(j < 0 \|\| j >= urut\.length\) return;/);
+  });
+
+  it('memisahkan pemindahan dari penyuntingan pada endpointnya', () => {
+    // Satu badan yang memuat keduanya membuat tombol naik-turun ikut mengirim
+    // teks pertanyaan yang sedang diketik dan belum selesai.
+    //
+    // One body carrying both would have the up and down buttons also send a
+    // question text still being typed.
+    const route = read('src/app/api/survey/forms/[formId]/questions/[questionId]/route.ts');
+    expect(route).toMatch(/body\.direction === 'up' \|\| body\.direction === 'down'/);
   });
 });

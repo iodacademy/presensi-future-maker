@@ -153,6 +153,86 @@ export async function addSurveyQuestion(
   await updateSurveyForm(actor, formId, { questions: [...current.questions, question] });
 }
 
+/**
+ * Mengubah satu pertanyaan.
+ *
+ * Id-nya dipertahankan, sehingga jawaban yang sudah masuk tetap menunjuk
+ * pertanyaan yang sama. Teksnya sendiri sudah disalin ke tiap jawaban saat
+ * dikirim, jadi rekap lama tetap menampilkan kalimat yang benar-benar dibaca
+ * penjawabnya -- bukan kalimat yang baru.
+ *
+ * Changes one question.
+ *
+ * Its id is kept, so responses already in still point at the same question.
+ * The text itself was copied onto each response when it was submitted, so old
+ * reports still show the sentence its author actually read -- not the new one.
+ */
+export async function updateSurveyQuestion(
+  actor: Actor,
+  formId: string,
+  questionId: string,
+  input: { kind: SurveyQuestionKind; text: string; options: string[]; required: boolean }
+): Promise<void> {
+  requireAdmin(actor);
+
+  const validated = validateSurveyQuestion(input);
+  const current = await getSurveyForm(formId);
+  if (!current) throw new Error('Survei tidak ditemukan');
+
+  const ada = current.questions.some((q) => q.id === questionId);
+  if (!ada) throw new Error('Pertanyaan tidak ditemukan');
+
+  const questions = current.questions.map((q) =>
+    q.id === questionId ? { ...q, ...validated, required: input.required } : q
+  );
+
+  await updateSurveyForm(actor, formId, { questions });
+}
+
+/**
+ * Memindahkan sebuah pertanyaan satu posisi ke atas atau ke bawah.
+ *
+ * Urutannya ditulis ulang seluruhnya setelah ditukar, bukan hanya pada dua
+ * pertanyaan yang berpindah: nomor urut yang bolong setelah penghapusan
+ * membuat pertukaran berikutnya melompati posisi.
+ *
+ * Moves a question one position up or down.
+ *
+ * The whole order is rewritten after the swap rather than only the two that
+ * moved: gaps left by a deletion would make the next swap skip a position.
+ */
+export async function moveSurveyQuestion(
+  actor: Actor,
+  formId: string,
+  questionId: string,
+  direction: 'up' | 'down'
+): Promise<void> {
+  requireAdmin(actor);
+
+  const current = await getSurveyForm(formId);
+  if (!current) throw new Error('Survei tidak ditemukan');
+
+  const urut = [...current.questions].sort((a, b) => a.order - b.order);
+  const i = urut.findIndex((q) => q.id === questionId);
+  if (i === -1) throw new Error('Pertanyaan tidak ditemukan');
+
+  const j = direction === 'up' ? i - 1 : i + 1;
+  // Di luar batas berarti tidak ada yang perlu dilakukan, bukan galat: tombol
+  // naik pada pertanyaan pertama sudah dinonaktifkan di layar, dan menolaknya
+  // di sini hanya memunculkan pesan galat untuk ketukan yang tidak berakibat.
+  //
+  // Out of range means nothing to do rather than an error: the up button on the
+  // first question is already disabled on screen, and refusing here would only
+  // raise an error for a tap that changes nothing.
+  if (j < 0 || j >= urut.length) return;
+
+  [urut[i], urut[j]] = [urut[j], urut[i]];
+
+  await updateSurveyForm(actor, formId, {
+    questions: urut.map((q, n) => ({ ...q, order: n + 1 })),
+  });
+}
+
 export async function removeSurveyQuestion(
   actor: Actor,
   formId: string,
