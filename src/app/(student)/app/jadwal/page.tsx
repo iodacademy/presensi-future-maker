@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { QrCode, Info, Video, FileText, Download, ClipboardList } from 'lucide-react';
+import { QrCode, Info, Video, FileText, Download, ClipboardList, ClipboardCheck } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import { formatTimeWib, formatDateTimeWib } from '@/lib/time';
 import type { SessionDocument, AttendanceDocument } from '@/features/attendance/types';
@@ -14,6 +14,7 @@ interface SessionItem {
   attendance: AttendanceDocument | null;
   isActive: boolean;
   workingPapers?: { id: string; title: string; dueAt: string | null }[];
+  exams?: { id: string; title: string; questionCount: number; durationMinutes: number | null; score: number | null; passed: boolean; attemptsLeft: number }[];
 }
 
 /**
@@ -32,13 +33,15 @@ interface SessionItem {
 function RecordingLinks({
   session,
   workingPapers = [],
+  exams = [],
 }: {
   session: SessionDocument;
   workingPapers?: { id: string; title: string; dueAt: string | null }[];
+  exams?: { id: string; title: string; questionCount: number; durationMinutes: number | null; score: number | null; passed: boolean; attemptsLeft: number }[];
 }) {
   const recordings = session.recordings ?? [];
   const materials = session.materials ?? [];
-  if (recordings.length === 0 && materials.length === 0 && workingPapers.length === 0) return null;
+  if (recordings.length === 0 && materials.length === 0 && workingPapers.length === 0 && exams.length === 0) return null;
 
   return (
     <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -114,6 +117,34 @@ function RecordingLinks({
           )}
         </Link>
       ))}
+
+      {/* Kuis pertemuan ini, berdampingan dengan rekaman dan bahannya: peserta
+          mencari berdasarkan pertemuan, bukan berdasarkan jenis kegiatan.
+
+          This meeting's quiz, beside its recordings and materials:
+          participants look by meeting, not by kind of activity. */}
+      {exams.map((e) => {
+        const habis = e.attemptsLeft === 0 && !e.passed;
+        return (
+          <Link
+            key={e.id}
+            href={`/app/ujian/${e.id}`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px',
+              borderRadius: '8px', textDecoration: 'none',
+              backgroundColor: e.passed ? 'var(--color-success-light)' : 'var(--color-primary-light)',
+            }}
+          >
+            <ClipboardCheck size={12} color={e.passed ? 'var(--color-success)' : 'var(--color-primary)'} strokeWidth={2} style={{ flexShrink: 0 }} />
+            <span style={{ flex: 1, minWidth: 0, fontSize: '10px', fontWeight: 600, color: e.passed ? 'var(--color-success)' : 'var(--color-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {e.title}
+            </span>
+            <span style={{ fontSize: '9px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0, color: e.passed ? 'var(--color-success)' : habis ? 'var(--color-danger)' : 'var(--color-primary)' }}>
+              {e.score !== null ? `Nilai ${e.score}` : habis ? 'Kesempatan habis' : `${e.questionCount} soal`}
+            </span>
+          </Link>
+        );
+      })}
     </div>
   );
 }
@@ -229,7 +260,7 @@ export default function StudentJadwalPage() {
             {filterMode === 'rekaman' ? 'Belum ada rekaman yang diunggah' : 'Tidak ada jadwal pertemuan'}
           </div>
         ) : (
-          filteredItems.map(({ session, attendance, isActive, workingPapers }) => {
+          filteredItems.map(({ session, attendance, isActive, workingPapers, exams }) => {
             const isAttended = Boolean(attendance);
             const isOnline = session.mode === 'online';
 
@@ -260,7 +291,7 @@ export default function StudentJadwalPage() {
                       </Link>
                     )}
                   </div>
-                  <RecordingLinks session={session} workingPapers={workingPapers} />
+                  <RecordingLinks session={session} workingPapers={workingPapers} exams={exams} />
                 </div>
               );
             }
@@ -290,7 +321,7 @@ export default function StudentJadwalPage() {
                   </div>
                 )}
 
-                <RecordingLinks session={session} workingPapers={workingPapers} />
+                <RecordingLinks session={session} workingPapers={workingPapers} exams={exams} />
               </div>
             );
           })

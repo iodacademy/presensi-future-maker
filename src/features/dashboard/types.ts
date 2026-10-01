@@ -57,5 +57,24 @@ export interface StudentHomeData {
    * most urgent one.
    */
   nearestWorkingPaper: StudentHomeTask | null;
+  /**
+   * Ujian wajib yang belum dikerjakan, terdekat batasnya lebih dulu.
+   *
+   * Ditandai di beranda, bukan mengunci apa pun: kuis yang salah setelah
+   * terbit tidak boleh menghentikan pengumpulan atau pertemuan berikutnya.
+   *
+   * Required exams not yet taken, nearest deadline first.
+   *
+   * Flagged on the home screen rather than locking anything: a quiz published
+   * with wrong settings must not halt submissions or the next meeting.
+   */
+  pendingExams: {
+    id: string;
+    title: string;
+    kind: 'pretest' | 'kuis';
+    dueAt: string | null;
+    isUrgent: boolean;
+    deadlineLabel: string;
+  }[];
   progress: StudentHomeProgress;
 }

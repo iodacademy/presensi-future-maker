@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { MapPin, QrCode, Users, FileText, ClipboardList, ChevronRight } from 'lucide-react';
+import { MapPin, QrCode, Users, FileText, ClipboardList, ClipboardCheck, ChevronRight } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import type { StudentHomeData } from '@/features/dashboard/types';
 
@@ -30,6 +30,7 @@ export default function StudentHomePage() {
   const nearestMentoring = data?.nearestMentoring;
   const nearestTask = data?.nearestTask;
   const nearestWorkingPaper = data?.nearestWorkingPaper;
+  const pendingExams = data?.pendingExams ?? [];
   const progress = data?.progress;
   const studentName = data?.studentName || 'Peserta';
   const className = data?.className || '-';
@@ -145,6 +146,35 @@ export default function StudentHomePage() {
                   <ChevronRight size={16} color="var(--color-text-faint)" strokeWidth={2} />
                 </div>
               </Link>
+
+              {/* Ujian wajib ditandai paling atas. Ditandai, bukan mengunci:
+                  kuis yang salah setelah terbit tidak boleh menghentikan
+                  pengumpulan atau pertemuan berikutnya.
+
+                  Required exams are flagged at the top. Flagged, not locking: a
+                  quiz published with wrong settings must not halt submissions
+                  or the next meeting. */}
+              {pendingExams.map((e) => (
+                <Link key={e.id} href={`/app/ujian/${e.id}`} style={{ textDecoration: 'none' }}>
+                  <div style={{ backgroundColor: e.isUrgent ? '#fff8f5' : '#ffffff', borderRadius: '14px', border: e.isUrgent ? '1px solid #fde1d3' : '1px solid var(--color-border)', padding: '13px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <ClipboardCheck size={18} color="var(--color-primary)" strokeWidth={2} />
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '9px', fontWeight: 700, color: e.isUrgent ? 'var(--color-warning)' : 'var(--color-text-faint)' }}>
+                        {e.dueAt ? e.deadlineLabel : 'WAJIB DIKERJAKAN'}
+                      </div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {e.title}
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
+                        {e.kind === 'pretest' ? 'Pretest' : 'Kuis Sesi'} - belum dikerjakan
+                      </div>
+                    </div>
+                    <ChevronRight size={16} color={e.isUrgent ? 'var(--color-warning)' : 'var(--color-text-faint)'} strokeWidth={2} />
+                  </div>
+                </Link>
+              ))}
 
               {/* Hasil praktik di kelas dikartu tersendiri: batasnya jatuh
                   beberapa jam setelah pertemuannya, jauh lebih cepat daripada

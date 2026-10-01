@@ -28,6 +28,7 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
     remainingMentoringQuota: 2,
     nearestTask: null,
     nearestWorkingPaper: null,
+    pendingExams: [],
     progress: {
       attendanceRatio: '0/0',
       dailyTasksRatio: '0/0',
@@ -50,7 +51,7 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
   // interdependency) -- run in parallel, not sequentially, so total latency =
   // slowest query, not the sum of all queries. This was the main cause of slow
   // Home page loads.
-  const [classDoc, sessionsSnap, attendSnap, bookingsSnap, quotaSnap, tasksSnap, subsSnap] = await Promise.all([
+  const [classDoc, sessionsSnap, attendSnap, bookingsSnap, quotaSnap, tasksSnap, subsSnap, examsSnap, attemptsSnap] = await Promise.all([
     db.collection('classes').doc(actor.classId).get(),
     db.collection('sessions').where('classId', '==', actor.classId).get(),
     db.collection('attendance').where('classId', '==', actor.classId).where('studentId', '==', actor.uid).get(),
@@ -58,6 +59,8 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
     db.collection('mentoringQuotas').doc(`${actor.uid}_bootcamp`).get(),
     db.collection('tasks').where('classId', '==', actor.classId).where('published', '==', true).get(),
     db.collection('submissions').where('studentId', '==', actor.uid).get(),
+    db.collection('exams').where('classId', '==', actor.classId).where('published', '==', true).get(),
+    db.collection('examAttempts').where('studentId', '==', actor.uid).get(),
   ]);
 
   if (!classDoc.exists) return defaultData;
@@ -183,6 +186,41 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
       ? toHomeTask(unsubmittedTasks.find((t) => t.kind === 'working-paper')!)
       : null;
 
+  // Ujian wajib yang belum dikerjakan.
+  //
+  // Ditandai, bukan mengunci apa pun: kuis yang salah setelah terbit tidak
+  // boleh menghentikan pengumpulan atau pertemuan berikutnya. Peserta yang
+  // sudah lulus tidak dihitung, sebab ia memang tidak dapat mengulang.
+  //
+  // Required exams not yet taken.
+  //
+  // Flagged rather than locking anything: a quiz published with wrong settings
+  // must not halt submissions or the next meeting. Participants who passed are
+  // not counted, since they cannot retake it anyway.
+  const lulusUjian = new Set<string>();
+  for (const d of attemptsSnap.docs) {
+    const a = d.data() as { examId: string; passed: boolean | null };
+    if (a.passed === true) lulusUjian.add(a.examId);
+  }
+
+  const pendingExams = examsSnap.docs
+    .map((d) => d.data() as { id: string; title: string; kind: string; dueAt: string | null; questionCount: number })
+    .filter((e) => e.questionCount > 0 && !lulusUjian.has(e.id))
+    .sort((a, b) => {
+      if (a.dueAt && b.dueAt) return a.dueAt.localeCompare(b.dueAt);
+      if (a.dueAt) return -1;
+      if (b.dueAt) return 1;
+      return a.title.localeCompare(b.title, 'id');
+    })
+    .map((e) => ({
+      id: e.id,
+      title: e.title,
+      kind: e.kind as 'pretest' | 'kuis',
+      dueAt: e.dueAt,
+      isUrgent: isDeadlineUrgent(e.dueAt, nowMs),
+      deadlineLabel: formatDeadlineLabel(isDeadlineUrgent(e.dueAt, nowMs), e.dueAt),
+    }));
+
   // Hitungan Rasio Progres Bootcamp (Frame 05) / Progress Ratios
   // Presensi: jumlah sesi yang dihadiri / total sesi yang sudah selesai
   const pastSessions = sessions.filter((s) => s.endsAt <= nowIso);
@@ -205,6 +243,7 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
     remainingMentoringQuota,
     nearestTask,
     nearestWorkingPaper,
+    pendingExams,
     progress: {
       attendanceRatio,
       dailyTasksRatio,

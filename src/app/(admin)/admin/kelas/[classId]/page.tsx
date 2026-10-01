@@ -10,6 +10,7 @@ import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { SessionMaterials } from './session-materials';
 import { SessionWorkingPaper } from './session-working-paper';
 import { SubmissionRoster } from './submission-roster';
+import { ExamBuilder } from './exam-builder';
 import { TASK_KIND_LABELS } from '@/features/tasks/types';
 import { formatDateTimeWib } from '@/lib/time';
 import type { TaskSummary, TaskKind } from '@/features/tasks/types';
@@ -23,12 +24,13 @@ interface Mentor {
   currentClassName?: string;
 }
 
-type BuilderTab = 'rekaman' | 'tugas' | 'capstone';
+type BuilderTab = 'rekaman' | 'tugas' | 'capstone' | 'pretest';
 
 const BUILDER_TABS: [BuilderTab, string][] = [
   ['rekaman', 'Materi Sesi'],
   ['tugas', 'Tugas'],
   ['capstone', 'Capstone'],
+  ['pretest', 'Pretest'],
 ];
 
 interface PendingDelete {
@@ -535,6 +537,20 @@ export default function CourseBuilderPage({
                     onChanged={loadTasks}
                     onDelete={(t) => setPendingDelete({ endpoint: `/api/tasks/${t.id}`, label: t.title })}
                   />
+
+                  <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
+
+                  {/* Kuis melekat pada pertemuan yang sama dengan rekaman,
+                      bahan, dan hasil praktiknya. Peserta mencari berdasarkan
+                      pertemuan, bukan berdasarkan jenis kegiatan.
+
+                      The quiz belongs to the same meeting as its recordings,
+                      materials, and practice result. Participants look by
+                      meeting, not by kind of activity. */}
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)' }}>
+                    KUIS SESI
+                  </div>
+                  <ExamBuilder classId={classId} sessionId={s.id} sessionTitle={s.title} kind="kuis" />
                 </div>
               );
             })
@@ -715,6 +731,23 @@ export default function CourseBuilderPage({
                 Capstone otomatis terkunci untuk peserta sampai seluruh Tugas Praktik Mandiri di kelas ini terkumpul.
               </div>
             </div>
+          </div>
+
+          {/* Pretest berdiri di depan seluruh kelas, bukan milik satu
+              pertemuan, sehingga tempatnya bukan pada kartu pertemuan seperti
+              kuis.
+
+              A pretest stands in front of the whole class rather than belonging
+              to one meeting, so its place is not on a meeting card the way a
+              quiz's is. */}
+          <div style={{ flex: '1 1 480px', minWidth: '360px', display: tab === 'pretest' ? 'flex' : 'none', flexDirection: 'column', gap: '12px' }}>
+            <div>
+              <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>Pretest Kelas</h2>
+              <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                Dikerjakan sebelum materi dimulai, untuk mengukur titik awal peserta.
+              </p>
+            </div>
+            <ExamBuilder classId={classId} sessionId={null} kind="pretest" />
           </div>
         </div>
       )}

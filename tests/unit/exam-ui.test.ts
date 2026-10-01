@@ -1,0 +1,219 @@
+// @vitest-environment node
+import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf-8');
+const runner = read('src/app/(student)/app/ujian/[examId]/page.tsx');
+const builder = read('src/app/(admin)/admin/kelas/[classId]/exam-builder.tsx');
+const classPage = read('src/app/(admin)/admin/kelas/[classId]/page.tsx');
+const jadwal = read('src/app/(student)/app/jadwal/page.tsx');
+const attendance = read('src/features/attendance/service.ts');
+
+describe('mesin pengerjaan peserta', () => {
+  it('membuat percobaan setelah ditekan, bukan saat halaman dimuat', () => {
+    // Membuatnya saat memuat berarti tombol kembali, tab yang dipulihkan
+    // peramban, dan prefetch ikut menghabiskan kesempatan peserta tanpa ia
+    // menjawab apa pun.
+    //
+    // Creating it on load means the back button, a browser-restored tab, and
+    // prefetching all burn attempts without the participant answering.
+    expect(runner).toMatch(/onClick=\{start\}/);
+    expect(runner).not.toMatch(/useEffect\([\s\S]{0,120}start\(\)/);
+  });
+
+  it('menyimpan jawaban setiap kali dipilih', () => {
+    // Satu kali muat ulang atau jaringan terputus tidak boleh menghapus
+    // jawaban yang sudah diisi.
+    //
+    // One reload or dropped connection must not erase answers already given.
+    expect(runner).toMatch(/async function pick\(/);
+    expect(runner).toContain('/answer`');
+  });
+
+  it('memulihkan jawaban yang sudah tersimpan', () => {
+    expect(runner).toContain('setAnswers(data.savedAnswers || {})');
+  });
+
+  it('mengumpulkan sendiri saat waktunya habis', () => {
+    expect(runner).toMatch(/if \(sisa === 0\) submitRef\.current\(true\)/);
+  });
+
+  it('membiarkan tombol kirim hidup setelah gagal', () => {
+    // Kegagalan jaringan bukan alasan untuk kehilangan seluruh jawaban.
+    // A network failure is no reason to lose every answer.
+    const blok = runner.slice(runner.indexOf('const submit = useCallback'), runner.indexOf('submitRef.current = submit'));
+    expect(blok).toContain('setError((e as Error).message)');
+    expect(blok).not.toMatch(/setState\(null\)|setAnswers\(\{\}\)/);
+  });
+
+  it('menyebut nomor soal yang belum dijawab, bukan hanya jumlahnya', () => {
+    // "3 soal belum dijawab" tanpa nomornya membuat peserta menggulir satu per
+    // satu untuk mencarinya.
+    //
+    // "3 unanswered" without the numbers makes a participant scroll through
+    // one by one.
+    expect(runner).toMatch(/belumDijawab\.map\(\(n\) =>/);
+    expect(runner).toMatch(/setIndex\(n - 1\)/);
+  });
+
+  it('memperingatkan bahwa soal yang dilewatkan dihitung salah', () => {
+    expect(runner).toContain('dihitung salah');
+  });
+
+  it('menyebutkan patokan nilai sebelum percobaan ulang dimulai', () => {
+    // Peserta berhak tahu batas nilainya sebelum mengerjakan, bukan sesudah.
+    // A participant deserves to know the ceiling before working, not after.
+    expect(runner).toMatch(/state\.attemptNumber > 1 && \(/);
+    expect(runner).toContain('Ini percobaan ulang');
+  });
+
+  it('menjelaskan nilai yang dipatok pada halaman hasil', () => {
+    // Nilai 70 di samping 18 dari 20 soal benar terbaca sebagai kesalahan
+    // hitung bila alasannya tidak disebut.
+    //
+    // A 70 beside 18 of 20 correct reads as a miscalculation when the reason
+    // goes unsaid.
+    expect(runner).toMatch(/result\.score !== result\.rawScore/);
+    expect(runner).toContain('Karena ini percobaan ulang');
+  });
+
+  it('menandai waktu kritis bagi pembaca layar', () => {
+    expect(runner).toContain("aria-live={mendesak ? 'assertive' : 'off'}");
+    expect(runner).toContain('role="timer"');
+  });
+});
+
+describe('penyusun soal admin', () => {
+  it('memilih jawaban benar dari pilihannya, bukan mengetiknya', () => {
+    // Kunci yang diketik dapat menunjuk pilihan yang tidak ada, dan soal
+    // seperti itu menilai setiap jawaban sebagai salah.
+    //
+    // A typed key can point at an option that does not exist, and such a
+    // question marks every answer wrong.
+    expect(builder).toMatch(/setCorrectIndex\(i\)/);
+    expect(builder).toContain('Tandai pilihan');
+  });
+
+  it('menggeser kunci saat pilihannya dihapus', () => {
+    // Dibiarkan, indeksnya dapat menunjuk pilihan yang sudah tidak ada.
+    // Left alone, its index could point at an option that no longer exists.
+    expect(builder).toMatch(/if \(correctIndex >= i && correctIndex > 0\) setCorrectIndex\(correctIndex - 1\)/);
+  });
+
+  it('mengunci teks pada soal benar-salah', () => {
+    expect(builder).toMatch(/disabled=\{kind === 'benar-salah'\}/);
+  });
+
+  it('menampilkan nomor percobaan pada rekap', () => {
+    // Nilai 70 dari percobaan kedua adalah hasil patokan remedial, bukan nilai
+    // mentahnya.
+    //
+    // A 70 on a second attempt is the remedial ceiling, not a raw score.
+    expect(builder).toMatch(/t\.attemptNumber > 1/);
+  });
+
+  it('mengambil rekap saat kartunya dibuka, bukan di muka', () => {
+    expect(builder).toMatch(/useEffect\(\(\) => \{[\s\S]{0,200}\/roster`\)/);
+  });
+
+  it('menyebut aturan remedial pada tombol terbit', () => {
+    expect(builder).toContain('Percobaan kedua dan ketiga yang lulus bernilai tepat');
+  });
+});
+
+describe('tempat ujian pada antarmuka', () => {
+  it('kuis melekat pada kartu pertemuan admin', () => {
+    expect(classPage).toContain('KUIS SESI');
+    expect(classPage).toMatch(/<ExamBuilder classId=\{classId\} sessionId=\{s\.id\}/);
+  });
+
+  it('pretest berdiri di tab tersendiri', () => {
+    // Pretest berdiri di depan seluruh kelas, bukan milik satu pertemuan.
+    // A pretest stands in front of the whole class, not one meeting.
+    expect(classPage).toMatch(/\['pretest', 'Pretest'\]/);
+    expect(classPage).toMatch(/sessionId=\{null\} kind="pretest"/);
+  });
+
+  it('kuis tampil pada kartu pertemuan peserta', () => {
+    expect(jadwal).toMatch(/exams\.map\(\(e\) =>/);
+    expect(jadwal).toContain('/app/ujian/');
+  });
+
+  it('kuis ikut dikirim bersama jadwalnya', () => {
+    // Tanpa ini halaman harus memanggil endpoint kedua untuk menyusun satu
+    // kartu.
+    //
+    // Without this the page would call a second endpoint to build one card.
+    const body = attendance.slice(
+      attendance.indexOf('export async function listStudentSessionsWithAttendance'),
+      attendance.indexOf('export', attendance.indexOf('export async function listStudentSessionsWithAttendance') + 10)
+    );
+    expect(body).toMatch(/collection\('exams'\)/);
+    expect(body).toContain('exams: examsBySession.get(s.id)');
+  });
+
+  it('hanya mengirim ujian yang sudah terbit', () => {
+    // Ujian yang belum terbit belum siap dikerjakan peserta.
+    // An unpublished exam is not ready for participants.
+    const body = attendance.slice(attendance.indexOf('export async function listStudentSessionsWithAttendance'));
+    expect(body.slice(0, 3000)).toMatch(/where\('published', '==', true\)/);
+  });
+});
+
+/**
+ * "Wajib dikerjakan" berarti ditandai, bukan mengunci.
+ *
+ * Kuis yang salah setelah terbit -- batas waktu keliru, kunci jawaban salah --
+ * tidak boleh menghentikan pengumpulan tugas atau menutup pertemuan
+ * berikutnya. Yang rusak sebaiknya satu kartu, bukan seluruh jalannya kelas.
+ *
+ * "Required" means flagged, not locked.
+ *
+ * A quiz published with wrong settings -- a bad deadline, a wrong key -- must
+ * not halt task submissions or close the next meeting. What breaks should be
+ * one card, not the running of the class.
+ */
+describe('ujian wajib ditandai di beranda', () => {
+  const service = read('src/features/dashboard/service.ts');
+  const home = read('src/app/(student)/app/page.tsx');
+
+  it('mengirim ujian yang belum dikerjakan', () => {
+    expect(service).toContain('pendingExams');
+    expect(service).toMatch(/where\('published', '==', true\)/);
+  });
+
+  it('melewatkan ujian yang sudah lulus', () => {
+    // Peserta yang sudah lulus memang tidak dapat mengulang, sehingga
+    // menandainya hanya menyisakan tanda yang tidak dapat dihilangkan.
+    //
+    // Someone who passed cannot retake it, so flagging them leaves a mark they
+    // can never clear.
+    expect(service).toMatch(/!lulusUjian\.has\(e\.id\)/);
+  });
+
+  it('melewatkan ujian yang belum bersoal', () => {
+    expect(service).toMatch(/e\.questionCount > 0/);
+  });
+
+  it('mengurutkan batas terdekat lebih dulu', () => {
+    expect(service).toMatch(/a\.dueAt\.localeCompare\(b\.dueAt\)/);
+  });
+
+  it('tidak mengunci apa pun', () => {
+    // Pemeriksaan ujian tidak boleh muncul pada jalur pengumpulan tugas atau
+    // pembukaan sesi.
+    //
+    // An exam check must not appear on the task submission or session opening
+    // paths.
+    const submission = read('src/features/tasks/submission-service.ts');
+    const attendanceSvc = read('src/features/attendance/service.ts');
+    expect(submission).not.toMatch(/examAttempts|pendingExams/);
+    expect(attendanceSvc).not.toMatch(/pendingExams/);
+  });
+
+  it('tampil sebagai kartu pada beranda peserta', () => {
+    expect(home).toMatch(/pendingExams\.map\(\(e\) =>/);
+    expect(home).toContain('WAJIB DIKERJAKAN');
+  });
+});

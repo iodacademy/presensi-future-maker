@@ -709,7 +709,7 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
   // Working papers are fetched alongside the sessions: participants look by
   // meeting, so recordings, materials, and the session's task need to arrive
   // together rather than forcing the page to call two endpoints.
-  const [sessions, attendanceSnap, papersSnap] = await Promise.all([
+  const [sessions, attendanceSnap, papersSnap, examSnap, attemptsSnap] = await Promise.all([
     listSessionsForClass(actor.classId),
     db.collection('attendance').where('classId', '==', actor.classId).where('studentId', '==', actor.uid).get(),
     db
@@ -717,7 +717,49 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
       .where('classId', '==', actor.classId)
       .where('kind', '==', 'working-paper')
       .get(),
+    // Kuis ikut diambil bersama sesinya: peserta mencari berdasarkan
+    // pertemuan, sehingga rekaman, bahan, tugas, dan kuisnya perlu tiba
+    // bersamaan alih-alih memaksa halaman memanggil endpoint kedua.
+    //
+    // Quizzes are fetched alongside their sessions: participants look by
+    // meeting, so recordings, materials, tasks, and the quiz need to arrive
+    // together rather than forcing the page to call a second endpoint.
+    db
+      .collection('exams')
+      .where('classId', '==', actor.classId)
+      .where('published', '==', true)
+      .get(),
+    db.collection('examAttempts').where('studentId', '==', actor.uid).get(),
   ]);
+
+  const bestByExam = new Map<string, { score: number; passed: boolean }>();
+  const attemptCount = new Map<string, number>();
+  for (const doc of attemptsSnap.docs) {
+    const a = doc.data() as { examId: string; status: string; score: number | null; passed: boolean | null };
+    attemptCount.set(a.examId, (attemptCount.get(a.examId) ?? 0) + 1);
+    if (a.status !== 'selesai') continue;
+    const sebelumnya = bestByExam.get(a.examId);
+    if (!sebelumnya || (a.score ?? 0) > sebelumnya.score) {
+      bestByExam.set(a.examId, { score: a.score ?? 0, passed: a.passed === true });
+    }
+  }
+
+  const examsBySession = new Map<string, { id: string; title: string; questionCount: number; durationMinutes: number | null; score: number | null; passed: boolean; attemptsLeft: number }[]>();
+  for (const doc of examSnap.docs) {
+    const e = doc.data() as { id: string; title: string; sessionId: string | null; questionCount: number; durationMinutes: number | null };
+    if (!e.sessionId) continue;
+    const terbaik = bestByExam.get(e.id);
+    if (!examsBySession.has(e.sessionId)) examsBySession.set(e.sessionId, []);
+    examsBySession.get(e.sessionId)!.push({
+      id: e.id,
+      title: e.title,
+      questionCount: e.questionCount,
+      durationMinutes: e.durationMinutes,
+      score: terbaik?.score ?? null,
+      passed: terbaik?.passed ?? false,
+      attemptsLeft: Math.max(0, 3 - (attemptCount.get(e.id) ?? 0)),
+    });
+  }
 
   const papersBySession = new Map<string, { id: string; title: string; dueAt: string | null }[]>();
   for (const doc of papersSnap.docs) {
@@ -745,6 +787,7 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
     attendance: attendMap.get(s.id) || null,
     isActive: isSessionAttendanceActive(s, nowIso),
     workingPapers: papersBySession.get(s.id) ?? [],
+    exams: examsBySession.get(s.id) ?? [],
   }));
 }
 
