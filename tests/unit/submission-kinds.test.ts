@@ -110,3 +110,54 @@ describe('pengumpulan working paper tetap terpisah dari syarat kelas', () => {
     expect(service).toContain("filter((s) => s.taskKind === 'daily')");
   });
 });
+
+/**
+ * Daftar kosong punya dua sebab yang sangat berbeda.
+ *
+ * Tidak ada yang mengumpulkan, atau semuanya sudah dinilai. Menyebut keduanya
+ * sebagai "sudah dinilai" memberi tahu admin bahwa pekerjaannya selesai
+ * padahal belum satu pun peserta mengumpulkan.
+ *
+ * An empty list has two very different causes.
+ *
+ * Nobody submitted, or everything is graded. Calling both "everything is
+ * graded" tells an admin their work is done when not one participant has
+ * submitted.
+ */
+describe('pesan daftar kosong', () => {
+  const page = read('src/app/(admin)/admin/tugas/page.tsx');
+
+  it('membedakan belum ada pengumpulan dari sudah dinilai semua', () => {
+    expect(page).toMatch(/totalKind === 0/);
+    expect(page).toContain('yang dikumpulkan');
+  });
+
+  it('menghitung seluruh pengumpulan, bukan yang tersaring saja', () => {
+    // Jumlah yang tersaring selalu nol saat daftarnya kosong, sehingga tidak
+    // dapat dipakai membedakan sebabnya.
+    //
+    // The filtered count is always zero when the list is empty, so it cannot
+    // tell the causes apart.
+    expect(page).toMatch(/setTotalKind/);
+    expect(page).toMatch(/Promise\.all\(\[/);
+  });
+
+  it('menunjuk tempat memeriksanya bila belum ada tugas', () => {
+    // "Belum ada yang dikumpulkan" tidak memberi tahu admin apa yang dapat ia
+    // lakukan; tugas yang belum terbit terlihat persis sama.
+    //
+    // "Nothing submitted" does not tell an admin what they can do; an
+    // unpublished task looks exactly the same.
+    expect(page).toContain('menu Kelas');
+    expect(page).toContain('sudah dibuat dan terbit');
+  });
+
+  it('menyebut jumlahnya pada pesan sudah dinilai', () => {
+    // "Semua sudah dinilai" tanpa angka tidak dapat dibedakan dari daftar yang
+    // memang kosong sejak awal.
+    //
+    // "All graded" with no number is indistinguishable from a list that was
+    // empty from the start.
+    expect(page).toMatch(/Seluruh \$\{totalKind\} pengumpulan/);
+  });
+});

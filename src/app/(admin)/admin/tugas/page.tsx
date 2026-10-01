@@ -36,6 +36,7 @@ export default function AdminTugasPage() {
   const [selectedClass, setSelectedClass] = useState<ClassSummary | null>(null);
 
   const [submissions, setSubmissions] = useState<SubmissionDocument[]>([]);
+  const [totalKind, setTotalKind] = useState(0);
   const [loading, setLoading] = useState(false);
   const [kind, setKind] = useState<TaskKind>('daily');
   const [gradeTab, setGradeTab] = useState<GradeTab>('menunggu');
@@ -59,9 +60,20 @@ export default function AdminTugasPage() {
     if (!selectedClass) return;
     setLoading(true);
     try {
-      const url = `/api/submissions?kind=${kind}&classId=${encodeURIComponent(selectedClass.id)}&graded=${gradeTab === 'dinilai'}`;
-      const res = await fetch(url);
-      if (res.ok) setSubmissions((await res.json()).submissions || []);
+      const dasar = `/api/submissions?kind=${kind}&classId=${encodeURIComponent(selectedClass.id)}`;
+      // Keduanya diambil sekaligus: yang tersaring untuk daftarnya, dan
+      // seluruhnya untuk membedakan "semua sudah dinilai" dari "belum ada yang
+      // mengumpulkan". Keduanya berurutan akan menggandakan waktu tunggunya.
+      //
+      // Both are fetched at once: the filtered set for the list, and the whole
+      // set to tell "everything is graded" from "nobody has submitted yet".
+      // Doing them in sequence would double the wait.
+      const [tersaring, semua] = await Promise.all([
+        fetch(`${dasar}&graded=${gradeTab === 'dinilai'}`),
+        fetch(dasar),
+      ]);
+      if (tersaring.ok) setSubmissions((await tersaring.json()).submissions || []);
+      if (semua.ok) setTotalKind(((await semua.json()).submissions || []).length);
     } catch (e) {
       console.error(e);
     } finally {
@@ -258,16 +270,30 @@ export default function AdminTugasPage() {
         </div>
       ) : visible.length === 0 ? (
         <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px dashed var(--color-border)', padding: '36px', textAlign: 'center' }}>
+          {/* Daftar kosong punya dua sebab yang sangat berbeda: tidak ada
+              yang mengumpulkan, atau semuanya sudah dinilai. Menyebut keduanya
+              sebagai "sudah dinilai" memberi tahu admin bahwa pekerjaannya
+              selesai padahal belum satu pun peserta mengumpulkan.
+
+              An empty list has two very different causes: nobody submitted, or
+              everything is graded. Calling both "everything is graded" tells an
+              admin their work is done when not one participant has submitted. */}
           <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)' }}>
             {needle
               ? 'Tidak ada yang cocok dengan pencarian'
-              : gradeTab === 'menunggu'
-                ? 'Tidak ada tugas yang menunggu dinilai'
-                : 'Belum ada tugas yang dinilai'}
+              : totalKind === 0
+                ? `Belum ada ${TASK_KIND_LABELS[kind].toLowerCase()} yang dikumpulkan`
+                : gradeTab === 'menunggu'
+                  ? 'Tidak ada tugas yang menunggu dinilai'
+                  : 'Belum ada tugas yang dinilai'}
           </div>
-          {!needle && gradeTab === 'menunggu' && (
-            <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '6px' }}>
-              Seluruh pengumpulan {TASK_KIND_LABELS[kind].toLowerCase()} di kelas ini sudah dinilai.
+          {!needle && (
+            <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '6px', lineHeight: 1.55 }}>
+              {totalKind === 0
+                ? `Kelas ini belum memiliki ${TASK_KIND_LABELS[kind].toLowerCase()}, atau pesertanya belum mengumpulkan. Periksa di menu Kelas apakah tugasnya sudah dibuat dan terbit.`
+                : gradeTab === 'menunggu'
+                  ? `Seluruh ${totalKind} pengumpulan ${TASK_KIND_LABELS[kind].toLowerCase()} di kelas ini sudah dinilai.`
+                  : `Ada ${totalKind} pengumpulan yang menunggu dinilai.`}
             </p>
           )}
         </div>
