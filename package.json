@@ -22,7 +22,8 @@
     "merge-session": "tsx scripts/merge-shared-session.ts",
     "set-session-classes": "tsx scripts/set-session-classes.ts",
     "diagnose-attendance": "tsx scripts/diagnose-attendance.ts",
-    "diagnose-submissions": "tsx scripts/diagnose-submissions.ts"
+    "diagnose-submissions": "tsx scripts/diagnose-submissions.ts",
+    "deploy-indexes": "firebase deploy --only firestore:indexes"
   },
   "dependencies": {
     "firebase": "^12.18.0",

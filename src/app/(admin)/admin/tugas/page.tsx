@@ -38,6 +38,7 @@ export default function AdminTugasPage() {
   const [submissions, setSubmissions] = useState<SubmissionDocument[]>([]);
   const [totalKind, setTotalKind] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [kind, setKind] = useState<TaskKind>('daily');
   const [gradeTab, setGradeTab] = useState<GradeTab>('menunggu');
   const [query, setQuery] = useState('');
@@ -59,6 +60,7 @@ export default function AdminTugasPage() {
   async function loadSubmissions() {
     if (!selectedClass) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const dasar = `/api/submissions?kind=${kind}&classId=${encodeURIComponent(selectedClass.id)}`;
       // Keduanya diambil sekaligus: yang tersaring untuk daftarnya, dan
@@ -72,10 +74,30 @@ export default function AdminTugasPage() {
         fetch(`${dasar}&graded=${gradeTab === 'dinilai'}`),
         fetch(dasar),
       ]);
-      if (tersaring.ok) setSubmissions((await tersaring.json()).submissions || []);
+
+      // Kegagalan kueri ditampilkan, bukan ditelan. Daftar kosong karena
+      // kueri gagal terlihat persis sama dengan daftar yang memang kosong,
+      // dan sebab yang sebenarnya hanya muncul di log server.
+      //
+      // A failed query is shown rather than swallowed. A list empty because
+      // the query failed looks exactly like one that is genuinely empty, and
+      // the real cause only appears in the server log.
+      // Badan respons dibaca sekali saja: json() hanya dapat dipanggil satu
+      // kali per respons, dan panggilan kedua melempar galat yang menutupi
+      // galat aslinya.
+      //
+      // The response body is read once: json() can only be called once per
+      // response, and a second call throws an error that masks the real one.
+      const data = await tersaring.json();
+      if (!tersaring.ok) {
+        throw new Error(data.error || 'Gagal memuat pengumpulan');
+      }
+
+      setSubmissions(data.submissions || []);
       if (semua.ok) setTotalKind(((await semua.json()).submissions || []).length);
     } catch (e) {
-      console.error(e);
+      setLoadError((e as Error).message);
+      setSubmissions([]);
     } finally {
       setLoading(false);
     }
@@ -267,6 +289,15 @@ export default function AdminTugasPage() {
       {loading ? (
         <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
           Memuat pengumpulan...
+        </div>
+      ) : loadError ? (
+        <div role="alert" style={{ backgroundColor: 'var(--color-danger-light)', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-danger)' }}>
+            Daftar pengumpulan gagal dimuat
+          </div>
+          <p style={{ fontSize: '11px', color: 'var(--color-danger)', marginTop: '6px', lineHeight: 1.55 }}>
+            {loadError}
+          </p>
         </div>
       ) : visible.length === 0 ? (
         <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px dashed var(--color-border)', padding: '36px', textAlign: 'center' }}>

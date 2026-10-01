@@ -161,3 +161,54 @@ describe('pesan daftar kosong', () => {
     expect(page).toMatch(/Seluruh \$\{totalKind\} pengumpulan/);
   });
 });
+
+/**
+ * Firestore menolak kueri yang indeks gabungannya belum ada.
+ *
+ * Kuerinya menyaring taskKind dan classId lalu mengurutkan submittedAt --
+ * tiga field yang menuntut satu indeks tersendiri. Tanpa indeks itu kuerinya
+ * gagal, dan halaman yang menelan galatnya menampilkan daftar kosong yang
+ * terlihat persis seperti kelas yang memang belum mengumpulkan apa pun.
+ *
+ * Firestore refuses a query whose composite index does not exist.
+ *
+ * The query filters on taskKind and classId then orders by submittedAt --
+ * three fields demanding an index of their own. Without it the query fails,
+ * and a page that swallows the error shows an empty list indistinguishable
+ * from a class that has genuinely submitted nothing.
+ */
+describe('indeks kueri rekap', () => {
+  const indexes = JSON.parse(read('firestore.indexes.json')) as {
+    indexes: { collectionGroup: string; fields: { fieldPath: string }[] }[];
+  };
+  const page = read('src/app/(admin)/admin/tugas/page.tsx');
+
+  it('memuat indeks untuk penyaring jenis, kelas, dan urutan waktu', () => {
+    const cocok = indexes.indexes.some(
+      (i) =>
+        i.collectionGroup === 'submissions' &&
+        i.fields.map((f) => f.fieldPath).join(',') === 'taskKind,classId,submittedAt'
+    );
+    expect(cocok, 'indeks taskKind+classId+submittedAt belum ada').toBe(true);
+  });
+
+  it('menampilkan kegagalan kueri, bukan menelannya', () => {
+    // Daftar kosong karena kueri gagal terlihat persis sama dengan daftar yang
+    // memang kosong, dan sebab sebenarnya hanya muncul di log server.
+    //
+    // A list empty because the query failed looks exactly like one that is
+    // genuinely empty, and the real cause only appears in the server log.
+    expect(page).toMatch(/if \(!tersaring\.ok\)/);
+    expect(page).toContain('Daftar pengumpulan gagal dimuat');
+    expect(page).toMatch(/setLoadError/);
+  });
+
+  it('membaca badan respons sekali saja', () => {
+    // json() hanya dapat dipanggil satu kali per respons; panggilan kedua
+    // melempar galat yang menutupi galat aslinya.
+    //
+    // json() can only be called once per response; a second call throws an
+    // error that masks the real one.
+    expect(page.match(/await tersaring\.json\(\)/g)?.length).toBe(1);
+  });
+});
