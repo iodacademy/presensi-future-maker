@@ -94,13 +94,64 @@ export function validateSessionInput(input: CreateSessionInput): {
 }
 
 /**
- * Memeriksa apakah jendela presensi sesi Online aktif:
- * Otomatis buka jam 19:00 WIB dan tutup 22:00 WIB pada tanggal sesi yang sama.
- * [19:00, 22:00) WIB.
+ * Menit presensi dibuka sebelum jam sesinya dimulai.
  *
- * Checks if online attendance window is active (19:00 - 22:00 WIB on session date).
+ * Acara dimulai tepat pada jamnya, sehingga peserta sudah berdatangan setengah
+ * jam sebelumnya. Tanpa jeda ini mereka menunggu di depan QR yang belum
+ * berlaku, lalu memindai berbarengan tepat saat acaranya mulai.
+ *
+ * Minutes attendance opens before the session's start time.
+ *
+ * Events begin exactly on the hour, so participants arrive half an hour early.
+ * Without this lead they wait in front of a QR that does not work yet, then all
+ * scan at once just as the event starts.
  */
-export function isOnlineWindowActive(
+export const EARLY_OPEN_MINUTES = 30;
+
+/**
+ * Mengurangi sebuah jam "HH:mm" sebanyak sekian menit.
+ *
+ * Dibatasi pada 00:00: sesi pukul 00.15 dikurangi tiga puluh menit jatuh ke
+ * hari sebelumnya, dan perbandingannya di bawah memakai tanggal sesi itu
+ * sendiri -- jam negatif akan membuat jendelanya tidak pernah terbuka.
+ *
+ * Subtracts a number of minutes from an "HH:mm" time.
+ *
+ * Clamped at 00:00: a 00:15 session minus thirty minutes falls on the previous
+ * day, and the comparison below uses that session's own date -- a negative time
+ * would leave the window never opening.
+ */
+export function subtractMinutes(time: string, minutes: number): string {
+  // Number.isNaN(undefined) bernilai false, sehingga "09" tanpa menit lolos
+  // pemeriksaan dan menghasilkan "NaN:NaN". Bentuknya diperiksa lebih dulu.
+  //
+  // Number.isNaN(undefined) is false, so "09" with no minutes passes the check
+  // and yields "NaN:NaN". The shape is checked first.
+  if (!/^\d{1,2}:\d{2}$/.test(time)) return time;
+
+  const [h, m] = time.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return time;
+
+  const total = Math.max(0, h * 60 + m - minutes);
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Memeriksa apakah jendela presensi sebuah sesi sedang aktif.
+ *
+ * Jendelanya terbuka sejak setengah jam sebelum sesinya mulai dan tertutup
+ * pada jam berakhirnya. Berlaku bagi sesi luring maupun daring: keduanya
+ * sama-sama dihadiri pada jam yang sama, dan membedakannya hanya membuat satu
+ * di antaranya bergantung pada ingatan admin.
+ *
+ * Checks whether a session's attendance window is active.
+ *
+ * The window opens half an hour before the session starts and closes at its
+ * end time. It applies to offline and online sessions alike: both are attended
+ * at the same hours, and treating them differently only makes one of them
+ * depend on an admin remembering.
+ */
+export function isAttendanceWindowActive(
   sessionDate: string,
   currentIsoOrWibString: string,
   startTime = '19:00',
@@ -125,6 +176,10 @@ export function isOnlineWindowActive(
   // pernah terbuka secara otomatis, sehingga admin harus membukanya manual
   // setiap kali.
   //
+  // Dibuka lebih awal karena acaranya mulai tepat pada jamnya: peserta sudah
+  // berdatangan setengah jam sebelumnya dan tidak perlu menunggu di depan QR
+  // yang belum berlaku.
+  //
   // Perbandingan dilakukan sebagai string "HH:mm", yang urut secara leksikal
   // sama dengan urutan waktunya.
   //
@@ -133,9 +188,14 @@ export function isOnlineWindowActive(
   // its attendance never opening on its own, forcing an admin to open it by
   // hand every time.
   //
+  // It opens early because the event starts exactly on the hour: participants
+  // are already arriving half an hour before and should not wait in front of a
+  // QR that does not work yet.
+  //
   // The comparison runs on "HH:mm" strings, whose lexical order matches their
   // chronological order.
-  return currentTimeWIB >= startTime && currentTimeWIB < endTime;
+  const openTime = subtractMinutes(startTime, EARLY_OPEN_MINUTES);
+  return currentTimeWIB >= openTime && currentTimeWIB < endTime;
 }
 
 /**
@@ -143,8 +203,7 @@ export function isOnlineWindowActive(
  * - Jika override = 'closed': selalu nonaktif (tutup manual oleh admin)
  * - Jika override = 'open': aktif (buka manual oleh admin untuk offline)
  * - Jika override = 'auto':
- *   - Online: mengikuti jendela 19:00 - 22:00 WIB
- *   - Offline: default tidak aktif sampai dibuka manual oleh admin
+ *   - Terbuka 30 menit sebelum jam mulai sampai jam berakhirnya, luring maupun daring
  *
  * Determines whether session attendance QR is currently active.
  */
@@ -157,13 +216,16 @@ export function isSessionAttendanceActive(session: SessionDocument, currentIsoSt
     return true;
   }
 
-  if (session.mode === 'online') {
-    return isOnlineWindowActive(session.date, currentIsoString, session.startTime, session.endTime);
-  }
-
-  // Offline default auto adalah belum buka sebelum dibuka admin
-  // Offline default auto is closed until manually opened
-  return false;
+  // Luring dan daring memakai jendela yang sama. Sebelumnya luring tidak
+  // pernah terbuka sendiri, sehingga admin yang lupa membukanya meninggalkan
+  // satu kelas penuh tanpa cara mencatat kehadirannya -- dan kelalaian itu
+  // baru ketahuan dari keluhan peserta di ruangan.
+  //
+  // Both offline and online use the same window. Offline previously never
+  // opened on its own, so an admin who forgot left a whole class with no way
+  // to record attendance -- and the lapse only surfaced through complaints
+  // from the room.
+  return isAttendanceWindowActive(session.date, currentIsoString, session.startTime, session.endTime);
 }
 
 /**

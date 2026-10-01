@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   validateSessionInput,
-  isOnlineWindowActive,
+  isAttendanceWindowActive,
   isSessionAttendanceActive,
 } from '../../src/features/attendance/policy';
 import {
@@ -98,23 +98,35 @@ describe('Attendance Policy', () => {
     ).toThrowError(/Jam selesai harus lebih akhir dari jam mulai/);
   });
 
-  it('checks online attendance window [19:00, 22:00) WIB', () => {
+  it('checks online attendance window [18:30, 22:00) WIB', () => {
     const sessionDate = '2026-09-10';
 
-    // 18:59:59 WIB pada hari yang sama -> false
-    expect(isOnlineWindowActive(sessionDate, '2026-09-10T18:59:59+07:00')).toBe(false);
+    // Jendelanya membuka setengah jam sebelum sesinya mulai: acaranya mulai
+    // tepat pada jamnya, dan peserta sudah berdatangan sebelum itu.
+    //
+    // The window opens half an hour before the session starts: the event
+    // begins exactly on the hour, and participants arrive before that.
+
+    // 17:59:59 WIB, lebih dari setengah jam sebelum mulai -> false
+    expect(isAttendanceWindowActive(sessionDate, '2026-09-10T17:59:59+07:00')).toBe(false);
+
+    // 18:30:00 WIB, tepat saat jendelanya membuka -> true
+    expect(isAttendanceWindowActive(sessionDate, '2026-09-10T18:30:00+07:00')).toBe(true);
+
+    // 18:59:59 WIB, sudah di dalam jendela -> true
+    expect(isAttendanceWindowActive(sessionDate, '2026-09-10T18:59:59+07:00')).toBe(true);
 
     // 19:00:00 WIB -> true
-    expect(isOnlineWindowActive(sessionDate, '2026-09-10T19:00:00+07:00')).toBe(true);
+    expect(isAttendanceWindowActive(sessionDate, '2026-09-10T19:00:00+07:00')).toBe(true);
 
     // 21:59:59 WIB -> true
-    expect(isOnlineWindowActive(sessionDate, '2026-09-10T21:59:59+07:00')).toBe(true);
+    expect(isAttendanceWindowActive(sessionDate, '2026-09-10T21:59:59+07:00')).toBe(true);
 
     // 22:00:00 WIB -> false (otomatis tutup)
-    expect(isOnlineWindowActive(sessionDate, '2026-09-10T22:00:00+07:00')).toBe(false);
+    expect(isAttendanceWindowActive(sessionDate, '2026-09-10T22:00:00+07:00')).toBe(false);
 
     // Tanggal berbeda -> false
-    expect(isOnlineWindowActive(sessionDate, '2026-09-11T19:30:00+07:00')).toBe(false);
+    expect(isAttendanceWindowActive(sessionDate, '2026-09-11T19:30:00+07:00')).toBe(false);
   });
 
   it('generates and verifies 30-second rotating QR token', () => {

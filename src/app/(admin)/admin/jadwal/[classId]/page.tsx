@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { Plus, Download, ArrowLeft, Trash2, Pencil, ClipboardCheck } from 'lucide-react';
+import { Plus, Download, ArrowLeft, Trash2, Pencil } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { CreateSessionModal } from '../create-session-modal';
 import { QrMonitorModal } from '../qr-monitor-modal';
@@ -191,13 +191,26 @@ export default function AdminJadwalDetailPage({ params }: { params: Promise<{ cl
                       Buka Monitor
                     </button>
                   )}
+                  {/* Bertulisan, bukan ikon. Papan ujian tidak menyatakan
+                      dirinya sebagai daftar hadir, dan ikon yang harus ditebak
+                      di samping dua ikon lain membuat admin menekannya satu per
+                      satu untuk menemukan yang dicarinya.
+
+                      Labelled, not an icon. A clipboard does not announce
+                      itself as an attendance list, and an icon to be guessed at
+                      beside two others has an admin press each in turn to find
+                      the one they want. */}
                   <button
                     type="button"
                     aria-label={`Daftar hadir ${session.title}`}
                     onClick={() => setAttendanceSessionId(session.id)}
-                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}
+                    style={{
+                      padding: '6px 12px', borderRadius: '7px', flexShrink: 0, cursor: 'pointer',
+                      border: '1px solid var(--color-primary)', backgroundColor: '#ffffff',
+                      color: 'var(--color-primary)', fontSize: '10px', fontWeight: 700,
+                    }}
                   >
-                    <ClipboardCheck size={14} color="var(--color-primary)" strokeWidth={2} />
+                    Buka
                   </button>
                   <button
                     type="button"

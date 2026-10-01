@@ -56,9 +56,9 @@ describe('Build isolation', () => {
       logLevel: 'silent',
     });
     const policy = runInNewContext(`${bundle.outputFiles[0].text};AttendancePolicy;`) as {
-      isOnlineWindowActive: (date: string, now: string) => boolean;
+      isAttendanceWindowActive: (date: string, now: string) => boolean;
     };
-    expect(policy.isOnlineWindowActive('2026-09-10', '2026-09-10T19:00:00+07:00')).toBe(true);
-    expect(policy.isOnlineWindowActive('2026-09-10', '2026-09-10T22:00:00+07:00')).toBe(false);
+    expect(policy.isAttendanceWindowActive('2026-09-10', '2026-09-10T19:00:00+07:00')).toBe(true);
+    expect(policy.isAttendanceWindowActive('2026-09-10', '2026-09-10T22:00:00+07:00')).toBe(false);
   });
 });
