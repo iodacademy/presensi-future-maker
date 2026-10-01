@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ClipboardCheck, Trash2, ChevronDown, ChevronRight, Plus, Check, Clock, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImportQuestions } from './import-questions';
+import { TemplateDownloadButton } from './question-template';
 import { formatDateTimeWib } from '@/lib/time';
 import {
   EXAM_KIND_LABELS,
@@ -583,10 +584,22 @@ export function ExamBuilder({ classId, sessionId, sessionTitle, kind }: ExamBuil
           </div>
         </div>
       ) : (
-        <Button variant="secondary" onClick={() => setCreating(true)} style={{ fontSize: '11px', padding: '8px 14px', alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-          <Plus size={12} strokeWidth={2} />
-          Tambah {EXAM_KIND_LABELS[kind]}
-        </Button>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <Button variant="secondary" onClick={() => setCreating(true)} style={{ fontSize: '11px', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            <Plus size={12} strokeWidth={2} />
+            Tambah {EXAM_KIND_LABELS[kind]}
+          </Button>
+
+          {/* Contoh Excel dapat diunduh sebelum ujiannya ada: admin menyiapkan
+              soalnya lebih dulu, dan tombol yang hanya ada di dalam kartu
+              ujian menuntut ujian dibuat dulu untuk sekadar melihat
+              kolomnya.
+
+              The Excel template downloads before the exam exists: an admin
+              prepares the questions first, and a button only inside an exam
+              card demands creating an exam just to see the columns. */}
+          <TemplateDownloadButton compact showColumns />
+        </div>
       )}
     </div>
   );

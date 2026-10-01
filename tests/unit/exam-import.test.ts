@@ -199,8 +199,42 @@ describe('alur impor pada layar admin', () => {
     // Tanpa contoh, admin menebak nama kolomnya dan berkasnya ditolak.
     // Without a template an admin guesses the column names and the file is
     // refused.
-    expect(panel).toContain('XLSX.writeFile');
-    expect(panel).toContain('templateRows()');
+    const tombol = read('src/app/(admin)/admin/kelas/[classId]/question-template.tsx');
+    expect(tombol).toContain('XLSX.writeFile');
+    expect(tombol).toContain('templateRows()');
+    expect(panel).toContain('<TemplateDownloadButton');
+  });
+
+  it('menawarkan contohnya sebelum ujiannya dibuat', () => {
+    // Admin menyiapkan soalnya di Excel lebih dulu; tombol yang hanya ada di
+    // dalam kartu ujian menuntut ujian dibuat dulu untuk sekadar melihat
+    // kolomnya.
+    //
+    // An admin prepares questions in Excel first; a button only inside an exam
+    // card demands creating an exam just to see the columns.
+    const diTingkatAtas = builder.slice(builder.indexOf('Tambah {EXAM_KIND_LABELS[kind]}'));
+    expect(diTingkatAtas).toContain('<TemplateDownloadButton');
+  });
+
+  it('menyebut kolomnya di layar, bukan hanya di dalam berkasnya', () => {
+    // Admin yang menyiapkan soal di komputer lain perlu tahu bentuknya tanpa
+    // membuka unduhan.
+    //
+    // An admin preparing questions on another machine needs to know the shape
+    // without opening the download.
+    const tombol = read('src/app/(admin)/admin/kelas/[classId]/question-template.tsx');
+    expect(tombol).toContain('TEMPLATE_HEADERS.join');
+    expect(builder).toContain('showColumns');
+  });
+
+  it('memakai satu fungsi unduh untuk kedua tempatnya', () => {
+    // Dua penyusun berkas yang terpisah akan menyimpang begitu kolomnya
+    // berubah di salah satunya.
+    //
+    // Two separate builders would drift apart as soon as the columns change in
+    // one of them.
+    expect(panel).not.toContain('XLSX.writeFile');
+    expect(builder).not.toContain('XLSX.writeFile');
   });
 
   it('mengurai berkas di peramban, mengirim barisnya saja', () => {

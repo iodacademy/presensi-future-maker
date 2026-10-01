@@ -2,9 +2,10 @@
 
 import React, { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { Upload, Download, AlertTriangle, Check } from 'lucide-react';
+import { Upload, AlertTriangle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { parseQuestionRows, templateRows, TEMPLATE_HEADERS, type ParsedQuestion } from '@/features/exams/import-policy';
+import { parseQuestionRows, type ParsedQuestion } from '@/features/exams/import-policy';
+import { TemplateDownloadButton } from './question-template';
 
 interface ImportQuestionsProps {
   examId: string;
@@ -38,21 +39,6 @@ export function ImportQuestions({ examId, onImported }: ImportQuestionsProps) {
   const [rowErrors, setRowErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  function downloadTemplate() {
-    const sheet = XLSX.utils.json_to_sheet(templateRows(), { header: [...TEMPLATE_HEADERS] });
-    // Lebar kolom disetel supaya pertanyaannya terbaca tanpa perlu melebarkan
-    // sendiri; berkas contoh yang kolomnya sempit terlihat seperti berkas yang
-    // rusak.
-    //
-    // Column widths are set so the question reads without widening it by hand;
-    // a template with cramped columns looks like a broken file.
-    sheet['!cols'] = [{ wch: 50 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 10 }, { wch: 40 }];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, sheet, 'Soal');
-    XLSX.writeFile(wb, 'contoh-soal-ujian.xlsx');
-  }
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -120,13 +106,7 @@ export function ImportQuestions({ examId, onImported }: ImportQuestionsProps) {
       </div>
 
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-        <Button
-          variant="secondary"
-          onClick={downloadTemplate}
-          style={{ fontSize: '11px', padding: '8px 12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-        >
-          <Download size={12} strokeWidth={2} /> Unduh Contoh
-        </Button>
+        <TemplateDownloadButton compact />
 
         <Button
           variant="secondary"
