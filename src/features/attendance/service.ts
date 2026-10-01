@@ -709,7 +709,7 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
   // Working papers are fetched alongside the sessions: participants look by
   // meeting, so recordings, materials, and the session's task need to arrive
   // together rather than forcing the page to call two endpoints.
-  const [sessions, attendanceSnap, papersSnap, examSnap, attemptsSnap] = await Promise.all([
+  const [sessions, attendanceSnap, papersSnap, examSnap, attemptsSnap, surveyFormSnap, surveyResponseSnap] = await Promise.all([
     listSessionsForClass(actor.classId),
     db.collection('attendance').where('classId', '==', actor.classId).where('studentId', '==', actor.uid).get(),
     db
@@ -730,7 +730,25 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
       .where('published', '==', true)
       .get(),
     db.collection('examAttempts').where('studentId', '==', actor.uid).get(),
+    // Formulir survei dan jawaban peserta ikut dibaca di sini: survei melekat
+    // pada pertemuan yang sama dengan rekaman dan kuisnya, dan memanggil
+    // endpoint kedua hanya untuk satu baris pada tiap kartu menambah satu
+    // perjalanan untuk data yang sudah dalam perjalanan.
+    //
+    // The survey form and the participant's responses are read here too: the
+    // survey belongs to the same meeting as its recordings and quiz, and a
+    // second endpoint for one row per card adds a round trip for data already
+    // in flight.
+    db.collection('surveyForms').doc('default').get(),
+    db.collection('surveyResponses').where('studentId', '==', actor.uid).get(),
   ]);
+
+  const surveyForm = surveyFormSnap.exists
+    ? (surveyFormSnap.data() as { title: string; questions: unknown[]; published: boolean })
+    : null;
+  const surveyDone = new Set(
+    surveyResponseSnap.docs.map((d) => (d.data() as { sessionId: string }).sessionId)
+  );
 
   const bestByExam = new Map<string, { score: number; passed: boolean }>();
   const attemptCount = new Map<string, number>();
@@ -788,6 +806,21 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
     isActive: isSessionAttendanceActive(s, nowIso),
     workingPapers: papersBySession.get(s.id) ?? [],
     exams: examsBySession.get(s.id) ?? [],
+    // Survei hanya muncul bila kehadirannya tercatat. Peserta yang tidak hadir
+    // tidak punya pengalaman pertemuan itu untuk dinilai, dan menagihnya
+    // meninggalkan tagihan yang tidak pernah dapat ia selesaikan.
+    //
+    // The survey appears only once attendance is recorded. Someone who did not
+    // attend has no experience of that meeting to rate, and asking them leaves
+    // a demand they can never satisfy.
+    survey:
+      surveyForm?.published && attendMap.has(s.id)
+        ? {
+            formTitle: surveyForm.title,
+            questionCount: surveyForm.questions.length,
+            submitted: surveyDone.has(s.id),
+          }
+        : null,
   }));
 }
 
