@@ -5,7 +5,13 @@ import { resolve } from 'node:path';
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf-8');
 const runner = read('src/app/(student)/app/ujian/[examId]/page.tsx');
-const builder = read('src/app/(admin)/admin/kelas/[classId]/exam-builder.tsx');
+// Penyusun soal kini berhalaman sendiri; yang tersisa di kartu kelas hanya
+// daftar ujiannya.
+//
+// The question editor now has its own page; what remains on the class card is
+// only the exam list.
+const builder = read('src/app/(admin)/admin/ujian/[examId]/page.tsx');
+const roster = read('src/app/(admin)/admin/ujian/[examId]/exam-roster.tsx');
 const classPage = read('src/app/(admin)/admin/kelas/[classId]/page.tsx');
 const jadwal = read('src/app/(student)/app/jadwal/page.tsx');
 const attendance = read('src/features/attendance/service.ts');
@@ -92,18 +98,19 @@ describe('penyusun soal admin', () => {
     //
     // A typed key can point at an option that does not exist, and such a
     // question marks every answer wrong.
-    expect(builder).toMatch(/setCorrectIndex\(i\)/);
+    expect(builder).toMatch(/correctIndex: i/);
     expect(builder).toContain('Tandai pilihan');
   });
 
   it('menggeser kunci saat pilihannya dihapus', () => {
     // Dibiarkan, indeksnya dapat menunjuk pilihan yang sudah tidak ada.
     // Left alone, its index could point at an option that no longer exists.
-    expect(builder).toMatch(/if \(correctIndex >= i && correctIndex > 0\) setCorrectIndex\(correctIndex - 1\)/);
+    expect(builder).toMatch(/draft\.correctIndex >= i && draft\.correctIndex > 0/);
+    expect(builder).toMatch(/Math\.min\(kunci, sisa\.length - 1\)/);
   });
 
   it('mengunci teks pada soal benar-salah', () => {
-    expect(builder).toMatch(/disabled=\{kind === 'benar-salah'\}/);
+    expect(builder).toMatch(/disabled=\{draft\.kind === 'benar-salah'\}/);
   });
 
   it('menampilkan nomor percobaan pada rekap', () => {
@@ -111,15 +118,23 @@ describe('penyusun soal admin', () => {
     // mentahnya.
     //
     // A 70 on a second attempt is the remedial ceiling, not a raw score.
-    expect(builder).toMatch(/t\.attemptNumber > 1/);
+    expect(roster).toMatch(/t\.attemptNumber > 1/);
   });
 
   it('mengambil rekap saat kartunya dibuka, bukan di muka', () => {
-    expect(builder).toMatch(/useEffect\(\(\) => \{[\s\S]{0,200}\/roster`\)/);
+    expect(roster).toMatch(/useEffect\(\(\) => \{[\s\S]{0,200}\/roster`\)/);
   });
 
   it('menyebut aturan remedial pada tombol terbit', () => {
     expect(builder).toContain('Percobaan kedua dan ketiga yang lulus bernilai tepat');
+  });
+
+  it('menyembunyikan rekap pada ujian yang belum terbit', () => {
+    // Ujian draf belum terlihat peserta, sehingga "0 dari 21" hanya
+    // menyesatkan.
+    //
+    // A draft is not visible to participants, so "0 of 21" would only mislead.
+    expect(builder).toMatch(/exam\.published && \(/);
   });
 });
 

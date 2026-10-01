@@ -2,6 +2,7 @@
 import { getApps, initializeApp, cert, type App } from 'firebase-admin/app';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { getStorage, type Storage } from 'firebase-admin/storage';
 import { getEnv } from '../env';
 import fs from 'fs';
 import path from 'path';
@@ -9,6 +10,7 @@ import path from 'path';
 let adminApp: App | null = null;
 let adminAuth: Auth | null = null;
 let adminDb: Firestore | null = null;
+let adminStorage: Storage | null = null;
 
 /**
  * Mengambil atau menginisialisasi singleton instance Firebase Admin App.
@@ -32,6 +34,7 @@ export function getAdminApp(): App {
       adminApp = initializeApp({
         credential: cert(serviceAccount),
         projectId: serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID,
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
       });
       return adminApp;
     } catch (err) {
@@ -67,6 +70,7 @@ export function getAdminApp(): App {
   if (process.env.FIRESTORE_EMULATOR_HOST || process.env.NODE_ENV === 'test') {
     adminApp = initializeApp({
       projectId: env.projectId,
+      storageBucket: env.storageBucket,
       ...signingAccount,
     });
     return adminApp;
@@ -81,6 +85,7 @@ export function getAdminApp(): App {
         privateKey: env.privateKey,
       }),
       projectId: env.projectId,
+      storageBucket: env.storageBucket,
     });
     return adminApp;
   }
@@ -123,6 +128,7 @@ export function getAdminApp(): App {
 
   adminApp = initializeApp({
     projectId: env.projectId,
+    storageBucket: env.storageBucket,
     ...signingAccount,
   });
 
@@ -151,4 +157,24 @@ export function getAdminDb(): Firestore {
     adminDb = getFirestore(getAdminApp());
   }
   return adminDb;
+}
+
+/**
+ * Mendapatkan instance Firebase Admin Storage.
+ *
+ * Berkas diunggah lewat server, bukan langsung dari peramban: aturan Storage
+ * menolak seluruh akses langsung, sehingga setiap unggahan diperiksa perannya
+ * dan jenis berkasnya lebih dulu di sini.
+ *
+ * Gets the Firebase Admin Storage instance.
+ *
+ * Files upload through the server rather than straight from the browser: the
+ * Storage rules refuse all direct access, so every upload has its role and file
+ * type checked here first.
+ */
+export function getAdminStorage(): Storage {
+  if (!adminStorage) {
+    adminStorage = getStorage(getAdminApp());
+  }
+  return adminStorage;
 }

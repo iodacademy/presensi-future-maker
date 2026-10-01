@@ -69,6 +69,23 @@ export const DEFAULT_PASSING_SCORE = 70;
 export interface ExamOption {
   id: string;
   text: string;
+  /**
+   * Gambar pilihan ini, bila ada.
+   *
+   * Tautan ke berkas di penyimpanan, bukan data gambar itu sendiri: gambar
+   * base64 di dalam dokumen membuat tiap soal terbaca utuh setiap kali
+   * daftarnya dimuat, dan satu ujian dua puluh soal menjadi berkali lipat
+   * besarnya.
+   *
+   * This option's image, when it has one.
+   *
+   * A link to a file in storage rather than the image data itself: a base64
+   * image inside the document makes every question read whole each time the
+   * list loads, and a twenty-question exam grows many times over.
+   */
+  imageUrl?: string | null;
+  /** Jalur berkasnya, untuk dihapus bersama soalnya / Its file path, to delete along with the question */
+  imagePath?: string | null;
 }
 
 /**
@@ -91,6 +108,9 @@ export interface QuestionDocument {
   examId: string;
   kind: QuestionKind;
   text: string;
+  /** Gambar pertanyaan, bila ada / The question's image, when it has one */
+  imageUrl?: string | null;
+  imagePath?: string | null;
   options: ExamOption[];
   order: number;
   createdAt: string;

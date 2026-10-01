@@ -1,6 +1,20 @@
 // Validasi variabel lingkungan server / Validate server environment variables
 export interface EnvConfig {
   projectId: string;
+  /**
+   * Bucket penyimpanan berkas.
+   *
+   * Tidak diwajibkan: aplikasi berjalan tanpa unggahan gambar, dan menolak
+   * start karena bucket yang belum disetel akan mematikan presensi dan tugas
+   * sekaligus demi satu fitur yang belum tentu dipakai.
+   *
+   * The file storage bucket.
+   *
+   * Not required: the app runs without image uploads, and refusing to start
+   * over an unset bucket would take down attendance and tasks alike for one
+   * feature that may not even be in use.
+   */
+  storageBucket?: string;
   clientEmail: string;
   privateKey: string;
 }
@@ -26,5 +40,10 @@ export function getEnv(): EnvConfig {
     privateKey = privateKey.replace(/\\n/g, '\n');
   }
 
-  return { projectId, clientEmail, privateKey };
+  return {
+    projectId,
+    clientEmail,
+    privateKey,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  };
 }

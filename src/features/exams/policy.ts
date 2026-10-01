@@ -199,12 +199,18 @@ export function seededShuffle<T>(items: T[], seed: string): T[] {
 export function validateQuestion(input: {
   kind: QuestionKind;
   text: string;
-  options: { id: string; text: string }[];
+  imageUrl?: string | null;
+  options: { id: string; text: string; imageUrl?: string | null }[];
   correctOptionId: string;
 }): void {
   const teks = input.text.trim();
-  if (!teks) {
-    throw new Error('Pertanyaan wajib diisi');
+  // Pertanyaan boleh berupa gambar saja: soal "perhatikan diagram berikut"
+  // yang seluruh isinya ada pada gambarnya tidak punya kalimat untuk diketik.
+  //
+  // A question may be an image alone: a "study the diagram below" question
+  // whose whole content is in the image has no sentence to type.
+  if (!teks && !input.imageUrl) {
+    throw new Error('Pertanyaan wajib diisi, atau sertakan gambarnya');
   }
 
   if (input.kind === 'benar-salah') {
@@ -218,8 +224,13 @@ export function validateQuestion(input: {
   }
 
   for (const o of input.options) {
-    if (!o.text.trim()) {
-      throw new Error('Setiap pilihan wajib diisi');
+    // Pilihan bergambar boleh tanpa teks: soal yang pilihannya berupa empat
+    // gambar tidak punya kalimat untuk tiap pilihannya.
+    //
+    // An image option may have no text: a question whose options are four
+    // images has no sentence for each of them.
+    if (!o.text.trim() && !o.imageUrl) {
+      throw new Error('Setiap pilihan wajib diisi teks atau gambarnya');
     }
   }
 

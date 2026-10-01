@@ -2,6 +2,7 @@
 // Exam service: authoring, running, and grading
 import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
+import { deleteExamImage } from '../uploads/service';
 import type { Actor } from '../auth/types';
 import {
   applyRemedialRule,
@@ -136,7 +137,9 @@ export async function createQuestion(
   input: {
     kind: QuestionKind;
     text: string;
-    options: { text: string }[];
+    imageUrl?: string | null;
+    imagePath?: string | null;
+    options: { text: string; imageUrl?: string | null; imagePath?: string | null }[];
     correctIndex: number;
     explanation?: string;
   }
@@ -149,7 +152,12 @@ export async function createQuestion(
   if (!examSnap.exists) throw new Error('Ujian tidak ditemukan');
 
   const exam = examSnap.data() as ExamDocument;
-  const options = input.options.map((o) => ({ id: crypto.randomUUID(), text: o.text.trim() }));
+  const options = input.options.map((o) => ({
+    id: crypto.randomUUID(),
+    text: o.text.trim(),
+    imageUrl: o.imageUrl ?? null,
+    imagePath: o.imagePath ?? null,
+  }));
   const correct = options[input.correctIndex];
 
   validateQuestion({
@@ -167,6 +175,8 @@ export async function createQuestion(
     examId,
     kind: input.kind,
     text: input.text.trim(),
+    imageUrl: input.imageUrl ?? null,
+    imagePath: input.imagePath ?? null,
     options,
     order: exam.questionCount + 1,
     createdAt: now,
@@ -275,6 +285,27 @@ export async function importQuestions(
   return { imported: parsed.length };
 }
 
+/**
+ * Menghapus seluruh gambar sebuah soal.
+ *
+ * Kegagalan tiap berkas ditelan oleh deleteExamImage: berkas yang sudah tidak
+ * ada bukan kesalahan, dan menggagalkan penghapusan soal karena gambarnya
+ * hilang meninggalkan soal yang tidak dapat dihapus sama sekali.
+ *
+ * Deletes all of a question's images.
+ *
+ * Each file's failure is swallowed by deleteExamImage: a file already gone is
+ * not an error, and failing a question's deletion because its image is missing
+ * would leave a question that cannot be deleted at all.
+ */
+async function removeQuestionImages(actor: Actor, question: QuestionDocument): Promise<void> {
+  const paths = [question.imagePath, ...question.options.map((o) => o.imagePath)].filter(
+    (p): p is string => Boolean(p)
+  );
+
+  await Promise.all(paths.map((p) => deleteExamImage(actor, p)));
+}
+
 export async function deleteQuestion(actor: Actor, questionId: string): Promise<void> {
   requireAdmin(actor);
 
@@ -288,6 +319,13 @@ export async function deleteQuestion(actor: Actor, questionId: string): Promise<
   const examSnap = await examRef.get();
   const count = (examSnap.data()?.questionCount as number) || 0;
   const now = new Date().toISOString();
+
+  // Gambarnya dihapus lebih dulu, di luar batch: batch Firestore hanya menulis
+  // dokumen, dan berkas penyimpanan tidak termasuk di dalamnya.
+  //
+  // The images go first, outside the batch: a Firestore batch only writes
+  // documents, and storage files are not among them.
+  await removeQuestionImages(actor, question);
 
   const batch = db.batch();
   batch.delete(qRef);
@@ -336,6 +374,12 @@ export async function listQuestionsForAdmin(
       correctOptionId: keys.get(q.id)?.correctOptionId ?? '',
       explanation: keys.get(q.id)?.explanation ?? '',
     }));
+}
+
+export async function getExamById(examId: string): Promise<ExamDocument | null> {
+  const db = getAdminDb();
+  const snap = await db.collection('exams').doc(examId).get();
+  return snap.exists ? (snap.data() as ExamDocument) : null;
 }
 
 export async function listExamsForClass(classId: string): Promise<ExamDocument[]> {
@@ -802,6 +846,10 @@ export async function deleteExam(actor: Actor, examId: string): Promise<void> {
     db.collection('examAttempts').where('examId', '==', examId).get(),
     db.collection('examAnswers').where('examId', '==', examId).get(),
   ]);
+
+  await Promise.all(
+    questions.docs.map((d) => removeQuestionImages(actor, d.data() as QuestionDocument))
+  );
 
   const batch = db.batch();
   for (const snap of [questions, keys, attempts, answers]) {

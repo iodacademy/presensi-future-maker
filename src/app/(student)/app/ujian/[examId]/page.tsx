@@ -364,9 +364,27 @@ export default function ExamRunnerPage({ params }: { params: Promise<{ examId: s
                 )}
               </div>
 
-              <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-main)', lineHeight: 1.65, whiteSpace: 'pre-wrap', margin: 0 }}>
-                {soal.text}
-              </p>
+              {soal.text && (
+                <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-main)', lineHeight: 1.65, whiteSpace: 'pre-wrap', margin: 0 }}>
+                  {soal.text}
+                </p>
+              )}
+
+              {/* Tingginya dibatasi agar pilihan jawabannya tetap terlihat
+                  tanpa menggulir: gambar setinggi layar mendorong seluruh
+                  pilihan ke bawah lipatan, dan peserta mengira soalnya tidak
+                  punya jawaban.
+
+                  The height is capped so the options stay in view without
+                  scrolling: a full-height image pushes every option below the
+                  fold, and participants think the question has no answers. */}
+              {soal.imageUrl && (
+                <img
+                  src={soal.imageUrl}
+                  alt=""
+                  style={{ display: 'block', maxWidth: '100%', maxHeight: '260px', width: 'auto', marginTop: soal.text ? '14px' : 0, borderRadius: '10px', border: '1px solid var(--color-border)' }}
+                />
+              )}
 
               <div style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {soal.options.map((o, i) => {
@@ -395,6 +413,13 @@ export default function ExamRunnerPage({ params }: { params: Promise<{ examId: s
                       >
                         {dipilih ? <Check size={13} strokeWidth={3} /> : String.fromCharCode(65 + i)}
                       </span>
+                      {o.imageUrl && (
+                        <img
+                          src={o.imageUrl}
+                          alt=""
+                          style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--color-border)', flexShrink: 0 }}
+                        />
+                      )}
                       <span style={{ flex: 1, fontSize: '13px', lineHeight: 1.55, whiteSpace: 'pre-wrap', fontWeight: dipilih ? 600 : 400, color: dipilih ? 'var(--color-primary)' : 'var(--color-text-main)' }}>
                         {o.text}
                       </span>

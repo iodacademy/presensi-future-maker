@@ -171,18 +171,23 @@ describe('alur impor pada layar admin', () => {
   const builder = read('src/app/(admin)/admin/kelas/[classId]/exam-builder.tsx');
   const service = read('src/features/exams/service.ts');
 
-  it('membuka ujian yang baru dibuat', () => {
-    // Kartu yang tertutup menyembunyikan formulir soalnya, sehingga ujian yang
-    // baru dibuat tampak seperti sudah selesai padahal belum memuat satu soal.
+  it('ujian baru langsung masuk ke penyuntingnya', () => {
+    // Ujian baru tidak punya soal, dan kembali ke daftar berarti admin harus
+    // menekannya lagi untuk melanjutkan apa yang baru saja ia mulai.
     //
-    // A closed card hides its question form, so a freshly created exam looks
-    // finished although it holds no question yet.
-    expect(builder).toContain('setOpenId(data.id)');
+    // A new exam has no questions, and returning to the list would have the
+    // admin tap it again to continue what they just started.
+    expect(builder).toMatch(/router\.push\(`\/admin\/ujian\/\$\{data\.id\}`\)/);
   });
 
   it('menyebut langkah berikutnya pada ujian yang belum bersoal', () => {
-    expect(builder).toMatch(/soal\.length === 0 && \(/);
-    expect(builder).toContain('Belum ada soal');
+    // Halaman kosong tanpa keterangan tidak memberi tahu admin dari mana
+    // memulai.
+    //
+    // An empty page with no note does not tell an admin where to begin.
+    const editor = read('src/app/(admin)/admin/ujian/[examId]/page.tsx');
+    expect(editor).toMatch(/questions\.length === 0 \?/);
+    expect(editor).toContain('Belum ada soal');
   });
 
   it('menampilkan pratinjau sebelum menyimpan', () => {
