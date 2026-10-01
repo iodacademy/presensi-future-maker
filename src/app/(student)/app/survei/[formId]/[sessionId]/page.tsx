@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, Star } from 'lucide-react';
+import { ArrowLeft, Check, Star, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SCALE_MAX, SCALE_MIN } from '@/features/survey/policy';
 import type { SurveyFormDocument } from '@/features/survey/types';
@@ -109,6 +109,22 @@ export default function SurveyPage({
           </p>
         )}
 
+        {/* Jawabannya tercatat atas nama peserta dan pertemuannya. Menyatakan
+            itu di muka mengubah apa yang ditulis orang -- dan membiarkannya
+            tidak disebut berarti mengumpulkan masukan dengan dasar yang keliru
+            dipahami penjawabnya.
+
+            Responses are recorded under the participant's name and meeting.
+            Saying so up front changes what people write -- and leaving it
+            unsaid means collecting feedback on a basis the respondent
+            misunderstands. */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '7px', padding: '10px 12px', borderRadius: '10px', backgroundColor: 'var(--color-primary-light)' }}>
+          <Info size={13} color="var(--color-primary)" strokeWidth={2} style={{ flexShrink: 0, marginTop: '1px' }} />
+          <span style={{ fontSize: '10px', color: 'var(--color-primary)', lineHeight: 1.55 }}>
+            Jawaban Anda tercatat atas nama Anda dan pertemuan ini, sehingga masukan yang membutuhkan tindak lanjut dapat ditangani. Tulis sejujurnya.
+          </span>
+        </div>
+
         {form.questions.map((q, i) => (
           <div key={q.id} style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid var(--color-border)', padding: '16px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-main)', lineHeight: 1.55 }}>
@@ -176,6 +192,46 @@ export default function SurveyPage({
                     {answers[q.id]} dari {SCALE_MAX}
                   </span>
                 )}
+              </div>
+            )}
+
+            {/* Nol sampai sepuluh, bukan satu sampai lima: pertanyaan
+                rekomendasi memang menyediakan nol sebagai jawaban, dan
+                menghilangkannya menghapus jawaban paling negatif yang dapat
+                diberikan seseorang.
+
+                Zero to ten, not one to five: a recommendation question does
+                offer zero as an answer, and removing it erases the most
+                negative answer anyone can give. */}
+            {q.kind === 'nps' && (
+              <div style={{ marginTop: '12px' }}>
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                  {Array.from({ length: 11 }, (_, n) => String(n)).map((nilai) => {
+                    const dipilih = answers[q.id] === nilai;
+                    return (
+                      <button
+                        key={nilai}
+                        type="button"
+                        onClick={() => setAnswers((p) => ({ ...p, [q.id]: nilai }))}
+                        aria-pressed={dipilih}
+                        aria-label={`Nilai ${nilai} dari 10`}
+                        style={{
+                          width: '38px', height: '38px', borderRadius: '10px', cursor: 'pointer',
+                          fontSize: '13px', fontWeight: 700,
+                          border: `1px solid ${dipilih ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                          backgroundColor: dipilih ? 'var(--color-primary)' : '#ffffff',
+                          color: dipilih ? '#ffffff' : 'var(--color-text-muted)',
+                        }}
+                      >
+                        {nilai}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '9px', color: 'var(--color-text-muted)' }}>
+                  <span>Tidak mungkin</span>
+                  <span>Sangat mungkin</span>
+                </div>
               </div>
             )}
 

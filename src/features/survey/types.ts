@@ -3,25 +3,45 @@
 /**
  * Jenis pertanyaan survei.
  *
- * 'skala' dan 'rating' sama-sama menyimpan angka satu sampai lima; yang
- * membedakan hanya bentuknya di layar peserta, berupa tombol berangka atau
- * bintang. 'pilihan' adalah daftar jawaban yang disusun admin, dan 'teks'
+ * 'skala', 'rating', dan 'nps' sama-sama menyimpan angka dan dirata-rata
+ * dengan cara yang sama; yang membedakan hanya rentang dan bentuknya di layar
+ * peserta. 'pilihan' adalah daftar jawaban yang disusun admin, dan 'teks'
  * dibiarkan terbuka untuk masukan yang tidak terwakili ketiganya.
  *
  * Survey question kinds.
  *
- * 'skala' and 'rating' both store a number from one to five; only their shape
- * on the participant's screen differs, as numbered buttons or as stars.
+ * 'skala', 'rating', and 'nps' all store a number and average the same way;
+ * only their range and their shape on the participant's screen differ.
  * 'pilihan' is a list of answers an admin writes, and 'teks' stays open for
  * feedback none of the others covers.
  */
-export type SurveyQuestionKind = 'skala' | 'rating' | 'pilihan' | 'teks';
+export type SurveyQuestionKind = 'skala' | 'rating' | 'nps' | 'pilihan' | 'teks';
 
 export const SURVEY_QUESTION_LABELS: Record<SurveyQuestionKind, string> = {
   skala: 'Skala 1-5',
   rating: 'Bintang 1-5',
+  nps: 'Skala 0-10',
   pilihan: 'Pilihan Ganda',
   teks: 'Isian Bebas',
+};
+
+/**
+ * Rentang angka yang sah untuk tiap jenis bernilai angka.
+ *
+ * Dipisahkan per jenis sebab 'nps' dimulai dari nol: pertanyaan rekomendasi
+ * memang menyediakan nol sebagai jawaban, dan memaksanya mulai dari satu
+ * menghilangkan jawaban paling negatif yang dapat diberikan seseorang.
+ *
+ * The valid number range for each numeric kind.
+ *
+ * Kept per kind because 'nps' starts at zero: a recommendation question does
+ * offer zero as an answer, and forcing it to start at one removes the most
+ * negative answer anyone can give.
+ */
+export const NUMERIC_RANGES: Record<string, { min: number; max: number }> = {
+  skala: { min: 1, max: 5 },
+  rating: { min: 1, max: 5 },
+  nps: { min: 0, max: 10 },
 };
 
 /**
@@ -37,7 +57,7 @@ export const SURVEY_QUESTION_LABELS: Record<SurveyQuestionKind, string> = {
  * only their shape on the participant's screen differs. Separating their rules
  * would create two places to keep in step.
  */
-export const NUMERIC_KINDS: SurveyQuestionKind[] = ['skala', 'rating'];
+export const NUMERIC_KINDS: SurveyQuestionKind[] = ['skala', 'rating', 'nps'];
 
 export interface SurveyQuestion {
   id: string;
@@ -136,7 +156,7 @@ export interface SurveyAnswer {
   questionId: string;
   questionText: string;
   kind: SurveyQuestionKind;
-  /** Angka untuk 'skala' dan 'rating', teks untuk jenis lain / A number for 'skala' and 'rating', text for other kinds */
+  /** Angka untuk jenis bernilai angka, teks untuk jenis lain / A number for numeric kinds, text for the others */
   value: string;
 }
 

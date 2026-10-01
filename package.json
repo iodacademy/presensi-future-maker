@@ -23,7 +23,8 @@
     "set-session-classes": "tsx scripts/set-session-classes.ts",
     "diagnose-attendance": "tsx scripts/diagnose-attendance.ts",
     "diagnose-submissions": "tsx scripts/diagnose-submissions.ts",
-    "deploy-indexes": "firebase deploy --only firestore:indexes"
+    "deploy-indexes": "firebase deploy --only firestore:indexes",
+    "seed-feedback-form": "tsx scripts/seed-feedback-form.ts"
   },
   "dependencies": {
     "firebase": "^12.18.0",

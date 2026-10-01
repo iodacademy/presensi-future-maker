@@ -1,5 +1,12 @@
 // Aturan formulir survei / Survey form rules
-import { NUMERIC_KINDS, type SurveyAnswer, type SurveyQuestion, type SurveyQuestionKind, type SurveyScope } from './types';
+import {
+  NUMERIC_KINDS,
+  NUMERIC_RANGES,
+  type SurveyAnswer,
+  type SurveyQuestion,
+  type SurveyQuestionKind,
+  type SurveyScope,
+} from './types';
 
 /** Nilai yang sah untuk pertanyaan skala / Valid values for a scale question */
 export const SCALE_MIN = 1;
@@ -80,9 +87,17 @@ export function validateResponses(
     }
 
     if (NUMERIC_KINDS.includes(q.kind)) {
+      // Rentangnya diambil per jenis: 'nps' dimulai dari nol, sedangkan skala
+      // dan bintang dari satu. Memakai satu rentang untuk semuanya akan
+      // menolak nol -- jawaban paling negatif yang dapat diberikan seseorang.
+      //
+      // The range comes from the kind: 'nps' starts at zero while scales and
+      // stars start at one. One shared range would refuse zero -- the most
+      // negative answer anyone can give.
+      const { min, max } = NUMERIC_RANGES[q.kind];
       const angka = Number(value);
-      if (!Number.isInteger(angka) || angka < SCALE_MIN || angka > SCALE_MAX) {
-        throw new Error(`Jawaban "${q.text}" harus berupa angka ${SCALE_MIN} sampai ${SCALE_MAX}`);
+      if (!Number.isInteger(angka) || angka < min || angka > max) {
+        throw new Error(`Jawaban "${q.text}" harus berupa angka ${min} sampai ${max}`);
       }
     }
 

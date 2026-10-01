@@ -6,6 +6,8 @@ import {
   validateResponses,
   summariseAnswers,
 } from '@/features/survey/policy';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { SurveyQuestion } from '@/features/survey/types';
 
 const soal = (over: Partial<SurveyQuestion> = {}): SurveyQuestion => ({
@@ -182,5 +184,94 @@ describe('rangkuman rekap', () => {
       jawaban('Ikut lagi?', 'Ya', 'pilihan'),
     ]);
     expect(hasil[0].distribution[0]).toEqual({ label: 'Ya', count: 2 });
+  });
+});
+
+
+/**
+ * Pertanyaan rekomendasi memakai nol sampai sepuluh.
+ *
+ * Nol memang jawaban yang sah: itulah jawaban paling negatif yang dapat
+ * diberikan seseorang, dan memaksanya mulai dari satu menghapusnya diam-diam.
+ *
+ * The recommendation question runs zero to ten.
+ *
+ * Zero is a valid answer: it is the most negative one anyone can give, and
+ * forcing the scale to start at one erases it silently.
+ */
+describe('skala nol sampai sepuluh', () => {
+  const nps = (over: Partial<SurveyQuestion> = {}): SurveyQuestion => ({
+    id: 'q1',
+    kind: 'nps',
+    text: 'Seberapa besar kemungkinan merekomendasikan?',
+    options: [],
+    required: true,
+    order: 1,
+    ...over,
+  });
+
+  it('menerima nol', () => {
+    expect(validateResponses([nps()], { q1: '0' })[0].value).toBe('0');
+  });
+
+  it('menerima sepuluh', () => {
+    expect(validateResponses([nps()], { q1: '10' })[0].value).toBe('10');
+  });
+
+  it('menolak sebelas dan angka negatif', () => {
+    expect(() => validateResponses([nps()], { q1: '11' })).toThrow(/angka 0 sampai 10/);
+    expect(() => validateResponses([nps()], { q1: '-1' })).toThrow(/angka 0 sampai 10/);
+  });
+
+  it('tidak memakai rentang satu sampai lima milik skala', () => {
+    // Satu rentang bersama akan menolak enam sampai sepuluh pada pertanyaan
+    // rekomendasi.
+    //
+    // One shared range would refuse six through ten on the recommendation
+    // question.
+    expect(validateResponses([nps()], { q1: '8' })[0].value).toBe('8');
+  });
+
+  it('menolak nol pada skala satu sampai lima', () => {
+    // Rentangnya per jenis, bukan satu untuk semuanya.
+    // The range is per kind, not one for all.
+    expect(() => validateResponses([soal()], { q1: '0' })).toThrow(/angka 1 sampai 5/);
+  });
+
+  it('ikut dirata-rata pada rekap', () => {
+    const hasil = summariseAnswers([
+      { questionId: 'q1', questionText: 'Rekomendasi?', kind: 'nps', value: '9' },
+      { questionId: 'q1', questionText: 'Rekomendasi?', kind: 'nps', value: '8' },
+    ]);
+    expect(hasil[0].average).toBe(8.5);
+  });
+
+  it('mengurutkan sebarannya menurut angkanya, bukan jumlahnya', () => {
+    // Sebaran nol sampai sepuluh yang diurutkan menurut jumlah tidak terbaca
+    // sebagai skala.
+    //
+    // A zero-to-ten distribution sorted by count does not read as a scale.
+    const hasil = summariseAnswers([
+      { questionId: 'q1', questionText: 'R?', kind: 'nps', value: '10' },
+      { questionId: 'q1', questionText: 'R?', kind: 'nps', value: '0' },
+      { questionId: 'q1', questionText: 'R?', kind: 'nps', value: '0' },
+    ]);
+    expect(hasil[0].distribution.map((d) => d.label)).toEqual(['0', '10']);
+  });
+});
+
+describe('pemberitahuan identitas', () => {
+  it('menyebutkan jawabannya tercatat atas nama dan pertemuannya', () => {
+    // Menyatakan itu di muka mengubah apa yang ditulis orang -- dan
+    // membiarkannya tidak disebut berarti mengumpulkan masukan dengan dasar
+    // yang keliru dipahami penjawabnya.
+    //
+    // Saying so up front changes what people write -- and leaving it unsaid
+    // means collecting feedback on a basis the respondent misunderstands.
+    const halaman = readFileSync(
+      resolve(process.cwd(), 'src/app/(student)/app/survei/[formId]/[sessionId]/page.tsx'),
+      'utf-8'
+    );
+    expect(halaman).toContain('tercatat atas nama Anda dan pertemuan ini');
   });
 });
