@@ -235,6 +235,20 @@ export interface AnswerDocument {
   studentId: string;
   questionId: string;
   selectedOptionId: string | null;
+  /**
+   * Peserta menandai soal ini untuk ditinjau ulang.
+   *
+   * Terpisah dari terjawab atau belum: soal yang sudah dijawab pun dapat
+   * diragukan, dan tanpa penanda ini peserta harus mengingat sendiri nomor
+   * mana yang ingin ia periksa lagi.
+   *
+   * The participant marked this question for another look.
+   *
+   * Separate from answered or not: an answered question can still be doubted,
+   * and without this marker a participant has to remember themselves which
+   * numbers they wanted to revisit.
+   */
+  isDoubtful: boolean;
   isCorrect: boolean | null;
   answeredAt: string;
 }

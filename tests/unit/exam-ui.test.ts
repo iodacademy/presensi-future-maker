@@ -27,7 +27,8 @@ describe('mesin pengerjaan peserta', () => {
     // jawaban yang sudah diisi.
     //
     // One reload or dropped connection must not erase answers already given.
-    expect(runner).toMatch(/async function pick\(/);
+    expect(runner).toMatch(/function pick\(/);
+    expect(runner).toMatch(/persist\(questionId, optionId/);
     expect(runner).toContain('/answer`');
   });
 
@@ -53,8 +54,8 @@ describe('mesin pengerjaan peserta', () => {
     //
     // "3 unanswered" without the numbers makes a participant scroll through
     // one by one.
-    expect(runner).toMatch(/belumDijawab\.map\(\(n\) =>/);
-    expect(runner).toMatch(/setIndex\(n - 1\)/);
+    expect(runner).toMatch(/belumDijawab\.map\(\(i\) =>/);
+    expect(runner).toMatch(/setIndex\(i\); setConfirming\(false\)/);
   });
 
   it('memperingatkan bahwa soal yang dilewatkan dihitung salah', () => {
@@ -65,7 +66,7 @@ describe('mesin pengerjaan peserta', () => {
     // Peserta berhak tahu batas nilainya sebelum mengerjakan, bukan sesudah.
     // A participant deserves to know the ceiling before working, not after.
     expect(runner).toMatch(/state\.attemptNumber > 1 && \(/);
-    expect(runner).toContain('Ini percobaan ulang');
+    expect(runner).toContain('Bila lulus, nilai yang tercatat adalah');
   });
 
   it('menjelaskan nilai yang dipatok pada halaman hasil', () => {

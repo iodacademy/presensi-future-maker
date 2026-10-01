@@ -342,6 +342,7 @@ export async function startAttempt(
   exam: Pick<ExamDocument, 'id' | 'title' | 'description' | 'durationMinutes' | 'passingScore' | 'questionCount'>;
   questions: QuestionDocument[];
   savedAnswers: Record<string, string>;
+  savedDoubts: string[];
 }> {
   if (actor.role !== 'student' || !actor.classId) {
     throw new Error('Hanya peserta yang dapat mengerjakan ujian');
@@ -417,9 +418,11 @@ export async function startAttempt(
   // Saved answers come back so a participant who reloads does not start empty.
   const savedSnap = await db.collection('examAnswers').where('attemptId', '==', attempt.id).get();
   const savedAnswers: Record<string, string> = {};
+  const savedDoubts: string[] = [];
   for (const d of savedSnap.docs) {
     const a = d.data() as AnswerDocument;
     if (a.selectedOptionId) savedAnswers[a.questionId] = a.selectedOptionId;
+    if (a.isDoubtful) savedDoubts.push(a.questionId);
   }
 
   return {
@@ -439,6 +442,7 @@ export async function startAttempt(
       .map((qid) => byId.get(qid))
       .filter((q): q is QuestionDocument => Boolean(q)),
     savedAnswers,
+    savedDoubts,
   };
 }
 
@@ -462,7 +466,8 @@ export async function saveDraftAnswer(
   actor: Actor,
   attemptId: string,
   questionId: string,
-  selectedOptionId: string | null
+  selectedOptionId: string | null,
+  isDoubtful = false
 ): Promise<void> {
   if (actor.role !== 'student') throw new Error('Hanya peserta yang dapat menjawab');
 
@@ -485,6 +490,7 @@ export async function saveDraftAnswer(
       studentId: actor.uid,
       questionId,
       selectedOptionId,
+      isDoubtful,
       isCorrect: null,
       answeredAt: new Date().toISOString(),
     };
@@ -562,6 +568,12 @@ export async function submitAttempt(
   // answers typed after time ran out must not count.
   const terlambat = isSubmissionLate(attempt.startedAt, exam.durationMinutes);
   const sumber: Record<string, string | null> = {};
+  const ragu: Record<string, boolean> = {};
+  for (const d of draftSnap.docs) {
+    const a = d.data() as AnswerDocument;
+    ragu[a.questionId] = a.isDoubtful === true;
+  }
+
   if (terlambat) {
     for (const d of draftSnap.docs) {
       const a = d.data() as AnswerDocument;
@@ -593,6 +605,7 @@ export async function submitAttempt(
       studentId: actor.uid,
       questionId: q.id,
       selectedOptionId: dipilih,
+      isDoubtful: ragu[q.id] === true,
       isCorrect: benar,
       answeredAt: now,
     } satisfies AnswerDocument);

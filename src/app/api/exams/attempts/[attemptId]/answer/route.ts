@@ -12,7 +12,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ att
   const { attemptId } = await params;
   try {
     const body = await request.json();
-    await saveDraftAnswer(actor, attemptId, body.questionId, body.selectedOptionId ?? null);
+    await saveDraftAnswer(actor, attemptId, body.questionId, body.selectedOptionId ?? null, body.isDoubtful === true);
     return NextResponse.json({ saved: true });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });

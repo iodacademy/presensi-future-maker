@@ -85,23 +85,43 @@ export default function ExamReviewPage({
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-app)' }}>
-      <div style={{ backgroundColor: 'var(--color-primary)', color: '#ffffff', padding: '20px' }}>
-        <Link href="/app/jadwal" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#ffffff', textDecoration: 'none', fontSize: '11px', fontWeight: 600 }}>
-          <ArrowLeft size={12} strokeWidth={2} /> Jadwal
+      <header style={{ height: '48px', display: 'flex', alignItems: 'center', gap: '10px', padding: '0 14px', borderBottom: '1px solid var(--color-border)', backgroundColor: '#ffffff' }}>
+        <Link href="/app/jadwal" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--color-text-muted)', textDecoration: 'none', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>
+          <ArrowLeft size={13} strokeWidth={2} /> Keluar
         </Link>
-        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '16px', fontWeight: 700, color: '#ffffff', margin: '8px 0 0' }}>
-          {data.examTitle}
-        </h1>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginTop: '8px' }}>
-          <span style={{ fontSize: '32px', fontWeight: 700, lineHeight: 1 }}>{data.score}</span>
-          <span style={{ fontSize: '11px', opacity: 0.9 }}>
-            {data.passed ? 'Lulus' : 'Belum lulus'} - {data.correctCount} soal benar
-            {data.attemptNumber > 1 && ` - percobaan ke-${data.attemptNumber}`}
+        <span style={{ width: '1px', height: '16px', backgroundColor: 'var(--color-border)', flexShrink: 0 }} aria-hidden="true" />
+        <span style={{ flex: 1, minWidth: 0, fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          Pembahasan - {data.examTitle}
+        </span>
+      </header>
+
+      <div style={{ padding: '16px', maxWidth: '720px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {/* Pita nilai mendatar, bukan kartu tengah: halaman ini daftar panjang,
+            dan ringkasannya tidak perlu memakan satu layar penuh.
+
+            A horizontal score band rather than a centred card: this page is a
+            long list, and its summary need not take a whole screen. */}
+        <div
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+            padding: '18px', borderRadius: '16px',
+            border: `1px solid ${data.passed ? 'var(--color-success)' : 'var(--color-warning)'}`,
+            backgroundColor: data.passed ? 'var(--color-success-light)' : 'var(--color-warning-light)',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--color-text-muted)' }}>NILAI ANDA</div>
+            <div style={{ fontSize: '30px', fontWeight: 800, lineHeight: 1.15, marginTop: '2px', color: data.passed ? 'var(--color-success)' : 'var(--color-warning)' }}>
+              {data.score}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+              {data.correctCount} soal benar{data.attemptNumber > 1 && ` - percobaan ke-${data.attemptNumber}`}
+            </div>
+          </div>
+          <span style={{ padding: '5px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap', backgroundColor: data.passed ? 'var(--color-success)' : 'var(--color-warning)', color: '#ffffff' }}>
+            {data.passed ? 'Lulus' : 'Belum Lulus'}
           </span>
         </div>
-      </div>
-
-      <div style={{ padding: '16px', maxWidth: '640px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {dipatok && (
           <div style={{ fontSize: '10px', color: '#7c2d12', backgroundColor: 'var(--color-warning-light)', padding: '10px 12px', borderRadius: '8px', lineHeight: 1.5 }}>
             Jawaban benar Anda setara nilai {data.rawScore}. Karena ini percobaan ulang, nilai yang tercatat adalah batas kelulusan.
@@ -122,39 +142,73 @@ export default function ExamReviewPage({
           data.questions.map((q, i) => {
             const benar = q.selectedOptionId === q.correctOptionId;
             return (
-              <div key={q.id} style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid var(--color-border)', padding: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <div key={q.id} style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
+                {/* Status berada pada strip kepala, bukan menempel pada
+                    jawabannya: satu tempat tetap untuk mencari benar atau salah
+                    saat menggulir daftar panjang.
+
+                    The status sits in a header strip rather than beside the
+                    answer: one fixed place to look for right or wrong while
+                    scrolling a long list. */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '10px 16px', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-app)' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)' }}>Soal {i + 1}</span>
                   <span
                     style={{
-                      width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0,
-                      backgroundColor: benar ? 'var(--color-success)' : 'var(--color-danger)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px',
+                      fontSize: '9px', fontWeight: 700,
+                      backgroundColor: !q.selectedOptionId ? 'var(--color-border)' : benar ? 'var(--color-success-light)' : 'var(--color-danger-light)',
+                      color: !q.selectedOptionId ? 'var(--color-text-muted)' : benar ? 'var(--color-success)' : 'var(--color-danger)',
                     }}
                   >
-                    {benar ? <Check size={12} color="#ffffff" strokeWidth={3} /> : <X size={12} color="#ffffff" strokeWidth={3} />}
+                    {benar && q.selectedOptionId ? <Check size={10} strokeWidth={3} /> : <X size={10} strokeWidth={3} />}
+                    {!q.selectedOptionId ? 'Tidak dijawab' : benar ? 'Benar' : 'Salah'}
                   </span>
+                </div>
+
+                <div style={{ padding: '16px' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-main)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                      {i + 1}. {q.text}
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                      {q.text}
                     </div>
 
-                    <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {q.options.map((o) => {
+                    <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginTop: '14px', marginBottom: '6px' }}>
+                      PILIHAN JAWABAN
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      {q.options.map((o, idx) => {
                         const kunci = o.id === q.correctOptionId;
                         const dipilih = o.id === q.selectedOptionId;
+                        const warna = kunci
+                          ? 'var(--color-success)'
+                          : dipilih
+                            ? 'var(--color-danger)'
+                            : 'var(--color-text-muted)';
                         return (
                           <div
                             key={o.id}
                             style={{
-                              display: 'flex', alignItems: 'center', gap: '7px', padding: '7px 10px', borderRadius: '8px', fontSize: '11px',
-                              backgroundColor: kunci ? 'var(--color-success-light)' : dipilih ? 'var(--color-danger-light)' : 'transparent',
-                              color: kunci ? 'var(--color-success)' : dipilih ? 'var(--color-danger)' : 'var(--color-text-muted)',
-                              fontWeight: kunci || dipilih ? 600 : 400,
+                              display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '10px',
+                              border: `1px solid ${kunci ? 'var(--color-success)' : dipilih ? 'var(--color-danger)' : 'var(--color-border)'}`,
+                              backgroundColor: kunci ? 'var(--color-success-light)' : dipilih ? 'var(--color-danger-light)' : '#ffffff',
                             }}
                           >
-                            <span style={{ flex: 1, minWidth: 0 }}>{o.text}</span>
-                            {kunci && <span style={{ fontSize: '9px', fontWeight: 700, whiteSpace: 'nowrap' }}>JAWABAN BENAR</span>}
-                            {dipilih && !kunci && <span style={{ fontSize: '9px', fontWeight: 700, whiteSpace: 'nowrap' }}>PILIHAN ANDA</span>}
+                            <span
+                              style={{
+                                width: '26px', height: '26px', borderRadius: '8px', flexShrink: 0,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '11px', fontWeight: 700,
+                                backgroundColor: kunci || dipilih ? warna : 'var(--color-bg-app)',
+                                color: kunci || dipilih ? '#ffffff' : 'var(--color-text-muted)',
+                              }}
+                            >
+                              {String.fromCharCode(65 + idx)}
+                            </span>
+                            <span style={{ flex: 1, minWidth: 0, fontSize: '12px', lineHeight: 1.5, fontWeight: kunci || dipilih ? 600 : 400, color: kunci || dipilih ? warna : 'var(--color-text-main)' }}>
+                              {o.text}
+                            </span>
+                            {kunci && <span style={{ fontSize: '9px', fontWeight: 700, whiteSpace: 'nowrap', color: warna }}>JAWABAN BENAR</span>}
+                            {dipilih && !kunci && <span style={{ fontSize: '9px', fontWeight: 700, whiteSpace: 'nowrap', color: warna }}>PILIHAN ANDA</span>}
                           </div>
                         );
                       })}
