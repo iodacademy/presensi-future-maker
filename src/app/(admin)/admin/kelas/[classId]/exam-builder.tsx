@@ -5,6 +5,7 @@ import { ClipboardCheck, Trash2, ChevronDown, ChevronRight, Plus, Check, Clock, 
 import { Button } from '@/components/ui/button';
 import { formatDateTimeWib } from '@/lib/time';
 import {
+  EXAM_KIND_LABELS,
   MAX_ATTEMPTS,
   QUESTION_KIND_LABELS,
   type ExamDocument,
@@ -530,7 +531,7 @@ export function ExamBuilder({ classId, sessionId, sessionTitle, kind }: ExamBuil
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={kind === 'pretest' ? 'Pretest Web Programming' : `Kuis ${sessionTitle ?? 'Sesi'}`}
+            placeholder={kind === 'kuis' ? `Kuis ${sessionTitle ?? 'Sesi'}` : `${EXAM_KIND_LABELS[kind]} Kelas`}
             aria-label="Judul ujian"
             autoFocus
             style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '11px' }}
@@ -557,7 +558,7 @@ export function ExamBuilder({ classId, sessionId, sessionTitle, kind }: ExamBuil
       ) : (
         <Button variant="secondary" onClick={() => setCreating(true)} style={{ fontSize: '11px', padding: '8px 14px', alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
           <Plus size={12} strokeWidth={2} />
-          {kind === 'pretest' ? 'Tambah Pretest' : 'Tambah Kuis'}
+          Tambah {EXAM_KIND_LABELS[kind]}
         </Button>
       )}
     </div>

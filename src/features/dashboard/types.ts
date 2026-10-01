@@ -1,5 +1,6 @@
 // Tipe data agregat beranda siswa / Student home dashboard data types
 import type { TaskKind } from '../tasks/types';
+import type { ExamKind } from '../exams/types';
 
 export interface StudentHomeSession {
   id: string;
@@ -71,7 +72,7 @@ export interface StudentHomeData {
   pendingExams: {
     id: string;
     title: string;
-    kind: 'pretest' | 'kuis';
+    kind: ExamKind;
     dueAt: string | null;
     isUrgent: boolean;
     deadlineLabel: string;

@@ -24,13 +24,13 @@ interface Mentor {
   currentClassName?: string;
 }
 
-type BuilderTab = 'rekaman' | 'tugas' | 'capstone' | 'pretest';
+type BuilderTab = 'rekaman' | 'tugas' | 'capstone' | 'ujian';
 
 const BUILDER_TABS: [BuilderTab, string][] = [
   ['rekaman', 'Materi Sesi'],
   ['tugas', 'Tugas'],
   ['capstone', 'Capstone'],
-  ['pretest', 'Pretest'],
+  ['ujian', 'Pretest & Postest'],
 ];
 
 interface PendingDelete {
@@ -733,21 +733,33 @@ export default function CourseBuilderPage({
             </div>
           </div>
 
-          {/* Pretest berdiri di depan seluruh kelas, bukan milik satu
-              pertemuan, sehingga tempatnya bukan pada kartu pertemuan seperti
-              kuis.
+          {/* Pretest dan postest berdiri di depan seluruh kelas, bukan milik
+              satu pertemuan, sehingga tempatnya bukan pada kartu pertemuan
+              seperti kuis. Keduanya satu tab sebab keduanya mengapit materi
+              yang sama dan kerap memuat soal yang sama persis.
 
-              A pretest stands in front of the whole class rather than belonging
-              to one meeting, so its place is not on a meeting card the way a
-              quiz's is. */}
-          <div style={{ flex: '1 1 480px', minWidth: '360px', display: tab === 'pretest' ? 'flex' : 'none', flexDirection: 'column', gap: '12px' }}>
+              A pretest and posttest stand in front of the whole class rather
+              than belonging to one meeting, so their place is not on a meeting
+              card the way a quiz's is. They share one tab since both bracket
+              the same material and often hold identical questions. */}
+          <div style={{ flex: '1 1 480px', minWidth: '360px', display: tab === 'ujian' ? 'flex' : 'none', flexDirection: 'column', gap: '18px' }}>
             <div>
-              <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>Pretest Kelas</h2>
-              <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+              <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>Pretest</h2>
+              <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', margin: '2px 0 10px' }}>
                 Dikerjakan sebelum materi dimulai, untuk mengukur titik awal peserta.
               </p>
+              <ExamBuilder classId={classId} sessionId={null} kind="pretest" />
             </div>
-            <ExamBuilder classId={classId} sessionId={null} kind="pretest" />
+
+            <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
+
+            <div>
+              <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>Postest</h2>
+              <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', margin: '2px 0 10px' }}>
+                Dikerjakan setelah seluruh materi selesai. Memakai soal yang sama dengan pretest membuat selisih nilainya dapat dibandingkan.
+              </p>
+              <ExamBuilder classId={classId} sessionId={null} kind="posttest" />
+            </div>
           </div>
         </div>
       )}

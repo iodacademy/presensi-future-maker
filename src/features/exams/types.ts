@@ -3,24 +3,40 @@
 /**
  * Jenis ujian.
  *
- * 'pretest' dikerjakan sebelum materi dimulai dan mengukur titik awal peserta,
- * sedangkan 'kuis' terikat pada satu pertemuan. Keduanya memakai mesin
- * pengerjaan dan penilaian yang sama; yang membedakan hanya keterikatannya
- * pada sesi dan tempat tampilnya.
+ * 'pretest' dan 'posttest' berdiri di depan seluruh kelas dan mengapit
+ * materinya, sedangkan 'kuis' terikat pada satu pertemuan. Ketiganya memakai
+ * mesin pengerjaan dan penilaian yang sama; yang membedakan hanya
+ * keterikatannya pada sesi dan tempat tampilnya.
  *
  * Exam kind.
  *
- * A 'pretest' is taken before the material starts and measures where a
- * participant begins, while a 'kuis' is tied to one meeting. Both use the same
- * engine and grading; what differs is the tie to a session and where it
- * appears.
+ * A 'pretest' and 'posttest' stand in front of the whole class and bracket the
+ * material, while a 'kuis' is tied to one meeting. All three use the same
+ * engine and grading; what differs is the tie to a session and where they
+ * appear.
  */
-export type ExamKind = 'pretest' | 'kuis';
+export type ExamKind = 'pretest' | 'posttest' | 'kuis';
 
 export const EXAM_KIND_LABELS: Record<ExamKind, string> = {
   pretest: 'Pretest',
+  posttest: 'Postest',
   kuis: 'Kuis Sesi',
 };
+
+/**
+ * Jenis ujian yang berdiri di depan seluruh kelas, bukan milik satu pertemuan.
+ *
+ * Keduanya memakai soal dan aturan nilai yang sama; yang membedakan hanya
+ * kapan dikerjakan. Pretest dan postest kerap memuat soal yang sama persis,
+ * supaya selisih nilainya dapat dibandingkan.
+ *
+ * Exam kinds that stand in front of the whole class rather than one meeting.
+ *
+ * Both use the same questions and scoring; only when they are taken differs.
+ * A pretest and posttest often hold identical questions, so the difference
+ * between the scores can be compared.
+ */
+export const CLASS_LEVEL_KINDS: ExamKind[] = ['pretest', 'posttest'];
 
 /**
  * Jenis soal yang dinilai otomatis.

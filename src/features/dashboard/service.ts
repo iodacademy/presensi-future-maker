@@ -6,6 +6,7 @@ import type { ClassDocument } from '../classes/types';
 import type { SessionDocument, AttendanceDocument } from '../attendance/types';
 import type { MentoringBookingDocument } from '../mentoring/types';
 import type { TaskDocument } from '../tasks/types';
+import type { ExamKind } from '../exams/types';
 import type { SubmissionDocument } from '../tasks/submission-types';
 import { isSessionAttendanceActive } from '../attendance/policy';
 import { isDeadlineUrgent, formatDeadlineLabel, formatProgressRatio } from './policy';
@@ -215,7 +216,7 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
     .map((e) => ({
       id: e.id,
       title: e.title,
-      kind: e.kind as 'pretest' | 'kuis',
+      kind: e.kind as ExamKind,
       dueAt: e.dueAt,
       isUrgent: isDeadlineUrgent(e.dueAt, nowMs),
       deadlineLabel: formatDeadlineLabel(isDeadlineUrgent(e.dueAt, nowMs), e.dueAt),

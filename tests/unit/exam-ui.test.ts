@@ -128,11 +128,14 @@ describe('tempat ujian pada antarmuka', () => {
     expect(classPage).toMatch(/<ExamBuilder classId=\{classId\} sessionId=\{s\.id\}/);
   });
 
-  it('pretest berdiri di tab tersendiri', () => {
-    // Pretest berdiri di depan seluruh kelas, bukan milik satu pertemuan.
-    // A pretest stands in front of the whole class, not one meeting.
-    expect(classPage).toMatch(/\['pretest', 'Pretest'\]/);
+  it('ujian tingkat kelas berdiri di tab tersendiri', () => {
+    // Pretest dan postest berdiri di depan seluruh kelas, bukan milik satu
+    // pertemuan, sehingga keduanya tidak pada kartu pertemuan.
+    //
+    // A pretest and posttest stand in front of the whole class rather than one
+    // meeting, so neither sits on a meeting card.
     expect(classPage).toMatch(/sessionId=\{null\} kind="pretest"/);
+    expect(classPage).toMatch(/sessionId=\{null\} kind="posttest"/);
   });
 
   it('kuis tampil pada kartu pertemuan peserta', () => {
@@ -215,5 +218,67 @@ describe('ujian wajib ditandai di beranda', () => {
   it('tampil sebagai kartu pada beranda peserta', () => {
     expect(home).toMatch(/pendingExams\.map\(\(e\) =>/);
     expect(home).toContain('WAJIB DIKERJAKAN');
+  });
+});
+
+/**
+ * Pretest, postest, dan kuis memakai mesin yang sama.
+ *
+ * Yang membedakan hanya keterikatannya pada sesi: kuis melekat pada satu
+ * pertemuan, dua lainnya berdiri di depan seluruh kelas. Menuliskan jenisnya
+ * satu per satu di tiap tempat berarti jenis keempat kelak terlewat di salah
+ * satunya.
+ *
+ * Pretest, posttest, and quiz share one engine.
+ *
+ * Only the tie to a session differs: a quiz hangs off one meeting, the other
+ * two stand in front of the whole class. Spelling the kinds out in each place
+ * means a fourth kind later gets missed in one of them.
+ */
+describe('tiga jenis ujian', () => {
+  const types = read('src/features/exams/types.ts');
+  const service = read('src/features/exams/service.ts');
+  const classPage = read('src/app/(admin)/admin/kelas/[classId]/page.tsx');
+  const builder = read('src/app/(admin)/admin/kelas/[classId]/exam-builder.tsx');
+
+  it('mengenal pretest, postest, dan kuis', () => {
+    expect(types).toContain("export type ExamKind = 'pretest' | 'posttest' | 'kuis'");
+    expect(types).toContain("posttest: 'Postest'");
+  });
+
+  it('mengikat sesi hanya pada kuis', () => {
+    // Berpatokan pada kuis, bukan menyebut pretest, membuat jenis tanpa sesi
+    // berikutnya ikut benar tanpa diubah.
+    //
+    // Keying on the quiz rather than naming the pretest makes the next
+    // session-less kind correct without a change.
+    expect(service).toMatch(/input\.kind === 'kuis' && !input\.sessionId/);
+    expect(service).toMatch(/input\.kind === 'kuis' \? input\.sessionId! : null/);
+  });
+
+  it('menyediakan pretest dan postest pada satu tab', () => {
+    // Keduanya mengapit materi yang sama dan kerap memuat soal yang sama
+    // persis.
+    //
+    // Both bracket the same material and often hold identical questions.
+    expect(classPage).toMatch(/\['ujian', 'Pretest & Postest'\]/);
+    expect(classPage).toContain('kind="pretest"');
+    expect(classPage).toContain('kind="posttest"');
+  });
+
+  it('memakai label terpusat, bukan nama yang diketik ulang', () => {
+    // Nama yang diketik ulang menyimpang begitu salah satunya berubah.
+    // Retyped names drift apart as soon as one of them changes.
+    expect(builder).toContain('EXAM_KIND_LABELS[kind]');
+    expect(builder).not.toMatch(/kind === 'pretest' \? '/);
+    expect(read('src/app/(student)/app/page.tsx')).toContain('EXAM_KIND_LABELS[e.kind]');
+  });
+
+  it('menandai setiap jenis pada beranda tanpa menyebutkannya', () => {
+    // Penyaring yang menyebut jenisnya akan melewatkan postest.
+    // A filter naming the kinds would miss the posttest.
+    const dashboard = read('src/features/dashboard/service.ts');
+    const blok = dashboard.slice(dashboard.indexOf('const pendingExams'), dashboard.indexOf('// Hitungan Rasio'));
+    expect(blok).not.toMatch(/kind === 'pretest'|kind === 'kuis'/);
   });
 });

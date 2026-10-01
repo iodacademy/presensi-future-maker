@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { MapPin, QrCode, Users, FileText, ClipboardList, ClipboardCheck, ChevronRight } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
+import { EXAM_KIND_LABELS } from '@/features/exams/types';
 import type { StudentHomeData } from '@/features/dashboard/types';
 
 export default function StudentHomePage() {
@@ -168,7 +169,7 @@ export default function StudentHomePage() {
                         {e.title}
                       </div>
                       <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-                        {e.kind === 'pretest' ? 'Pretest' : 'Kuis Sesi'} - belum dikerjakan
+                        {EXAM_KIND_LABELS[e.kind]} - belum dikerjakan
                       </div>
                     </div>
                     <ChevronRight size={16} color={e.isUrgent ? 'var(--color-warning)' : 'var(--color-text-faint)'} strokeWidth={2} />
