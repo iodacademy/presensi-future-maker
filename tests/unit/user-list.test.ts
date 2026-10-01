@@ -104,13 +104,43 @@ describe('dialog tambah akun', () => {
     expect(modal).toMatch(/rows\.map\(\(r\) => \(\{ \.\.\.r, role, kelas: className \}\)\)/);
   });
 
-  it('hanya menawarkan peran peserta dan mentor', () => {
-    // Admin pertama dibuat lewat skrip bootstrap; membuatnya dari antarmuka
-    // akan menjadi jalur peningkatan hak yang tidak diawasi.
+  it('menawarkan ketiga peran, termasuk admin', () => {
+    // Tanpa jalur ini, admin baru hanya dapat dibuat lewat skrip bootstrap di
+    // mesin pengembang, dan satu-satunya admin yang kehilangan aksesnya tidak
+    // punya jalan kembali.
     //
-    // The first admin is created through the bootstrap script; creating one
-    // from the UI would be an unsupervised privilege-escalation path.
-    expect(modal).toContain("Extract<Role, 'student' | 'mentor'>");
+    // Without this path a new admin can only be made through the bootstrap
+    // script on a developer machine, and the only admin who loses access has
+    // no way back.
+    expect(modal).toContain("'admin', 'Admin'");
+  });
+
+  it('menyebutkan kuasa admin sebelum akunnya dibuat', () => {
+    // Admin yang dibuat di sini memegang kuasa yang sama dengan yang
+    // membuatnya, termasuk membuat admin berikutnya dan menonaktifkan akun
+    // siapa pun. Menyebutkannya di muka lebih baik daripada membiarkannya
+    // ditemukan belakangan.
+    //
+    // An admin created here holds the same powers as whoever created them,
+    // including making further admins and deactivating anyone's account.
+    // Saying so up front beats leaving it to be discovered later.
+    expect(modal).toContain('Admin memegang kuasa penuh');
+  });
+
+  it('melewati pemilihan kelas bagi admin', () => {
+    // Admin tidak terikat kelas mana pun; dibiarkan, tombol lanjutnya mati
+    // menunggu kelas yang tidak pernah relevan baginya -- termasuk sebelum
+    // ada satu pun kelas dibuat.
+    //
+    // An admin belongs to no class; left in place, the continue button stays
+    // dead waiting for a class that never applies -- including before any
+    // class exists at all.
+    expect(modal).toMatch(/role !== 'admin' && \(/);
+    const policy = readFileSync(
+      resolve(process.cwd(), 'src/features/users/import-policy.ts'),
+      'utf-8'
+    );
+    expect(policy).toMatch(/if \(row\.role !== 'admin'\) \{/);
   });
 
   it('menahan tombol simpan sampai pratinjau dinyatakan sah', () => {

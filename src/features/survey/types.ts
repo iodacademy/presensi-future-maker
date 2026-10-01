@@ -3,23 +3,41 @@
 /**
  * Jenis pertanyaan survei.
  *
- * 'skala' adalah pilihan satu sampai lima yang dipakai untuk menilai, dan
- * 'pilihan' adalah daftar jawaban yang disusun admin. 'teks' dibiarkan terbuka
- * untuk masukan yang tidak terwakili keduanya.
+ * 'skala' dan 'rating' sama-sama menyimpan angka satu sampai lima; yang
+ * membedakan hanya bentuknya di layar peserta, berupa tombol berangka atau
+ * bintang. 'pilihan' adalah daftar jawaban yang disusun admin, dan 'teks'
+ * dibiarkan terbuka untuk masukan yang tidak terwakili ketiganya.
  *
  * Survey question kinds.
  *
- * 'skala' is a one-to-five choice used for rating, and 'pilihan' is a list of
- * answers an admin writes. 'teks' stays open for feedback neither of those
- * covers.
+ * 'skala' and 'rating' both store a number from one to five; only their shape
+ * on the participant's screen differs, as numbered buttons or as stars.
+ * 'pilihan' is a list of answers an admin writes, and 'teks' stays open for
+ * feedback none of the others covers.
  */
-export type SurveyQuestionKind = 'skala' | 'pilihan' | 'teks';
+export type SurveyQuestionKind = 'skala' | 'rating' | 'pilihan' | 'teks';
 
 export const SURVEY_QUESTION_LABELS: Record<SurveyQuestionKind, string> = {
   skala: 'Skala 1-5',
+  rating: 'Bintang 1-5',
   pilihan: 'Pilihan Ganda',
   teks: 'Isian Bebas',
 };
+
+/**
+ * Jenis yang nilainya berupa angka satu sampai lima.
+ *
+ * Skala dan bintang menyimpan angka yang sama dan dirata-rata dengan cara
+ * yang sama; yang berbeda hanya bentuknya di layar peserta. Memisahkan
+ * aturannya akan membuat dua tempat yang harus dijaga tetap sama.
+ *
+ * Kinds whose value is a number from one to five.
+ *
+ * A scale and a star rating store the same number and average the same way;
+ * only their shape on the participant's screen differs. Separating their rules
+ * would create two places to keep in step.
+ */
+export const NUMERIC_KINDS: SurveyQuestionKind[] = ['skala', 'rating'];
 
 export interface SurveyQuestion {
   id: string;
@@ -97,7 +115,7 @@ export interface SurveyAnswer {
   questionId: string;
   questionText: string;
   kind: SurveyQuestionKind;
-  /** Angka untuk 'skala', teks untuk jenis lain / A number for 'skala', text for other kinds */
+  /** Angka untuk 'skala' dan 'rating', teks untuk jenis lain / A number for 'skala' and 'rating', text for other kinds */
   value: string;
 }
 

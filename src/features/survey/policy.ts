@@ -1,5 +1,5 @@
 // Aturan formulir survei / Survey form rules
-import type { SurveyAnswer, SurveyQuestion, SurveyQuestionKind } from './types';
+import { NUMERIC_KINDS, type SurveyAnswer, type SurveyQuestion, type SurveyQuestionKind } from './types';
 
 /** Nilai yang sah untuk pertanyaan skala / Valid values for a scale question */
 export const SCALE_MIN = 1;
@@ -28,13 +28,14 @@ export function validateSurveyQuestion(input: {
     return { kind: input.kind, text, options };
   }
 
-  // Skala dan isian bebas tidak punya pilihan. Menyimpan pilihan yang pernah
-  // diketik lalu jenisnya diganti membuat pilihan itu muncul kembali bila
-  // jenisnya dikembalikan, padahal admin mengira sudah menghapusnya.
+  // Skala, bintang, dan isian bebas tidak punya pilihan. Menyimpan pilihan
+  // yang pernah diketik lalu jenisnya diganti membuat pilihan itu muncul
+  // kembali bila jenisnya dikembalikan, padahal admin mengira sudah
+  // menghapusnya.
   //
-  // Scale and free text have no options. Keeping options typed earlier and
-  // then switched away from makes them reappear if the kind is switched back,
-  // although the admin believed they were gone.
+  // Scale, stars, and free text have no options. Keeping options typed earlier
+  // and then switched away from makes them reappear if the kind is switched
+  // back, although the admin believed they were gone.
   return { kind: input.kind, text, options: [] };
 }
 
@@ -78,7 +79,7 @@ export function validateResponses(
       continue;
     }
 
-    if (q.kind === 'skala') {
+    if (NUMERIC_KINDS.includes(q.kind)) {
       const angka = Number(value);
       if (!Number.isInteger(angka) || angka < SCALE_MIN || angka > SCALE_MAX) {
         throw new Error(`Jawaban "${q.text}" harus berupa angka ${SCALE_MIN} sampai ${SCALE_MAX}`);
@@ -162,12 +163,13 @@ export function summariseAnswers(answers: SurveyAnswer[]): {
 
     const distribution = [...hitung.entries()]
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => (kind === 'skala' ? Number(a.label) - Number(b.label) : b.count - a.count));
+      .sort((a, b) =>
+        NUMERIC_KINDS.includes(kind) ? Number(a.label) - Number(b.label) : b.count - a.count
+      );
 
-    const average =
-      kind === 'skala'
-        ? Math.round((list.reduce((t, a) => t + Number(a.value), 0) / list.length) * 10) / 10
-        : null;
+    const average = NUMERIC_KINDS.includes(kind)
+      ? Math.round((list.reduce((t, a) => t + Number(a.value), 0) / list.length) * 10) / 10
+      : null;
 
     return { questionText, kind, count: list.length, average, distribution, texts: [] };
   });

@@ -78,16 +78,26 @@ export function validateImportRows(
     }
 
     // 3. Validasi Role / Validate Role
-    if (row.role !== 'student' && row.role !== 'mentor') {
-      errors.push('Role harus siswa atau mentor');
+    if (row.role !== 'student' && row.role !== 'mentor' && row.role !== 'admin') {
+      errors.push('Role harus siswa, mentor, atau admin');
     }
 
     // 4. Validasi Kelas / Validate Class
+    //
+    // Admin tidak terikat kelas mana pun, sehingga mewajibkan kelas baginya
+    // membuat akun admin mustahil dibuat sebelum ada satu pun kelas -- padahal
+    // admin justru orang yang membuat kelasnya.
+    //
+    // An admin belongs to no class, so requiring one makes an admin account
+    // impossible to create before any class exists -- although the admin is
+    // precisely who creates the classes.
     const classNorm = row.className.trim().toLowerCase();
-    if (!classNorm) {
-      errors.push('Nama kelas wajib diisi');
-    } else if (!validClassNamesNormalized.includes(classNorm)) {
-      errors.push(`Kelas tidak ditemukan: ${row.className}`);
+    if (row.role !== 'admin') {
+      if (!classNorm) {
+        errors.push('Nama kelas wajib diisi');
+      } else if (!validClassNamesNormalized.includes(classNorm)) {
+        errors.push(`Kelas tidak ditemukan: ${row.className}`);
+      }
     }
 
     if (errors.length > 0) {

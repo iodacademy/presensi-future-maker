@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { UserPlus, Search } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
+import { Pagination, PAGE_SIZE } from '@/components/ui/pagination';
 import { Button } from '@/components/ui/button';
 import { EditUserModal } from './edit-user-modal';
 import { AddUserModal } from './add-user-modal';
@@ -35,6 +36,7 @@ export default function AdminAkunPage() {
   const [status, setStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [togglingUid, setTogglingUid] = useState<string | null>(null);
   const [editing, setEditing] = useState<UserListItem | null>(null);
+  const [page, setPage] = useState(0);
 
   async function loadUsers() {
     const res = await fetch('/api/users');
@@ -83,6 +85,8 @@ export default function AdminAkunPage() {
   }
 
   const needle = query.trim().toLowerCase();
+  useEffect(() => { setPage(0); }, [tab, query, classFilter]);
+
   const visible = users.filter(
     (u) =>
       u.role === tab &&
@@ -209,7 +213,7 @@ export default function AdminAkunPage() {
         </div>
       ) : (
         <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
-          {visible.map((user, i) => (
+          {visible.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map((user, i) => (
             <div
               key={user.uid}
               style={{
@@ -278,6 +282,10 @@ export default function AdminAkunPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {!loading && visible.length > 0 && (
+        <Pagination page={page} totalItems={visible.length} onChange={setPage} label="akun" />
       )}
 
       {editing && (

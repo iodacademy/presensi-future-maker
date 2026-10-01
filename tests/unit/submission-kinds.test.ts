@@ -23,10 +23,15 @@ describe('rekap pengumpulan mengenal seluruh jenis tugas', () => {
   const page = read('src/app/(admin)/admin/tugas/page.tsx');
   const service = read('src/features/tasks/submission-service.ts');
 
-  it('menyediakan tab untuk tiap jenis tugas', () => {
-    for (const kind of Object.keys(TASK_KIND_LABELS)) {
-      expect(page, `tab ${kind} hilang`).toContain(`'${kind}'`);
-    }
+  it('menyediakan pilihan untuk tiap jenis tugas', () => {
+    // Jenisnya diturunkan dari TASK_KIND_LABELS, bukan diketik satu per satu:
+    // daftar tertutup inilah yang dulu menyembunyikan hasil praktik, dan
+    // jenis keempat kelak akan terlewat dengan cara yang sama.
+    //
+    // The kinds come from TASK_KIND_LABELS rather than being typed out: that
+    // closed list is what once hid practice results, and a fourth kind would
+    // be missed the same way.
+    expect(page).toMatch(/Object\.keys\(TASK_KIND_LABELS\) as TaskKind\[\]/);
   });
 
   it('tidak membatasi penyaring pada dua jenis saja', () => {
@@ -53,10 +58,42 @@ describe('rekap pengumpulan mengenal seluruh jenis tugas', () => {
 
   it('menyebut jenis yang sedang dilihat pada pesan kosong', () => {
     // "Belum ada submission" tidak memberi tahu admin bahwa ia sedang melihat
-    // tab yang salah.
+    // jenis tugas yang salah.
     //
-    // "No submissions yet" does not tell an admin they are on the wrong tab.
-    expect(page).toContain('TASK_KIND_LABELS[activeTab]');
+    // "No submissions yet" does not tell an admin they are looking at the
+    // wrong kind of task.
+    expect(page).toContain('TASK_KIND_LABELS[kind].toLowerCase()');
+  });
+
+  it('memisahkan yang menunggu dinilai dari yang sudah', () => {
+    // Daftar gabungan menuntut admin memindai nilainya satu per satu untuk
+    // menemukan mana yang masih perlu dikerjakan.
+    //
+    // A merged list makes an admin scan the scores one by one to find what
+    // still needs doing.
+    expect(page).toMatch(/\['menunggu', 'Menunggu Dinilai'\]/);
+    expect(page).toMatch(/\['dinilai', 'Sudah Dinilai'\]/);
+    expect(page).toContain("graded=${gradeTab === 'dinilai'}");
+  });
+
+  it('memilih kelas lebih dulu lewat kartu', () => {
+    // Admin menilai satu kelas dalam satu duduk; daftar gabungan empat kelas
+    // menuntutnya menyaring setiap kali membuka halaman.
+    //
+    // An admin grades one class in one sitting; a merged list of four classes
+    // makes them filter every time they open the page.
+    expect(page).toMatch(/if \(!selectedClass\)/);
+    expect(page).toContain('Kembali ke Daftar Kelas');
+  });
+
+  it('membuka isi pengumpulan dari layar penilaian', () => {
+    // Tautan yang hanya tercetak sebagai teks menuntut admin menyalinnya ke
+    // bilah alamat untuk setiap peserta.
+    //
+    // A link printed as plain text makes an admin copy it into the address bar
+    // for every participant.
+    expect(page).toMatch(/href=\{grading\.url\}/);
+    expect(page).toContain('rel="noopener noreferrer"');
   });
 });
 

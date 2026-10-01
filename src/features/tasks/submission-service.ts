@@ -287,7 +287,7 @@ export async function listSubmissionsForAdmin(
   //
   // TaskKind rather than two hand-written kinds: a closed list here left
   // submitted working papers stored but never visible to any admin.
-  filters: { kind?: TaskKind; classId?: string }
+  filters: { kind?: TaskKind; classId?: string; graded?: boolean }
 ): Promise<SubmissionDocument[]> {
   if (actor.role !== 'admin') {
     throw new Error('Hanya admin yang diizinkan melihat rekap tugas siswa');
@@ -304,8 +304,26 @@ export async function listSubmissionsForAdmin(
     query = query.where('classId', '==', filters.classId);
   }
 
-  const snapshot = await query.limit(50).get();
-  return snapshot.docs.map((doc) => doc.data() as SubmissionDocument);
+  // Batasnya dinaikkan dari 50: satu kelas berisi sembilan belas peserta
+  // dikali belasan tugas, sehingga lima puluh baris memotong daftar justru
+  // pada kelas yang paling ramai.
+  //
+  // The cap rises from 50: one class holds nineteen participants times a dozen
+  // tasks, so fifty rows cut the list off on exactly the busiest class.
+  const snapshot = await query.limit(500).get();
+  const submissions = snapshot.docs.map((doc) => doc.data() as SubmissionDocument);
+
+  // Dinilai atau belum disaring di sini, bukan lewat kueri: Firestore menuntut
+  // indeks gabungan untuk tiap padanan penyaring, dan jumlah barisnya sudah
+  // terbatas pada satu kelas.
+  //
+  // Graded or not is filtered here rather than in the query: Firestore demands
+  // a composite index for each combination of filters, and the row count is
+  // already bounded to one class.
+  if (filters.graded === undefined) return submissions;
+  return submissions.filter((s) =>
+    filters.graded ? s.score !== null && s.score !== undefined : s.score === null || s.score === undefined
+  );
 }
 
 /**

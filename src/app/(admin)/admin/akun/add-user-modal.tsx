@@ -16,7 +16,20 @@ interface AddUserModalProps {
 }
 
 type Step = 'role' | 'method' | 'single' | 'bulk';
-type AddableRole = Extract<Role, 'student' | 'mentor'>;
+/**
+ * Peran yang dapat dibuat dari layar ini.
+ *
+ * Admin termasuk: tanpa itu, admin baru hanya dapat dibuat lewat skrip
+ * bootstrap di mesin pengembang, dan satu-satunya admin yang kehilangan
+ * aksesnya tidak punya jalan kembali.
+ *
+ * Roles that can be created from this screen.
+ *
+ * Admin is included: without it a new admin can only be made through the
+ * bootstrap script on a developer machine, and the only admin who loses access
+ * has no way back.
+ */
+type AddableRole = Role;
 
 const labelStyle: React.CSSProperties = { fontSize: '10px', fontWeight: 700, color: 'var(--color-text-faint)' };
 
@@ -83,7 +96,7 @@ export function AddUserModal({ classes, onClose, onSuccess }: AddUserModalProps)
       const commitData = await commitRes.json();
       if (!commitRes.ok) throw new Error(commitData.error || 'Gagal menyimpan akun');
 
-      onSuccess(`${role === 'student' ? 'Peserta' : 'Mentor'} "${name}" berhasil ditambahkan`);
+      onSuccess(`${roleLabel} "${name}" berhasil ditambahkan`);
     } catch (err) {
       setError((err as Error).message);
       setSubmitting(false);
@@ -153,7 +166,7 @@ export function AddUserModal({ classes, onClose, onSuccess }: AddUserModalProps)
     }
   }
 
-  const roleLabel = role === 'student' ? 'Peserta' : 'Mentor';
+  const roleLabel = role === 'student' ? 'Peserta' : role === 'mentor' ? 'Mentor' : 'Admin';
 
   return (
     <div
@@ -189,14 +202,16 @@ export function AddUserModal({ classes, onClose, onSuccess }: AddUserModalProps)
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {([['student', 'Peserta', 'Mengikuti kelas, mengumpulkan tugas, dan presensi'],
-                 ['mentor', 'Mentor', 'Membimbing peserta dan mengisi slot mentoring']] as const).map(([value, title, desc]) => (
+                 ['mentor', 'Mentor', 'Membimbing peserta dan mengisi slot mentoring'],
+                 ['admin', 'Admin', 'Mengelola seluruh kelas, akun, nilai, dan pengaturan']] as const).map(([value, title, desc]) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => chooseRole(value)}
                   style={{
                     textAlign: 'left', padding: '14px', borderRadius: '10px',
-                    border: '1px solid var(--color-border)', backgroundColor: '#ffffff', cursor: 'pointer',
+                    border: `1px solid ${value === 'admin' ? 'var(--color-warning)' : 'var(--color-border)'}`,
+                    backgroundColor: '#ffffff', cursor: 'pointer',
                   }}
                 >
                   <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)' }}>{title}</div>
@@ -204,40 +219,59 @@ export function AddUserModal({ classes, onClose, onSuccess }: AddUserModalProps)
                 </button>
               ))}
             </div>
-            <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', margin: '14px 0 0' }}>
-              Akun admin tidak dibuat dari sini. Admin pertama dibuat lewat skrip bootstrap, dan
-              admin berikutnya diangkat dengan mengubah peran akun yang sudah ada.
+
+            {/* Admin yang dibuat di sini memegang kuasa yang sama dengan yang
+                membuatnya, termasuk membuat admin berikutnya dan menonaktifkan
+                akun siapa pun. Menyebutkannya di muka lebih baik daripada
+                membiarkannya ditemukan belakangan.
+
+                An admin created here holds the same powers as whoever created
+                them, including making further admins and deactivating anyone's
+                account. Saying so up front beats leaving it to be discovered
+                later. */}
+            <p style={{ fontSize: '10px', color: '#7c2d12', backgroundColor: 'var(--color-warning-light)', padding: '9px 11px', borderRadius: '8px', margin: '14px 0 0', lineHeight: 1.55 }}>
+              Admin memegang kuasa penuh: mengelola seluruh kelas dan nilai, menambah admin lain, serta
+              menonaktifkan akun siapa pun. Berikan hanya kepada orang yang memang menjalankan program ini.
             </p>
           </>
         )}
 
         {step === 'method' && (
           <>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={labelStyle}>KELAS</label>
-              <select
-                value={className}
-                onChange={(e) => setClassName(e.target.value)}
-                style={{
-                  width: '100%', padding: '10px', borderRadius: '8px', marginTop: '6px',
-                  border: '1px solid var(--color-border)', fontSize: '12px',
-                }}
-              >
-                {classes.length === 0 && <option value="">Belum ada kelas</option>}
-                {classes.map((c) => (
-                  <option key={c.id} value={c.canonicalName}>{c.canonicalName}</option>
-                ))}
-              </select>
-            </div>
+            {/* Admin tidak terikat kelas mana pun, sehingga pemilihnya
+                disembunyikan. Dibiarkan, tombol lanjutnya mati menunggu kelas
+                yang tidak pernah relevan baginya.
+
+                An admin belongs to no class, so the picker is hidden. Left in
+                place, the continue button stays dead waiting for a class that
+                never applies to them. */}
+            {role !== 'admin' && (
+              <div style={{ marginBottom: '16px' }}>
+                <label style={labelStyle}>KELAS</label>
+                <select
+                  value={className}
+                  onChange={(e) => setClassName(e.target.value)}
+                  style={{
+                    width: '100%', padding: '10px', borderRadius: '8px', marginTop: '6px',
+                    border: '1px solid var(--color-border)', fontSize: '12px',
+                  }}
+                >
+                  {classes.length === 0 && <option value="">Belum ada kelas</option>}
+                  {classes.map((c) => (
+                    <option key={c.id} value={c.canonicalName}>{c.canonicalName}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button
                 type="button"
                 onClick={() => setStep('single')}
-                disabled={!className}
+                disabled={role !== 'admin' && !className}
                 style={{
-                  textAlign: 'left', padding: '14px', borderRadius: '10px', cursor: className ? 'pointer' : 'not-allowed',
-                  border: '1px solid var(--color-border)', backgroundColor: '#ffffff', opacity: className ? 1 : 0.5,
+                  textAlign: 'left', padding: '14px', borderRadius: '10px', cursor: role === 'admin' || className ? 'pointer' : 'not-allowed',
+                  border: '1px solid var(--color-border)', backgroundColor: '#ffffff', opacity: role === 'admin' || className ? 1 : 0.5,
                 }}
               >
                 <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)' }}>Satu akun</div>
@@ -246,10 +280,10 @@ export function AddUserModal({ classes, onClose, onSuccess }: AddUserModalProps)
               <button
                 type="button"
                 onClick={() => setStep('bulk')}
-                disabled={!className}
+                disabled={role !== 'admin' && !className}
                 style={{
-                  textAlign: 'left', padding: '14px', borderRadius: '10px', cursor: className ? 'pointer' : 'not-allowed',
-                  border: '1px solid var(--color-border)', backgroundColor: '#ffffff', opacity: className ? 1 : 0.5,
+                  textAlign: 'left', padding: '14px', borderRadius: '10px', cursor: role === 'admin' || className ? 'pointer' : 'not-allowed',
+                  border: '1px solid var(--color-border)', backgroundColor: '#ffffff', opacity: role === 'admin' || className ? 1 : 0.5,
                 }}
               >
                 <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)' }}>Impor Excel</div>

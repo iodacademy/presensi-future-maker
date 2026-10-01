@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SCALE_MAX, SCALE_MIN } from '@/features/survey/policy';
 import type { SurveyFormDocument } from '@/features/survey/types';
@@ -135,6 +135,43 @@ export default function SurveyPage({ params }: { params: Promise<{ sessionId: st
                     </button>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Bintang, bukan angka. Lima tombol berangka menuntut peserta
+                menerjemahkan sendiri bahwa 5 berarti bagus; bintang sudah
+                berarti itu tanpa penjelasan.
+
+                Stars, not numbers. Five numbered buttons ask a participant to
+                work out for themselves that 5 means good; a star already means
+                that without explanation. */}
+            {q.kind === 'rating' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', flexWrap: 'wrap' }}>
+                {Array.from({ length: SCALE_MAX - SCALE_MIN + 1 }, (_, n) => n + SCALE_MIN).map((nilai) => {
+                  const terpilih = Number(answers[q.id] ?? 0) >= nilai;
+                  return (
+                    <button
+                      key={nilai}
+                      type="button"
+                      onClick={() => setAnswers((p) => ({ ...p, [q.id]: String(nilai) }))}
+                      aria-label={`${nilai} dari ${SCALE_MAX} bintang`}
+                      aria-pressed={answers[q.id] === String(nilai)}
+                      style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px', lineHeight: 0 }}
+                    >
+                      <Star
+                        size={34}
+                        strokeWidth={1.5}
+                        color={terpilih ? 'var(--color-warning)' : 'var(--color-border)'}
+                        fill={terpilih ? 'var(--color-warning)' : 'none'}
+                      />
+                    </button>
+                  );
+                })}
+                {answers[q.id] && (
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', marginLeft: '4px' }}>
+                    {answers[q.id]} dari {SCALE_MAX}
+                  </span>
+                )}
               </div>
             )}
 
