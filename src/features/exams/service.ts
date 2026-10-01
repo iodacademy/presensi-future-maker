@@ -712,3 +712,130 @@ export async function deleteExam(actor: Actor, examId: string): Promise<void> {
   batch.delete(db.collection('exams').doc(examId));
   await batch.commit();
 }
+
+/**
+ * Pembahasan sebuah percobaan yang sudah selesai.
+ *
+ * Hanya dikembalikan bila peserta tidak dapat mengulang lagi -- sudah lulus
+ * atau kesempatannya habis. Pembahasan memuat jawaban benarnya, sehingga
+ * menampilkannya selagi peserta masih punya kesempatan berarti memberikan
+ * kunci untuk percobaan berikutnya: ia tinggal mencatat lalu mengulang.
+ *
+ * Jawaban peserta sendiri selalu ditampilkan, sebab itu miliknya dan tidak
+ * membocorkan apa pun yang belum ia ketahui.
+ *
+ * The review for a finished attempt.
+ *
+ * Returned only once the participant cannot retake -- they passed or ran out
+ * of attempts. The review carries the correct answers, so showing it while
+ * attempts remain hands over the key for the next one: they need only write it
+ * down and retake.
+ *
+ * Their own answers always show, since those are theirs and reveal nothing
+ * they do not already know.
+ */
+export async function getAttemptReview(
+  actor: Actor,
+  attemptId: string
+): Promise<{
+  examTitle: string;
+  score: number;
+  rawScore: number;
+  passed: boolean;
+  correctCount: number;
+  attemptNumber: number;
+  /** Null berarti pembahasan ditahan; alasannya ada pada withheldReason / Null means the review is withheld; see withheldReason */
+  questions:
+    | {
+        id: string;
+        text: string;
+        options: { id: string; text: string }[];
+        selectedOptionId: string | null;
+        correctOptionId: string;
+        explanation: string;
+      }[]
+    | null;
+  withheldReason: string | null;
+}> {
+  if (actor.role !== 'student') {
+    throw new Error('Hanya peserta yang dapat melihat pembahasan ujiannya');
+  }
+
+  const db = getAdminDb();
+  const attemptSnap = await db.collection('examAttempts').doc(attemptId).get();
+  if (!attemptSnap.exists) throw new Error('Percobaan tidak ditemukan');
+
+  const attempt = attemptSnap.data() as AttemptDocument;
+  if (attempt.studentId !== actor.uid) throw new Error('Percobaan ini bukan milik Anda');
+  if (attempt.status !== 'selesai') throw new Error('Percobaan ini belum dikumpulkan');
+
+  const ringkasan = {
+    examTitle: attempt.examTitle,
+    score: attempt.score ?? 0,
+    rawScore: attempt.rawScore ?? 0,
+    passed: attempt.passed ?? false,
+    correctCount: attempt.correctCount ?? 0,
+    attemptNumber: attempt.attemptNumber,
+  };
+
+  const semuaSnap = await db
+    .collection('examAttempts')
+    .where('examId', '==', attempt.examId)
+    .where('studentId', '==', actor.uid)
+    .get();
+
+  const semua = semuaSnap.docs.map((d) => d.data() as AttemptDocument);
+  const sudahLulus = semua.some((a) => a.passed === true);
+  const kesempatanHabis = semua.length >= MAX_ATTEMPTS;
+
+  if (!sudahLulus && !kesempatanHabis) {
+    return {
+      ...ringkasan,
+      questions: null,
+      withheldReason:
+        'Pembahasan ditampilkan setelah Anda lulus atau kesempatan mengerjakan habis, supaya percobaan berikutnya tetap bermakna.',
+    };
+  }
+
+  const [qSnap, kSnap, aSnap] = await Promise.all([
+    db.collection('examQuestions').where('examId', '==', attempt.examId).get(),
+    db.collection('examAnswerKeys').where('examId', '==', attempt.examId).get(),
+    db.collection('examAnswers').where('attemptId', '==', attemptId).get(),
+  ]);
+
+  const keys = new Map<string, AnswerKeyDocument>();
+  for (const d of kSnap.docs) {
+    const k = d.data() as AnswerKeyDocument;
+    keys.set(k.id, k);
+  }
+
+  const jawaban = new Map<string, string | null>();
+  for (const d of aSnap.docs) {
+    const a = d.data() as AnswerDocument;
+    jawaban.set(a.questionId, a.selectedOptionId);
+  }
+
+  const byId = new Map(qSnap.docs.map((d) => {
+    const q = d.data() as QuestionDocument;
+    return [q.id, q];
+  }));
+
+  // Urutannya mengikuti urutan percobaan itu, bukan urutan aslinya: peserta
+  // mengingat soal nomor tiga sebagaimana ia melihatnya.
+  //
+  // The order follows that attempt's order rather than the original: a
+  // participant remembers question three as they saw it.
+  const questions = attempt.questionOrder
+    .map((qid) => byId.get(qid))
+    .filter((q): q is QuestionDocument => Boolean(q))
+    .map((q) => ({
+      id: q.id,
+      text: q.text,
+      options: q.options,
+      selectedOptionId: jawaban.get(q.id) ?? null,
+      correctOptionId: keys.get(q.id)?.correctOptionId ?? '',
+      explanation: keys.get(q.id)?.explanation ?? '',
+    }));
+
+  return { ...ringkasan, questions, withheldReason: null };
+}

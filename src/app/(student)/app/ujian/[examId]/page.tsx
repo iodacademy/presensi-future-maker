@@ -178,8 +178,11 @@ export default function ExamRunnerPage({ params }: { params: Promise<{ examId: s
             </div>
           )}
 
+          <Link href={`/app/ujian/${examId}/hasil/${state?.attemptId ?? ''}`} style={{ textDecoration: 'none' }}>
+            <Button variant="primary" style={{ width: '100%', marginTop: '16px' }}>Lihat Pembahasan</Button>
+          </Link>
           <Link href="/app/jadwal" style={{ textDecoration: 'none' }}>
-            <Button variant="primary" style={{ width: '100%', marginTop: '16px' }}>Kembali ke Jadwal</Button>
+            <Button variant="secondary" style={{ width: '100%', marginTop: '8px' }}>Kembali ke Jadwal</Button>
           </Link>
         </div>
       </main>
