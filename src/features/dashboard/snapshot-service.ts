@@ -6,6 +6,13 @@ import type { SessionDocument } from '../attendance/types';
 import { summariseAnswers } from '../survey/policy';
 import { NUMERIC_KINDS } from '../survey/types';
 import type { SurveyAnswer, SurveyFormDocument, SurveyResponseDocument } from '../survey/types';
+import { ageFrom } from '../users/profile-service';
+import {
+  DISABILITY_LABELS,
+  ENTRY_STATUS_LABELS,
+  GENDER_LABELS,
+  type StudentProfileDocument,
+} from '../users/profile-types';
 import type {
   AlertStudent,
   AlertThresholds,
@@ -85,6 +92,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     responsesSnap,
     capstoneSnap,
     catatanSnap,
+    profilesSnap,
   ] = await Promise.all([
     db.collection('classes').get(),
     db.collection('users').where('role', '==', 'student').get(),
@@ -99,6 +107,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     db.collection('surveyResponses').get(),
     db.collection('assessmentScores').where('kind', '==', 'capstone').get(),
     db.collection('studentNotes').get(),
+    db.collection('studentProfiles').get(),
   ]);
 
   const classes = classesSnap.docs.map((d) => d.data() as ClassDocument);
@@ -122,6 +131,46 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
       droppedOut: terdaftar.length - hidup,
     };
   });
+
+  // --- profil peserta ---------------------------------------------------
+  const profilPerSiswa = new Map<string, StudentProfileDocument>();
+  for (const d of profilesSnap.docs) {
+    const pr = d.data() as StudentProfileDocument;
+    // Hanya peserta aktif yang dihitung: profil peserta yang sudah keluar
+    // tetap tersimpan, dan menyertakannya membuat sebarannya menggambarkan
+    // angkatan yang tidak lagi ada.
+    //
+    // Only active participants count: a departed participant's profile stays
+    // stored, and including it would have the distribution describe a cohort
+    // that no longer exists.
+    if (aktifIds.has(pr.id)) profilPerSiswa.set(pr.id, pr);
+  }
+
+  function hitungSebaran(ambil: (p: StudentProfileDocument) => string, labels: Record<string, string>) {
+    const hitung = new Map<string, number>();
+    for (const pr of profilPerSiswa.values()) {
+      const kunci = ambil(pr);
+      hitung.set(kunci, (hitung.get(kunci) ?? 0) + 1);
+    }
+    return Object.keys(labels)
+      .map((k) => ({ label: labels[k], count: hitung.get(k) ?? 0 }))
+      .filter((x) => x.count > 0);
+  }
+
+  const usia = [...profilPerSiswa.values()]
+    .map((pr) => ageFrom(pr.birthDate))
+    .filter((u): u is number => u !== null);
+
+  const profile = {
+    completed: profilPerSiswa.size,
+    pending: aktif.length - profilPerSiswa.size,
+    genders: hitungSebaran((pr) => pr.gender, GENDER_LABELS),
+    disabilities: hitungSebaran((pr) => pr.disability, DISABILITY_LABELS),
+    entryStatuses: hitungSebaran((pr) => pr.entryStatus, ENTRY_STATUS_LABELS),
+    averageAge: usia.length === 0 ? null : Math.round((usia.reduce((a, b) => a + b, 0) / usia.length) * 10) / 10,
+    youngest: usia.length === 0 ? null : Math.min(...usia),
+    oldest: usia.length === 0 ? null : Math.max(...usia),
+  };
 
   // --- kehadiran per pertemuan ----------------------------------------
   const sessions = sessionsSnap.docs
@@ -469,6 +518,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     totalActive: aktif.length,
     totalDroppedOut: students.length - aktif.length,
     classes: perKelas,
+    profile,
     attendancePerSession,
     submissionPerTask,
     scorePerTask,

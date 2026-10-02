@@ -156,6 +156,33 @@ export interface AlertThresholds {
   quiz: number;
 }
 
+/**
+ * Rangkuman profil peserta aktif.
+ *
+ * Jumlah yang belum melengkapi dicatat terpisah, bukan dilebur ke dalam
+ * sebarannya: persentase yang dihitung dari tujuh puluh peserta tetapi
+ * disajikan seolah dari seratus akan dibaca sebagai gambaran utuh angkatan.
+ *
+ * A summary of active participants' profiles.
+ *
+ * How many have not completed theirs is recorded separately rather than folded
+ * into the distribution: a percentage computed over seventy participants but
+ * presented as if over a hundred would be read as the whole cohort.
+ */
+export interface ProfileSummary {
+  /** Peserta aktif yang sudah melengkapi profilnya / Active participants who completed their profile */
+  completed: number;
+  /** Peserta aktif yang belum / Active participants who have not */
+  pending: number;
+  genders: { label: string; count: number }[];
+  disabilities: { label: string; count: number }[];
+  entryStatuses: { label: string; count: number }[];
+  /** Null bila belum ada yang melengkapi / Null when nobody has completed one */
+  averageAge: number | null;
+  youngest: number | null;
+  oldest: number | null;
+}
+
 export interface DashboardSnapshot {
   /** Tanggal WIB "YYYY-MM-DD", sekaligus id dokumennya / WIB date "YYYY-MM-DD", also the document id */
   id: string;
@@ -167,6 +194,7 @@ export interface DashboardSnapshot {
   totalActive: number;
   totalDroppedOut: number;
   classes: ClassSnapshot[];
+  profile: ProfileSummary;
 
   /** Kehadiran per pertemuan, dalam persen peserta aktif / Attendance per meeting, as a percentage of active participants */
   attendancePerSession: SeriesPoint[];

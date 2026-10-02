@@ -22,6 +22,15 @@ import type { DashboardSnapshot } from '@/features/dashboard/snapshot-types';
  * load: computing them means reading around thirteen thousand documents, and
  * this is the most-opened page there is.
  */
+const SEBARAN_WARNA = [
+  'var(--color-primary)',
+  '#7c8cf8',
+  '#9b8bd4',
+  '#c48bc0',
+  '#e09bab',
+  '#f0b49a',
+];
+
 export default function AdminDashboardPage() {
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
@@ -144,6 +153,65 @@ export default function AdminDashboardPage() {
             </div>
           ))}
         </div>
+      </Panel>
+
+      <Panel
+        title="Profil peserta"
+        hint={`${snapshot.profile.completed} dari ${snapshot.profile.completed + snapshot.profile.pending} peserta aktif sudah melengkapi profilnya`}
+      >
+        {snapshot.profile.completed === 0 ? (
+          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+            Belum ada peserta yang melengkapi profilnya
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Jumlah yang belum melengkapi disebut di atas sebarannya, bukan
+                disembunyikan. Sebaran dari tujuh puluh peserta yang dibaca
+                seolah dari seratus menuntun ke kesimpulan yang salah tentang
+                angkatannya.
+
+                How many have not completed theirs is stated above the
+                distribution rather than hidden. A distribution over seventy
+                participants read as if over a hundred leads to the wrong
+                conclusion about the cohort. */}
+            {snapshot.profile.pending > 0 && (
+              <div style={{ fontSize: '10px', color: 'var(--color-warning)', fontWeight: 600 }}>
+                {snapshot.profile.pending} peserta belum melengkapi profilnya. Sebaran di bawah dihitung dari {snapshot.profile.completed} yang sudah.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <StatCard
+                label="Rata-rata usia"
+                value={snapshot.profile.averageAge ?? '-'}
+                detail={
+                  snapshot.profile.youngest === null
+                    ? undefined
+                    : `termuda ${snapshot.profile.youngest}, tertua ${snapshot.profile.oldest}`
+                }
+              />
+            </div>
+
+            {([
+              ['Jenis kelamin', snapshot.profile.genders],
+              ['Status saat mendaftar', snapshot.profile.entryStatuses],
+              ['Disabilitas', snapshot.profile.disabilities],
+            ] as const).map(([judul, baris]) => (
+              <div key={judul}>
+                <h3 style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', margin: '0 0 7px' }}>
+                  {judul.toUpperCase()}
+                </h3>
+                <StackedBar
+                  parts={baris.map((b, i) => ({
+                    label: b.label,
+                    value: b.count,
+                    color: SEBARAN_WARNA[i % SEBARAN_WARNA.length],
+                  }))}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </Panel>
 
       <Panel title="Kehadiran per pertemuan" hint="Persentase peserta aktif yang hadir di tiap pertemuan">
