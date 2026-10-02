@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutGrid, Calendar, Users, FileText, Contact, LogOut, Settings } from 'lucide-react';
+import { LayoutGrid, Calendar, Users, FileText, Contact, LogOut, Settings, Award } from 'lucide-react';
 import type { Role } from '@/features/auth/types';
 import { ProfileMenu } from '@/components/ui/profile-menu';
 
@@ -49,6 +49,7 @@ export function AppShell({ role, userName, classNameTitle, children }: AppShellP
       { label: 'Jadwal dan Presensi', href: '/admin/jadwal', icon: Calendar },
       { label: 'Mentoring', href: '/admin/mentoring', icon: Users },
       { label: 'Tugas Siswa', href: '/admin/tugas', icon: FileText },
+      { label: 'Nilai Akhir', href: '/admin/nilai', icon: Award },
       { label: 'Peserta dan Mentor', href: '/admin/akun', icon: Contact },
       { label: 'Pengaturan', href: '/admin/pengaturan', icon: Settings },
     ],

@@ -266,3 +266,113 @@ describe('perhitungan nilai akhir kelas', () => {
     expect(blok).toMatch(/sort\(\(a, b\) => b\.score - a\.score\)/);
   });
 });
+
+describe('halaman nilai akhir', () => {
+  const page = read('src/app/(admin)/admin/nilai/page.tsx');
+  const panel = read('src/app/(admin)/admin/nilai/import-scores.tsx');
+  const shell = read('src/components/app-shell.tsx');
+
+  it('tercantum pada menu admin', () => {
+    expect(shell).toContain("href: '/admin/nilai'");
+  });
+
+  it('memilih kelas lebih dulu lewat kartu', () => {
+    // Nilai dibaca satu kelas dalam satu duduk; daftar gabungan empat kelas
+    // menuntut admin menyaring setiap kali membuka halaman.
+    //
+    // Scores are read one class at a time; a merged list of four classes makes
+    // an admin filter every time they open the page.
+    expect(page).toMatch(/if \(!selected\)/);
+    expect(page).toContain('Kembali ke Daftar Kelas');
+  });
+
+  it('menyediakan unduhan contoh sebelum berkasnya dipilih', () => {
+    // Tanpa contoh, admin menebak nama kolomnya dan berkasnya ditolak.
+    // Without a template an admin guesses the column names and the file is
+    // refused.
+    expect(panel).toContain('downloadScoreTemplate');
+    expect(panel).toContain('scoreTemplateRows()');
+  });
+
+  it('menyebut kolomnya di layar, bukan hanya di dalam berkasnya', () => {
+    expect(panel).toMatch(/SCORE_HEADERS\.join/);
+  });
+
+  it('menampilkan pratinjau sebelum menyimpan', () => {
+    // Seratus baris yang langsung masuk tanpa diperiksa berarti seratus nilai
+    // yang harus diperbaiki bila kolomnya ternyata tertukar.
+    //
+    // A hundred rows landing unchecked means a hundred scores to fix when a
+    // column turns out to be swapped.
+    // Dicocokkan pada awal ekspresinya, bukan di mana pun: pemeriksaan yang
+    // longgar tetap lolos ketika blok pratinjaunya dimatikan dengan "false &&"
+    // di depannya.
+    //
+    // Matched at the start of the expression rather than anywhere: a loose
+    // check still passes when the preview block is switched off with a leading
+    // "false &&".
+    expect(panel).toMatch(/\{preview && preview\.length > 0 && \(/);
+    expect(panel).toContain('siap disimpan');
+  });
+
+  it('membedakan kolom nilai yang kosong pada pratinjaunya', () => {
+    // Kolom kosong dan nilai nol terlihat sama bila keduanya ditulis angka.
+    // An empty column and a zero look alike if both are written as a number.
+    expect(panel).toMatch(/r\.capstone === null \? 'capstone -'/);
+  });
+
+  it('menyebut surel yang dilewatkan setelah impor', () => {
+    // Impor yang melaporkan "100 berhasil" padahal lima surel salah ketik
+    // meninggalkan lima peserta tanpa nilai tanpa ada yang tahu.
+    //
+    // An import reporting "100 succeeded" when five emails were mistyped leaves
+    // five participants unscored with nobody the wiser.
+    expect(panel).toMatch(/skipped\.map/);
+    expect(panel).toContain('baris dilewatkan');
+  });
+
+  it('mengosongkan kolom berkas setelah dibaca', () => {
+    // Tanpa ini, memilih berkas bernama sama setelah diperbaiki tidak memicu
+    // apa pun.
+    //
+    // Without this, picking an identically named file after fixing it fires
+    // nothing.
+    expect(panel).toContain("e.target.value = ''");
+  });
+
+  it('menyebut komponen yang belum dinilai', () => {
+    // Nilai akhir yang dibaca sebagai final padahal capstone-nya belum masuk
+    // akan dipakai untuk keputusan yang salah.
+    //
+    // A final score read as final when the capstone is not yet in would be used
+    // for the wrong decision.
+    expect(page).toMatch(/g\.pending\.length > 0/);
+    expect(page).toContain('akan naik setelah nilainya masuk');
+  });
+
+  it('merinci sumbangan tiap komponen saat barisnya dibuka', () => {
+    // Nilai akhir tanpa rinciannya tidak dapat diperiksa, dan peserta yang
+    // mempertanyakannya dijawab dengan angka yang sama.
+    //
+    // A final score without its breakdown cannot be checked, and a participant
+    // who questions it is answered with the same number.
+    expect(page).toMatch(/g\.breakdown\.map/);
+    expect(page).toContain('COMPONENT_LABELS[b.component]');
+  });
+
+  it('menyaring lebih dulu, memotong halaman sesudahnya', () => {
+    // Memotong lebih dulu akan mencari di dalam sepuluh baris pertama saja.
+    // Slicing first would search only within the first ten rows.
+    expect(page).toMatch(/\.slice\(page \* PAGE_SIZE, \(page \+ 1\) \* PAGE_SIZE\)/);
+    expect(page).toMatch(/visible = grades\.filter/);
+  });
+
+  it('menyebut bobot tiap komponen pada halamannya', () => {
+    // Nilai akhir yang bobotnya tidak disebut tidak dapat dihitung ulang
+    // siapa pun yang mempertanyakannya.
+    //
+    // A final score whose weights go unstated cannot be recomputed by anyone
+    // who questions it.
+    expect(page).toContain('GRADE_WEIGHTS');
+  });
+});
