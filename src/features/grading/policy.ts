@@ -1,96 +1,52 @@
 // Aturan perhitungan nilai akhir / Final score calculation rules
-import {
-  CAPSTONE_ASPECTS,
-  GRADE_WEIGHTS,
-  RUBRIC_MAX,
-  RUBRIC_MIN,
-  SHOWCASE_ASPECTS,
-  type ComponentBreakdown,
-  type GradeComponent,
-  type RubricKind,
-  type RubricScoreDocument,
-} from './types';
-
-export function aspectsFor(kind: RubricKind): readonly { id: string; label: string }[] {
-  return kind === 'capstone' ? CAPSTONE_ASPECTS : SHOWCASE_ASPECTS;
-}
+import { GRADE_WEIGHTS, type ComponentBreakdown, type GradeComponent } from './types';
 
 /**
- * Memvalidasi satu penilaian rubrik.
+ * Memvalidasi nilai capstone atau showcase yang diimpor.
  *
- * Seluruh aspek wajib dinilai: aspek yang dilewatkan tidak dapat dibedakan
- * dari aspek bernilai terendah bila dibiarkan kosong, dan rata-ratanya dihitung
- * dari jumlah aspek yang berbeda antar-penilai.
+ * Diperiksa di sini meski berkasnya sudah diurai di peramban: muatan yang
+ * dikirim ke endpoint dapat diubah sebelum tiba, dan nilai di luar nol sampai
+ * seratus membuat nilai akhirnya melampaui batas atau jatuh di bawah nol.
  *
- * Validates one rubric assessment.
+ * Validates an imported capstone or showcase score.
  *
- * Every aspect must be scored: an aspect left out cannot be told from one
- * scored lowest if left blank, and its average would be computed over a
- * different aspect count for each assessor.
+ * Checked here although the file is parsed in the browser: the payload sent to
+ * the endpoint can be altered before it arrives, and a score outside zero to a
+ * hundred would push the final past its limit or below zero.
  */
-export function validateRubricScores(kind: RubricKind, scores: Record<string, number>): Record<string, number> {
-  const bersih: Record<string, number> = {};
-
-  for (const aspek of aspectsFor(kind)) {
-    const nilai = scores[aspek.id];
-
-    if (nilai === undefined || nilai === null) {
-      throw new Error(`Aspek "${aspek.label}" belum dinilai`);
-    }
-
-    if (!Number.isInteger(nilai) || nilai < RUBRIC_MIN || nilai > RUBRIC_MAX) {
-      throw new Error(`Nilai "${aspek.label}" harus bilangan bulat ${RUBRIC_MIN} sampai ${RUBRIC_MAX}`);
-    }
-
-    bersih[aspek.id] = nilai;
+export function validateAssessmentScore(value: unknown, label: string): number {
+  // Sel kosong diperiksa lebih dulu. Number('') bernilai nol, bukan NaN,
+  // sehingga peserta yang belum dinilai akan tercatat nol -- nilai sah yang
+  // terbaca sebagai gagal total, dan tidak dapat dibedakan dari nilai nol yang
+  // memang diberikan penilainya.
+  //
+  // Empty cells are checked first. Number('') is zero, not NaN, so a
+  // participant not yet assessed would be recorded as zero -- a valid score
+  // that reads as total failure, indistinguishable from a zero their assessor
+  // actually gave.
+  const mentah = typeof value === 'number' ? value : String(value ?? '').trim();
+  if (mentah === '') {
+    throw new Error(`Nilai ${label} masih kosong`);
   }
 
-  return bersih;
-}
+  const angka = typeof mentah === 'number' ? mentah : Number(mentah);
 
-/**
- * Mengubah nilai rubrik satu penilai menjadi skala 0-100.
- *
- * Skala 1-4 dipetakan sehingga 1 menjadi 0 dan 4 menjadi 100. Memperlakukan
- * angka 1-4 sebagai persentase langsung akan membuat penilaian terbaik bernilai
- * empat dari seratus, dan membaginya dengan empat membuat penilaian terburuk
- * bernilai dua puluh lima -- padahal 1 berarti tidak memenuhi sama sekali.
- *
- * Converts one assessor's rubric scores to a 0-100 scale.
- *
- * A 1-4 scale maps so that 1 becomes 0 and 4 becomes 100. Treating 1-4 as a
- * percentage directly would make the best assessment worth four out of a
- * hundred, and dividing by four would make the worst worth twenty-five --
- * although 1 means not met at all.
- */
-export function rubricToPercent(kind: RubricKind, scores: Record<string, number>): number {
-  const aspek = aspectsFor(kind);
-  if (aspek.length === 0) return 0;
+  if (!Number.isFinite(angka)) {
+    throw new Error(`Nilai ${label} harus berupa angka`);
+  }
 
-  const total = aspek.reduce((t, a) => t + (scores[a.id] ?? RUBRIC_MIN), 0);
-  const rata = total / aspek.length;
+  if (angka < 0 || angka > 100) {
+    throw new Error(`Nilai ${label} harus antara 0 dan 100`);
+  }
 
-  return Math.round(((rata - RUBRIC_MIN) / (RUBRIC_MAX - RUBRIC_MIN)) * 100);
-}
-
-/**
- * Merata-ratakan penilaian beberapa penilai menjadi satu angka 0-100.
- *
- * Dirata-rata dari penilai yang sudah menilai, bukan dari jumlah penilai yang
- * seharusnya: menahan nilai sampai ketiganya masuk berarti satu mentor yang
- * belum menilai menahan nilai seluruh kelasnya.
- *
- * Averages several assessors into one 0-100 figure.
- *
- * Averaged over the assessors who have scored rather than over how many should
- * have: withholding until all three are in would have one mentor who has not
- * assessed hold back their whole class's scores.
- */
-export function averageRubric(kind: RubricKind, entries: RubricScoreDocument[]): number | null {
-  if (entries.length === 0) return null;
-
-  const total = entries.reduce((t, e) => t + rubricToPercent(kind, e.scores), 0);
-  return Math.round(total / entries.length);
+  // Dibulatkan ke satu angka di belakang koma: nilai 83,333333 dari pembagian
+  // di Excel tidak perlu disimpan seutuhnya, dan angka panjang pada layar
+  // terbaca seperti ketelitian yang tidak dimilikinya.
+  //
+  // Rounded to one decimal: an 83.333333 from a division in Excel need not be
+  // stored whole, and a long number on screen reads as a precision it does not
+  // have.
+  return Math.round(angka * 10) / 10;
 }
 
 /**

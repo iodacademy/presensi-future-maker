@@ -34,82 +34,48 @@ export const COMPONENT_LABELS: Record<GradeComponent, string> = {
 };
 
 /**
- * Rentang skala rubrik.
+ * Nilai capstone atau showcase seorang peserta.
  *
- * Satu sampai empat, bukan nol sampai empat: skala rubrik menilai tingkatan
- * mutu, dan nol berarti aspeknya tidak ada sama sekali -- keadaan yang tidak
- * dapat dibedakan dari aspek yang belum dinilai.
+ * Diimpor sudah berupa angka 0-100, bukan dihitung dari rubrik di dalam
+ * aplikasi: penilaiannya terjadi sekali, di ruangan, oleh mentor dan juri yang
+ * memegang lembar penilaian sendiri. Memindahkan rapat penilaian ke dalam
+ * aplikasi menuntut tiga mentor membuka layar yang sama saat itu juga.
  *
- * The rubric scale's range.
+ * Rinciannya tidak tersimpan. Itu konsekuensi yang dipilih: peserta yang
+ * bertanya "kenapa nilai saya 85" dijawab dari lembar penilaian di luar
+ * aplikasi, bukan dari layar ini.
  *
- * One to four, not zero to four: a rubric scale rates degrees of quality, and
- * zero would mean the aspect is absent entirely -- a state indistinguishable
- * from one not yet assessed.
+ * One participant's capstone or showcase score.
+ *
+ * Imported as a finished 0-100 figure rather than computed from a rubric in the
+ * app: the assessment happens once, in a room, by mentors and judges holding
+ * their own score sheets. Moving that meeting into the app would require three
+ * mentors to open the same screen at that moment.
+ *
+ * The per-aspect detail is not stored. That is a chosen consequence: a
+ * participant asking "why is my score 85" is answered from the score sheet
+ * outside the app, not from this screen.
  */
-export const RUBRIC_MIN = 1;
-export const RUBRIC_MAX = 4;
+export type AssessmentKind = 'capstone' | 'showcase';
 
-/** Jumlah mentor yang menilai satu capstone / How many mentors assess one capstone */
-export const CAPSTONE_ASSESSOR_COUNT = 3;
+export const ASSESSMENT_LABELS: Record<AssessmentKind, string> = {
+  capstone: 'Capstone',
+  showcase: 'Showcase',
+};
 
-/**
- * Aspek penilaian capstone.
- *
- * Disimpan sebagai daftar tetap, bukan disusun admin: nilai yang sudah masuk
- * menunjuk aspeknya menurut id, dan aspek yang dapat ditambah atau dihapus di
- * tengah jalan membuat rata-rata dua peserta dihitung dari jumlah aspek yang
- * berbeda.
- *
- * The capstone's assessment aspects.
- *
- * Kept as a fixed list rather than composed by an admin: scores already in
- * point at their aspect by id, and aspects that could be added or removed
- * partway through would have two participants' averages computed over
- * different counts.
- */
-export const CAPSTONE_ASPECTS = [
-  { id: 'masalah', label: 'Kejelasan masalah' },
-  { id: 'teknis', label: 'Kualitas teknis' },
-  { id: 'luaran', label: 'Kualitas luaran' },
-  { id: 'ai', label: 'Pemanfaatan AI' },
-  { id: 'dokumentasi', label: 'Kelengkapan dokumentasi' },
-] as const;
-
-/** Aspek penilaian showcase / The showcase's assessment aspects */
-export const SHOWCASE_ASPECTS = [
-  { id: 'penyampaian', label: 'Kejelasan penyampaian' },
-  { id: 'demonstrasi', label: 'Demonstrasi karya' },
-  { id: 'penguasaan', label: 'Penguasaan materi' },
-  { id: 'waktu', label: 'Ketepatan waktu' },
-] as const;
-
-export type RubricKind = 'capstone' | 'showcase';
-
-/**
- * Penilaian satu peserta oleh satu penilai.
- *
- * Tiap penilai menyimpan dokumennya sendiri, bukan menulis ke satu dokumen
- * bersama: tiga mentor yang menilai berbarengan akan saling menimpa bila
- * berbagi satu dokumen, dan yang terakhir menyimpan menghapus dua lainnya.
- *
- * One participant's assessment by one assessor.
- *
- * Each assessor keeps their own document rather than writing into a shared
- * one: three mentors assessing at the same time would overwrite each other in
- * a shared document, and whoever saved last would erase the other two.
- */
-export interface RubricScoreDocument {
-  id: string; // ${kind}_${studentId}_${assessorId}
-  kind: RubricKind;
+export interface AssessmentScoreDocument {
+  id: string; // ${kind}_${studentId}
+  kind: AssessmentKind;
   studentId: string;
   studentName: string;
   classId: string;
-  assessorId: string;
-  assessorName: string;
-  /** Nilai tiap aspek, 1-4, dikunci menurut id aspeknya / Each aspect's score, 1-4, keyed by aspect id */
-  scores: Record<string, number>;
+  className: string;
+  /** Nilai 0-100 / The score, 0-100 */
+  score: number;
   note: string;
-  updatedAt: string;
+  /** Admin yang mengimpornya, untuk ditelusuri bila angkanya dipertanyakan / The admin who imported it, traceable if the figure is questioned */
+  importedBy: string;
+  importedAt: string;
 }
 
 /** Rincian satu komponen pada nilai akhir / One component's detail in the final score */

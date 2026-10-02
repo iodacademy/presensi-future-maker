@@ -1,37 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import {
-  validateRubricScores,
-  rubricToPercent,
-  averageRubric,
+  validateAssessmentScore,
   averageWithZeros,
   calculateFinalGrade,
-  aspectsFor,
 } from '@/features/grading/policy';
-import {
-  GRADE_WEIGHTS,
-  CAPSTONE_ASPECTS,
-  SHOWCASE_ASPECTS,
-  RUBRIC_MIN,
-  RUBRIC_MAX,
-  type RubricScoreDocument,
-} from '@/features/grading/types';
-
-const penuh = (kind: 'capstone' | 'showcase', nilai: number) =>
-  Object.fromEntries(aspectsFor(kind).map((a) => [a.id, nilai]));
-
-const penilai = (kind: 'capstone' | 'showcase', nilai: number, id = 'm1'): RubricScoreDocument => ({
-  id: `${kind}_s1_${id}`,
-  kind,
-  studentId: 's1',
-  studentName: 'Budi',
-  classId: 'c1',
-  assessorId: id,
-  assessorName: 'Mentor',
-  scores: penuh(kind, nilai),
-  note: '',
-  updatedAt: '2026-10-02T00:00:00.000Z',
-});
+import { GRADE_WEIGHTS } from '@/features/grading/types';
 
 /**
  * Bobot yang jumlahnya tidak seratus membuat nilai tertinggi yang mungkin
@@ -68,109 +42,78 @@ describe('bobot komponen', () => {
 });
 
 /**
- * Skala 1-4 dipetakan sehingga 1 menjadi 0 dan 4 menjadi 100.
+ * Nilai capstone dan showcase diimpor sudah berupa angka 0-100.
  *
- * Memperlakukan 1-4 sebagai persentase langsung membuat penilaian terbaik
- * bernilai empat dari seratus; membaginya dengan empat membuat penilaian
- * terburuk bernilai dua puluh lima, padahal 1 berarti tidak memenuhi sama
- * sekali.
+ * Penilaiannya terjadi sekali, di ruangan, oleh mentor dan juri yang memegang
+ * lembar penilaian sendiri. Yang diperiksa aplikasi tinggal kewarasan
+ * angkanya.
  *
- * A 1-4 scale maps so 1 becomes 0 and 4 becomes 100.
+ * Capstone and showcase scores are imported as finished 0-100 figures.
  *
- * Treating 1-4 as a percentage makes the best assessment worth four out of a
- * hundred; dividing by four makes the worst worth twenty-five, although 1 means
- * not met at all.
+ * The assessment happens once, in a room, by mentors and judges holding their
+ * own score sheets. All the app checks is whether the number is sane.
  */
-describe('konversi skala rubrik', () => {
-  it('memetakan nilai terendah ke nol', () => {
-    expect(rubricToPercent('capstone', penuh('capstone', RUBRIC_MIN))).toBe(0);
+describe('validasi nilai yang diimpor', () => {
+  it('menerima nol sampai seratus', () => {
+    expect(validateAssessmentScore(0, 'capstone')).toBe(0);
+    expect(validateAssessmentScore(100, 'capstone')).toBe(100);
+    expect(validateAssessmentScore(85, 'capstone')).toBe(85);
   });
 
-  it('memetakan nilai tertinggi ke seratus', () => {
-    expect(rubricToPercent('capstone', penuh('capstone', RUBRIC_MAX))).toBe(100);
+  it('menerima angka dalam bentuk teks', () => {
+    // Excel mengirim selnya sebagai teks pada berkas CSV.
+    // Excel sends its cells as text in a CSV file.
+    expect(validateAssessmentScore('85', 'capstone')).toBe(85);
+    expect(validateAssessmentScore(' 85 ', 'capstone')).toBe(85);
   });
 
-  it('memetakan nilai tengah ke sepertiga dan duapertiga', () => {
-    expect(rubricToPercent('capstone', penuh('capstone', 2))).toBe(33);
-    expect(rubricToPercent('capstone', penuh('capstone', 3))).toBe(67);
+  it('menolak nilai di luar rentangnya', () => {
+    // Nilai di luar nol sampai seratus membuat nilai akhirnya melampaui batas
+    // atau jatuh di bawah nol.
+    //
+    // A score outside zero to a hundred would push the final past its limit or
+    // below zero.
+    expect(() => validateAssessmentScore(101, 'capstone')).toThrow(/antara 0 dan 100/);
+    expect(() => validateAssessmentScore(-1, 'capstone')).toThrow(/antara 0 dan 100/);
   });
 
-  it('tidak memperlakukan angkanya sebagai persentase langsung', () => {
-    // Penilaian sempurna tidak boleh bernilai empat dari seratus.
-    // A perfect assessment must not be worth four out of a hundred.
-    expect(rubricToPercent('capstone', penuh('capstone', 4))).not.toBe(4);
-  });
-
-  it('berlaku sama untuk rubrik showcase', () => {
-    expect(rubricToPercent('showcase', penuh('showcase', RUBRIC_MIN))).toBe(0);
-    expect(rubricToPercent('showcase', penuh('showcase', RUBRIC_MAX))).toBe(100);
-  });
-});
-
-describe('validasi penilaian rubrik', () => {
-  it('menuntut seluruh aspeknya dinilai', () => {
-    // Aspek yang dilewatkan tidak dapat dibedakan dari aspek bernilai terendah.
-    // An aspect left out cannot be told from one scored lowest.
-    const kurang = { ...penuh('capstone', 3) };
-    delete kurang[CAPSTONE_ASPECTS[0].id];
-    expect(() => validateRubricScores('capstone', kurang)).toThrow(/belum dinilai/);
-  });
-
-  it('menolak nilai di luar satu sampai empat', () => {
-    for (const n of [0, 5, -1, 2.5]) {
-      expect(() => validateRubricScores('capstone', penuh('capstone', n)), String(n)).toThrow(
-        /bilangan bulat 1 sampai 4/
-      );
+  it('menolak yang bukan angka', () => {
+    for (const v of ['belum dinilai', {}, true]) {
+      expect(() => validateAssessmentScore(v, 'capstone'), String(v)).toThrow(/harus berupa angka/);
     }
   });
 
-  it('membuang aspek yang tidak dikenal', () => {
-    // Aspek asing pada muatan kiriman tidak boleh ikut tersimpan dan
-    // mengubah pembagi rata-ratanya.
+  it('menolak sel kosong dengan pesannya sendiri', () => {
+    // Number('') bernilai nol, bukan NaN, sehingga peserta yang belum dinilai
+    // akan tercatat nol -- nilai sah yang terbaca sebagai gagal total, dan
+    // tidak dapat dibedakan dari nilai nol yang memang diberikan penilainya.
     //
-    // An unknown aspect in the payload must not be stored and shift the
-    // average's divisor.
-    const hasil = validateRubricScores('capstone', { ...penuh('capstone', 3), palsu: 4 });
-    expect(Object.keys(hasil).sort()).toEqual(CAPSTONE_ASPECTS.map((a) => a.id).sort());
+    // Number('') is zero, not NaN, so a participant not yet assessed would be
+    // recorded as zero -- a valid score that reads as total failure,
+    // indistinguishable from a zero their assessor actually gave.
+    for (const v of ['', '   ', null, undefined]) {
+      expect(() => validateAssessmentScore(v, 'capstone'), String(v)).toThrow(/masih kosong/);
+    }
   });
 
-  it('memakai daftar aspek yang berbeda untuk tiap rubrik', () => {
-    expect(aspectsFor('capstone')).toHaveLength(5);
-    expect(aspectsFor('showcase')).toHaveLength(4);
-    expect(SHOWCASE_ASPECTS.map((a) => a.id)).not.toContain('ai');
-  });
-});
-
-/**
- * Nilai keluar dari penilai yang sudah menilai, bukan menunggu seluruhnya.
- *
- * Menahan nilai sampai ketiga mentor masuk berarti satu mentor yang belum
- * menilai menahan nilai seluruh kelasnya.
- *
- * A score comes from the assessors who have scored, not from waiting for all.
- *
- * Withholding until all three mentors are in would have one mentor who has not
- * assessed hold back their whole class's scores.
- */
-describe('rata-rata beberapa penilai', () => {
-  it('merata-rata tiga penilai', () => {
-    const hasil = averageRubric('capstone', [
-      penilai('capstone', 4, 'm1'),
-      penilai('capstone', 4, 'm2'),
-      penilai('capstone', 1, 'm3'),
-    ]);
-    // 100, 100, 0 -> 66,67 dibulatkan 67
-    expect(hasil).toBe(67);
+  it('membulatkan ke satu angka di belakang koma', () => {
+    // Nilai 83,333333 dari pembagian di Excel tidak perlu disimpan seutuhnya,
+    // dan angka panjang pada layar terbaca seperti ketelitian yang tidak
+    // dimilikinya.
+    //
+    // An 83.333333 from a division in Excel need not be stored whole, and a
+    // long number on screen reads as a precision it does not have.
+    expect(validateAssessmentScore(83.333333, 'capstone')).toBe(83.3);
+    expect(validateAssessmentScore(83.35, 'capstone')).toBe(83.4);
   });
 
-  it('tetap menghasilkan nilai dari satu penilai saja', () => {
-    expect(averageRubric('capstone', [penilai('capstone', 4)])).toBe(100);
-  });
-
-  it('mengembalikan null bila belum ada yang menilai', () => {
-    // Null dibedakan dari nol: belum dinilai bukan berarti bernilai nol.
-    // Null differs from zero: not yet assessed does not mean scored zero.
-    expect(averageRubric('capstone', [])).toBe(null);
+  it('menyebut komponen yang bermasalah pada pesannya', () => {
+    // "Nilai harus antara 0 dan 100" tidak memberi tahu kolom mana yang salah
+    // saat dua kolom diimpor sekaligus.
+    //
+    // "Score must be between 0 and 100" does not say which column is wrong when
+    // two are imported at once.
+    expect(() => validateAssessmentScore(200, 'showcase')).toThrow(/showcase/);
   });
 });
 
