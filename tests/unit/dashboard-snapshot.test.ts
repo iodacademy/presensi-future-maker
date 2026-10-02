@@ -1,0 +1,181 @@
+// @vitest-environment node
+import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { ALERT_THRESHOLDS, SNAPSHOT_MAX_AGE_MS } from '@/features/dashboard/snapshot-service';
+
+const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf-8');
+const service = read('src/features/dashboard/snapshot-service.ts');
+const types = read('src/features/dashboard/snapshot-types.ts');
+const route = read('src/app/api/dashboard/snapshot/route.ts');
+
+const compute = service.slice(
+  service.indexOf('export async function computeSnapshot'),
+  service.indexOf('export async function getSnapshot')
+);
+
+/**
+ * Menghitung ringkasan menuntut membaca seluruh kehadiran, pengumpulan,
+ * percobaan ujian, dan jawaban survei -- sekitar tiga belas ribu dokumen untuk
+ * seratus peserta.
+ *
+ * Dashboard adalah halaman yang paling sering dibuka, dan dua puluh kali buka
+ * sehari sudah melampaui kuota baca harian Firestore.
+ *
+ * Computing the snapshot means reading every attendance record, submission,
+ * exam attempt, and survey response -- around thirteen thousand documents for a
+ * hundred participants.
+ *
+ * The dashboard is the most-opened page, and twenty opens a day already exceeds
+ * Firestore's daily read quota.
+ */
+describe('ringkasan disimpan, bukan dihitung tiap buka', () => {
+  it('membaca dokumen ringkasannya lebih dulu', () => {
+    const baca = service.slice(service.indexOf('export async function getSnapshot'));
+    expect(baca).toMatch(/collection\('dashboardSnapshots'\)\.doc\(id\)\.get\(\)/);
+  });
+
+  it('menghitung ulang hanya bila sudah usang', () => {
+    const baca = service.slice(service.indexOf('export async function getSnapshot'));
+    expect(baca).toMatch(/umur < SNAPSHOT_MAX_AGE_MS/);
+    expect(baca).toMatch(/return data;/);
+  });
+
+  it('menyimpan hasil hitungannya agar tidak diulang', () => {
+    const baca = service.slice(service.indexOf('export async function getSnapshot'));
+    expect(baca).toMatch(/collection\('dashboardSnapshots'\)\.doc\(id\)\.set\(baru\)/);
+  });
+
+  it('memakai umur satu jam', () => {
+    // Angka yang menua sepanjang hari membuat admin yang baru menilai tugas
+    // tidak melihat perubahannya dan mengira penilaiannya gagal.
+    //
+    // Figures that age all day leave an admin who just graded a task seeing no
+    // change and assuming the grading failed.
+    expect(SNAPSHOT_MAX_AGE_MS).toBe(60 * 60 * 1000);
+  });
+
+  it('menyediakan paksa hitung ulang', () => {
+    expect(route).toMatch(/refresh'\) === '1'/);
+    expect(service).toMatch(/options\.force/);
+  });
+
+  it('membaca tiap koleksi sekali, bukan per peserta', () => {
+    // Satu kueri per peserta per angka akan menjadi ratusan kueri untuk satu
+    // halaman, dan biayanya ditanggung tiap kali halamannya dibuka.
+    //
+    // One query per participant per figure would be hundreds of queries for one
+    // page, and the cost would be paid on every open.
+    expect(compute).toMatch(/await Promise\.all\(\[/);
+    expect(compute).not.toMatch(/for \([\s\S]{0,140}await db\.collection/);
+  });
+
+  it('dikunci pada tanggal WIB, bukan tanggal UTC', () => {
+    // Pukul 06.00 WIB adalah 23.00 UTC hari sebelumnya; tanggal UTC membuat
+    // ringkasan pagi tersimpan sebagai ringkasan kemarin.
+    //
+    // 06:00 WIB is 23:00 UTC the previous day; a UTC date would store the
+    // morning's snapshot as yesterday's.
+    expect(service).toContain("timeZone: 'Asia/Jakarta'");
+  });
+});
+
+describe('perhitungan angkanya', () => {
+  it('membagi dengan jumlah peserta aktif, bukan terdaftar', () => {
+    // Menyertakan yang sudah keluar membuat persentase kehadirannya melampaui
+    // seratus setelah beberapa peserta drop out.
+    //
+    // Including those who left would push the attendance percentage past a
+    // hundred once some participants drop out.
+    expect(compute).toMatch(/if \(!aktifIds\.has\(a\.studentId\)\) continue;/);
+    expect(compute).toMatch(/aktif\.length/);
+  });
+
+  it('menandai pertemuan yang belum berlangsung sebagai null', () => {
+    // Nol berarti tidak ada yang hadir, dan grafiknya akan menunjukkan
+    // kemerosotan yang tidak pernah terjadi.
+    //
+    // Zero means nobody attended, and the chart would show a collapse that
+    // never happened.
+    expect(compute).toMatch(/s\.startsAt > nowIso \? null/);
+  });
+
+  it('menandai tugas yang belum dinilai sebagai null', () => {
+    expect(compute).toMatch(/nilai\.length === 0 \? null/);
+  });
+
+  it('memakai nilai tertinggi tiap ujian per peserta', () => {
+    // Sejalan dengan aturan remedial: percobaan ulang yang lulus sudah dipatok
+    // di KKM saat disimpan.
+    //
+    // In line with the remedial rule: a passing retake was already pinned at
+    // the mark when it was stored.
+    expect(compute).toMatch(/Math\.max\(peta\.get\(a\.studentId\) \?\? 0, a\.score\)/);
+  });
+
+  it('mengecualikan pretest dari rata-rata kuis peserta', () => {
+    // Pretest mengukur titik awal sebelum diajar; memasukkannya menyeret
+    // seluruh angkanya ke bawah secara merata.
+    //
+    // A pretest measures the starting point before teaching; folding it in
+    // drags every figure down evenly.
+    expect(compute).toMatch(/examById\.get\(examId\)\?\.kind === 'pretest'\) continue/);
+  });
+
+  it('merata-rata survei hanya dari pertanyaan bernilai angka', () => {
+    // Isian bebas dan pilihan ganda tidak punya angka untuk dijumlahkan.
+    // Free text and multiple choice have no number to add up.
+    expect(compute).toMatch(/NUMERIC_KINDS\.includes\(r\.kind\)/);
+  });
+
+  it('mengurutkan daftar siaga dari masalah terbanyak', () => {
+    // Peserta yang kehadirannya buruk sekaligus tugasnya tertinggal lebih
+    // butuh dihubungi daripada yang hanya satu angkanya rendah.
+    //
+    // Someone whose attendance is poor and whose tasks are behind needs
+    // contacting more than someone with only one low figure.
+    expect(compute).toMatch(/b\.issueCount - a\.issueCount/);
+  });
+
+  it('memakai ambang yang disepakati', () => {
+    expect(ALERT_THRESHOLDS).toEqual({ attendance: 75, task: 70, quiz: 70 });
+  });
+
+  it('menyimpan ambangnya pada ringkasannya', () => {
+    // Ambang yang berubah membuat daftar lama tidak dapat dibaca ulang dengan
+    // aturan yang sama.
+    //
+    // A changed threshold makes an older list unreadable under the same rule.
+    expect(compute).toContain('thresholds: ALERT_THRESHOLDS');
+    expect(types).toContain('thresholds: AlertThresholds');
+  });
+
+  it('mengecualikan capstone dari hitungan tugas', () => {
+    // Capstone punya bobotnya sendiri pada nilai akhir; menghitungnya sebagai
+    // tugas harian membuatnya terhitung dua kali.
+    //
+    // The capstone carries its own weight in the final score; counting it as a
+    // daily task would count it twice.
+    expect(compute).toMatch(/t\.kind !== 'capstone'/);
+  });
+
+  it('menghitung peringkat dari rata-rata tiga angka yang sama dengan daftar siaga', () => {
+    // Nilai akhir berbobot ada pada halaman Nilai Akhir; dua angka berbeda
+    // pada satu layar akan terbaca sebagai kesalahan hitung.
+    //
+    // The weighted final score lives on the Final Score page; two different
+    // numbers on one screen would read as a miscalculation.
+    expect(compute).toMatch(/t\.attendanceRate \+ t\.taskRate \+ t\.quizAverage\) \/ 3/);
+  });
+});
+
+describe('penjagaan akses', () => {
+  it('hanya admin yang dapat membacanya', () => {
+    expect(service.slice(service.indexOf('export async function getSnapshot'))).toContain("actor.role !== 'admin'");
+    expect(route).toContain("actor.role !== 'admin'");
+  });
+
+  it('hanya admin yang dapat menghitungnya', () => {
+    expect(compute).toContain("actor.role !== 'admin'");
+  });
+});
