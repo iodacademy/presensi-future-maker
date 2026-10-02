@@ -1,0 +1,808 @@
+/*
+ * Gaya dashboard, mengikuti rancangan "Dashboard FutureMakers update".
+ *
+ * Ditulis sebagai modul CSS, bukan gaya sebaris: panelnya bersandar pada grid
+ * dan titik putus lebar, dan keduanya tidak dapat dinyatakan sebagai gaya
+ * sebaris. Sebagai modul, namanya tidak bertabrakan dengan halaman lain.
+ *
+ * Warnanya memakai token aplikasi yang sudah ada, bukan nilai heksa dari
+ * rancangannya: tema aplikasi berubah di satu tempat, dan nilai yang ditulis
+ * ulang di sini akan tertinggal.
+ *
+ * The dashboard's styles, following the "Dashboard FutureMakers update" design.
+ *
+ * Written as a CSS module rather than inline styles: the panels rely on grid and
+ * width breakpoints, neither of which can be expressed inline. As a module, its
+ * names cannot collide with another page.
+ *
+ * Colours use the application's existing tokens rather than the design's hex
+ * values: the app's theme changes in one place, and values retyped here would be
+ * left behind.
+ */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* --- kepala --------------------------------------------------------------- */
+.header {
+  background: var(--color-primary);
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 22px 24px;
+  border-bottom: 6px solid var(--color-highlight-yellow);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ffffff;
+  opacity: 0.85;
+  margin: 0 0 4px;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  margin: 0;
+}
+
+.generated {
+  font-size: 11px;
+  color: #ffffff;
+  opacity: 0.8;
+  margin: 6px 0 0;
+}
+
+.hdrActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.14);
+  padding: 4px;
+  border-radius: 999px;
+}
+
+.seg button {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.seg button:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.seg button[aria-pressed='true'] {
+  background: var(--color-highlight-yellow);
+  color: var(--color-text-main);
+  font-weight: 600;
+}
+
+.seg button:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.headerBtn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: #ffffff;
+  color: var(--color-primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.headerBtn:hover:not([disabled]) {
+  background: var(--color-highlight-yellow);
+  color: var(--color-text-main);
+}
+
+.headerBtn:focus-visible {
+  outline: 2px solid var(--color-highlight-yellow);
+  outline-offset: 2px;
+}
+
+.headerBtn[disabled] {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* --- panel ---------------------------------------------------------------- */
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 20px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panelHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.panelHead h2 {
+  font-size: 17px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  color: var(--color-text-main);
+  margin: 0;
+}
+
+.panelHead h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text-main);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: 0 0 10px;
+}
+
+.empty {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* --- ubin angka ----------------------------------------------------------- */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kpi {
+  background: var(--color-primary);
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.kpi .l {
+  font-size: 13px;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.kpi .v {
+  font-family: var(--font-heading);
+  font-size: 30px;
+  font-weight: 700;
+  margin: 2px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi .v small {
+  font-size: 14px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.kpi .s {
+  font-size: 12px;
+  margin: 0;
+  opacity: 0.85;
+}
+
+.kpi .sGood {
+  opacity: 1;
+  font-weight: 500;
+}
+
+.kpi .sBad {
+  color: var(--color-highlight-yellow);
+  opacity: 1;
+  font-weight: 600;
+}
+
+/* --- batang bertumpuk ----------------------------------------------------- */
+.bars .row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 72px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--color-text-main);
+}
+
+.stack {
+  display: flex;
+  height: 26px;
+  border-radius: 6px;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.stack > div {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+.segOk {
+  background: var(--color-success-light);
+  color: #4d6e00;
+}
+
+.segBad {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+  justify-content: center;
+}
+
+.legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.sw {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 5px;
+  vertical-align: -1px;
+}
+
+/* --- peta panas ----------------------------------------------------------- */
+.scroll {
+  overflow-x: auto;
+}
+
+.hm {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.hm .c {
+  border-radius: 6px;
+  padding: 8px 0;
+  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hm .c small {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.8;
+  margin-top: 1px;
+}
+
+.hm .h {
+  color: var(--color-text-muted);
+  text-align: center;
+  font-size: 11px;
+  align-self: end;
+}
+
+.hm .lb {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: var(--color-text-main);
+}
+
+.ok {
+  background: var(--color-success-light);
+  color: #4d6e00;
+}
+
+.wr {
+  background: var(--color-warning-light);
+  color: #7a5f00;
+}
+
+.bd {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
+/* Belum berjalan dibedakan dari nilai rendah: keduanya menuntut tindakan yang
+   berbeda, dan satu warna untuk keduanya membuat jadwal yang belum jalan
+   terbaca sebagai kegagalan.
+
+   Not-yet-held differs from a low score: the two call for different action, and
+   one colour for both would have an unstarted schedule read as a failure. */
+.na {
+  background: var(--color-bg-app);
+  color: var(--color-text-faint);
+  font-weight: 400;
+}
+
+/* --- profil --------------------------------------------------------------- */
+.profile {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.box {
+  background: var(--color-primary-light);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.hbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hbar .row {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--color-text-main);
+}
+
+.hbar .track {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.hbar .b {
+  height: 24px;
+  border-radius: 5px;
+  flex: none;
+  min-width: 68px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.hbar .val b {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- learning analytics --------------------------------------------------- */
+.laGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.laItem {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.laWide {
+  grid-column: 1 / -1;
+}
+
+/* --- fase program --------------------------------------------------------- */
+.tl {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 8px;
+  min-width: 760px;
+}
+
+.tl .ph {
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tl .ph .n {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text-main);
+}
+
+.tl .ph .d {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.tl .done {
+  background: var(--color-primary-light);
+  border-color: transparent;
+}
+
+.tl .done .n::after {
+  content: ' \2713';
+  color: var(--color-primary);
+}
+
+.tl .now {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.tl .now .n,
+.tl .now .d {
+  color: #ffffff;
+}
+
+.tl .now .d {
+  opacity: 0.9;
+}
+
+.tl .tag {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--color-highlight-yellow);
+  color: var(--color-text-main);
+  border-radius: 999px;
+  padding: 1px 8px;
+  margin-bottom: 4px;
+}
+
+.tl .prog {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.3);
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.tl .prog i {
+  display: block;
+  height: 100%;
+  background: var(--color-highlight-yellow);
+}
+
+/* --- peringkat ------------------------------------------------------------ */
+.rk4 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.rkbox {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.rkbox h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text-main);
+}
+
+.rkbox h3 small {
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+.rkrow {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 52px;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-main);
+}
+
+.rkrow:last-child {
+  border-bottom: 0;
+}
+
+.rkn {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--color-bg-app);
+  color: var(--color-text-main);
+}
+
+.rkn.top {
+  background: var(--color-highlight-yellow);
+  color: var(--color-text-main);
+}
+
+.rkscore {
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.linkbtn {
+  font: inherit;
+  font-size: 12px;
+  color: var(--color-primary);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font-weight: 500;
+}
+
+.linkbtn:hover {
+  text-decoration: underline;
+}
+
+/* --- tabel --------------------------------------------------------------- */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table td {
+  padding: 9px 8px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-main);
+}
+
+.ctr {
+  text-align: center;
+}
+
+.pill {
+  display: inline-block;
+  min-width: 48px;
+  text-align: center;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-weight: 600;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pillOk {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+/* --- titik kehadiran ----------------------------------------------------- */
+.dots {
+  display: inline-flex;
+  gap: 3px;
+  flex-wrap: nowrap;
+}
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dotH {
+  background: var(--color-success);
+}
+
+.dotX {
+  background: var(--color-danger);
+}
+
+.dotN {
+  background: var(--color-border);
+}
+
+.stpill {
+  display: inline-block;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.sumrow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sumrow button {
+  font: inherit;
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-weight: 500;
+  border: 2px solid transparent;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.sumrow button:hover {
+  opacity: 1;
+}
+
+.sumrow button[aria-pressed='true'] {
+  opacity: 1;
+  border-color: currentColor;
+  font-weight: 600;
+}
+
+.sumrow button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* --- tabel peserta ------------------------------------------------------- */
+.roster td {
+  white-space: nowrap;
+}
+
+.roster th.grp {
+  border-bottom: 2px solid var(--color-primary);
+  color: var(--color-primary);
+}
+
+.roster th.subh {
+  font-size: 11px;
+  padding: 4px 6px;
+}
+
+.roster .sep {
+  border-left: 1px solid var(--color-border);
+}
+
+.roster td,
+.roster th {
+  padding-left: 7px;
+  padding-right: 7px;
+}
+
+/* Kolom nama dibekukan supaya baris yang digulir mendatar tetap dapat
+   ditelusuri ke orangnya. Dua puluh kolom tanpa ini membuat admin kehilangan
+   siapa yang sedang ia baca.
+
+   The name column is frozen so a row scrolled sideways can still be traced to
+   its person. Without it, twenty columns leave an admin unsure whose row they
+   are reading. */
+.roster .stick {
+  position: sticky;
+  left: 0;
+  background: var(--color-surface);
+  z-index: 1;
+  box-shadow: 1px 0 0 var(--color-border);
+}
+
+.roster th.stick {
+  background: var(--color-surface);
+}
+
+.roster td.note {
+  white-space: normal;
+  color: var(--color-text-muted);
+  min-width: 300px;
+  line-height: 1.45;
+}
+
+.noteInput {
+  width: 100%;
+  padding: 5px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  font-size: 11px;
+  font-family: inherit;
+  color: var(--color-text-main);
+  background: var(--color-surface);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 760px) {
+  .laGrid,
+  .two,
+  .rk4 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kpis,
+  .profile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .title {
+    font-size: 24px;
+  }
+}

@@ -89,3 +89,22 @@ export function formatDateWib(isoString: string | null | undefined): string {
     timeZone: WIB,
   }).format(date);
 }
+
+/**
+ * Tanggal WIB hari ini dalam bentuk "YYYY-MM-DD".
+ *
+ * Dipakai sebagai id dokumen harian, sehingga batas harinya mengikuti hari
+ * peserta, bukan UTC: tanpa ini, pembukaan aplikasi pukul tujuh pagi WIB
+ * tercatat pada tanggal sebelumnya.
+ *
+ * Today's WIB date as "YYYY-MM-DD".
+ *
+ * Used as a daily document id, so the day boundary follows the participant's day
+ * rather than UTC: without this, opening the app at seven in the morning WIB
+ * would be recorded under the previous date.
+ */
+export function wibDate(now = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Jakarta',
+  }).format(now);
+}

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ALERT_THRESHOLDS, SNAPSHOT_MAX_AGE_MS } from '@/features/dashboard/snapshot-service';
+import { wibDate } from '@/lib/time';
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf-8');
 const service = read('src/features/dashboard/snapshot-service.ts');
@@ -76,7 +77,15 @@ describe('ringkasan disimpan, bukan dihitung tiap buka', () => {
     //
     // 06:00 WIB is 23:00 UTC the previous day; a UTC date would store the
     // morning's snapshot as yesterday's.
-    expect(service).toContain("timeZone: 'Asia/Jakarta'");
+    // Diuji dari perilakunya, bukan dari teks di berkasnya: fungsinya kini
+    // dipakai dua fitur dan tinggal di lib/time, dan pencarian teks akan gagal
+    // hanya karena berkasnya berpindah.
+    //
+    // Tested through its behaviour rather than text in a file: the function is
+    // now used by two features and lives in lib/time, and a text search would
+    // fail merely because the file moved.
+    expect(wibDate(new Date('2026-03-01T22:30:00Z'))).toBe('2026-03-02');
+    expect(wibDate(new Date('2026-03-01T16:00:00Z'))).toBe('2026-03-01');
   });
 });
 
@@ -344,8 +353,14 @@ describe('halaman dashboard', () => {
     //
     // Zero means nobody attended, and the chart would show a collapse that
     // never happened.
-    expect(charts).toMatch(/p\.value === null \? emptyLabel/);
-    expect(charts).toMatch(/\{p\.value !== null && \(/);
+    // Peta panasnya menggambar "·" berkelas na, bukan nol persen.
+    // The heatmap draws a "·" with the na class rather than zero percent.
+    expect(charts).toMatch(/if \(!v \|\| v\.total === 0\)/);
+    expect(charts).toMatch(/s\.na/);
+    // Batang berkelompoknya menyebut "belum" alih-alih membiarkan ruang kosong.
+    // The grouped bars say "belum" rather than leaving empty space.
+    expect(charts).toMatch(/!adaIsi && \(/);
+    expect(charts).toContain('belum');
   });
 
   it('tidak menggambar bagian bernilai nol pada batang bertumpuk', () => {
@@ -353,7 +368,10 @@ describe('halaman dashboard', () => {
     // ketiadaan.
     //
     // A one-pixel sliver reads as a small value, not as absence.
-    expect(charts).toMatch(/p\.value === 0 \? null/);
+    // Bagian bernilai nol tidak digambar pada komposisi maupun mentoring.
+    // A zero-valued segment is drawn in neither the composition nor mentoring.
+    expect(page).toMatch(/\{c\.droppedOut > 0 && \(/);
+    expect(page).toMatch(/\{belum > 0 && </);
   });
 
   it('menampilkan kenaikan poin sebagai angka, bukan hanya jarak batang', () => {
@@ -362,7 +380,13 @@ describe('halaman dashboard', () => {
     //
     // A gap on a chart has to be measured by eye, while the point gain is what
     // gets reported.
-    expect(charts).toMatch(/gain > 0 \? '\+' : ''/);
+    expect(charts).toMatch(/r\.posttest - r\.pretest >= 0 \? '\+' : ''/);
+    // Kenaikannya hanya muncul bila keduanya ada: selisih dari satu angka
+    // bukan kenaikan apa pun.
+    //
+    // The gain appears only when both exist: a difference from one number is not
+    // a gain at all.
+    expect(charts).toMatch(/r\.pretest !== null && r\.posttest !== null && \(/);
   });
 
   it('menyimpan catatan saat kolomnya ditinggalkan', () => {
@@ -386,7 +410,7 @@ describe('halaman dashboard', () => {
   it('mempertahankan catatan di layar bila penyimpanannya gagal', () => {
     // Kegagalan jaringan bukan alasan menghapus yang baru diketik.
     // A network failure is no reason to erase what was just typed.
-    const blok = table.slice(table.indexOf('async function simpanCatatan'), table.indexOf('function exportCsv'));
+    const blok = table.slice(table.indexOf('async function simpanCatatan'), table.indexOf('const hitung ='));
     expect(blok).not.toMatch(/setDraft\([\s\S]{0,60}\{\}\)/);
   });
 
@@ -395,8 +419,10 @@ describe('halaman dashboard', () => {
     // untuk apa pun.
     //
     // A file holding ten of a hundred participants is no use for anything.
-    expect(table).toMatch(/const rows = visible\.map/);
-    expect(table).not.toMatch(/const rows = halaman\.map/);
+    // Ekspornya kini di halamannya, memuat seluruh baris daerah yang dipilih.
+    // The export now lives on the page and carries every row of the chosen region.
+    expect(page).toMatch(/snapshot\.roster\.filter\(\(r\) => r\.city === kota\)/);
+    expect(page).not.toMatch(/const baris = halaman/);
   });
 
   it('menggulir tabelnya mendatar alih-alih mempersempit kolomnya', () => {
@@ -405,8 +431,15 @@ describe('halaman dashboard', () => {
     //
     // Twenty columns forced to fit would leave every cell truncated and
     // unreadable.
-    expect(table).toMatch(/overflowX: 'auto'/);
-    expect(table).toMatch(/minWidth: '960px'/);
+    const css = read('src/app/(admin)/admin/dashboard/dashboard.module.css');
+    expect(css).toMatch(/\.scroll \{\s*overflow-x: auto;/);
+    expect(table).toMatch(/className=\{s\.scroll\}/);
+    // Lebar terkecilnya tumbuh seiring jumlah kuis dan tugasnya: lebar tetap
+    // membuat kolom terpotong begitu kuisnya bertambah.
+    //
+    // Its minimum width grows with the quiz and task count: a fixed width would
+    // truncate columns as soon as another quiz is added.
+    expect(table).toMatch(/\(KQ \+ TG\)/);
   });
 
   it('memberi keterangan tiap titik kehadiran', () => {

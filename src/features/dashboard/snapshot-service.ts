@@ -7,6 +7,8 @@ import { summariseAnswers } from '../survey/policy';
 import { NUMERIC_KINDS } from '../survey/types';
 import type { SurveyAnswer, SurveyFormDocument, SurveyResponseDocument } from '../survey/types';
 import { ageFrom } from '../users/profile-service';
+import { hitungFase } from './phases';
+import { wibDate } from '@/lib/time';
 import {
   DISABILITY_LABELS,
   ENTRY_STATUS_LABELS,
@@ -18,6 +20,9 @@ import type {
   AlertThresholds,
   DashboardSnapshot,
   SeriesPoint,
+  ProfileRow,
+  SurveyQuestionPoint,
+  LoginPoint,
 } from './snapshot-types';
 
 /**
@@ -47,12 +52,6 @@ export const ALERT_THRESHOLDS: AlertThresholds = {
  * responsive.
  */
 export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
-
-function wibDate(now = new Date()): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Jakarta',
-  }).format(now);
-}
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -93,6 +92,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     capstoneSnap,
     catatanSnap,
     profilesSnap,
+    loginsSnap,
   ] = await Promise.all([
     db.collection('classes').get(),
     db.collection('users').where('role', '==', 'student').get(),
@@ -108,6 +108,16 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     db.collection('assessmentScores').where('kind', '==', 'capstone').get(),
     db.collection('studentNotes').get(),
     db.collection('studentProfiles').get(),
+    // Dibatasi enam puluh hari terakhir, bukan seluruh koleksinya: satu baris
+    // per peserta per hari berarti seratus baris sehari, dan dalam dua tahun
+    // penghitungan ringkasan akan membaca empat puluh ribu dokumen hanya untuk
+    // satu grafik -- hampir seluruh kuota baca harian.
+    //
+    // Limited to the last sixty days rather than the whole collection: one row per
+    // participant per day means a hundred rows a day, and within two years the
+    // snapshot would read forty thousand documents for one chart alone -- nearly
+    // the entire daily read quota.
+    db.collection('lmsLogins').where('date', '>=', wibDate(new Date(Date.now() - 60 * 24 * 60 * 60 * 1000))).get(),
   ]);
 
   const classes = classesSnap.docs.map((d) => d.data() as ClassDocument);
@@ -133,44 +143,42 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   });
 
   // --- profil peserta ---------------------------------------------------
-  const profilPerSiswa = new Map<string, StudentProfileDocument>();
+  // Disimpan sebagai baris mentah, bukan sebagai sebaran yang sudah dijumlah:
+  // dashboardnya dapat disaring per daerah, dan sebaran yang sudah dijumlah
+  // tidak dapat dipecah lagi.
+  //
+  // Stored as raw rows rather than a summed distribution: the dashboard can be
+  // filtered by region, and a summed distribution cannot be split again.
+  const kotaPerSiswa = new Map(aktif.map((s) => [s.uid, classCities.get(s.classId ?? '') ?? '']));
+
+  const profiles: ProfileRow[] = [];
+  const sudahLengkap = new Set<string>();
   for (const d of profilesSnap.docs) {
     const pr = d.data() as StudentProfileDocument;
-    // Hanya peserta aktif yang dihitung: profil peserta yang sudah keluar
-    // tetap tersimpan, dan menyertakannya membuat sebarannya menggambarkan
-    // angkatan yang tidak lagi ada.
+    // Hanya peserta aktif yang dihitung: profil peserta yang sudah keluar tetap
+    // tersimpan, dan menyertakannya membuat sebarannya menggambarkan angkatan
+    // yang tidak lagi ada.
     //
     // Only active participants count: a departed participant's profile stays
     // stored, and including it would have the distribution describe a cohort
     // that no longer exists.
-    if (aktifIds.has(pr.id)) profilPerSiswa.set(pr.id, pr);
+    if (!aktifIds.has(pr.id)) continue;
+    sudahLengkap.add(pr.id);
+    profiles.push({
+      city: kotaPerSiswa.get(pr.id) ?? '',
+      gender: GENDER_LABELS[pr.gender] ?? pr.gender,
+      disability: DISABILITY_LABELS[pr.disability] ?? pr.disability,
+      entryStatus: ENTRY_STATUS_LABELS[pr.entryStatus] ?? pr.entryStatus,
+      age: ageFrom(pr.birthDate),
+    });
   }
 
-  function hitungSebaran(ambil: (p: StudentProfileDocument) => string, labels: Record<string, string>) {
-    const hitung = new Map<string, number>();
-    for (const pr of profilPerSiswa.values()) {
-      const kunci = ambil(pr);
-      hitung.set(kunci, (hitung.get(kunci) ?? 0) + 1);
-    }
-    return Object.keys(labels)
-      .map((k) => ({ label: labels[k], count: hitung.get(k) ?? 0 }))
-      .filter((x) => x.count > 0);
+  const profilePendingByCity: Record<string, number> = {};
+  for (const s of aktif) {
+    if (sudahLengkap.has(s.uid)) continue;
+    const kota = kotaPerSiswa.get(s.uid) ?? '';
+    profilePendingByCity[kota] = (profilePendingByCity[kota] ?? 0) + 1;
   }
-
-  const usia = [...profilPerSiswa.values()]
-    .map((pr) => ageFrom(pr.birthDate))
-    .filter((u): u is number => u !== null);
-
-  const profile = {
-    completed: profilPerSiswa.size,
-    pending: aktif.length - profilPerSiswa.size,
-    genders: hitungSebaran((pr) => pr.gender, GENDER_LABELS),
-    disabilities: hitungSebaran((pr) => pr.disability, DISABILITY_LABELS),
-    entryStatuses: hitungSebaran((pr) => pr.entryStatus, ENTRY_STATUS_LABELS),
-    averageAge: usia.length === 0 ? null : Math.round((usia.reduce((a, b) => a + b, 0) / usia.length) * 10) / 10,
-    youngest: usia.length === 0 ? null : Math.min(...usia),
-    oldest: usia.length === 0 ? null : Math.max(...usia),
-  };
 
   // --- kehadiran per pertemuan ----------------------------------------
   const sessions = sessionsSnap.docs
@@ -306,6 +314,61 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     penjawabPerForm.get(r.formId)!.add(r.studentId);
   }
 
+  // Jawaban dikelompokkan per kota supaya satu daerah yang ratingnya jatuh
+  // tidak tertutupi tiga daerah yang baik.
+  //
+  // Answers are grouped by city so one region whose rating has dropped is not
+  // masked by three good ones.
+  const jawabanPerFormKota = new Map<string, Map<string, SurveyAnswer[]>>();
+  const penjawabPerFormKota = new Map<string, Map<string, Set<string>>>();
+  for (const d of responsesSnap.docs) {
+    const r = d.data() as SurveyResponseDocument;
+    if (!aktifIds.has(r.studentId)) continue;
+    const kota = kotaPerSiswa.get(r.studentId) ?? '';
+    if (!jawabanPerFormKota.has(r.formId)) jawabanPerFormKota.set(r.formId, new Map());
+    const perKota = jawabanPerFormKota.get(r.formId)!;
+    if (!perKota.has(kota)) perKota.set(kota, []);
+    perKota.get(kota)!.push(...r.answers);
+
+    if (!penjawabPerFormKota.has(r.formId)) penjawabPerFormKota.set(r.formId, new Map());
+    const orangPerKota = penjawabPerFormKota.get(r.formId)!;
+    if (!orangPerKota.has(kota)) orangPerKota.set(kota, new Set());
+    orangPerKota.get(kota)!.add(r.studentId);
+  }
+
+  const aktifPerKota = new Map<string, number>();
+  for (const s of aktif) {
+    const kota = kotaPerSiswa.get(s.uid) ?? '';
+    aktifPerKota.set(kota, (aktifPerKota.get(kota) ?? 0) + 1);
+  }
+
+  const rataBerangka = (jawaban: SurveyAnswer[]): number | null => {
+    const berangka = summariseAnswers(jawaban).filter((r) => NUMERIC_KINDS.includes(r.kind) && r.average !== null);
+    if (berangka.length === 0) return null;
+    return Math.round((berangka.reduce((t, r) => t + (r.average ?? 0), 0) / berangka.length) * 10) / 10;
+  };
+
+  // Tiap pertanyaan dipecah per kota untuk peta panasnya. Hanya pertanyaan
+  // bernilai angka: isian bebas tidak punya angka untuk dirata-rata.
+  //
+  // Each question is split per city for the heatmap. Numeric questions only:
+  // free text has no number to average.
+  const surveyQuestions: SurveyQuestionPoint[] = [];
+  for (const f of forms) {
+    const perKota = jawabanPerFormKota.get(f.id);
+    if (!perKota) continue;
+    const seluruh = summariseAnswers([...perKota.values()].flat());
+    for (const q of seluruh) {
+      if (!NUMERIC_KINDS.includes(q.kind)) continue;
+      const byCity: Record<string, number | null> = {};
+      for (const [kota, jawaban] of perKota) {
+        const satu = summariseAnswers(jawaban).find((x) => x.questionText === q.questionText);
+        byCity[kota] = satu?.average ?? null;
+      }
+      surveyQuestions.push({ label: q.questionText, byCity });
+    }
+  }
+
   const surveys = forms.map((f) => {
     const ringkas = summariseAnswers(jawabanPerForm.get(f.id) ?? []);
     // Hanya pertanyaan bernilai angka yang dirata-rata; isian bebas dan
@@ -323,8 +386,51 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
       formTitle: f.title,
       average,
       responseRate: persen(penjawabPerForm.get(f.id)?.size ?? 0, aktif.length),
+      byCity: Object.fromEntries(
+        [...aktifPerKota.keys()].map((kota) => [
+          kota,
+          {
+            average: rataBerangka(jawabanPerFormKota.get(f.id)?.get(kota) ?? []),
+            responseRate: persen(
+              penjawabPerFormKota.get(f.id)?.get(kota)?.size ?? 0,
+              aktifPerKota.get(kota) ?? 0
+            ),
+          },
+        ])
+      ),
     };
   });
+
+  // --- login LMS per hari ------------------------------------------------
+  // Dikelompokkan per tanggal dan kota. Satu dokumen per peserta per hari sudah
+  // menjamin tidak ada yang terhitung dua kali pada hari yang sama.
+  //
+  // Grouped by date and city. One document per participant per day already
+  // guarantees nobody is counted twice on the same day.
+  const loginPerTanggal = new Map<string, Record<string, number>>();
+  for (const d of loginsSnap.docs) {
+    const l = d.data() as { uid: string; date: string };
+    if (!aktifIds.has(l.uid)) continue;
+    if (!loginPerTanggal.has(l.date)) loginPerTanggal.set(l.date, {});
+    const perKota = loginPerTanggal.get(l.date)!;
+    const kota = kotaPerSiswa.get(l.uid) ?? '';
+    perKota[kota] = (perKota[kota] ?? 0) + 1;
+  }
+  // Hanya enam puluh hari terakhir yang disimpan. Grafiknya memperlihatkan
+  // keaktifan belakangan, dan satu baris per hari tumbuh tanpa batas: empat
+  // ratus hari dalam dua tahun akan membuat dokumen ringkasannya menggelembung
+  // demi hari-hari yang tidak ada yang menelusuri lagi.
+  //
+  // ponytail: dipangkas 60 hari, simpan per bulan bila kelak dibutuhkan riwayat
+  // yang lebih panjang
+  //
+  // Only the last sixty days are kept. The chart shows recent activity, and one
+  // row per day grows without bound: four hundred days over two years would swell
+  // the snapshot document for days nobody scans any more.
+  const logins: LoginPoint[] = [...loginPerTanggal.entries()]
+    .map(([date, byCity]) => ({ date, byCity }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-60);
 
   // --- peringkat dan daftar siaga ---------------------------------------
   const sesiPerKelas = new Map<string, number>();
@@ -353,6 +459,28 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     if (!aktifIds.has(sub.studentId)) continue;
     if (!nilaiTugasPerSiswa.has(sub.studentId)) nilaiTugasPerSiswa.set(sub.studentId, new Map());
     nilaiTugasPerSiswa.get(sub.studentId)!.set(sub.taskId, sub.score ?? null);
+  }
+
+  // Terkumpul atau tidak dicatat terpisah dari nilainya: tugas yang terkumpul
+  // tetapi belum dinilai bernilai null pada nilainya -- sama dengan tugas yang
+  // tidak pernah dikumpulkan, padahal yang pertama menunggu admin dan yang
+  // kedua menunggu peserta.
+  //
+  // Whether it was submitted is recorded apart from its score: a task submitted
+  // but not yet graded is null in the score -- the same as one never handed in,
+  // though the first waits on the admin and the second on the participant.
+  const terkumpulPerSiswa = new Map<string, Set<string>>();
+  for (const d of submissionsSnap.docs) {
+    const sub = d.data() as { studentId: string; taskId: string };
+    if (!aktifIds.has(sub.studentId)) continue;
+    if (!terkumpulPerSiswa.has(sub.studentId)) terkumpulPerSiswa.set(sub.studentId, new Set());
+    terkumpulPerSiswa.get(sub.studentId)!.add(sub.taskId);
+  }
+
+  const tenggatTugas = new Map<string, string | null>();
+  for (const t of tasksSnap.docs) {
+    const d = t.data() as { id: string; dueAt?: string | null };
+    tenggatTugas.set(d.id, d.dueAt ?? null);
   }
 
   const nilaiCapstone = new Map<string, number>();
@@ -503,12 +631,27 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         capstone: nilaiCapstone.get(s.uid) ?? null,
         quizScores: kuisUrut.map((e) => nilaiTertinggi.get(e.id)?.get(s.uid) ?? null),
         taskScores: tasks.map((t) => tugasSiswa?.get(t.id) ?? null),
+        taskSubmitted: tasks.map((t) => {
+          if (terkumpulPerSiswa.get(s.uid)?.has(t.id)) return true;
+          // Tenggat yang belum lewat bernilai null, bukan false: peserta masih
+          // punya waktu, dan menandainya sebagai tidak mengumpulkan membuat
+          // admin menghubungi orang yang tidak terlambat.
+          //
+          // A deadline not yet passed is null, not false: the participant still
+          // has time, and marking it as missed would have an admin contact
+          // someone who is not late.
+          const tenggat = tenggatTugas.get(t.id);
+          if (!tenggat || tenggat > nowIso) return null;
+          return false;
+        }),
         status: (!s.active ? 'nonaktif' : issueCount > 0 ? 'siaga' : 'aktif') as 'aktif' | 'siaga' | 'nonaktif',
         issueCount,
         note: c?.note ?? '',
         followUp: c?.followUp ?? '',
       };
     });
+
+  const phases = hitungFase(sessions, nowIso);
 
   return {
     id: wibDate(),
@@ -518,7 +661,9 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     totalActive: aktif.length,
     totalDroppedOut: students.length - aktif.length,
     classes: perKelas,
-    profile,
+    profiles,
+    profilePendingByCity,
+    phases,
     attendancePerSession,
     submissionPerTask,
     scorePerTask,
@@ -526,6 +671,8 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     learningGain,
     mentoring,
     surveys,
+    surveyQuestions,
+    logins,
     ranking,
     alerts,
     roster,

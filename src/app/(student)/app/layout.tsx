@@ -1,5 +1,6 @@
 import { getSessionActor } from '@/features/auth/session';
 import { getProfile } from '@/features/users/profile-service';
+import { recordDailyLogin } from '@/features/dashboard/login-service';
 import { ProfileGateClient } from '@/components/profile-gate-client';
 
 /**
@@ -47,6 +48,25 @@ export default async function StudentAppLayout({ children }: { children: React.R
   // The form renders in place rather than redirecting elsewhere. The form's own
   // page would also sit under this layout, so redirecting to it would trigger
   // the same check and redirect again -- a loop that never ends.
+  // Kehadirannya di LMS dicatat di sini, bukan pada halaman masuk: peserta
+  // membuka aplikasi dari ikon layar utama berhari-hari tanpa pernah melewati
+  // halaman masuk lagi, dan grafiknya akan memperlihatkan nol pada hari-hari
+  // peserta justru paling aktif.
+  //
+  // Tidak ditunggu: sisa layout ini tidak bergantung padanya, dan menahan
+  // halamannya demi satu tulis untuk grafik admin adalah pertukaran yang salah
+  // arah. Kegagalannya ditangani di dalam fungsinya.
+  //
+  // Their LMS presence is recorded here rather than on the login page:
+  // participants open the app from a home-screen icon for days without passing
+  // through login again, and the chart would show zero on exactly the days they
+  // were most active.
+  //
+  // Not awaited: nothing else in this layout depends on it, and holding the page
+  // for one write that feeds an admin's chart is the wrong trade. Its failure is
+  // handled inside the function.
+  void recordDailyLogin(actor.uid);
+
   const profile = await getProfile(actor.uid);
   if (!profile) {
     return <ProfileGateClient />;

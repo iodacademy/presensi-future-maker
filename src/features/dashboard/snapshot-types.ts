@@ -42,6 +42,8 @@ export interface SurveySummaryPoint {
   average: number | null;
   /** Persentase peserta aktif yang mengisi / Percentage of active participants who responded */
   responseRate: number;
+  /** Rata-rata dan persentase pengisi, per kota / The average and response share, per city */
+  byCity: Record<string, { average: number | null; responseRate: number }>;
 }
 
 /**
@@ -109,6 +111,22 @@ export interface RosterRow {
   /** Nilai tiap tugas, urut nomornya / Each task's score, in order */
   taskScores: (number | null)[];
   /**
+   * Terkumpul atau tidak, urut nomornya: true terkumpul, false lewat tenggat
+   * tanpa dikumpulkan, null belum dibuka.
+   *
+   * Dibedakan dari nilainya karena tugas yang terkumpul tetapi belum dinilai
+   * bernilai null pada taskScores -- sama dengan tugas yang tidak pernah
+   * dikumpulkan, padahal keduanya menuntut tindakan yang berbeda.
+   *
+   * Submitted or not, in order: true submitted, false past deadline with nothing
+   * handed in, null not yet opened.
+   *
+   * Kept apart from the score because a task submitted but not yet graded is
+   * null in taskScores -- the same as one never handed in, though the two call
+   * for different action.
+   */
+  taskSubmitted: (boolean | null)[];
+  /**
    * Status yang diturunkan dari ambangnya.
    *
    * 'nonaktif' dibedakan dari 'siaga': peserta yang sudah keluar tidak perlu
@@ -157,30 +175,81 @@ export interface AlertThresholds {
 }
 
 /**
- * Rangkuman profil peserta aktif.
+ * Satu profil peserta aktif, tanpa namanya.
  *
- * Jumlah yang belum melengkapi dicatat terpisah, bukan dilebur ke dalam
- * sebarannya: persentase yang dihitung dari tujuh puluh peserta tetapi
- * disajikan seolah dari seratus akan dibaca sebagai gambaran utuh angkatan.
+ * Disimpan sebagai baris mentah, bukan sebagai sebaran yang sudah dihitung:
+ * dashboard dapat disaring per daerah, dan sebaran yang sudah dijumlah tidak
+ * dapat dipecah lagi. Seratus baris sekecil ini jauh lebih murah daripada
+ * menyimpan satu sebaran per daerah per pertanyaan.
  *
- * A summary of active participants' profiles.
+ * Namanya tidak disertakan: tidak ada panel yang menyebut siapa yang
+ * disabilitas atau berapa usianya, dan menyertakannya hanya menambah data
+ * pribadi yang beredar tanpa ada yang memakainya.
  *
- * How many have not completed theirs is recorded separately rather than folded
- * into the distribution: a percentage computed over seventy participants but
- * presented as if over a hundred would be read as the whole cohort.
+ * One active participant's profile, without their name.
+ *
+ * Stored as a raw row rather than a precomputed distribution: the dashboard can
+ * be filtered by region, and a summed distribution cannot be split again. A
+ * hundred rows this small cost far less than storing one distribution per region
+ * per question.
+ *
+ * The name is left out: no panel names who has a disability or how old they are,
+ * and including it would only put personal data in circulation with nothing
+ * using it.
  */
-export interface ProfileSummary {
-  /** Peserta aktif yang sudah melengkapi profilnya / Active participants who completed their profile */
-  completed: number;
-  /** Peserta aktif yang belum / Active participants who have not */
-  pending: number;
-  genders: { label: string; count: number }[];
-  disabilities: { label: string; count: number }[];
-  entryStatuses: { label: string; count: number }[];
-  /** Null bila belum ada yang melengkapi / Null when nobody has completed one */
-  averageAge: number | null;
-  youngest: number | null;
-  oldest: number | null;
+export interface ProfileRow {
+  city: string;
+  gender: string;
+  disability: string;
+  entryStatus: string;
+  /** Dihitung saat ringkasannya dibuat; null bila tanggalnya tidak terbaca / Computed when the snapshot is built; null when the date cannot be read */
+  age: number | null;
+}
+
+/**
+ * Satu pertanyaan survei beserta rata-ratanya per daerah.
+ *
+ * Dipecah per daerah karena satu angka gabungan menyembunyikan daerah yang
+ * ratingnya jatuh: rata-rata 4,2 dapat berarti seluruh daerah baik, atau tiga
+ * daerah sangat baik menutupi satu daerah yang buruk.
+ *
+ * One survey question with its average per region.
+ *
+ * Split by region because a single combined figure hides the region whose rating
+ * has dropped: an average of 4.2 can mean every region is fine, or three very
+ * good regions masking one bad one.
+ */
+export interface SurveyQuestionPoint {
+  label: string;
+  /** Rata-rata per kota; kota tanpa jawaban tidak muncul / Average per city; a city with no answers is absent */
+  byCity: Record<string, number | null>;
+}
+
+export interface LoginPoint {
+  /** Tanggal WIB "YYYY-MM-DD" / WIB date "YYYY-MM-DD" */
+  date: string;
+  /** Peserta aktif yang membuka aplikasi, per kota / Active participants who opened the app, per city */
+  byCity: Record<string, number>;
+}
+
+/**
+ * Satu fase program beserta tanggalnya.
+ *
+ * Onboarding dan bootcamp diturunkan dari jadwal sesi yang sudah ada; sisanya
+ * ditulis di kode karena belum ada tempat untuk mengisinya.
+ *
+ * One programme phase with its dates.
+ *
+ * Onboarding and the bootcamp derive from the existing session schedule; the
+ * rest are written in code because there is nowhere to enter them yet.
+ */
+export interface PhasePoint {
+  name: string;
+  /** Rentangnya sebagaimana ditampilkan, mis. "14 Sep sampai 9 Okt" / The range as displayed, e.g. "14 Sep sampai 9 Okt" */
+  range: string;
+  status: 'selesai' | 'berjalan' | 'akan-datang';
+  /** Persentase kemajuan, hanya untuk fase yang berjalan / Progress percentage, only for the running phase */
+  progress: number | null;
 }
 
 export interface DashboardSnapshot {
@@ -194,7 +263,26 @@ export interface DashboardSnapshot {
   totalActive: number;
   totalDroppedOut: number;
   classes: ClassSnapshot[];
-  profile: ProfileSummary;
+
+  /** Satu baris per peserta aktif yang sudah melengkapi profilnya / One row per active participant who completed their profile */
+  profiles: ProfileRow[];
+  /**
+   * Yang belum melengkapi, per kota.
+   *
+   * Dicatat terpisah dari sebarannya: persentase yang dihitung dari tujuh puluh
+   * peserta tetapi disajikan seolah dari seratus akan dibaca sebagai gambaran
+   * utuh angkatan.
+   *
+   * Those who have not completed theirs, per city.
+   *
+   * Recorded apart from the distribution: a percentage computed over seventy
+   * participants but presented as if over a hundred would be read as the whole
+   * cohort.
+   */
+  profilePendingByCity: Record<string, number>;
+
+  /** Fase program beserta tanggalnya / The programme phases with their dates */
+  phases: PhasePoint[];
 
   /** Kehadiran per pertemuan, dalam persen peserta aktif / Attendance per meeting, as a percentage of active participants */
   attendancePerSession: SeriesPoint[];
@@ -212,6 +300,10 @@ export interface DashboardSnapshot {
   mentoring: { none: number; once: number; twice: number };
 
   surveys: SurveySummaryPoint[];
+  /** Rata-rata tiap pertanyaan survei per daerah, untuk peta panasnya / Each survey question's average per region, for the heatmap */
+  surveyQuestions: SurveyQuestionPoint[];
+  /** Jumlah peserta yang membuka aplikasi per hari / How many participants opened the app each day */
+  logins: LoginPoint[];
   ranking: RankedStudent[];
   roster: RosterRow[];
   /** Judul tiap pertemuan, agar titik kehadirannya dapat dilabeli / Each meeting's title, so the attendance dots can be labelled */

@@ -305,15 +305,46 @@ describe('profil pada ringkasan dashboard', () => {
   });
 
   it('mencatat yang belum melengkapi terpisah dari sebarannya', () => {
-    expect(types).toMatch(/pending: number/);
-    expect(service).toMatch(/pending: aktif\.length - profilPerSiswa\.size/);
-    expect(page).toContain('snapshot.profile.pending');
+    expect(types).toMatch(/profilePendingByCity: Record<string, number>/);
+    expect(service).toMatch(/if \(sudahLengkap\.has\(s\.uid\)\) continue;/);
+    expect(page).toContain('snapshot.profilePendingByCity');
   });
 
   it('menyebut pembaginya saat ada yang belum melengkapi', () => {
     // Sebaran yang ditampilkan tanpa pembaginya terbaca sebagai gambaran utuh.
     // A distribution shown without its denominator reads as the whole picture.
-    expect(page).toMatch(/Sebaran di bawah dihitung dari \{snapshot\.profile\.completed\}/);
+    expect(page).toContain('Dari {profiles.length} peserta yang sudah melengkapi profilnya');
+    expect(page).toMatch(/\{pending > 0 \? `, \$\{pending\} belum`/);
+  });
+
+  it('menyimpan barisnya mentah agar dapat disaring per daerah', () => {
+    // Sebaran yang sudah dijumlah tidak dapat dipecah lagi, dan dashboardnya
+    // dapat disaring per daerah.
+    //
+    // A summed distribution cannot be split again, and the dashboard can be
+    // filtered by region.
+    expect(types).toMatch(/profiles: ProfileRow\[\]/);
+    expect(types).toMatch(/city: string/);
+    expect(page).toMatch(/snapshot\.profiles\.filter\(\(p\) => cities\.includes\(p\.city\)\)/);
+  });
+
+  it('tidak menyertakan nama peserta pada barisnya', () => {
+    // Tidak ada panel yang menyebut siapa yang disabilitas atau berapa usianya,
+    // dan menyertakan namanya hanya menambah data pribadi yang beredar tanpa
+    // ada yang memakainya.
+    //
+    // No panel names who has a disability or how old they are, and including the
+    // name would only put personal data in circulation with nothing using it.
+    const blok = types.slice(types.indexOf('export interface ProfileRow'), types.indexOf('export interface SurveyQuestionPoint'));
+    expect(blok).not.toMatch(/\bname\b|studentId|uid/i);
+  });
+
+  it('tidak menghitung "tidak ada" sebagai disabilitas', () => {
+    // Menjumlahkannya ke dalam hitungan peserta disabilitas membuat angkanya
+    // menjadi seluruh peserta.
+    //
+    // Adding it to the disability count would make the figure the entire cohort.
+    expect(page).toMatch(/d\.label !== 'Tidak ada'/);
   });
 
   it('menghitung usia saat meringkas, bukan menyimpannya', () => {
@@ -323,10 +354,14 @@ describe('profil pada ringkasan dashboard', () => {
 
   it('membuang kategori yang tidak ada isinya', () => {
     // Enam batang kosong di samping satu yang terisi membuat yang terisi
-    // menjadi sulit dibandingkan.
+    // menjadi sulit dibandingkan. Dihitung di peramban dari barisnya, sehingga
+    // hanya kategori yang benar-benar dipilih seseorang yang muncul.
     //
     // Six empty bars beside one filled makes the filled one hard to compare.
-    expect(service).toMatch(/\.filter\(\(x\) => x\.count > 0\)/);
+    // Counted in the browser from the rows, so only categories someone actually
+    // picked appear at all.
+    expect(page).toMatch(/peta\.set\(ambil\(p\), \(peta\.get\(ambil\(p\)\) \?\? 0\) \+ 1\)/);
+    expect(page).toMatch(/\.filter\(\(\[, v\]\) => v > 0\)/);
   });
 
   it('tidak memakai hijau dan merah untuk kategori yang netral', () => {
