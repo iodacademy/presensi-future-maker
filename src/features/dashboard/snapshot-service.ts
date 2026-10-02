@@ -83,6 +83,8 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     quotasSnap,
     formsSnap,
     responsesSnap,
+    capstoneSnap,
+    catatanSnap,
   ] = await Promise.all([
     db.collection('classes').get(),
     db.collection('users').where('role', '==', 'student').get(),
@@ -95,6 +97,8 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     db.collection('mentoringQuotas').get(),
     db.collection('surveyForms').get(),
     db.collection('surveyResponses').get(),
+    db.collection('assessmentScores').where('kind', '==', 'capstone').get(),
+    db.collection('studentNotes').get(),
   ]);
 
   const classes = classesSnap.docs.map((d) => d.data() as ClassDocument);
@@ -287,6 +291,33 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     for (const uid of pesertanya) hadirPerSiswa.set(uid, (hadirPerSiswa.get(uid) ?? 0) + 1);
   }
 
+  // Nilai tugas per peserta per tugas, untuk kolom tabelnya. Angka ringkas
+  // tidak dapat memberi tahu tugas mana yang kosong, dan itulah yang dicari
+  // admin saat menindaklanjuti.
+  //
+  // Per-participant, per-task scores for the table's columns. A summary figure
+  // cannot say which task is blank, and that is what an admin looks for when
+  // following up.
+  const nilaiTugasPerSiswa = new Map<string, Map<string, number | null>>();
+  for (const d of submissionsSnap.docs) {
+    const sub = d.data() as { studentId: string; taskId: string; score: number | null };
+    if (!aktifIds.has(sub.studentId)) continue;
+    if (!nilaiTugasPerSiswa.has(sub.studentId)) nilaiTugasPerSiswa.set(sub.studentId, new Map());
+    nilaiTugasPerSiswa.get(sub.studentId)!.set(sub.taskId, sub.score ?? null);
+  }
+
+  const nilaiCapstone = new Map<string, number>();
+  for (const d of capstoneSnap.docs) {
+    const a = d.data() as { studentId: string; score: number };
+    nilaiCapstone.set(a.studentId, a.score);
+  }
+
+  const catatan = new Map<string, { note: string; followUp: string }>();
+  for (const d of catatanSnap.docs) {
+    const c = d.data() as { note?: string; followUp?: string };
+    catatan.set(d.id, { note: c.note ?? '', followUp: c.followUp ?? '' });
+  }
+
   const kumpulPerSiswa = new Map<string, number>();
   const nilaiKuisPerSiswa = new Map<string, number[]>();
   for (const d of submissionsSnap.docs) {
@@ -357,6 +388,79 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     .filter((t) => t.issueCount > 0)
     .sort((a, b) => b.issueCount - a.issueCount || a.studentName.localeCompare(b.studentName, 'id'));
 
+  // Urutan kuis dan tugas dikunci di sini supaya kolom tabelnya sejajar
+  // antar-peserta. Mengurutkannya per peserta membuat kolom "Kuis 3" memuat
+  // kuis yang berbeda pada tiap baris.
+  //
+  // The quiz and task order is fixed here so the table's columns line up across
+  // participants. Sorting per participant would have the "Kuis 3" column hold a
+  // different quiz on each row.
+  const kuisUrut = exams.filter((e) => e.kind === 'kuis');
+  // Seluruh pertemuan ditampilkan, termasuk yang belum berjalan: tabelnya
+  // memperlihatkan jadwal utuh, dan pertemuan yang belum berjalan bernilai null.
+  //
+  // Every meeting is shown, including ones not yet held: the table displays the
+  // whole schedule, and a meeting not yet held carries null.
+  const sesiTampil = sessions;
+
+  const roster = aktif
+    .concat(students.filter((s) => !s.active))
+    .map((s) => {
+      const cid = s.classId ?? '';
+      const kelas = classes.find((c) => c.id === cid);
+
+      const attendance = sesiTampil.map((sesi) => {
+        // Pertemuan yang belum berlangsung bernilai null, bukan false: tidak
+        // hadir dan belum berjalan menuntut tindakan yang berbeda.
+        //
+        // A meeting not yet held is null, not false: absent and not-yet-held
+        // call for different action.
+        if (sesi.startsAt > nowIso) return null;
+        return hadirPerSesi.get(sesi.id)?.has(s.uid) ?? false;
+      });
+
+      const sudah = attendance.filter((a) => a !== null).length;
+      const hadir = attendance.filter((a) => a === true).length;
+      const tugasSiswa = nilaiTugasPerSiswa.get(s.uid);
+
+      const pre = exams.find((e) => e.classId === cid && e.kind === 'pretest');
+      const post = exams.find((e) => e.classId === cid && e.kind === 'posttest');
+
+      const taskRate = persen(kumpulPerSiswa.get(s.uid) ?? 0, tugasPerKelas.get(cid) ?? 0);
+      const nilaiKuis = nilaiKuisPerSiswa.get(s.uid) ?? [];
+      const rataKuis = nilaiKuis.length === 0
+        ? 0
+        : Math.round(nilaiKuis.reduce((a, b) => a + b, 0) / nilaiKuis.length);
+      const attendanceRate = persen(hadir, sudah);
+
+      let issueCount = 0;
+      if (attendanceRate < ALERT_THRESHOLDS.attendance) issueCount += 1;
+      if (taskRate < ALERT_THRESHOLDS.task) issueCount += 1;
+      if (rataKuis < ALERT_THRESHOLDS.quiz) issueCount += 1;
+
+      const c = catatan.get(s.uid);
+
+      return {
+        studentId: s.uid,
+        studentName: s.name,
+        className: classNames.get(cid) ?? '',
+        programName: kelas?.programName ?? '',
+        city: classCities.get(cid) ?? '',
+        attendance,
+        attendanceRate,
+        mentoringUsed: kuota.get(s.uid) ?? 0,
+        pretest: pre ? (nilaiTertinggi.get(pre.id)?.get(s.uid) ?? null) : null,
+        posttest: post ? (nilaiTertinggi.get(post.id)?.get(s.uid) ?? null) : null,
+        capstone: nilaiCapstone.get(s.uid) ?? null,
+        quizScores: kuisUrut.map((e) => nilaiTertinggi.get(e.id)?.get(s.uid) ?? null),
+        taskScores: tasks.map((t) => tugasSiswa?.get(t.id) ?? null),
+        status: (!s.active ? 'nonaktif' : issueCount > 0 ? 'siaga' : 'aktif') as 'aktif' | 'siaga' | 'nonaktif',
+        issueCount,
+        note: c?.note ?? '',
+        followUp: c?.followUp ?? '',
+      };
+    });
+
   return {
     id: wibDate(),
     generatedAt: nowIso,
@@ -374,6 +478,10 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     surveys,
     ranking,
     alerts,
+    roster,
+    sessionLabels: sesiTampil.map((x) => x.title),
+    quizLabels: kuisUrut.map((e) => e.title),
+    taskLabels: tasks.map((t) => t.title),
     thresholds: ALERT_THRESHOLDS,
   };
 }

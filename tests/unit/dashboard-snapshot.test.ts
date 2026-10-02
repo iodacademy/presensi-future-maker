@@ -179,3 +179,124 @@ describe('penjagaan akses', () => {
     expect(compute).toContain("actor.role !== 'admin'");
   });
 });
+
+/**
+ * Tabel peserta menampilkan satu baris per orang dengan titik kehadiran tiap
+ * pertemuan, nilai tiap kuis, dan nilai tiap tugas.
+ *
+ * Angka ringkas tidak dapat memberi tahu pertemuan atau tugas mana yang
+ * kosong, dan itulah yang dicari admin saat menindaklanjuti.
+ *
+ * The participant table shows one row per person with a dot per meeting, each
+ * quiz's score, and each task's score.
+ *
+ * A summary figure cannot say which meeting or task is blank, and that is what
+ * an admin looks for when following up.
+ */
+describe('tabel peserta', () => {
+  it('menyimpan kehadiran per pertemuan, bukan hanya jumlahnya', () => {
+    expect(compute).toMatch(/attendance = sesiTampil\.map/);
+    expect(types).toContain('attendance: (boolean | null)[]');
+  });
+
+  it('membedakan belum berjalan dari tidak hadir', () => {
+    // Tidak hadir dan belum berjalan menuntut tindakan yang berbeda.
+    // Absent and not-yet-held call for different action.
+    expect(compute).toMatch(/if \(sesi\.startsAt > nowIso\) return null;/);
+  });
+
+  it('membagi kehadiran dengan pertemuan yang sudah berjalan', () => {
+    // Membaginya dengan seluruh jadwal membuat peserta yang hadir penuh
+    // bernilai lima puluh persen di pertengahan program.
+    //
+    // Dividing by the whole schedule would give a participant with perfect
+    // attendance fifty percent halfway through the programme.
+    expect(compute).toMatch(/persen\(hadir, sudah\)/);
+  });
+
+  it('mengunci urutan kuis dan tugas untuk seluruh peserta', () => {
+    // Mengurutkannya per peserta membuat kolom "Kuis 3" memuat kuis yang
+    // berbeda pada tiap baris.
+    //
+    // Sorting per participant would have the "Kuis 3" column hold a different
+    // quiz on each row.
+    expect(compute).toMatch(/kuisUrut\.map\(\(e\) =>/);
+    expect(compute).toMatch(/tasks\.map\(\(t\) =>/);
+  });
+
+  it('menyertakan label kolomnya pada ringkasan', () => {
+    // Tanpa labelnya, kolom bernomor tidak dapat ditelusuri ke pertemuan atau
+    // tugas mana pun.
+    //
+    // Without labels, numbered columns cannot be traced back to any meeting or
+    // task.
+    expect(compute).toContain('sessionLabels:');
+    expect(compute).toContain('quizLabels:');
+    expect(compute).toContain('taskLabels:');
+  });
+
+  it('memakai nama program kelasnya sebagai jurusan', () => {
+    expect(compute).toMatch(/programName: kelas\?\.programName/);
+  });
+
+  it('membedakan nonaktif dari siaga', () => {
+    // Peserta yang sudah keluar tidak perlu dihubungi, dan menggabungkannya
+    // membuat daftar tindak lanjut memuat nama yang tidak dapat
+    // ditindaklanjuti.
+    //
+    // Someone who has left needs no contacting, and merging them would fill the
+    // follow-up list with names nothing can be done about.
+    expect(compute).toMatch(/!s\.active \? 'nonaktif'/);
+  });
+
+  it('menyertakan peserta nonaktif pada tabelnya', () => {
+    // Peserta yang keluar tetap perlu terlihat: tabelnya juga dipakai memeriksa
+    // siapa yang sudah tidak mengikuti.
+    //
+    // Participants who left still need to be visible: the table is also used to
+    // check who is no longer taking part.
+    expect(compute).toMatch(/students\.filter\(\(s\) => !s\.active\)/);
+  });
+});
+
+describe('catatan admin per peserta', () => {
+  const notes = read('src/app/api/dashboard/notes/[studentId]/route.ts');
+
+  it('disimpan di luar dokumen penggunanya', () => {
+    // Catatan ini milik admin, bukan milik peserta, dan menaruhnya pada
+    // dokumen pengguna berarti ia ikut terbaca setiap kali akun itu dimuat --
+    // termasuk pada jalur yang dipakai peserta sendiri.
+    //
+    // The note belongs to the admin, not the participant, and putting it on the
+    // user document means it is read every time that account loads -- including
+    // on paths the participant themselves use.
+    expect(notes).toMatch(/collection\('studentNotes'\)/);
+    expect(notes).not.toMatch(/collection\('users'\)/);
+  });
+
+  it('hanya admin yang dapat menulisnya', () => {
+    expect(notes).toContain("actor.role !== 'admin'");
+  });
+
+  it('membatasi panjangnya', () => {
+    // Kolom catatan yang tidak dibatasi membuat satu baris tabel mendorong
+    // seluruh kolom lainnya keluar layar.
+    //
+    // An unbounded note field would have one table row push every other column
+    // off screen.
+    expect(notes).toMatch(/length > 500/);
+  });
+
+  it('menyegarkan ringkasannya setelah disimpan', () => {
+    // Tanpa ini, catatan yang baru diketik tidak muncul sampai ringkasannya
+    // berumur satu jam, dan admin mengira penyimpanannya gagal.
+    //
+    // Without this, a note just typed would not appear until the snapshot turns
+    // an hour old, and the admin would assume the save failed.
+    expect(notes).toMatch(/collection\('dashboardSnapshots'\)\.doc\(hariIni\)\.delete\(\)/);
+  });
+
+  it('mencatat siapa yang menulisnya', () => {
+    expect(notes).toContain('updatedBy: actor.name');
+  });
+});

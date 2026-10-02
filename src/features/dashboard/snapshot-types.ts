@@ -69,6 +69,66 @@ export interface AlertStudent {
   issueCount: number;
 }
 
+/**
+ * Satu baris pada tabel peserta.
+ *
+ * Kehadiran disimpan sebagai daftar per pertemuan, bukan hanya jumlahnya:
+ * tabelnya menampilkan titik untuk tiap pertemuan, dan angka ringkasnya tidak
+ * dapat memberi tahu pertemuan mana yang terlewat.
+ *
+ * Nilai yang belum ada bernilai null, bukan nol: nol berarti dikerjakan dan
+ * salah semua, sedangkan null berarti belum dikerjakan -- keduanya menuntut
+ * tindakan yang berbeda dari admin.
+ *
+ * One row in the participant table.
+ *
+ * Attendance is stored per meeting rather than as a count alone: the table
+ * shows a dot for each meeting, and a summary figure cannot say which ones were
+ * missed.
+ *
+ * A missing score is null rather than zero: zero means attempted and all wrong,
+ * while null means not attempted -- the two call for different action from an
+ * admin.
+ */
+export interface RosterRow {
+  studentId: string;
+  studentName: string;
+  className: string;
+  /** Nama program kelasnya, dipakai sebagai jurusan / The class's programme name, used as the stream */
+  programName: string;
+  city: string;
+  /** Satu nilai per pertemuan: true hadir, false tidak, null belum berjalan / One value per meeting: true present, false absent, null not yet held */
+  attendance: (boolean | null)[];
+  attendanceRate: number;
+  mentoringUsed: number;
+  pretest: number | null;
+  posttest: number | null;
+  capstone: number | null;
+  /** Nilai tiap kuis sesi, urut jadwalnya / Each session quiz's score, in schedule order */
+  quizScores: (number | null)[];
+  /** Nilai tiap tugas, urut nomornya / Each task's score, in order */
+  taskScores: (number | null)[];
+  /**
+   * Status yang diturunkan dari ambangnya.
+   *
+   * 'nonaktif' dibedakan dari 'siaga': peserta yang sudah keluar tidak perlu
+   * dihubungi, dan menggabungkannya membuat daftar tindak lanjut memuat nama
+   * yang tidak dapat ditindaklanjuti.
+   *
+   * The status derived from the thresholds.
+   *
+   * 'nonaktif' differs from 'siaga': someone who has left needs no contacting,
+   * and merging them would fill the follow-up list with names nothing can be
+   * done about.
+   */
+  status: 'aktif' | 'siaga' | 'nonaktif';
+  issueCount: number;
+  /** Catatan admin, diketik di tabelnya / The admin's note, typed in the table */
+  note: string;
+  /** Tindak lanjut yang direncanakan / The planned follow-up */
+  followUp: string;
+}
+
 export interface RankedStudent {
   studentId: string;
   studentName: string;
@@ -125,6 +185,11 @@ export interface DashboardSnapshot {
 
   surveys: SurveySummaryPoint[];
   ranking: RankedStudent[];
+  roster: RosterRow[];
+  /** Judul tiap pertemuan, agar titik kehadirannya dapat dilabeli / Each meeting's title, so the attendance dots can be labelled */
+  sessionLabels: string[];
+  quizLabels: string[];
+  taskLabels: string[];
   alerts: AlertStudent[];
   thresholds: AlertThresholds;
 }

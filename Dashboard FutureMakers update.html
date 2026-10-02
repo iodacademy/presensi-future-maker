@@ -1,0 +1,471 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Dashboard FutureMakers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: header strip, then summary tiles, then stacked panels in a two-column grid that collapses to one on phones. Palette follows the program brand guideline: primary #0072CE, neutrals from Light Grey and Dark Blue */
+:root{
+  --bg:#F2F3F4;--panel:#FFFFFF;--line:#D3E5F6;--fg:#243C4B;--muted:#4F6B82;--faint:#7F97AB;--tile:#EAF3FC;--kpi:#0072CE;--on-kpi:#FFFFFF;--pink:#FFB0DA;--on-bg:#243C4B;
+  --accent:#0072CE;--accent-bg:#E1EEF9;--navy:#243C4B;--hl:#FFD500;--on-hl:#243C4B;--magenta:#DC0080;
+  --ok-bg:#EDF6DA;--ok-fg:#4D6E00;--warn-bg:#FFF4C2;--warn-fg:#7A5F00;--bad-bg:#FBE2E3;--bad-fg:#B00B12;--na-bg:#EEF4FA;--na-fg:#9AAFC0;
+  --r1:#58CAE7;--r2:#8AC208;--r3:#FFD500;--r4:#243C4B;--lb:#58CAE7;--green:#8AC208;--red:#D40D15;
+  --pre:#BFD6EC;--post:#0072CE;--ref:#D40D15;
+  --f-display:"Poppins",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-body:"Poppins",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0A1E31;--panel:#0C2C4B;--line:#1E4670;--fg:#EEF4FA;--muted:#A9C2D8;--faint:#7C9AB5;--tile:#12385E;--kpi:#0072CE;--on-kpi:#FFFFFF;--pink:#FFB0DA;--on-bg:#FFFFFF;
+  --accent:#4DA3E8;--accent-bg:#14324A;--navy:#58CAE7;--hl:#FFD500;--on-hl:#243C4B;--magenta:#F04DA6;
+  --ok-bg:#26340F;--ok-fg:#B4DE5E;--warn-bg:#3A3210;--warn-fg:#FFE066;--bad-bg:#3F1517;--bad-fg:#F58A8E;--na-bg:#123658;--na-fg:#6F8FAE;
+  --r1:#58CAE7;--r2:#A5D93A;--r3:#FFD500;--r4:#9FB6C3;--lb:#58CAE7;--green:#A5D93A;--red:#F2555C;
+  --pre:#3B6189;--post:#4DA3E8;--ref:#F2555C;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0A1E31;--panel:#0C2C4B;--line:#1E4670;--fg:#EEF4FA;--muted:#A9C2D8;--faint:#7C9AB5;--tile:#12385E;--kpi:#0072CE;--on-kpi:#FFFFFF;--pink:#FFB0DA;--on-bg:#FFFFFF;
+  --accent:#4DA3E8;--accent-bg:#14324A;--navy:#58CAE7;--hl:#FFD500;--on-hl:#243C4B;--magenta:#F04DA6;
+  --ok-bg:#26340F;--ok-fg:#B4DE5E;--warn-bg:#3A3210;--warn-fg:#FFE066;--bad-bg:#3F1517;--bad-fg:#F58A8E;--na-bg:#123658;--na-fg:#6F8FAE;
+  --r1:#58CAE7;--r2:#A5D93A;--r3:#FFD500;--r4:#9FB6C3;--lb:#58CAE7;--green:#A5D93A;--red:#F2555C;
+  --pre:#3B6189;--post:#4DA3E8;--ref:#F2555C;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.5;padding:0 16px}
+.wrap{max-width:1140px;margin:0 auto;padding-block:24px 48px;display:flex;flex-direction:column;gap:20px}
+h1,h2{font-family:var(--f-display);font-weight:700;margin:0;text-wrap:balance}
+h1{font-size:28px;letter-spacing:-.01em;color:#FFFFFF}
+header{background:#0072CE;color:#FFFFFF;border-radius:12px;padding:22px 24px;border-bottom:6px solid var(--hl)}
+header .seg{display:flex;flex-wrap:wrap;gap:6px;background:rgba(255,255,255,.14);padding:4px;border-radius:999px}
+.seg button{font:inherit;font-size:13px;font-weight:500;border:0;border-radius:999px;padding:6px 14px;background:transparent;color:#FFFFFF;cursor:pointer}
+.seg button:hover{background:rgba(255,255,255,.18)}
+.seg button[aria-pressed="true"]{background:var(--hl);color:var(--on-hl);font-weight:600}
+.seg button:focus-visible{outline:2px solid #FFFFFF;outline-offset:2px}
+.hdr-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.exp{font:inherit;font-size:13px;font-weight:600;border:0;border-radius:999px;padding:8px 16px;background:#FFFFFF;color:#0072CE;cursor:pointer}
+.exp:hover{background:var(--hl);color:var(--on-hl)}
+.exp:focus-visible{outline:2px solid var(--hl);outline-offset:2px}
+.exp[disabled]{opacity:.6;cursor:wait}
+.expmsg{width:100%;margin:0;font-size:12px;color:#FFFFFF;min-height:0}
+.expmsg:empty{display:none}
+.eyebrow{color:#FFFFFF;opacity:.85}
+header .chip.plain{background:rgba(255,255,255,.16);color:#FFFFFF}
+.jur{display:inline-block;font-size:11px;color:var(--muted);font-weight:400}
+h2{font-size:17px;font-weight:600;font-family:var(--f-body)}
+.num{font-variant-numeric:tabular-nums}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px}
+.eyebrow{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+.meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--hl);color:var(--on-hl);font-weight:600}
+.chip.plain{background:var(--tile);color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.span2{grid-column:1/-1}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.hint{font-size:12px;color:var(--muted);margin:0}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.kpi{background:var(--kpi);color:var(--on-kpi);border-radius:10px;padding:14px 16px}
+.kpi .l{font-size:13px;color:var(--on-kpi);opacity:.9;margin:0}
+.kpi .s,.kpi .v span{color:var(--on-kpi)!important;opacity:.85}
+.kpi .ok-t{color:var(--on-kpi)!important;opacity:1;font-weight:500}.kpi .bad-t{color:var(--hl)!important;opacity:1;font-weight:600}
+.kpi .v{font-family:var(--f-display);font-size:30px;font-weight:700;margin:2px 0 0;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:12px;margin:0}
+.ok-t{color:var(--ok-fg)}.bad-t{color:var(--bad-fg)}
+.bars .row{display:grid;grid-template-columns:84px minmax(0,1fr) 64px;gap:10px;align-items:center;margin-bottom:8px;font-size:13px}
+.stack{display:flex;height:26px;border-radius:6px;overflow:hidden;font-size:11px;font-weight:600}
+.stack>div{display:flex;align-items:center;padding:0 8px;white-space:nowrap}
+.seg-ok{background:var(--ok-bg);color:var(--ok-fg)}.seg-bad{background:var(--bad-bg);color:var(--bad-fg);justify-content:center}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.scroll{overflow-x:auto}
+.hm{display:grid;gap:4px;font-size:12px;min-width:560px}
+.hm .c{border-radius:6px;padding:8px 0;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
+.hm .h{color:var(--muted);text-align:center;font-size:11px;align-self:end}
+.hm .lb{display:flex;align-items:center;font-size:13px}
+.ok{background:var(--ok-bg);color:var(--ok-fg)}.wr{background:var(--warn-bg);color:var(--warn-fg)}.bd{background:var(--bad-bg);color:var(--bad-fg)}.na{background:var(--na-bg);color:var(--na-fg);font-weight:400!important}
+.profile{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.hbar{display:flex;flex-direction:column;gap:12px}
+.hbar .row{display:grid;grid-template-columns:100px minmax(0,1fr);gap:12px;align-items:center;font-size:13px}
+.hbar .track{display:flex;align-items:center;gap:10px;min-width:0}
+.hbar .b{height:24px;border-radius:5px;flex:none;min-width:68px;display:flex;align-items:center;padding:0 8px;font-size:12px;font-weight:600;color:var(--panel);white-space:nowrap}
+.box{background:var(--tile);border-radius:10px;padding:16px}
+.la-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.la-item{display:flex;flex-direction:column;gap:12px;min-width:0;background:var(--panel);border:1px solid var(--line);padding:18px}
+h3{font-size:15px;font-weight:600;margin:0}
+.la-wide{grid-column:1/-1}
+.hbar .val{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+.hbar .val b{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.hmscale{display:inline-flex;align-items:center;gap:6px}
+.hmscale .grad{display:inline-block;width:90px;height:10px;border-radius:3px;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 12%,var(--panel)),var(--accent))}
+.hm .c small{display:block;font-size:10px;font-weight:500;opacity:.8;margin-top:1px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.sub{font-size:13px;color:var(--muted);margin:0 0 10px}
+svg text{font-family:var(--f-body)}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+th{font-weight:600;color:var(--muted);font-size:12px;text-align:left;padding:8px;border-bottom:1px solid var(--line)}
+td{padding:9px 8px;border-bottom:1px solid var(--line)}
+.ctr{text-align:center}
+.pill{display:inline-block;min-width:48px;text-align:center;border-radius:6px;padding:2px 6px;font-weight:600;font-size:12px;font-variant-numeric:tabular-nums}
+.pill.okp{color:var(--muted);font-weight:500}
+select{font:inherit;font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
+select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tl{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:8px;min-width:760px}
+.tl .ph{border-radius:10px;padding:12px 14px;background:var(--tile);border:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.tl .ph .n{font-size:13px;font-weight:600;margin:0}
+.tl .ph .d{font-size:12px;color:var(--muted);margin:0}
+.tl .done{background:var(--accent-bg);border-color:transparent}
+.tl .done .n::after{content:" \2713";color:var(--accent)}
+.tl .now{background:var(--accent);border-color:var(--accent);color:#FFFFFF}
+.tl .now .d{color:#FFFFFF;opacity:.9}
+.tl .tag{align-self:flex-start;font-size:11px;font-weight:600;background:var(--hl);color:var(--on-hl);border-radius:999px;padding:1px 8px;margin-bottom:4px}
+.tl .prog{height:6px;border-radius:3px;background:rgba(255,255,255,.3);margin-top:8px;overflow:hidden}
+.tl .prog i{display:block;height:100%;background:var(--hl)}
+.rk4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.rkbox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.rkbox h3 small{font-weight:400;color:var(--muted);font-size:12px;margin-left:6px}
+.rkrow{display:grid;grid-template-columns:28px minmax(0,1fr) 52px;gap:10px;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px solid var(--line)}
+.rkrow:last-child{border-bottom:0}
+.rkn{display:inline-flex;width:24px;height:24px;border-radius:50%;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:var(--tile);color:var(--fg)}
+.rkn.top{background:var(--hl);color:var(--on-hl)}
+.rkscore{font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.wchips{display:flex;gap:6px;flex-wrap:wrap}
+.wchip{font-size:12px;background:var(--accent-bg);color:var(--accent);border-radius:999px;padding:3px 10px;font-weight:500}
+.linkbtn{font:inherit;font-size:12px;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-align:left;font-weight:500}
+.linkbtn:hover{text-decoration:underline}
+@media (max-width:760px){.rk4{grid-template-columns:minmax(0,1fr)}}
+.dots{display:inline-flex;gap:3px;flex-wrap:nowrap}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%}
+.dot.h{background:var(--ok-fg)}.dot.x{background:var(--bad-fg)}.dot.n{background:var(--line)}
+.stpill{display:inline-block;border-radius:6px;padding:2px 8px;font-weight:600;font-size:12px;white-space:nowrap}
+.sumrow{display:flex;gap:8px;flex-wrap:wrap}
+.sumrow button{font:inherit;font-size:12px;border-radius:999px;padding:4px 12px;font-weight:500;border:2px solid transparent;cursor:pointer;opacity:.75}
+.sumrow button:hover{opacity:1}
+.sumrow button[aria-pressed="true"]{opacity:1;border-color:currentColor;font-weight:600}
+.sumrow button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#pesertaTbl td{white-space:nowrap}
+#pesertaTbl th.grp{border-bottom:2px solid var(--accent);color:var(--accent)}
+#pesertaTbl th.sub{font-size:11px;padding:4px 6px}
+#pesertaTbl .sep{border-left:1px solid var(--line)}
+#pesertaTbl td,#pesertaTbl th{padding-left:7px;padding-right:7px}
+#pesertaTbl .stick{position:sticky;left:0;background:var(--panel);z-index:1;box-shadow:1px 0 0 var(--line)}
+#pesertaTbl td.note{white-space:normal;color:var(--muted);min-width:300px;line-height:1.45}
+footer{font-size:12px;color:var(--faint);text-align:center}
+@media (max-width:760px){.grid,.two,.la-grid{grid-template-columns:minmax(0,1fr)}.kpis,.profile{grid-template-columns:minmax(0,1fr)}h1{font-size:24px}}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <p class="eyebrow">Bootcamp FutureMakers</p>
+    <h1 id="judul">Dashboard umum 4 daerah</h1>
+  </div>
+  <div class="hdr-actions"><div class="seg" role="group" aria-label="Filter daerah" id="seg"></div><button type="button" id="btnExport" class="exp" hidden>Unduh data Excel</button></div><p id="expMsg" class="expmsg" role="status"></p>
+</header>
+<section class="panel" aria-labelledby="h-tl" style="gap:12px">
+  <div class="panel-head"><h2 id="h-tl">Fase program</h2><p class="hint">Per 30 September 2026: bootcamp minggu ke-3 dari 4</p></div>
+  <div class="scroll"><div class="tl">
+    <div class="ph done"><p class="n">Onboarding</p><p class="d">11 Sep</p></div>
+    <div class="ph now"><span class="tag">Sekarang</span><p class="n">Bootcamp</p><p class="d">14 Sep sampai 9 Okt</p><div class="prog"><i style="width:65%"></i></div></div>
+    <div class="ph"><p class="n">Capstone</p><p class="d">6 sampai 12 Okt</p></div>
+    <div class="ph"><p class="n">Showcase</p><p class="d">14 Okt</p></div>
+    <div class="ph"><p class="n">Magang</p><p class="d">19 Okt sampai Jan 2027</p></div>
+    <div class="ph"><p class="n">Pendampingan kerja</p><p class="d">Setelah magang</p></div>
+  </div></div>
+</section>
+
+
+<div class="grid">
+  <section class="panel span2" aria-labelledby="h-status">
+    <div class="panel-head"><h2 id="h-status">Status peserta</h2><p class="hint">Aktif dan drop out dihitung dari total terdaftar</p></div>
+    <div class="kpis">
+      <div class="kpi"><p class="l">Terdaftar</p><p class="v" id="kTer">100</p><p class="s" id="kTerS">DKI 27, SMG 20, DIY 25, SBY 28</p></div>
+      <div class="kpi"><p class="l">Aktif</p><p class="v" id="kAkt">90</p><p class="s ok-t" id="kAktS">90% dari terdaftar</p></div>
+      <div class="kpi"><p class="l">Drop out</p><p class="v" id="kDrop">10</p><p class="s bad-t" id="kDropS">10% drop rate</p></div>
+    </div>
+    <div>
+      <p class="sub">Komposisi peserta per daerah</p>
+      <div class="bars" id="komposisi"></div>
+      <div class="legend"><span><span class="sw" style="background:var(--ok-bg);outline:1px solid var(--ok-fg)"></span>Aktif</span><span><span class="sw" style="background:var(--bad-bg);outline:1px solid var(--bad-fg)"></span>Drop out</span><span>Label merah: drop rate 15% ke atas. Pembagian aktif dan drop out masih contoh</span></div>
+    </div>
+  </section>
+
+  <section class="panel span2" aria-labelledby="h-profil">
+    <div class="panel-head"><h2 id="h-profil">Profil peserta</h2><p class="hint" id="profilHint">Berdasarkan data pendaftaran</p></div>
+    <div class="profile">
+      <div class="kpi"><p class="l">Gender</p><p class="v">100% <span style="font-size:14px;color:var(--muted);font-family:var(--f-body);font-weight:500">perempuan</span></p><p class="s" style="color:var(--faint)">100 peserta perempuan</p></div>
+      <div class="kpi"><p class="l">Peserta disabilitas</p><p class="v">5 <span style="font-size:14px;color:var(--muted);font-family:var(--f-body);font-weight:500">(5%)</span></p><p class="s" style="color:var(--faint)">Fisik 2, sensorik 2, lainnya 1</p></div>
+      <div class="kpi"><p class="l">Usia rata-rata</p><p class="v">21 <span style="font-size:14px;color:var(--muted);font-family:var(--f-body);font-weight:500">tahun</span></p><p class="s" style="color:var(--faint)">Termuda 17, tertua 29</p></div>
+    </div>
+    <div class="two">
+      <div class="box"><p class="sub">Sebaran usia</p><div class="hbar" id="usia"></div></div>
+      <div class="box"><p class="sub">Status saat mendaftar</p><div class="hbar" id="statusDaftar"></div></div>
+    </div>
+  </section>
+
+  <section class="panel span2" aria-labelledby="h-hadir">
+    <div class="panel-head"><h2 id="h-hadir">Kehadiran per hari (%)</h2><p class="hint">Persentase peserta aktif yang hadir di tiap hari</p></div>
+    <div class="scroll"><div class="hm" id="hadir"></div></div>
+    <div class="legend"><span><span class="sw ok"></span>85% ke atas</span><span><span class="sw wr"></span>70 sampai 84%</span><span><span class="sw bd"></span>di bawah 70%</span><span><span class="sw na"></span>belum berjalan</span></div>
+  </section>
+
+  <section class="panel span2" aria-labelledby="h-la">
+    <div class="panel-head"><h2 id="h-la">Learning Analytics</h2><p class="hint">Pengumpulan tugas, nilai tugas, kuis formatif, dan learning gain</p></div>
+    <div class="la-grid">
+  <div class="box la-item" role="group" aria-labelledby="h-tugas">
+    <h3 id="h-tugas">Tugas terkumpul per tugas (%)</h3>
+    <p class="hint">Dihitung dari peserta aktif</p>
+    <div class="scroll"><div class="hm" id="tugas" style="min-width:0"></div></div>
+    <div class="legend"><span><span class="sw ok"></span>85% ke atas</span><span><span class="sw wr"></span>70 sampai 84%</span><span><span class="sw bd"></span>di bawah 70%</span><span><span class="sw na"></span>belum dibuka</span></div>
+  </div>
+
+  <div class="box la-item" role="group" aria-labelledby="h-nilai">
+    <h3 id="h-nilai">Nilai tugas</h3>
+    <p class="hint">Rata-rata nilai per tugas, garis merah adalah standar 70</p>
+    <div id="nilaiTugas"></div>
+    <div class="legend" id="lgNilai"></div>
+  </div>
+
+  <div class="box la-item" role="group" aria-labelledby="h-kuis">
+    <h3 id="h-kuis">Kuis formatif per sesi</h3>
+    <p class="hint">Rata-rata nilai kuis akhir sesi, garis putus-putus adalah KKM 70</p>
+    <div id="kuis"></div>
+    <div class="legend" id="lgKuis"></div>
+  </div>
+
+  <div class="box la-item" role="group" aria-labelledby="h-gain">
+    <h3 id="h-gain">Learning gain</h3>
+    <p class="hint">Rata-rata pretest dan post test, label hijau adalah kenaikan poin</p>
+    <div id="gain"></div>
+    <div class="legend"><span><span class="sw" style="background:var(--pre)"></span>Pretest</span><span><span class="sw" style="background:var(--post)"></span>Post test</span></div>
+  </div>
+
+  <div class="box la-item la-wide" role="group" aria-labelledby="h-login">
+    <div class="panel-head"><h3 id="h-login">Aktivitas login LMS</h3><p class="hint" id="loginHint"></p></div>
+    <div id="login"></div>
+  </div>
+
+  <div class="box la-item la-wide" role="group" aria-labelledby="h-mentor">
+    <div class="panel-head"><h3 id="h-mentor">Mentoring</h3><p class="hint num" id="mentorHint"></p></div>
+    <div class="bars" id="mentoring"></div>
+    <div class="legend"><span><span class="sw bd"></span>Belum mentoring (0x)</span><span><span class="sw ok"></span>1x</span><span><span class="sw" style="background:var(--post)"></span>2x, jatah habis</span></div>
+  </div>
+
+    </div>
+  </section>
+
+
+  <section class="panel span2" aria-labelledby="h-peserta" id="secPeserta" hidden>
+    <div class="panel-head"><h2 id="h-peserta">Daftar peserta</h2><p class="hint" id="pesertaHint"></p></div>
+    <div class="sumrow" id="pesertaSum"></div>
+    <div class="scroll"><table id="pesertaTbl" style="min-width:1900px"></table></div>
+    <div class="legend"><span><span class="dot h"></span> hadir</span><span><span class="dot x"></span> tidak hadir</span><span><span class="dot n"></span> belum berjalan</span><span>Nilai merah: di bawah 70</span><span>· belum berjalan</span><span>Belum mengerjakan: kuis sesi itu belum dikerjakan</span><span>Tidak mengumpulkan: tugas lewat tenggat tanpa dikumpulkan</span><span>Perlu tindak lanjut: kehadiran di bawah 70% atau belum mentoring. Pantau: kehadiran di bawah 85% atau mentoring baru 1x</span></div>
+  </section>
+
+  <section class="panel span2" aria-labelledby="h-rank">
+    <div class="panel-head"><h2 id="h-rank">Performance ranking</h2><p class="hint" id="rankHint"></p></div>
+    <div id="rank"></div>
+  </section>
+
+  <section class="panel span2" aria-labelledby="h-alert">
+    <div class="panel-head">
+      <h2 id="h-alert">Siswa berstatus alert</h2>
+      <span class="hint num" id="alertCount"></span>
+    </div>
+    <div class="scroll"><table><thead><tr><th class="ctr" style="width:44px">No</th><th>Nama siswa</th><th>Jurusan</th><th>Daerah</th><th class="ctr">Kehadiran</th><th class="ctr">Tugas</th><th class="ctr">Kuis</th></tr></thead><tbody id="alertBody"></tbody></table></div>
+    <div class="legend"><span><span class="sw bd"></span>di bawah batas</span><span><span class="sw wr"></span>mendekati batas</span><span>Batas: kehadiran 75%, tugas 70%, kuis 70</span><span>Diurutkan dari masalah terbanyak</span></div>
+  </section>
+
+  <section class="panel span2" aria-labelledby="h-puas">
+    <div class="panel-head"><h2 id="h-puas">Rating kepuasan</h2><p class="hint">Skala 1 sampai 5, kolom respons adalah persentase peserta aktif yang mengisi survey</p></div>
+    <div class="scroll"><div class="hm" id="puas" style="min-width:560px"></div></div>
+    <div class="legend"><span><span class="sw ok"></span>4,2 ke atas</span><span><span class="sw wr"></span>3,5 sampai 4,1</span><span><span class="sw bd"></span>di bawah 3,5</span></div>
+  </section>
+</div>
+
+<footer>Jumlah peserta per daerah sudah final. Angka lain masih data contoh untuk menguji tampilan.</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const ALL=["DKI Jakarta","Semarang","DIY","Surabaya"];let R=ALL,SEL="Semua";const RC={"DKI Jakarta":"var(--r1)","Semarang":"var(--r2)","DIY":"var(--r3)","Surabaya":"var(--r4)"};
+const hs=(v,lo,hi,lim)=>{const t=Math.max(0,Math.min(1,(v-lo)/(hi-lo))),p=Math.round(12+t*88);return `background:color-mix(in srgb,var(--accent) ${p}%,var(--panel));color:${p>=55?'#FFFFFF':'var(--fg)'};${v<lim?'box-shadow:inset 0 0 0 2px var(--ref);':''}`};
+const $=id=>document.getElementById(id),fmt=v=>String(v).replace('.',',');
+
+const REG={"DKI Jakarta":27,"Semarang":20,"DIY":25,"Surabaya":28},JUR={"DKI Jakarta":"Data Analyst","Semarang":"AI Web Programming","DIY":"Social Media Marketing","Surabaya":"Social Media Marketing"},AB={"DKI Jakarta":"DKI","Semarang":"SMG","DIY":"DIY","Surabaya":"SBY"};
+function psRows(k){const MT=8,MC={"DKI Jakarta":[5,12,8],"Semarang":[7,6,3],"DIY":[3,11,10],"Surabaya":[7,11,7]};
+if(!window.__PS)window.__PS={};
+if(!window.__PS[k]){let sd=k.length*97+13;const rnd=()=>{sd=(sd*16807)%2147483647;return sd/2147483647};
+const list=window.__RK[k].map(x=>x.nama).slice().sort((a,b)=>a.localeCompare(b,'id'));
+const mc=[];const[c0,c1,c2]=MC[k];for(let i=0;i<c0;i++)mc.push(0);for(let i=0;i<c1;i++)mc.push(1);for(let i=0;i<c2;i++)mc.push(2);
+for(let i=mc.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[mc[i],mc[j]]=[mc[j],mc[i]]}
+const base={"DKI Jakarta":.9,"Semarang":.74,"DIY":.93,"Surabaya":.84}[k];
+const pre0={"DKI Jakarta":52,"Semarang":61,"DIY":45,"Surabaya":58}[k],sk={"DKI Jakarta":82,"Semarang":70,"DIY":85,"Surabaya":77}[k],cl=v=>Math.max(40,Math.min(100,Math.round(v)));
+window.__PS[k]=list.map((n,i)=>{const p=Math.min(.98,Math.max(.4,base+(rnd()-.5)*.45));const at=Array.from({length:12},(_,j)=>j<MT?(rnd()<p?1:0):null);const lv=(p-base)*40;
+const kuis=at.map(v=>v==null?null:v===0?0:cl(sk+lv+(rnd()-.5)*18));const tugas=Array.from({length:6},(_,j)=>j<4?(rnd()<p+.05?cl(sk+lv+(rnd()-.5)*20):0):null);
+return{n,at,mc:mc[i],pre:cl(pre0+(rnd()-.5)*20),kuis,tugas}})}
+return window.__PS[k].map(p=>{const h=p.at.filter(v=>v===1).length,pc=Math.round(h/MT*100);let cur=0;p.at.forEach(v=>{if(v===0)cur++;else if(v===1)cur=0});
+const st=pc<70||p.mc==0?'urgent':pc<85||p.mc<2?'watch':'ok';
+const tk=p.tugas.filter(v=>v===0).length,kq=p.kuis.filter(v=>v===0).length,low=[...p.kuis,...p.tugas].filter(v=>v&&v<70).length;
+const why=[];if(pc<70)why.push(`Kehadiran ${pc}%, di bawah batas 70%`);else if(pc<85)why.push(`Kehadiran ${pc}%, di bawah target 85%`);
+if(cur>=2)why.push(`Tidak hadir ${cur} pertemuan terakhir berturut-turut`);
+if(p.mc==0)why.push('Belum ikut mentoring sama sekali');else if(p.mc==1)why.push('Baru ikut 1 dari 2 sesi mentoring');
+if(tk)why.push(`${tk} tugas tidak dikumpulkan`);if(kq)why.push(`${kq} kuis belum dikerjakan`);if(low)why.push(`${low} nilai kuis atau tugas di bawah 70`);
+const act=[];if(st=='urgent'&&(pc<70||cur>=2))act.push('hubungi peserta untuk cek kendala kehadiran');if(p.mc==0)act.push('jadwalkan mentoring 1');else if(p.mc==1)act.push('jadwalkan mentoring 2');if(tk||kq)act.push(tk&&kq?'ingatkan pengerjaan kuis dan pengumpulan tugas':tk?'ingatkan pengumpulan tugas':'ingatkan pengerjaan kuis');
+return{...p,h,pc,st,why,act,note:why.length?why.join('. ')+'.':'Kehadiran, mentoring, dan pengumpulan tugas sesuai target.',todo:act.length?'Tindak lanjut: '+act.join(', ')+'.':''}});}
+function renderAll(){
+/* Komposisi */
+const komp={"DKI Jakarta":[25,2],"Semarang":[16,4],"DIY":[24,1],"Surabaya":[25,3]};
+{const ter=R.reduce((a,k)=>a+REG[k],0),akt=R.reduce((a,k)=>a+komp[k][0],0),dr=ter-akt;
+$('kTer').textContent=ter;$('kTerS').textContent=R.length>1?R.map(k=>AB[k]+' '+REG[k]).join(', '):JUR[SEL];
+$('kAkt').textContent=akt;$('kAktS').textContent=Math.round(akt/ter*100)+'% dari terdaftar';
+$('kDrop').textContent=dr;$('kDropS').textContent=Math.round(dr/ter*100)+'% drop rate';
+$('judul').textContent=R.length>1?'Dashboard umum 4 daerah':'Dashboard '+SEL;
+$('profilHint').textContent=R.length>1?'Berdasarkan data pendaftaran':'Data profil masih gabungan semua daerah';}
+$('komposisi').innerHTML=R.map(k=>{const[a,x]=komp[k],t=a+x,d=Math.round(x/t*100);return`<div class="row"><span>${k}</span><div class="stack"><div class="seg-ok" style="width:${a/t*100}%">${a} aktif</div><div class="seg-bad" style="width:${x/t*100}%">${x}</div></div><span class="num" style="font-size:12px;color:${d>=15?'var(--bad-fg)':'var(--muted)'}">drop ${d}%</span></div>`}).join('');
+
+/* Profil */
+function hbars(id,data,tot,col){const mx=Math.max(...Object.values(data));$(id).innerHTML=Object.entries(data).map(([k,v])=>`<div class="row"><span>${k}</span><div class="track"><div class="b" style="width:calc((100% - 56px) * ${v/mx});background:${col}">${v} orang</div><div class="val"><b>${Math.round(v/tot*100)}%</b></div></div></div>`).join('')}
+hbars('usia',{"17-19":24,"20-22":42,"23-25":26,"26-29":8},100,'var(--r1)');
+hbars('statusDaftar',{"Mahasiswa":43,"Pencari kerja":31,"Bekerja":14,"Wirausaha":12},100,'var(--navy)');
+
+/* Heatmap */
+function heat(id,label,n,data,cls,lastBold=true){
+  const rows={...data};if(lastBold){const tot=[];for(let i=0;i<n;i++){const vs=Object.values(data).map(a=>a[i]).filter(v=>v!=null);tot.push(vs.length?Math.round(vs.reduce((a,b)=>a+b)/vs.length):null)}rows["Semua"]=tot}
+  const el=$(id);el.style.gridTemplateColumns=`90px repeat(${n},minmax(0,1fr))`;
+  let h='<div></div>';for(let i=1;i<=n;i++)h+=`<div class="h">${label} ${i}</div>`;
+  for(const[k,a]of Object.entries(rows)){h+=`<div class="lb"${k=='Semua'?' style="font-weight:600"':''}>${k}</div>`;for(let i=0;i<n;i++){const v=a[i];h+=`<div class="c ${v==null?'na':cls(v)}">${v==null?'·':v}</div>`}}
+  el.innerHTML=h}
+const pct=v=>v>=85?'ok':v>=70?'wr':'bd';
+(()=>{const n={"DKI Jakarta":25,"Semarang":16,"DIY":24,"Surabaya":25},p={"DKI Jakarta":[98,95,92,90,88,86,85,83],"Semarang":[96,90,82,76,72,70,68,65],"DIY":[97,94,93,92,92,90,91,89],"Surabaya":[95,88,85,80,78,79,77,74]},N=12;
+const rows={};R.forEach(k=>rows[k]=p[k].map(v=>[Math.round(v*n[k]/100),n[k]]));
+if(R.length>1){rows["Semua"]=[];for(let i=0;i<N;i++){if(p[R[0]][i]==null)break;rows["Semua"].push(R.reduce((a,k)=>[a[0]+rows[k][i][0],a[1]+rows[k][i][1]],[0,0]))}}
+const el=$('hadir');el.style.gridTemplateColumns=`90px repeat(${N},minmax(0,1fr))`;el.style.minWidth='720px';
+let h='<div></div>';for(let i=1;i<=N;i++)h+=`<div class="h">Day ${i}</div>`;
+for(const[k,a]of Object.entries(rows)){h+=`<div class="lb"${k=='Semua'?' style="font-weight:600"':''}>${k}</div>`;for(let i=0;i<N;i++){const v=a[i];if(!v){h+='<div class="c na">·<small>&nbsp;</small></div>';continue}const pc=Math.round(v[0]/v[1]*100);h+=`<div class="c ${pct(pc)}">${pc}%<small>${v[0]}/${v[1]}</small></div>`}}
+el.innerHTML=h})();
+(()=>{const n={"DKI Jakarta":25,"Semarang":16,"DIY":24,"Surabaya":25},c={"DKI Jakarta":[24,23,22,21],"Semarang":[15,13,11,10],"DIY":[24,23,23,22],"Surabaya":[23,21,20,19]},N=6;
+const rows={};R.forEach(k=>rows[k]=c[k].map(v=>[v,n[k]]));
+if(R.length>1)rows["Semua"]=c[R[0]].map((_,i)=>R.reduce((a,k)=>[a[0]+rows[k][i][0],a[1]+rows[k][i][1]],[0,0]));
+const el=$('tugas');el.style.gridTemplateColumns=`90px repeat(${N},minmax(0,1fr))`;
+let h='<div></div>';for(let i=1;i<=N;i++)h+=`<div class="h">Tugas ${i}</div>`;
+for(const[k,a]of Object.entries(rows)){h+=`<div class="lb"${k=='Semua'?' style="font-weight:600"':''}>${k}</div>`;for(let i=0;i<N;i++){const v=a[i];if(!v){h+='<div class="c na">·<small>&nbsp;</small></div>';continue}const pc=Math.round(v[0]/v[1]*100);h+=`<div class="c ${pct(pc)}">${pc}%<small>${v[0]}/${v[1]}</small></div>`}}
+el.innerHTML=h})();
+
+/* SVG helpers */
+const W=560,H=250,L=34,Rp=10,T=16,B=28;
+function axes(lo,hi,step,y){let s='';for(let v=lo;v<=hi;v+=step)s+=`<line x1="${L}" x2="${W-Rp}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--line)" stroke-width="1"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="11" style="fill:var(--faint)">${v}</text>`;return s}
+function refLine(v,y,txt){return`<line x1="${L}" x2="${W-Rp}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--ref)" stroke-width="1.4" stroke-dasharray="5 4"/><text x="${W-Rp}" y="${y(v)-6}" text-anchor="end" font-size="11" style="fill:var(--ref)">${txt}</text>`}
+const legendRegions=id=>$(id).innerHTML=R.map(k=>`<span><span class="sw" style="background:${RC[k]}"></span>${k}</span>`).join('');
+
+/* Nilai tugas */
+(()=>{const d={"DKI Jakarta":[84,80,77,82],"Semarang":[78,71,65,63],"DIY":[88,85,83,86],"Surabaya":[81,76,72,74]},N=6,y=v=>T+(100-v)/100*(H-T-B),gw=(W-L-Rp)/N,bw=Math.min(gw*.8/R.length,40),gx0=(gw-bw*R.length)/2;
+let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Rata-rata nilai tugas per tugas per daerah">`+axes(0,100,25,y);
+for(let i=0;i<N;i++){const gx=L+i*gw+gx0;s+=`<text x="${L+i*gw+gw/2}" y="${H-8}" text-anchor="middle" font-size="11" style="fill:var(--muted)">Tugas ${i+1}</text>`;let any=0;
+R.forEach((k,j)=>{const v=d[k][i];if(v==null)return;any=1;const bx=gx+j*bw;s+=`<rect x="${bx+1}" y="${y(v)}" width="${bw-2}" height="${y(0)-y(v)}" rx="2" style="fill:${RC[k]}"><title>${k}, tugas ${i+1}: ${v}</title></rect><text x="${bx+bw/2}" y="${y(v)-4}" text-anchor="middle" font-size="9" style="fill:var(--muted)">${v}</text>`});
+if(!any)s+=`<text x="${L+i*gw+gw/2}" y="${y(45)}" text-anchor="middle" font-size="11" style="fill:var(--faint)">belum</text>`}
+$('nilaiTugas').innerHTML=s+refLine(70,y,'Standar 70')+'</svg>';legendRegions('lgNilai')})();
+
+/* Kuis */
+(()=>{const d={"DKI Jakarta":[85,82,78,84,80,76,83,81],"Semarang":[80,74,66,70,64,68,62,65],"DIY":[88,86,81,87,85,79,86,84],"Surabaya":[82,79,72,78,75,71,77,74]},N=12,lo=50,hi=100,x=i=>L+8+i*(W-L-Rp-16)/(N-1),y=v=>T+(hi-v)/(hi-lo)*(H-T-B);
+let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Tren nilai kuis formatif per sesi per daerah">`+axes(lo,hi,10,y);
+for(let i=0;i<N;i++)s+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="11" style="fill:var(--muted)">S${i+1}</text>`;
+s+=refLine(70,y,'KKM 70');
+R.forEach(k=>{const a=d[k];s+=`<polyline fill="none" style="stroke:${RC[k]}" stroke-width="2.2" stroke-linejoin="round" points="${a.map((v,i)=>x(i)+','+y(v)).join(' ')}"/>`;a.forEach((v,i)=>s+=`<circle cx="${x(i)}" cy="${y(v)}" r="${i==a.length-1?4.5:3}" style="fill:${RC[k]}"><title>${k}, sesi ${i+1}: ${v}</title></circle>`)});
+$('kuis').innerHTML=s+'</svg>';legendRegions('lgKuis')})();
+
+/* Learning gain */
+(()=>{const d={"DKI Jakarta":[52,78],"Semarang":[61,70],"DIY":[45,80],"Surabaya":[58,74]},Hh=270,Tt=40,y=v=>Tt+(100-v)/100*(Hh-Tt-B),gw=(W-L-Rp)/R.length,bw=Math.min(40,gw*.28);
+let s=`<svg viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="Rata-rata pretest dan post test per daerah">`;
+for(let v=0;v<=100;v+=25)s+=`<line x1="${L}" x2="${W-Rp}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="11" style="fill:var(--faint)">${v}</text>`;
+R.forEach((k,i)=>{const[p,q]=d[k],cx=L+i*gw+gw/2,x1=cx-bw-3,x2=cx+3;
+s+=`<rect x="${x1}" y="${y(p)}" width="${bw}" height="${y(0)-y(p)}" rx="3" style="fill:var(--pre)"/><text x="${x1+bw/2}" y="${y(p)+15}" text-anchor="middle" font-size="11" style="fill:var(--fg)">${p}</text>`;
+s+=`<rect x="${x2}" y="${y(q)}" width="${bw}" height="${y(0)-y(q)}" rx="3" style="fill:var(--post)"/><text x="${x2+bw/2}" y="${y(q)+15}" text-anchor="middle" font-size="11" style="fill:var(--panel)">${q}</text>`;
+const ly=y(q)-26;s+=`<rect x="${cx-26}" y="${ly}" width="52" height="20" rx="6" style="fill:var(--ok-bg)"/><text x="${cx}" y="${ly+14}" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--ok-fg)">↑ +${q-p}</text>`;
+s+=`<text x="${cx}" y="${Hh-8}" text-anchor="middle" font-size="12" style="fill:var(--muted)">${k}</text>`});
+$('gain').innerHTML=s+'</svg>'})();
+
+
+
+/* Login LMS */
+{if(!window.__LG){let seed=11;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};window.__LG={};
+const rate={"DKI Jakarta":.9,"Semarang":.72,"DIY":.93,"Surabaya":.84};
+ALL.forEach(k=>{const n=komp[k][0];window.__LG[k]=[];for(let d=11;d<=30;d++){const wd=new Date(2026,8,d).getDay(),meet=[1,3,5].includes(wd),we=wd==0||wd==6;
+const r=meet?rate[k]-(d-11)*.004:we?.18:.42;window.__LG[k].push(Math.min(n,Math.round(n*(r+(rnd()-.5)*.1))))}})}
+const days=[];for(let d=11;d<=30;d++)days.push(d);
+const tot=R.reduce((a,k)=>a+komp[k][0],0),v=days.map((_,i)=>R.reduce((a,k)=>a+window.__LG[k][i],0));
+const Wd=1000,Hd=240,Ld=40,Rd=10,Td=16,Bd=34,y=x=>Td+(1-x/tot)*(Hd-Td-Bd),gw=(Wd-Ld-Rd)/days.length,bw=gw*.62;
+let s=`<svg viewBox="0 0 ${Wd} ${Hd}" width="100%" role="img" aria-label="Jumlah peserta yang login LMS per hari">`;
+[0,.25,.5,.75,1].forEach(p=>{const val=Math.round(tot*p);s+=`<line x1="${Ld}" x2="${Wd-Rd}" y1="${y(val)}" y2="${y(val)}" style="stroke:var(--line)"/><text x="${Ld-6}" y="${y(val)+4}" text-anchor="end" font-size="11" style="fill:var(--faint)">${val}</text>`});
+days.forEach((d,i)=>{const wd=new Date(2026,8,d).getDay(),meet=[1,3,5].includes(wd),x=Ld+i*gw+(gw-bw)/2;
+s+=`<rect x="${x}" y="${y(v[i])}" width="${bw}" height="${y(0)-y(v[i])}" rx="3" style="fill:var(--accent)"><title>${d} Sep: ${v[i]} dari ${tot} peserta login</title></rect>`;
+s+=`<text x="${x+bw/2}" y="${y(v[i])-5}" text-anchor="middle" font-size="10" style="fill:var(--muted)">${v[i]}</text>`;
+s+=`<text x="${x+bw/2}" y="${Hd-16}" text-anchor="middle" font-size="11" style="fill:var(--muted)">${d}</text>`});
+s+=`<text x="${Ld+(Wd-Ld-Rd)/2}" y="${Hd-2}" text-anchor="middle" font-size="11" style="fill:var(--faint)">September 2026</text>`;
+$('login').innerHTML=`<div class="scroll"><div style="min-width:640px">${s}</svg></div></div>`;
+const pk=Math.max(...v),pd=days[v.indexOf(pk)];
+$('loginHint').textContent=`Jumlah peserta yang login per hari dari ${tot} peserta aktif. Tertinggi ${pk} peserta pada ${pd} Sep`}
+
+/* Mentoring */
+(()=>{const d={"DKI Jakarta":[5,12,8],"Semarang":[7,6,3],"DIY":[3,11,10],"Surabaya":[7,11,7]};
+$('mentoring').innerHTML=R.map(k=>{const[a,b,c]=d[k],t=a+b+c;return`<div class="row"><span>${k}</span><div class="stack">
+<div class="bd" style="width:${a/t*100}%;justify-content:center">${a}</div><div class="ok" style="width:${b/t*100}%;justify-content:center">${b}</div><div style="width:${c/t*100}%;justify-content:center;background:var(--post);color:var(--panel)">${c}</div></div>
+<span class="num" style="font-size:12px;color:${a/t>=.3?'var(--bad-fg)':'var(--muted)'}">${Math.round(a/t*100)}% belum</span></div>`}).join('');
+const used=R.reduce((s,k)=>s+d[k][1]+2*d[k][2],0),quota=R.reduce((s,k)=>s+2*(d[k][0]+d[k][1]+d[k][2]),0);$('mentorHint').textContent=`Jatah terpakai ${used} dari ${quota} sesi (2 sesi per peserta aktif)`})();
+
+
+/* Ranking */
+{const W8={h:.15,k:.2,t:.3,c:.35},base={"DKI Jakarta":[88,80,82],"Semarang":[74,68,70],"DIY":[91,84,87],"Surabaya":[82,76,77]};
+const fn=["Aulia","Bella","Citra","Dinda","Elsa","Fitri","Gita","Hana","Indah","Jihan","Kirana","Laras","Maya","Nadia","Oktavia","Putri","Qonita","Rani","Salsa","Tiara","Ulfa","Vina","Wulan","Yuni","Zahra","Amelia","Bunga","Cahya"];
+const ln=["Pratiwi","Rahmawati","Lestari","Maharani","Kusuma","Anggraini","Safitri","Wulandari","Permata","Nuraini","Handayani","Setiawati"];
+if(!window.__RK){let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};window.__RK={};
+ALL.forEach((k,ri)=>{const n=komp[k][0],b=base[k];window.__RK[k]=Array.from({length:n},(_,i)=>{const cl=v=>Math.max(40,Math.min(100,Math.round(v)));
+const h=cl(b[0]+(rnd()-.5)*26),q=cl(b[1]+(rnd()-.5)*30),t=cl(b[2]+(rnd()-.5)*30);
+const skor=(W8.h*h+W8.k*q+W8.t*t)/(W8.h+W8.k+W8.t);return{nama:fn[(i+ri*7)%fn.length]+' '+ln[(i*5+ri)%ln.length],h,q,t,c:null,skor:Math.round(skor*10)/10}}).sort((a,b)=>b.skor-a.skor)})}
+const f1=v=>v.toFixed(1).replace('.',',');
+$('rankHint').textContent='Skor akhir: Kehadiran (15%), Rerata Kuis (20%), Rerata Tugas (30%), Nilai Capstone (35%). Sebelum capstone dinilai, skor dihitung dari tiga komponen lain';
+if(R.length>1){$('rank').innerHTML='<div class="rk4">'+R.map(k=>`<div class="rkbox"><h3>${k}<small>${JUR[k]}</small></h3><div>${window.__RK[k].slice(0,5).map((x,i)=>`<div class="rkrow"><span class="rkn${i<3?' top':''}">${i+1}</span><span>${x.nama}</span><span class="rkscore">${f1(x.skor)}</span></div>`).join('')}</div><button class="linkbtn" type="button" data-go="${k}">Lihat semua ${window.__RK[k].length} peserta</button></div>`).join('')+'</div>';
+$('rank').querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>document.getElementById('f-'+b.dataset.go.replace(/\s/g,'')).click())}
+else{const k=R[0];$('rank').innerHTML=`<div class="scroll"><table><thead><tr><th class="ctr" style="width:64px">Peringkat</th><th>Nama siswa</th><th class="ctr">Kehadiran (15%)</th><th class="ctr">Rerata Kuis (20%)</th><th class="ctr">Rerata Tugas (30%)</th><th class="ctr">Nilai Capstone (35%)</th><th class="ctr">Skor akhir</th></tr></thead><tbody>${window.__RK[k].map((x,i)=>`<tr><td class="ctr"><span class="rkn${i<3?' top':''}">${i+1}</span></td><td>${x.nama}</td><td class="ctr num">${x.h}%</td><td class="ctr num">${x.q}</td><td class="ctr num">${x.t}</td><td class="ctr" style="color:var(--faint)">belum</td><td class="ctr num" style="font-weight:600">${f1(x.skor)}</td></tr>`).join('')}</tbody></table></div>`}}
+
+
+/* Daftar peserta */
+{const sec=$('secPeserta');if(R.length>1){sec.hidden=true}else{sec.hidden=false;const k=R[0],MT=8,MC={"DKI Jakarta":[5,12,8],"Semarang":[7,6,3],"DIY":[3,11,10],"Surabaya":[7,11,7]};
+const rows=psRows(k);
+const lab={urgent:['Perlu tindak lanjut','background:var(--bad-bg);color:var(--bad-fg)'],watch:['Pantau','background:var(--warn-bg);color:var(--warn-fg)'],ok:['Aman','background:var(--ok-bg);color:var(--ok-fg)']};
+const cnt=t=>rows.filter(r=>r.st==t).length;
+$('pesertaHint').textContent=`${rows.length} peserta aktif ${k}, ${MT} dari 12 pertemuan sudah berjalan`;
+const F=window.__PSF||'all';$('pesertaSum').innerHTML=`<button type="button" data-st="all" aria-pressed="${F=='all'}" style="background:var(--tile);color:var(--fg)">Semua: ${rows.length}</button>`+['urgent','watch','ok'].map(t=>`<button type="button" data-st="${t}" aria-pressed="${F==t}" style="${lab[t][1]}">${lab[t][0]}: ${cnt(t)}</button>`).join('');
+$('pesertaSum').querySelectorAll('button').forEach(b=>b.onclick=()=>{window.__PSF=b.dataset.st;renderAll()});
+rows.forEach((r,i)=>r.no=i+1);const shown=F=='all'?rows:rows.filter(r=>r.st==F);
+const pc2=p=>p>=85?'var(--ok-fg)':p>=70?'var(--warn-fg)':'var(--bad-fg)',mcs=m=>m==2?'background:var(--ok-bg);color:var(--ok-fg)':m==1?'background:var(--warn-bg);color:var(--warn-fg)':'background:var(--bad-bg);color:var(--bad-fg)';
+const KQ=12,TG=6,sv=(x,t)=>x==null?'<span style="color:var(--faint)">·</span>':x===0?`<span class="stpill" style="background:var(--bad-bg);color:var(--bad-fg);font-size:11px">${t=='k'?'Belum mengerjakan':'Tidak mengumpulkan'}</span>`:`<span class="num" style="${x<70?'color:var(--bad-fg);font-weight:600':''}">${x}</span>`;
+$('pesertaTbl').innerHTML=`<thead><tr><th rowspan="2" class="ctr" style="width:44px">No</th><th rowspan="2" class="stick">Nama peserta</th><th rowspan="2">Pertemuan 1 sampai 12</th><th rowspan="2" class="ctr">Hadir</th><th rowspan="2" class="ctr">Mentoring</th><th rowspan="2" class="ctr sep">Pre test</th><th colspan="${KQ}" class="ctr grp sep">Kuis</th><th colspan="${TG}" class="ctr grp sep">Tugas</th><th rowspan="2" class="ctr sep">Post test</th><th rowspan="2" class="ctr">Capstone</th><th rowspan="2" class="sep">Status</th><th rowspan="2">Catatan</th></tr><tr>${Array.from({length:KQ},(_,i)=>`<th class="ctr sub${i==0?' sep':''}">${i+1}</th>`).join('')}${Array.from({length:TG},(_,i)=>`<th class="ctr sub${i==0?' sep':''}">${i+1}</th>`).join('')}</tr></thead><tbody>${shown.map((p,i)=>`<tr><td class="ctr num" style="color:var(--muted)">${p.no}</td><td class="stick">${p.n}</td><td><span class="dots" aria-label="Hadir ${p.h} dari ${MT} pertemuan">${p.at.map((v,j)=>`<span class="dot ${v===1?'h':v===0?'x':'n'}" title="Pertemuan ${j+1}: ${v===1?'hadir':v===0?'tidak hadir':'belum berjalan'}"></span>`).join('')}</span></td><td class="ctr num"><b style="color:${pc2(p.pc)}">${p.pc}%</b> <span style="color:var(--faint)">${p.h}/${MT}</span></td><td class="ctr"><span class="stpill num" style="${mcs(p.mc)}">${p.mc}/2</span></td><td class="ctr sep">${sv(p.pre)}</td>${p.kuis.map((x,j)=>`<td class="ctr${j==0?' sep':''}">${sv(x,'k')}</td>`).join('')}${p.tugas.map((x,j)=>`<td class="ctr${j==0?' sep':''}">${sv(x,'t')}</td>`).join('')}<td class="ctr sep" style="color:var(--faint)">Belum dimulai</td><td class="ctr" style="color:var(--faint)">Belum dimulai</td><td class="sep"><span class="stpill" style="${lab[p.st][1]}">${lab[p.st][0]}</span></td><td class="note">${p.note}${p.todo?`<br><b style="color:var(--fg)">${p.todo}</b>`:''}</td></tr>`).join('')}</tbody>`}}
+
+/* Kepuasan */
+(()=>{const asp=["Materi","Fasilitator","Fasilitas","Relevansi","Keseluruhan"],d={"DKI Jakarta":[4.5,4.7,4.1,4.4,4.5,92],"Semarang":[4.0,3.8,3.3,4.1,3.8,71],"DIY":[4.6,4.8,4.4,4.5,4.7,95],"Surabaya":[4.3,4.4,3.7,4.2,4.2,84]},cls=v=>v>=4.2?'ok':v>=3.5?'wr':'bd',f=v=>v.toFixed(1).replace('.',',');
+const el=$('puas');el.style.gridTemplateColumns='90px repeat(5,minmax(0,1fr)) 72px';
+let h='<div></div>'+asp.map(a=>`<div class="h">${a}</div>`).join('')+'<div class="h">Respons</div>';
+R.forEach(k=>{const a=d[k];h+=`<div class="lb">${k}</div>`+a.slice(0,5).map(v=>`<div class="c ${cls(v)}">${f(v)}</div>`).join('')+`<div class="lb num" style="justify-content:center;color:var(--muted)">${a[5]}%</div>`});
+if(R.length>1){const tot=asp.map((_,i)=>R.reduce((s,k)=>s+d[k][i],0)/R.length),rt=Math.round(R.reduce((s,k)=>s+d[k][5],0)/R.length);
+h+='<div class="lb" style="font-weight:600">Semua</div>'+tot.map(v=>`<div class="c ${cls(v)}">${f(v)}</div>`).join('')+`<div class="lb num" style="justify-content:center;color:var(--muted)">${rt}%</div>`}
+el.innerHTML=h})();
+
+/* Alert */
+(()=>{const r=[["Rizka Pratiwi","AI Web Programming","Semarang",58,50,61],["Siti Nurhaliza","AI Web Programming","Semarang",63,67,58],["Anisa Saputri","Social Media Marketing","Surabaya",71,50,66],["Dewi Lestari","AI Web Programming","Semarang",75,33,72],["Fajriah Hidayati","Social Media Marketing","Surabaya",67,83,64],["Nabila Putri","Data Analyst","DKI Jakarta",62,67,74],["Bunga Wicaksana","Social Media Marketing","Surabaya",79,50,69],["Intan Maharani","Social Media Marketing","DIY",65,83,78]];
+const c=(v,lim)=>v<lim?'bd':v<lim+10?'wr':'okp',sev=x=>[x[3]<75,x[4]<70,x[5]<70].filter(Boolean).length;
+r.sort((a,b)=>sev(b)-sev(a)||a[3]-b[3]);
+{const rows=r.filter(x=>R.includes(x[2]));
+$('alertCount').textContent=rows.length+' siswa';
+$('alertBody').innerHTML=rows.length?rows.map((x,i)=>`<tr><td class="ctr num">${i+1}</td><td>${x[0]}</td><td style="color:var(--muted)">${x[1]}</td><td>${x[2]}</td><td class="ctr"><span class="pill ${c(x[3],75)}">${x[3]}%</span></td><td class="ctr"><span class="pill ${c(x[4],70)}">${x[4]}%</span></td><td class="ctr"><span class="pill ${c(x[5],70)}">${x[5]}</span></td></tr>`).join(''):`<tr><td colspan="7" class="ctr" style="color:var(--muted);padding:20px">Tidak ada siswa berstatus alert di daerah ini</td></tr>`}
+})();
+}
+const seg=$('seg');['Semua',...ALL].forEach(k=>{const b=document.createElement('button');b.type='button';b.id='f-'+k.replace(/\s/g,'');b.textContent=k=='Semua'?'Semua daerah':k;b.setAttribute('aria-pressed',k==SEL);b.onclick=()=>{SEL=k;window.__PSF='all';R=k=='Semua'?ALL:[k];seg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));renderAll()};seg.appendChild(b)});
+renderAll();
+
+/* Export Excel */
+(async()=>{const dl=await claude.use("downloads").catch(()=>null);const btn=$('btnExport'),msg=$('expMsg');if(!dl||!window.XLSX)return;btn.hidden=false;
+btn.onclick=async()=>{btn.disabled=true;msg.textContent='';try{const wb=XLSX.utils.book_new(),lab={urgent:'Perlu tindak lanjut',watch:'Pantau',ok:'Aman'};
+const head=['No','Nama peserta','Jurusan','Daerah',...Array.from({length:12},(_,i)=>'Pertemuan '+(i+1)),'Kehadiran (%)','Mentoring','Pre test',...Array.from({length:12},(_,i)=>'Kuis '+(i+1)),...Array.from({length:6},(_,i)=>'Tugas '+(i+1)),'Post test','Capstone','Status','Alasan','Tindak lanjut'];
+const regs=SEL=='Semua'?ALL:[SEL];
+regs.forEach(k=>{const rows=psRows(k);const aoa=[head,...rows.map((p,i)=>[i+1,p.n,JUR[k],k,...p.at.map(v=>v===1?'Hadir':v===0?'Tidak hadir':''),p.pc,p.mc+'/2',p.pre,...p.kuis.map(v=>v==null?'':v===0?'Belum mengerjakan':v),...p.tugas.map(v=>v==null?'':v===0?'Tidak mengumpulkan':v),'','',lab[p.st],p.why.join('. '),p.act.join(', ')])];
+const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=head.map((h,i)=>({wch:i==1?24:i>=head.length-2?48:Math.max(8,h.length+1)}));ws['!freeze']={xSplit:2,ySplit:1};XLSX.utils.book_append_sheet(wb,ws,k.slice(0,31))});
+const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});const name='FutureMakers_'+(SEL=='Semua'?'Semua_Daerah':SEL.replace(/\s/g,'_'))+'.xlsx';
+await dl.save({filename:name,data:new Blob([buf])});msg.textContent='File '+name+' disimpan'}catch(e){msg.textContent=e&&e.code=='declined'?'':e&&e.code=='rate_limited'?'Tunggu sebentar lalu coba lagi':'File belum bisa diunduh di tampilan ini'}finally{btn.disabled=false}}})();
+</script>
+
+</body></html>
