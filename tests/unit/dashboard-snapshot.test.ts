@@ -300,3 +300,127 @@ describe('catatan admin per peserta', () => {
     expect(notes).toContain('updatedBy: actor.name');
   });
 });
+
+describe('halaman dashboard', () => {
+  const page = read('src/app/(admin)/admin/dashboard/page.tsx');
+  const charts = read('src/app/(admin)/admin/dashboard/charts.tsx');
+  const table = read('src/app/(admin)/admin/dashboard/roster-table.tsx');
+  const shell = read('src/components/app-shell.tsx');
+  const home = read('src/app/(admin)/admin/page.tsx');
+
+  it('menjadi halaman pertama admin', () => {
+    // Dashboard menjawab pertanyaan yang pertama kali diajukan admin saat
+    // membuka aplikasi, sedangkan daftar kelas adalah tempat menyusun.
+    //
+    // The dashboard answers the question an admin asks first on opening the
+    // app, while the class list is where things are built.
+    expect(home).toContain("redirect('/admin/dashboard')");
+    expect(shell).toContain("href: '/admin/dashboard'");
+  });
+
+  it('menyebut waktu penghitungan ringkasannya', () => {
+    // Angka yang terlihat seperti waktu nyata padahal berumur satu jam membuat
+    // admin menarik kesimpulan dari keadaan yang sudah berubah.
+    //
+    // Figures that look live while being an hour old have an admin draw
+    // conclusions from a state that has already changed.
+    expect(page).toContain('formatDateTimeWib(snapshot.generatedAt)');
+    expect(page).toContain('Hitung Ulang');
+  });
+
+  it('menyebut ambangnya pada daftar siaga', () => {
+    // Daftar siaga tanpa ambangnya tidak dapat diperiksa siapa pun yang
+    // mempertanyakan mengapa seseorang masuk ke dalamnya.
+    //
+    // An alert list without its thresholds cannot be checked by anyone asking
+    // why someone is on it.
+    expect(page).toMatch(/snapshot\.thresholds\.attendance/);
+    expect(page).toMatch(/snapshot\.thresholds\.quiz/);
+  });
+
+  it('membedakan belum berjalan dari nol pada grafiknya', () => {
+    // Nol berarti tidak ada yang hadir, dan grafiknya akan menunjukkan
+    // kemerosotan yang tidak pernah terjadi.
+    //
+    // Zero means nobody attended, and the chart would show a collapse that
+    // never happened.
+    expect(charts).toMatch(/p\.value === null \? emptyLabel/);
+    expect(charts).toMatch(/\{p\.value !== null && \(/);
+  });
+
+  it('tidak menggambar bagian bernilai nol pada batang bertumpuk', () => {
+    // Potongan setebal satu piksel terbaca sebagai nilai kecil, bukan sebagai
+    // ketiadaan.
+    //
+    // A one-pixel sliver reads as a small value, not as absence.
+    expect(charts).toMatch(/p\.value === 0 \? null/);
+  });
+
+  it('menampilkan kenaikan poin sebagai angka, bukan hanya jarak batang', () => {
+    // Jarak pada grafik harus diukur mata, sedangkan kenaikan poin adalah yang
+    // dilaporkan.
+    //
+    // A gap on a chart has to be measured by eye, while the point gain is what
+    // gets reported.
+    expect(charts).toMatch(/gain > 0 \? '\+' : ''/);
+  });
+
+  it('menyimpan catatan saat kolomnya ditinggalkan', () => {
+    // Admin menelusuri belasan peserta berturut-turut, dan satu tombol simpan
+    // per baris berarti belasan ketukan tambahan untuk pekerjaan yang sama.
+    //
+    // An admin works down a dozen participants in a row, and a save button each
+    // would mean a dozen extra taps for the same work.
+    expect(table).toMatch(/onBlur=\{\(\) => simpanCatatan\(r\)\}/);
+  });
+
+  it('tidak menyimpan bila catatannya tidak berubah', () => {
+    // Menyimpan setiap kali kolomnya ditinggalkan berarti satu tulisan tiap
+    // kali admin sekadar melewatinya.
+    //
+    // Saving on every blur would mean one write each time an admin merely tabs
+    // past it.
+    expect(table).toMatch(/if \(d\.note === r\.note && d\.followUp === r\.followUp\) return;/);
+  });
+
+  it('mempertahankan catatan di layar bila penyimpanannya gagal', () => {
+    // Kegagalan jaringan bukan alasan menghapus yang baru diketik.
+    // A network failure is no reason to erase what was just typed.
+    const blok = table.slice(table.indexOf('async function simpanCatatan'), table.indexOf('function exportCsv'));
+    expect(blok).not.toMatch(/setDraft\([\s\S]{0,60}\{\}\)/);
+  });
+
+  it('mengekspor seluruh baris tersaring, bukan halaman yang terlihat', () => {
+    // Berkas berisi sepuluh baris dari seratus peserta tidak dapat dipakai
+    // untuk apa pun.
+    //
+    // A file holding ten of a hundred participants is no use for anything.
+    expect(table).toMatch(/const rows = visible\.map/);
+    expect(table).not.toMatch(/const rows = halaman\.map/);
+  });
+
+  it('menggulir tabelnya mendatar alih-alih mempersempit kolomnya', () => {
+    // Dua puluh kolom yang dipaksa muat membuat tiap selnya terpotong dan
+    // tidak terbaca.
+    //
+    // Twenty columns forced to fit would leave every cell truncated and
+    // unreadable.
+    expect(table).toMatch(/overflowX: 'auto'/);
+    expect(table).toMatch(/minWidth: '960px'/);
+  });
+
+  it('memberi keterangan tiap titik kehadiran', () => {
+    // Titik tanpa keterangan tidak dapat ditelusuri ke pertemuan mana pun.
+    // A dot with no caption cannot be traced back to any meeting.
+    expect(table).toMatch(/title=\{`\$\{snapshot\.sessionLabels\[j\]/);
+  });
+
+  it('menyebut tempat nilai akhir berbobot berada', () => {
+    // Peringkat di sini rata-rata tiga angka; dua angka berbeda pada satu
+    // aplikasi akan terbaca sebagai kesalahan hitung bila tidak dijelaskan.
+    //
+    // The ranking here averages three figures; two different numbers in one app
+    // would read as a miscalculation if left unexplained.
+    expect(page).toContain('Nilai akhir berbobot ada di menu Nilai Akhir');
+  });
+});

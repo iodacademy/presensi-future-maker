@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutGrid, Calendar, Users, FileText, Contact, LogOut, Settings, Award } from 'lucide-react';
+import { LayoutGrid, Calendar, Users, FileText, Contact, LogOut, Settings, Award, BookOpen } from 'lucide-react';
 import type { Role } from '@/features/auth/types';
 import { ProfileMenu } from '@/components/ui/profile-menu';
 
@@ -45,7 +45,8 @@ export function AppShell({ role, userName, classNameTitle, children }: AppShellP
 
   const navMap: Record<Role, NavItem[]> = {
     admin: [
-      { label: 'Kelas', href: '/admin/kelas', icon: LayoutGrid },
+      { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutGrid },
+      { label: 'Kelas', href: '/admin/kelas', icon: BookOpen },
       { label: 'Jadwal dan Presensi', href: '/admin/jadwal', icon: Calendar },
       { label: 'Mentoring', href: '/admin/mentoring', icon: Users },
       { label: 'Tugas Siswa', href: '/admin/tugas', icon: FileText },
