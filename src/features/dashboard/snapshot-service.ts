@@ -53,6 +53,27 @@ export const ALERT_THRESHOLDS: AlertThresholds = {
  */
 export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
 
+/**
+ * Versi bentuk ringkasannya. Dinaikkan tiap kali cara menghitungnya berubah
+ * sehingga angka lama menjadi salah, bukan tiap kali ada medan baru: medan baru
+ * yang kosong hanya membuat satu panel menunggu satu jam, sedangkan angka yang
+ * salah dibaca sebagai kebenaran.
+ *
+ * 2: kolom kehadiran dikelompokkan per kelas. Sebelumnya tiap peserta diberi
+ *    kolom untuk sesi seluruh kelas, sehingga kehadirannya jatuh ke angka yang
+ *    tidak pernah terjadi.
+ *
+ * The snapshot's shape version. Raised whenever the way figures are computed
+ * changes such that old ones become wrong, not whenever a field is added: a new
+ * empty field merely leaves one panel waiting an hour, while a wrong figure is
+ * read as the truth.
+ *
+ * 2: attendance columns grouped per class. Previously each participant was given
+ *    columns for every class's sessions, dropping their attendance to a figure
+ *    that never happened.
+ */
+export const SNAPSHOT_VERSION = 2;
+
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
   return Math.round((bagian / dari) * 100);
@@ -694,6 +715,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
 
   return {
     id: wibDate(),
+    version: SNAPSHOT_VERSION,
     generatedAt: nowIso,
     generatedBy: actor.name,
     totalRegistered: students.length,
@@ -765,7 +787,14 @@ export async function getSnapshot(
     if (snap.exists) {
       const data = snap.data() as DashboardSnapshot;
       const umur = Date.now() - new Date(data.generatedAt).getTime();
-      if (umur < SNAPSHOT_MAX_AGE_MS) return data;
+      // Versinya diperiksa sebelum umurnya: ringkasan berbentuk lama memuat
+      // angka yang dihitung dengan aturan yang sudah diperbaiki, dan umurnya
+      // yang masih muda justru membuatnya bertahan paling lama.
+      //
+      // The version is checked before the age: an older-shaped snapshot carries
+      // figures computed under rules since fixed, and being freshly written is
+      // exactly what would keep it around longest.
+      if ((data.version ?? 1) === SNAPSHOT_VERSION && umur < SNAPSHOT_MAX_AGE_MS) return data;
     }
   }
 

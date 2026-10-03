@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { hitungFase, keteranganFase, tanggalSingkat, PHASES_AFTER_BOOTCAMP } from '@/features/dashboard/phases';
+import { SNAPSHOT_VERSION } from '@/features/dashboard/snapshot-service';
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf-8');
 const page = read('src/app/(admin)/admin/dashboard/page.tsx');
@@ -494,5 +495,45 @@ describe('kolom kehadiran per kelas', () => {
     // No caller forces it to zero: a zero width restores the same squeeze inside a
     // narrower box.
     expect(page).not.toMatch(/minWidth=\{0\}/);
+  });
+});
+
+/**
+ * Ringkasan berbentuk lama dihitung ulang sendiri.
+ *
+ * Ringkasan yang dibuat kode lama memuat angka yang dihitung dengan aturan yang
+ * sudah diperbaiki. Menampilkannya berarti perbaikan yang sudah tayang tidak
+ * terlihat sampai ada yang menekan Hitung Ulang -- beban yang dipikul admin
+ * untuk kesalahan yang bukan miliknya.
+ *
+ * An older-shaped snapshot recomputes itself.
+ *
+ * A snapshot built by older code carries figures computed under rules that have
+ * since been fixed. Showing it means a deployed fix stays invisible until somebody
+ * presses Hitung Ulang -- a burden carried by an admin for a mistake that is not
+ * theirs.
+ */
+describe('versi bentuk ringkasan', () => {
+  it('memeriksa versinya sebelum umurnya', () => {
+    // Ringkasan berbentuk lama yang baru saja ditulis adalah yang paling muda,
+    // dan pemeriksaan umur saja justru membuatnya bertahan paling lama.
+    //
+    // A freshly written older-shaped snapshot is the youngest of all, and an age
+    // check alone is exactly what would keep it around longest.
+    expect(service).toMatch(/\(data\.version \?\? 1\) === SNAPSHOT_VERSION && umur < SNAPSHOT_MAX_AGE_MS/);
+  });
+
+  it('memperlakukan ringkasan tanpa versi sebagai versi satu', () => {
+    // Ringkasan yang sudah tersimpan sebelum versinya ada tidak punya medan itu,
+    // dan undefined yang tidak ditangani akan membuatnya bertahan selamanya.
+    //
+    // A snapshot stored before the version existed lacks the field, and an
+    // unhandled undefined would keep it forever.
+    expect(service).toMatch(/data\.version \?\? 1/);
+  });
+
+  it('menyertakan versinya pada ringkasan yang baru dihitung', () => {
+    expect(service).toMatch(/version: SNAPSHOT_VERSION/);
+    expect(SNAPSHOT_VERSION).toBeGreaterThanOrEqual(2);
   });
 });

@@ -257,6 +257,24 @@ export interface PhasePoint {
 export interface DashboardSnapshot {
   /** Tanggal WIB "YYYY-MM-DD", sekaligus id dokumennya / WIB date "YYYY-MM-DD", also the document id */
   id: string;
+  /**
+   * Versi bentuk ringkasannya.
+   *
+   * Ringkasan yang versinya tertinggal dihitung ulang sendiri, tanpa menunggu
+   * umurnya habis: ringkasan yang dibuat kode lama memuat angka yang dihitung
+   * dengan aturan yang sudah diperbaiki, dan menampilkannya berarti perbaikan
+   * yang sudah tayang tidak terlihat sampai ada yang menekan Hitung Ulang --
+   * beban yang dipikul admin untuk kesalahan yang bukan miliknya.
+   *
+   * The snapshot's shape version.
+   *
+   * A snapshot on an older version recomputes itself rather than waiting out its
+   * age: one built by older code carries figures computed under rules that have
+   * since been fixed, and showing it means a deployed fix stays invisible until
+   * somebody presses Hitung Ulang -- a burden carried by an admin for a mistake
+   * that is not theirs.
+   */
+  version: number;
   generatedAt: string;
   /** Admin yang memicu penghitungannya, atau 'otomatis' / The admin who triggered it, or 'otomatis' */
   generatedBy: string;
