@@ -24,6 +24,10 @@ export const PHASES_AFTER_BOOTCAMP: { name: string; start: string; end: string |
 ];
 
 const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+const BULAN_PANJANG = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
 
 /** "2026-09-14" menjadi "14 Sep" / "2026-09-14" becomes "14 Sep" */
 export function tanggalSingkat(iso: string): string {
@@ -46,6 +50,51 @@ export function tanggalSingkat(iso: string): string {
  * one meeting moves, and this panel would name a different week from the one
  * participants see in their own schedule.
  */
+/**
+ * Keterangan di sebelah judul fase.
+ *
+ * Minggunya dihitung dari pertemuan pertama bootcamp, bukan dari tanggal
+ * kalender: bootcamp yang mulai hari Senin dan bootcamp yang mulai hari Kamis
+ * akan menghitung minggu yang berbeda bila diukur dari pergantian pekan.
+ *
+ * The caption beside the phase heading.
+ *
+ * The week counts from the bootcamp's first meeting rather than the calendar: a
+ * bootcamp starting on a Monday and one starting on a Thursday would count
+ * different weeks if measured from week boundaries.
+ */
+export function keteranganFase(sessions: { date: string }[], nowIso: string): string {
+  const hariIni = nowIso.slice(0, 10);
+  const per = `Per ${tanggalPanjang(hariIni)}`;
+  if (sessions.length < 2) return per;
+
+  const tanggal = sessions.map((s) => s.date).sort();
+  const mulai = tanggal[1];
+  const akhir = tanggal[tanggal.length - 1];
+
+  const minggu = (dari: string, sampai: string) =>
+    Math.floor((Date.parse(`${sampai}T00:00:00Z`) - Date.parse(`${dari}T00:00:00Z`)) / (7 * 86400000)) + 1;
+
+  if (hariIni < mulai) return `${per}: bootcamp mulai ${tanggalSingkat(mulai)}`;
+  if (hariIni > akhir) return `${per}: bootcamp selesai ${tanggalSingkat(akhir)}`;
+
+  // Tanpa pembatas: cabang ini hanya berjalan saat hari ini berada di dalam
+  // rentangnya, sehingga minggunya tidak pernah dapat melampaui totalnya.
+  // Pembatas di sini akan menjadi kode yang tidak pernah berjalan, dan kode
+  // semacam itu menyesatkan pembaca berikutnya tentang keadaan yang mungkin.
+  //
+  // No cap: this branch runs only while today sits inside the range, so the week
+  // can never exceed the total. A cap here would be code that never runs, and such
+  // code misleads the next reader about what states are possible.
+  return `${per}: bootcamp minggu ke-${minggu(mulai, hariIni)} dari ${minggu(mulai, akhir)}`;
+}
+
+/** "2026-09-30" menjadi "30 September 2026" / "2026-09-30" becomes "30 September 2026" */
+export function tanggalPanjang(iso: string): string {
+  const [th, bl, hr] = iso.split('-');
+  return `${Number(hr)} ${BULAN_PANJANG[Number(bl) - 1] ?? ''} ${th}`;
+}
+
 export function hitungFase(sessions: { date: string }[], nowIso: string): PhasePoint[] {
   const hariIni = nowIso.slice(0, 10);
 

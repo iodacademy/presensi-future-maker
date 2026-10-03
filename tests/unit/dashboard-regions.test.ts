@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { hitungFase, tanggalSingkat, PHASES_AFTER_BOOTCAMP } from '@/features/dashboard/phases';
+import { hitungFase, keteranganFase, tanggalSingkat, PHASES_AFTER_BOOTCAMP } from '@/features/dashboard/phases';
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf-8');
 const page = read('src/app/(admin)/admin/dashboard/page.tsx');
@@ -324,5 +324,103 @@ describe('batas biaya login', () => {
   it('memangkas barisnya sebelum disimpan', () => {
     const blok = service.slice(service.indexOf('const logins:'), service.indexOf('// --- peringkat'));
     expect(blok).toMatch(/\.slice\(-60\)/);
+  });
+});
+
+/**
+ * Keterangan fase menyebut minggu keberapa bootcamp berjalan.
+ *
+ * Dihitung bersama fasenya di server, bukan di peramban: keduanya diturunkan
+ * dari jadwal sesi yang sama, dan menghitungnya di dua tempat membuat
+ * keterangan dan kotaknya dapat menyebut minggu yang berbeda.
+ *
+ * The phase caption names which week of the bootcamp is running.
+ *
+ * Computed with the phases on the server rather than in the browser: both derive
+ * from the same session schedule, and computing it in two places would let the
+ * caption and the cards name different weeks.
+ */
+describe('keterangan fase', () => {
+  it('menyebut minggu keberapa dari berapa', () => {
+    // 14 Sep mulai, 9 Okt akhir: empat minggu. 30 Sep ada di minggu ketiga.
+    // Starting 14 Sep, ending 9 Okt: four weeks. 30 Sep falls in the third.
+    const k = keteranganFase(sesi(['2026-09-11', '2026-09-14', '2026-10-09']), '2026-09-30T00:00:00Z');
+    expect(k).toBe('Per 30 September 2026: bootcamp minggu ke-3 dari 4');
+  });
+
+  it('menghitung minggunya dari pertemuan pertama, bukan pergantian pekan', () => {
+    // Bootcamp yang mulai hari Senin dan yang mulai hari Kamis akan menghitung
+    // minggu yang berbeda bila diukur dari pergantian pekan.
+    //
+    // A bootcamp starting on a Monday and one starting on a Thursday would count
+    // different weeks if measured from week boundaries.
+    const kamis = keteranganFase(sesi(['2026-09-01', '2026-09-03', '2026-09-30']), '2026-09-09T00:00:00Z');
+    expect(kamis).toContain('minggu ke-1');
+    const seninLalu = keteranganFase(sesi(['2026-09-01', '2026-09-03', '2026-09-30']), '2026-09-11T00:00:00Z');
+    expect(seninLalu).toContain('minggu ke-2');
+  });
+
+  it('tidak pernah menyebut minggu melampaui totalnya', () => {
+    // Diperiksa menyeluruh atas rentang yang mungkin, bukan satu contoh:
+    // "minggu ke-5 dari 4" adalah kalimat yang mustahil, dan satu contoh hanya
+    // membuktikan satu tanggal.
+    //
+    // Checked exhaustively across the possible ranges rather than with one
+    // example: "minggu ke-5 dari 4" is an impossible sentence, and a single
+    // example proves only one date.
+    const hari = (n: number) => new Date(Date.UTC(2026, 8, 14) + n * 86400000).toISOString().slice(0, 10);
+
+    for (let akhir = 0; akhir < 120; akhir += 5) {
+      for (let kini = 0; kini <= akhir; kini += 3) {
+        const teks = keteranganFase(sesi(['2026-09-11', hari(0), hari(akhir)]), `${hari(kini)}T00:00:00Z`);
+        const cocok = teks.match(/minggu ke-(\d+) dari (\d+)/);
+        if (!cocok) continue;
+        expect(Number(cocok[1]), teks).toBeLessThanOrEqual(Number(cocok[2]));
+      }
+    }
+  });
+
+  it('menyebut keadaannya saat bootcamp belum mulai atau sudah selesai', () => {
+    const belum = keteranganFase(sesi(['2026-09-11', '2026-09-14', '2026-10-09']), '2026-09-12T00:00:00Z');
+    expect(belum).toContain('bootcamp mulai 14 Sep');
+    const usai = keteranganFase(sesi(['2026-09-11', '2026-09-14', '2026-10-09']), '2026-11-01T00:00:00Z');
+    expect(usai).toContain('bootcamp selesai 9 Okt');
+  });
+
+  it('tetap menyebut tanggalnya saat jadwalnya belum diisi', () => {
+    expect(keteranganFase([], '2026-09-30T00:00:00Z')).toBe('Per 30 September 2026');
+  });
+
+  it('dihitung di server, bukan di peramban', () => {
+    expect(service).toMatch(/keteranganFase\(sessions, nowIso\)/);
+    expect(page).toMatch(/\{snapshot\.phaseCaption\}/);
+  });
+});
+
+/**
+ * Daerah disingkat pada ubin yang sempit.
+ *
+ * Singkatannya diturunkan dari namanya, bukan dari daftar di kode: daerah baru
+ * akan tersingkat sendiri tanpa menyunting apa pun.
+ *
+ * Regions are abbreviated on the narrow tiles.
+ *
+ * The abbreviation derives from the name rather than a list in code: a new region
+ * abbreviates itself with nothing to edit.
+ */
+describe('singkatan daerah', () => {
+  it('menurunkan singkatannya dari namanya, bukan daftar di kode', () => {
+    expect(page).toMatch(/function singkatan\(kota: string\)/);
+    // Daftar harfiah akan menuntut penyuntingan kode tiap kelas baru dibuka.
+    // A literal list would demand a code change each time a class opens.
+    expect(page).not.toMatch(/'DKI Jakarta':\s*'DKI'/);
+  });
+
+  it('memakai huruf awal untuk nama banyak kata', () => {
+    expect(page).toMatch(/kata\.map\(\(k\) => k\[0\]\)/);
+  });
+
+  it('membuang vokal tengah untuk nama satu kata', () => {
+    expect(page).toMatch(/replace\(\/\[aeiou\]\/gi, ''\)/);
   });
 });

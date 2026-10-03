@@ -7,7 +7,7 @@ import { summariseAnswers } from '../survey/policy';
 import { NUMERIC_KINDS } from '../survey/types';
 import type { SurveyAnswer, SurveyFormDocument, SurveyResponseDocument } from '../survey/types';
 import { ageFrom } from '../users/profile-service';
-import { hitungFase } from './phases';
+import { hitungFase, keteranganFase } from './phases';
 import { wibDate } from '@/lib/time';
 import {
   DISABILITY_LABELS,
@@ -135,6 +135,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     return {
       classId: c.id,
       className: c.canonicalName,
+      programName: c.programName ?? '',
       city: c.city,
       registered: terdaftar.length,
       active: hidup,
@@ -652,6 +653,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     });
 
   const phases = hitungFase(sessions, nowIso);
+  const phaseCaption = keteranganFase(sessions, nowIso);
 
   return {
     id: wibDate(),
@@ -664,6 +666,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     profiles,
     profilePendingByCity,
     phases,
+    phaseCaption,
     attendancePerSession,
     submissionPerTask,
     scorePerTask,

@@ -202,16 +202,6 @@ function DashboardBody({
             <h1 className={s.title}>
               {satuDaerah ? `Dashboard ${city}` : `Dashboard umum ${allCities.length} daerah`}
             </h1>
-            {/* Waktu penghitungannya disebut. Angka yang terlihat seperti waktu
-                nyata padahal berumur satu jam membuat admin menarik kesimpulan
-                dari keadaan yang sudah berubah.
-
-                The computation time is stated. Figures that look live while being
-                an hour old have an admin draw conclusions from a state that has
-                already changed. */}
-            <p className={s.generated}>
-              Dihitung {formatDateTimeWib(snapshot.generatedAt)} WIB oleh {snapshot.generatedBy}
-            </p>
           </div>
 
           <div className={s.hdrActions}>
@@ -229,6 +219,16 @@ function DashboardBody({
               <RefreshCw size={13} strokeWidth={2} />
               {refreshing ? 'Menghitung...' : 'Hitung Ulang'}
             </button>
+            {/* Waktu penghitungannya tetap disebut. Angka yang terlihat seperti
+                waktu nyata padahal berumur satu jam membuat admin menarik
+                kesimpulan dari keadaan yang sudah berubah.
+
+                The computation time is still stated. Figures that look live while
+                being an hour old have an admin draw conclusions from a state that
+                has already changed. */}
+            <p className={s.generated}>
+              Dihitung {formatDateTimeWib(snapshot.generatedAt)} WIB oleh {snapshot.generatedBy}
+            </p>
           </div>
         </header>
 
@@ -242,7 +242,7 @@ function DashboardBody({
         <section className={s.panel} aria-labelledby="h-fase" style={{ gap: '12px' }}>
           <div className={s.panelHead}>
             <h2 id="h-fase">Fase program</h2>
-            <p className={s.hint}>Onboarding dan bootcamp mengikuti jadwal pertemuan</p>
+            <p className={s.hint}>{snapshot.phaseCaption}</p>
           </div>
           <div className={s.scroll}>
             <div className={s.tl}>
@@ -277,8 +277,8 @@ function DashboardBody({
               <p className={s.v}>{terdaftar}</p>
               <p className={s.s}>
                 {satuDaerah
-                  ? kelasTerpilih.map((c) => c.className).join(', ')
-                  : kelasTerpilih.map((c) => `${c.city} ${c.registered}`).join(', ')}
+                  ? kelasTerpilih.map((c) => c.programName || c.className).join(', ')
+                  : kelasTerpilih.map((c) => `${singkatan(c.city)} ${c.registered}`).join(', ')}
               </p>
             </div>
             <div className={s.kpi}>
@@ -320,8 +320,8 @@ function DashboardBody({
               })}
             </div>
             <div className={s.legend}>
-              <span><span className={`${s.sw} ${s.ok}`} />Aktif</span>
-              <span><span className={`${s.sw} ${s.bd}`} />Drop out</span>
+              <span><span className={`${s.sw} ${s.swOk}`} />Aktif</span>
+              <span><span className={`${s.sw} ${s.swBad}`} />Drop out</span>
               <span>Label merah: drop rate 15% ke atas</span>
             </div>
           </div>
@@ -609,6 +609,29 @@ function DashboardBody({
       </div>
     </AppShell>
   );
+}
+
+/**
+ * Singkatan nama daerah untuk ubin yang sempit.
+ *
+ * Diturunkan dari namanya, bukan dari daftar di kode: daerah baru akan
+ * tersingkat sendiri tanpa menyunting apa pun. Nama satu kata diambil tiga
+ * hurufnya tanpa vokal di tengah ("Semarang" menjadi "SMG"), nama banyak kata
+ * diambil huruf awalnya ("DKI Jakarta" menjadi "DKI").
+ *
+ * A region's abbreviation for the narrow tiles.
+ *
+ * Derived from the name rather than a list in code: a new region abbreviates
+ * itself with nothing to edit. A one-word name takes three letters with its inner
+ * vowels dropped ("Semarang" becomes "SMG"); a multi-word name takes its initials
+ * ("DKI Jakarta" becomes "DKI").
+ */
+function singkatan(kota: string): string {
+  const kata = kota.trim().split(/\s+/);
+  if (kata.length > 1) return kata.map((k) => k[0]).join('').toUpperCase().slice(0, 4);
+  if (kota.length <= 3) return kota.toUpperCase();
+  const tanpaVokal = kota[0] + kota.slice(1).replace(/[aeiou]/gi, '');
+  return (tanpaVokal.length >= 3 ? tanpaVokal : kota).toUpperCase().slice(0, 3);
 }
 
 /** Rata-rata yang mengabaikan null; null berarti belum ada yang terukur / An average ignoring nulls; null means nothing was measured yet */

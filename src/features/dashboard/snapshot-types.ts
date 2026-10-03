@@ -20,6 +20,8 @@
 export interface ClassSnapshot {
   classId: string;
   className: string;
+  /** Jurusannya, mis. "AI Web Programming" / Its stream, e.g. "AI Web Programming" */
+  programName: string;
   city: string;
   registered: number;
   active: number;
@@ -283,6 +285,22 @@ export interface DashboardSnapshot {
 
   /** Fase program beserta tanggalnya / The programme phases with their dates */
   phases: PhasePoint[];
+  /**
+   * Keterangan di sebelah judul fase, mis. "Per 3 Okt 2026: bootcamp minggu
+   * ke-3 dari 4".
+   *
+   * Dihitung bersama fasenya, bukan di peramban: keduanya diturunkan dari
+   * jadwal sesi yang sama, dan menghitungnya di dua tempat membuat keterangan
+   * dan kotaknya dapat menyebut minggu yang berbeda.
+   *
+   * The caption beside the phase heading, e.g. "Per 3 Okt 2026: bootcamp minggu
+   * ke-3 dari 4".
+   *
+   * Computed with the phases rather than in the browser: both derive from the same
+   * session schedule, and computing it in two places would let the caption and the
+   * cards name different weeks.
+   */
+  phaseCaption: string;
 
   /** Kehadiran per pertemuan, dalam persen peserta aktif / Attendance per meeting, as a percentage of active participants */
   attendancePerSession: SeriesPoint[];
