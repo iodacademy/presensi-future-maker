@@ -185,7 +185,9 @@ describe('alur impor pada layar admin', () => {
     // memulai.
     //
     // An empty page with no note does not tell an admin where to begin.
-    const editor = read('src/app/(admin)/admin/ujian/[examId]/page.tsx');
+    const editor =
+  read('src/app/(admin)/admin/ujian/[examId]/page.tsx') +
+  read('src/app/(admin)/admin/ujian/[examId]/question-editor.tsx');
     expect(editor).toMatch(/questions\.length === 0 \?/);
     expect(editor).toContain('Belum ada soal');
   });

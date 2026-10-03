@@ -306,6 +306,121 @@ async function removeQuestionImages(actor: Actor, question: QuestionDocument): P
   await Promise.all(paths.map((p) => deleteExamImage(actor, p)));
 }
 
+/**
+ * Menyunting soal yang sudah ada.
+ *
+ * Sebelumnya soal hanya dapat dibuat dan dihapus, sehingga satu huruf yang
+ * salah pada soal kedelapan belas menuntut admin menghapusnya lalu mengetik
+ * ulang pertanyaan, seluruh pilihan, kunci, pembahasan, dan mengunggah ulang
+ * gambarnya -- dan soal itu pindah ke urutan terakhir karena nomornya diambil
+ * dari jumlah soal.
+ *
+ * Pilihan yang dikirim menggantikan seluruh pilihan lama, bukan ditambalkan
+ * satu per satu: menyamakan pilihan lama dengan yang baru menuntut penanda
+ * yang tidak dikirim peramban, dan mencocokkannya berdasarkan urutan akan
+ * salah begitu satu pilihan disisipkan di tengah.
+ *
+ * Id pilihan dipertahankan sejauh jumlahnya masih sama. Id yang berganti
+ * membuat jawaban peserta yang sudah tersimpan menunjuk pilihan yang tidak ada
+ * lagi, dan hasil yang sudah dinilai berubah tanpa ada yang menyentuhnya.
+ *
+ * Edits an existing question.
+ *
+ * Previously a question could only be created and deleted, so one wrong letter in
+ * the eighteenth question meant deleting it and retyping the question, every
+ * option, the key, the explanation, and re-uploading its images -- and that
+ * question moved to the end, since its number came from the question count.
+ *
+ * The options sent replace the old ones wholesale rather than being patched one
+ * by one: matching old options to new ones needs an identifier the browser does
+ * not send, and matching by position breaks as soon as one is inserted in the
+ * middle.
+ *
+ * Option ids are preserved while the count is unchanged. Changing ids would leave
+ * an already-saved participant answer pointing at an option that no longer
+ * exists, and a graded result would change with nobody touching it.
+ */
+export async function updateQuestion(
+  actor: Actor,
+  questionId: string,
+  input: {
+    kind: QuestionKind;
+    text: string;
+    imageUrl?: string | null;
+    imagePath?: string | null;
+    options: { text: string; imageUrl?: string | null; imagePath?: string | null }[];
+    correctIndex: number;
+    explanation?: string;
+  }
+): Promise<void> {
+  requireAdmin(actor);
+
+  const db = getAdminDb();
+  const qRef = db.collection('examQuestions').doc(questionId);
+  const qSnap = await qRef.get();
+  if (!qSnap.exists) throw new Error('Soal tidak ditemukan');
+
+  const lama = qSnap.data() as QuestionDocument;
+
+  const options = input.options.map((o, i) => ({
+    id: lama.options.length === input.options.length ? lama.options[i].id : crypto.randomUUID(),
+    text: o.text.trim(),
+    imageUrl: o.imageUrl ?? null,
+    imagePath: o.imagePath ?? null,
+  }));
+  const correct = options[input.correctIndex];
+
+  validateQuestion({
+    kind: input.kind,
+    text: input.text,
+    imageUrl: input.imageUrl,
+    options,
+    correctOptionId: correct?.id ?? '',
+  });
+
+  // Gambar yang tidak lagi dipakai dihapus dari penyimpanan. Tanpa ini, tiap
+  // penggantian gambar meninggalkan berkas yang tidak dapat dicapai siapa pun
+  // namun tetap ditagihkan.
+  //
+  // Images no longer referenced are removed from storage. Without this, every
+  // replaced image leaves a file nobody can reach yet which is still billed.
+  const dipakai = new Set(
+    [input.imagePath, ...input.options.map((o) => o.imagePath)].filter((p): p is string => Boolean(p))
+  );
+  const usang = [lama.imagePath, ...lama.options.map((o) => o.imagePath)]
+    .filter((p): p is string => Boolean(p))
+    .filter((p) => !dipakai.has(p));
+  await Promise.all(usang.map((p) => deleteExamImage(actor, p)));
+
+  const now = new Date().toISOString();
+
+  const batch = db.batch();
+  batch.update(qRef, {
+    kind: input.kind,
+    text: input.text.trim(),
+    imageUrl: input.imageUrl ?? null,
+    imagePath: input.imagePath ?? null,
+    options,
+    updatedAt: now,
+  });
+  // Kuncinya ikut diperbarui dalam batch yang sama: kunci yang menunjuk pilihan
+  // yang sudah diganti akan menilai seluruh jawaban sebagai salah.
+  //
+  // The key is updated in the same batch: a key pointing at a replaced option
+  // would mark every answer wrong.
+  batch.set(
+    db.collection('examAnswerKeys').doc(questionId),
+    {
+      id: questionId,
+      examId: lama.examId,
+      correctOptionId: correct.id,
+      explanation: (input.explanation ?? '').trim(),
+      updatedAt: now,
+    } satisfies AnswerKeyDocument
+  );
+  await batch.commit();
+}
+
 export async function deleteQuestion(actor: Actor, questionId: string): Promise<void> {
   requireAdmin(actor);
 
@@ -344,6 +459,44 @@ export async function deleteQuestion(actor: Actor, questionId: string): Promise<
     batch.update(examRef, { published: false });
   }
 
+  await batch.commit();
+}
+
+/**
+ * Mengurutkan ulang soal sebuah ujian.
+ *
+ * Seluruh urutan dikirim sekaligus, bukan "pindahkan yang ini ke sana":
+ * menukar dua soal mengubah nomor keduanya, dan dua permintaan terpisah dapat
+ * berhenti di tengah sehingga dua soal memakai nomor yang sama.
+ *
+ * Id yang dikirim diperiksa terhadap soal ujian ini. Tanpa itu, id dari ujian
+ * lain akan menulis nomor pada soal yang bukan miliknya.
+ *
+ * Reorders an exam's questions.
+ *
+ * The whole order is sent at once rather than "move this one there": swapping two
+ * questions changes both their numbers, and two separate requests can stop halfway
+ * leaving two questions sharing a number.
+ *
+ * The ids sent are checked against this exam's questions. Without that, an id from
+ * another exam would write a number onto a question that is not its own.
+ */
+export async function reorderQuestions(actor: Actor, examId: string, order: string[]): Promise<void> {
+  requireAdmin(actor);
+
+  const db = getAdminDb();
+  const snap = await db.collection('examQuestions').where('examId', '==', examId).get();
+  const milik = new Set(snap.docs.map((d) => d.id));
+
+  if (order.length !== milik.size || order.some((id) => !milik.has(id))) {
+    throw new Error('Urutan tidak cocok dengan soal ujian ini');
+  }
+
+  const now = new Date().toISOString();
+  const batch = db.batch();
+  order.forEach((id, i) => {
+    batch.update(db.collection('examQuestions').doc(id), { order: i + 1, updatedAt: now });
+  });
   await batch.commit();
 }
 

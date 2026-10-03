@@ -212,8 +212,23 @@ describe('draf tidak dapat menimpa hasil penilaian', () => {
 
 describe('endpoint ujian', () => {
   it('soal untuk admin dijaga perannya', () => {
-    const route = read('src/app/api/exams/[examId]/questions/route.ts');
-    expect(route.match(/actor\.role !== 'admin'/g)?.length).toBe(2);
+    // Tiap handler dijaga sendiri, bukan dihitung jumlahnya: angka keras akan
+    // gagal hanya karena handler baru ditambahkan, dan yang perlu dijamin
+    // adalah tidak ada satu pun handler yang lolos tanpa penjaga.
+    //
+    // Each handler is guarded on its own rather than counted: a hard number fails
+    // merely because a handler was added, and what must be guaranteed is that no
+    // handler slips through unguarded.
+    for (const berkas of [
+      'src/app/api/exams/[examId]/questions/route.ts',
+      'src/app/api/exams/questions/[questionId]/route.ts',
+    ]) {
+      const route = read(berkas);
+      const handler = route.match(/export async function (GET|POST|PATCH|PUT|DELETE)/g) ?? [];
+      const penjaga = route.match(/actor\.role !== 'admin'/g) ?? [];
+      expect(handler.length, berkas).toBeGreaterThan(0);
+      expect(penjaga.length, `${berkas}: ${handler.length} handler, ${penjaga.length} penjaga`).toBe(handler.length);
+    }
   });
 
   it('memulai percobaan lewat POST, bukan GET', () => {

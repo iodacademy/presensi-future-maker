@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionActor } from '@/features/auth/session';
-import { createQuestion, listQuestionsForAdmin } from '@/features/exams/service';
+import { createQuestion, listQuestionsForAdmin, reorderQuestions } from '@/features/exams/service';
 
 /**
  * Soal beserta kunci jawabannya.
@@ -36,6 +36,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ exa
   const { examId } = await params;
   try {
     return NextResponse.json(await createQuestion(actor, examId, await request.json()));
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+  }
+}
+
+export async function PATCH(request: Request, { params }: { params: Promise<{ examId: string }> }) {
+  const actor = await getSessionActor();
+  if (!actor || actor.role !== 'admin') {
+    return NextResponse.json({ error: 'Hanya admin yang diizinkan' }, { status: 403 });
+  }
+
+  const { examId } = await params;
+  try {
+    const { order } = await request.json();
+    if (!Array.isArray(order)) throw new Error('Urutan soal wajib berupa daftar id');
+    await reorderQuestions(actor, examId, order);
+    return NextResponse.json({ saved: true });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }

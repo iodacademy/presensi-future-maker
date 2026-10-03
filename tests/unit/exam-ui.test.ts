@@ -10,7 +10,9 @@ const runner = read('src/app/(student)/app/ujian/[examId]/page.tsx');
 //
 // The question editor now has its own page; what remains on the class card is
 // only the exam list.
-const builder = read('src/app/(admin)/admin/ujian/[examId]/page.tsx');
+const builder =
+  read('src/app/(admin)/admin/ujian/[examId]/page.tsx') +
+  read('src/app/(admin)/admin/ujian/[examId]/question-editor.tsx');
 const roster = read('src/app/(admin)/admin/ujian/[examId]/exam-roster.tsx');
 const classPage = read('src/app/(admin)/admin/kelas/[classId]/page.tsx');
 const jadwal = read('src/app/(student)/app/jadwal/page.tsx');
@@ -98,19 +100,25 @@ describe('penyusun soal admin', () => {
     //
     // A typed key can point at an option that does not exist, and such a
     // question marks every answer wrong.
-    expect(builder).toMatch(/correctIndex: i/);
+    // Kuncinya disimpan sebagai id pilihan, bukan nomor yang diketik.
+    // The key is stored as an option's id, not a typed number.
+    expect(builder).toMatch(/setCorrectId\(o\.id\)/);
     expect(builder).toContain('Tandai pilihan');
   });
 
   it('menggeser kunci saat pilihannya dihapus', () => {
     // Dibiarkan, indeksnya dapat menunjuk pilihan yang sudah tidak ada.
     // Left alone, its index could point at an option that no longer exists.
-    expect(builder).toMatch(/draft\.correctIndex >= i && draft\.correctIndex > 0/);
-    expect(builder).toMatch(/Math\.min\(kunci, sisa\.length - 1\)/);
+    // Kunci yang pilihannya terhapus jatuh ke pilihan pertama yang tersisa,
+    // bukan dibiarkan menunjuk id yang sudah tidak ada.
+    //
+    // A key whose option was deleted falls to the first remaining option rather
+    // than being left pointing at an id that no longer exists.
+    expect(builder).toMatch(/sisa\.some\(\(x\) => x\.id === correctId\) \? correctId : sisa\[0\]\.id/);
   });
 
   it('mengunci teks pada soal benar-salah', () => {
-    expect(builder).toMatch(/disabled=\{draft\.kind === 'benar-salah'\}/);
+    expect(builder).toMatch(/disabled=\{kind === 'benar-salah'\}/);
   });
 
   it('menampilkan nomor percobaan pada rekap', () => {

@@ -8,7 +8,9 @@ import { validateQuestion } from '@/features/exams/policy';
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf-8');
 const uploads = read('src/features/uploads/service.ts');
 const examService = read('src/features/exams/service.ts');
-const editor = read('src/app/(admin)/admin/ujian/[examId]/page.tsx');
+const editor =
+  read('src/app/(admin)/admin/ujian/[examId]/page.tsx') +
+  read('src/app/(admin)/admin/ujian/[examId]/question-editor.tsx');
 const builder = read('src/app/(admin)/admin/kelas/[classId]/exam-builder.tsx');
 const runner = read('src/app/(student)/app/ujian/[examId]/page.tsx');
 const rules = read('storage.rules');

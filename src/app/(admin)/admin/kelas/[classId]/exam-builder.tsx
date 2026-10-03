@@ -32,8 +32,6 @@ export function ExamBuilder({ classId, sessionId, sessionTitle, kind }: ExamBuil
   const router = useRouter();
   const [exams, setExams] = useState<ExamDocument[]>([]);
   const [creating, setCreating] = useState(false);
-  const [title, setTitle] = useState('');
-  const [duration, setDuration] = useState('30');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +52,7 @@ export function ExamBuilder({ classId, sessionId, sessionTitle, kind }: ExamBuil
   }, [classId, sessionId, kind]);
 
 
-  async function create() {
+  async function create(judul: string) {
     setBusy(true);
     setError(null);
     try {
@@ -65,13 +63,11 @@ export function ExamBuilder({ classId, sessionId, sessionTitle, kind }: ExamBuil
           classId,
           kind,
           sessionId,
-          title: title.trim(),
-          durationMinutes: duration ? Number(duration) : null,
+          title: judul.trim(),
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Gagal membuat ujian');
-      setTitle('');
       setCreating(false);
       // Langsung masuk ke penyuntingnya. Ujian baru tidak punya soal, dan
       // kembali ke daftar berarti admin harus menekannya lagi untuk
@@ -129,37 +125,18 @@ export function ExamBuilder({ classId, sessionId, sessionTitle, kind }: ExamBuil
         </Link>
       ))}
 
-      {creating ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', padding: '12px', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={kind === 'kuis' ? `Kuis ${sessionTitle ?? 'Sesi'}` : `${EXAM_KIND_LABELS[kind]} Kelas`}
-            aria-label="Judul ujian"
-            autoFocus
-            style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '11px' }}
-          />
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <label style={{ fontSize: '10px', color: 'var(--color-text-muted)' }} htmlFor="exam-duration">Durasi</label>
-            <input
-              id="exam-duration"
-              type="number"
-              min={0}
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              style={{ width: '70px', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '11px' }}
-            />
-            <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>menit, kosongkan untuk tanpa batas</span>
-          </div>
-          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={() => setCreating(false)} disabled={busy} style={{ fontSize: '11px', padding: '8px 12px' }}>Batal</Button>
-            <Button variant="primary" onClick={create} disabled={busy || !title.trim()} style={{ fontSize: '11px', padding: '8px 12px' }}>
-              {busy ? 'Membuat...' : 'Buat'}
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+      {creating && (
+        <NewExamDialog
+          defaultTitle={kind === 'kuis' ? `Kuis ${sessionTitle ?? 'Sesi'}` : `${EXAM_KIND_LABELS[kind]} Kelas`}
+          kindLabel={EXAM_KIND_LABELS[kind]}
+          busy={busy}
+          error={error}
+          onCancel={() => { setCreating(false); setError(null); }}
+          onCreate={create}
+        />
+      )}
+
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
           <Button variant="secondary" onClick={() => setCreating(true)} style={{ fontSize: '11px', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
             <Plus size={12} strokeWidth={2} />
             Tambah {EXAM_KIND_LABELS[kind]}
@@ -173,9 +150,110 @@ export function ExamBuilder({ classId, sessionId, sessionTitle, kind }: ExamBuil
               The Excel template downloads before the exam exists: an admin
               prepares the questions first, and a button only inside an exam
               card demands creating an exam just to see the columns. */}
-          <TemplateDownloadButton compact showColumns />
+        <TemplateDownloadButton compact showColumns />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Dialog judul ujian baru.
+ *
+ * Judulnya saja yang diminta. Durasi dan KKM diatur di penyuntingnya bersama
+ * pengaturan lain, dan menanyakan tiga hal sebelum ujiannya ada menunda admin
+ * dari pekerjaan sebenarnya: menyusun soalnya.
+ *
+ * The new exam's title dialog.
+ *
+ * Only the title is asked. Duration and the passing score are set in the editor
+ * alongside the other settings, and asking three things before the exam exists
+ * delays the admin from the real work: composing its questions.
+ */
+function NewExamDialog({
+  defaultTitle,
+  kindLabel,
+  busy,
+  error,
+  onCancel,
+  onCreate,
+}: {
+  defaultTitle: string;
+  kindLabel: string;
+  busy: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onCreate: (judul: string) => void;
+}) {
+  const [judul, setJudul] = useState(defaultTitle);
+
+  // Escape menutupnya. Dialog yang hanya dapat ditutup lewat tombolnya memaksa
+  // mencari sasaran kecil untuk membatalkan sesuatu yang belum terjadi.
+  //
+  // Escape closes it. A dialog that closes only through its button forces hunting
+  // for a small target to cancel something that has not happened yet.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !busy) onCancel();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [busy, onCancel]);
+
+  const siap = judul.trim().length > 0 && !busy;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="new-exam-title"
+      onClick={() => !busy && onCancel()}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100, padding: '16px',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '12px', padding: '22px', width: '100%', maxWidth: '400px' }}
+      >
+        <h2 id="new-exam-title" style={{ fontFamily: 'var(--font-heading)', fontSize: '15px', fontWeight: 700, margin: '0 0 4px', color: 'var(--color-text-main)' }}>
+          {kindLabel} baru
+        </h2>
+        <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', margin: '0 0 14px' }}>
+          Durasi dan KKM diatur di penyuntingnya.
+        </p>
+
+        <label htmlFor="new-exam-input" style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '5px' }}>
+          JUDUL
+        </label>
+        <input
+          id="new-exam-input"
+          value={judul}
+          onChange={(e) => setJudul(e.target.value)}
+          // Enter membuatnya, sebagaimana kolom tunggal lain. Memindahkan tangan
+          // ke tetikus untuk satu kolom adalah langkah yang tidak perlu.
+          //
+          // Enter creates it, as any single field would. Moving a hand to the
+          // mouse for one field is a step that need not exist.
+          onKeyDown={(e) => { if (e.key === 'Enter' && siap) onCreate(judul); }}
+          autoFocus
+          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '12px', fontFamily: 'inherit' }}
+        />
+
+        {error && (
+          <p role="alert" style={{ fontSize: '11px', color: 'var(--color-danger)', margin: '10px 0 0' }}>{error}</p>
+        )}
+
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
+          <Button variant="secondary" onClick={onCancel} disabled={busy} style={{ fontSize: '11px', padding: '9px 14px' }}>
+            Batal
+          </Button>
+          <Button variant="primary" onClick={() => onCreate(judul)} disabled={!siap} style={{ fontSize: '11px', padding: '9px 14px' }}>
+            {busy ? 'Membuat...' : 'Buat dan Susun Soal'}
+          </Button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

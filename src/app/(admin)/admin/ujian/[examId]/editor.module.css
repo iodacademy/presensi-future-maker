@@ -1,0 +1,597 @@
+/*
+ * Penyunting soal berlayar penuh.
+ *
+ * Tanpa sidebar aplikasi: menyusun dua puluh soal adalah pekerjaan yang
+ * berlangsung lama, dan menu ke halaman lain hanya memakan lebar yang
+ * dibutuhkan soal beserta pilihan dan gambarnya.
+ *
+ * Tinggi dikunci setinggi layar lalu digulir di dalamnya, bukan menggulir
+ * seluruh halaman: daftar soal di kiri harus tetap terlihat saat soal di kanan
+ * digulir, dan halaman yang menggulir utuh membuat daftar itu hilang dari
+ * pandangan tepat ketika dipakai berpindah soal.
+ *
+ * A full-screen question editor.
+ *
+ * No application sidebar: composing twenty questions is long-running work, and
+ * navigation to other pages only eats the width the questions, their options, and
+ * their images need.
+ *
+ * The height is locked to the viewport and scrolled within, rather than scrolling
+ * the whole page: the question list on the left must stay visible while the
+ * question on the right scrolls, and a whole-page scroll would take that list out
+ * of view exactly when it is used to move between questions.
+ */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-bg-app);
+}
+
+/* --- pita atas ------------------------------------------------------------ */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  height: 56px;
+  padding: 0 16px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.back:hover {
+  background: var(--color-bg-app);
+}
+
+.back:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.identity {
+  min-width: 0;
+  flex: 1;
+}
+
+.examTitle {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-main);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.examMeta {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 1px 0 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Penanda simpan. Autosave yang tidak terlihat membuat admin menutup tab
+   sebelum tulisannya selesai, dan yang hilang tidak pernah ia sadari.
+
+   The save indicator. Invisible autosave has an admin close the tab before the
+   write lands, and what is lost is never noticed. */
+.saveState {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.saveError {
+  color: var(--color-danger);
+}
+
+.saveDone {
+  color: var(--color-success);
+}
+
+.spinner {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  border-bottom-color: var(--color-text-muted);
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Geraknya dihentikan bagi yang memintanya. Pemutaran tanpa henti memicu rasa
+   pusing pada sebagian orang, dan penanda ini berputar selama halaman terbuka.
+
+   Motion stops for those who ask for it. Endless spinning triggers nausea in some
+   people, and this indicator spins for as long as the page is open. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-bottom-color: var(--color-primary);
+  }
+}
+
+.badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.badgeLive {
+  background: var(--color-success);
+  color: #ffffff;
+}
+
+.badgeDraft {
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-main);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--color-bg-app);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.btnPrimary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.btnDanger {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.btnDanger:hover:not(:disabled) {
+  background: var(--color-danger-light);
+}
+
+/* --- badan: dua kolom ----------------------------------------------------- */
+.body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+/* Daftarnya digulir sendiri, terpisah dari soal di kanan. Daftar yang ikut
+   menggulir bersama halamannya menghilang dari pandangan tepat ketika dipakai
+   berpindah soal.
+
+   The list scrolls on its own, apart from the question on the right. A list that
+   scrolls with its page leaves view exactly when it is used to move between
+   questions. */
+.sidebarScroll {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.sidebarHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 12px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+}
+
+.sidebarFoot {
+  flex-shrink: 0;
+  padding: 8px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.qrow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.qbtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background-color 0.15s;
+}
+
+.qbtn:hover {
+  background: var(--color-bg-app);
+}
+
+.qbtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.qbtnActive {
+  background: var(--color-primary-light);
+}
+
+.qnum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.qnumActive {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.qtext {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--color-text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qtextActive {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.qempty {
+  color: var(--color-text-faint);
+  font-style: italic;
+}
+
+.qmove {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.qmove button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 1px 2px;
+  color: var(--color-text-faint);
+  line-height: 0;
+}
+
+.qmove button:hover:not(:disabled) {
+  color: var(--color-text-main);
+}
+
+.qmove button:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
+/* --- panel kanan ---------------------------------------------------------- */
+.main {
+  min-width: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.pane {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cardTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-main);
+  margin: 0;
+}
+
+.label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  margin-bottom: 5px;
+  letter-spacing: 0.03em;
+}
+
+.input {
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-main);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.textarea {
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  background: var(--color-border);
+  color: var(--color-text-main);
+}
+
+.chipActive {
+  background: var(--color-primary);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* --- pilihan jawaban ------------------------------------------------------ */
+.option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Lingkarannya sekaligus penanda kunci: tombol terpisah untuk menandai jawaban
+   benar menuntut dua ketukan untuk satu maksud.
+
+   The circle is also the key control: a separate button for marking the correct
+   answer would cost two taps for one intent. */
+.optionKey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.optionKey:hover {
+  border-color: var(--color-success);
+}
+
+.optionKey:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.optionKeyOn {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #ffffff;
+}
+
+.iconBtn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 4px;
+  flex-shrink: 0;
+  line-height: 0;
+  border-radius: 6px;
+}
+
+.iconBtn:hover:not(:disabled) {
+  background: var(--color-bg-app);
+}
+
+.iconBtn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.linkBtn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  align-self: flex-start;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.linkBtn:hover {
+  text-decoration: underline;
+}
+
+.hint {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.warn {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-danger);
+  background: var(--color-danger-light);
+  padding: 9px 12px;
+  border-radius: 8px;
+}
+
+.notice {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7a5f00;
+  background: var(--color-warning-light);
+  padding: 9px 12px;
+  border-radius: 8px;
+}
+
+.empty {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  padding: 24px 8px;
+  text-align: center;
+}
+
+/* Di layar sempit kolomnya bertumpuk: daftar selebar 280px di sebelah penyunting
+   menyisakan ruang yang tidak cukup untuk satu kalimat soal pun.
+
+   On narrow screens the columns stack: a 280px list beside the editor leaves too
+   little room for even one question sentence. */
+@media (max-width: 860px) {
+  .shell {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .body {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .sidebarScroll {
+    max-height: 240px;
+  }
+
+  .main {
+    overflow: visible;
+  }
+}
