@@ -2,9 +2,8 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowLeft, Check, Clock } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Check, Clock, Trash2 } from 'lucide-react';
 import { ImportQuestions } from '../../kelas/[classId]/import-questions';
-import { TemplateDownloadButton } from '../../kelas/[classId]/question-template';
 import { ExamRoster } from './exam-roster';
 import { AddQuestionButton, QuestionEditor, QuestionList, kurangLengkap, type AdminQuestion } from './question-editor';
 import { EXAM_KIND_LABELS, MAX_ATTEMPTS, type ExamDocument } from '@/features/exams/types';
@@ -301,6 +300,33 @@ export default function ExamEditorPage({ params }: { params: Promise<{ examId: s
           >
             {exam.published ? 'Tarik' : 'Terbitkan'}
           </button>
+
+          {/* Hapus berada di kepala sebagai ikon, bukan sebagai kartu di dasar
+              halaman. Di dasar, ia menjadi hal terakhir yang terbaca setiap kali
+              admin menggulir mencari sesuatu yang lain -- dan tindakan yang
+              memusnahkan hasil kerja peserta tidak layak menjadi tujuan akhir
+              gulirannya.
+
+              Delete sits in the header as an icon rather than a card at the foot
+              of the page. At the foot it becomes the last thing read every time an
+              admin scrolls looking for something else -- and an action that
+              destroys participant work does not deserve to be where scrolling
+              ends. */}
+          <button
+            type="button"
+            className={`${s.iconBtn} ${s.headerDanger}`}
+            aria-label="Hapus ujian"
+            title="Hapus ujian"
+            onClick={async () => {
+              if (!confirm(`Hapus ${exam.title} beserta seluruh soal dan hasil pengerjaannya?
+
+Hasil pengerjaan peserta ikut terhapus dan tidak dapat dikembalikan.`)) return;
+              await fetch(`/api/exams/${examId}`, { method: 'DELETE' });
+              router.push(`/admin/kelas/${exam.classId}`);
+            }}
+          >
+            <Trash2 size={14} strokeWidth={2} />
+          </button>
         </div>
       </header>
 
@@ -347,6 +373,8 @@ export default function ExamEditorPage({ params }: { params: Promise<{ examId: s
               </div>
             )}
 
+            <ExamSettings exam={exam} onPatch={patchExam} />
+
             {current ? (
               <QuestionEditor
                 key={current.id}
@@ -365,15 +393,14 @@ export default function ExamEditorPage({ params }: { params: Promise<{ examId: s
               </div>
             )}
 
-            <ExamSettings exam={exam} onPatch={patchExam} />
+            {/* Tanpa kartu pembungkus: ImportQuestions sudah menggambar
+                kotaknya sendiri lengkap dengan judul dan tombol contohnya, dan
+                membungkusnya lagi menampilkan judul serta tombol itu dua kali.
 
-            <div className={s.card}>
-              <div className={s.cardHead}>
-                <h2 className={s.cardTitle}>Impor dari Excel</h2>
-                <TemplateDownloadButton compact showColumns />
-              </div>
-              <ImportQuestions examId={examId} onImported={reloadQuestions} />
-            </div>
+                No wrapping card: ImportQuestions already draws its own box with
+                its heading and template button, and wrapping it again shows both
+                of them twice. */}
+            <ImportQuestions examId={examId} onImported={reloadQuestions} />
 
             {/* Rekap hanya untuk ujian yang sudah terbit: ujian draf belum
                 terlihat peserta, sehingga "0 dari 21" hanya menyesatkan.
@@ -389,26 +416,6 @@ export default function ExamEditorPage({ params }: { params: Promise<{ examId: s
               </div>
             )}
 
-            <div className={s.card}>
-              <div className={s.cardHead}>
-                <h2 className={s.cardTitle}>Hapus ujian</h2>
-              </div>
-              <p className={s.hint}>
-                Seluruh soal dan hasil pengerjaan peserta ikut terhapus dan tidak dapat dikembalikan.
-              </p>
-              <button
-                type="button"
-                className={`${s.btn} ${s.btnDanger}`}
-                style={{ alignSelf: 'flex-start' }}
-                onClick={async () => {
-                  if (!confirm(`Hapus ${exam.title} beserta seluruh soal dan hasil pengerjaannya?`)) return;
-                  await fetch(`/api/exams/${examId}`, { method: 'DELETE' });
-                  router.push(`/admin/kelas/${exam.classId}`);
-                }}
-              >
-                Hapus ujian ini
-              </button>
-            </div>
           </div>
         </main>
       </div>

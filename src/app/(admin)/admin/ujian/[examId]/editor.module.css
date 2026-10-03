@@ -595,3 +595,17 @@
     overflow: visible;
   }
 }
+
+/* Hapus di kepala: warnanya hanya muncul saat disentuh, sehingga ia tidak
+   menarik mata sepanjang waktu namun tetap jelas begitu dituju.
+
+   Delete in the header: its colour appears only on hover, so it does not pull the
+   eye all day yet is unmistakable once aimed at. */
+.headerDanger {
+  color: var(--color-text-faint);
+}
+
+.headerDanger:hover {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}

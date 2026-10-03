@@ -374,3 +374,69 @@ describe('soal yang belum lengkap', () => {
     expect(page).toMatch(/disabled=\{!exam\.published && questions\.length === 0\}/);
   });
 });
+
+/**
+ * Urutan panelnya mengikuti seberapa sering dipakai.
+ *
+ * Yang dipakai tiap kali ujian dibuka berada di atas; yang dipakai sekali atau
+ * tidak pernah berada di bawahnya. Panel yang jarang dipakai di jalur utama
+ * menuntut admin menggulir melewatinya setiap kali.
+ *
+ * The panel order follows how often each is used.
+ *
+ * What is used every time an exam is opened sits at the top; what is used once or
+ * never sits below. A rarely used panel in the main path makes an admin scroll past
+ * it every time.
+ */
+describe('susunan panel penyunting', () => {
+  const urutan = (nama: string) => page.indexOf(nama);
+
+  it('menaruh pengaturan ujian di atas penyunting soalnya', () => {
+    // Judul, durasi, dan KKM adalah hal pertama yang diperiksa admin saat
+    // membuka ujian, dan menguburnya di bawah penyunting soal berarti menggulir
+    // melewati seluruh soal untuk mengubah satu angka.
+    //
+    // The title, duration, and passing score are the first things an admin checks
+    // on opening an exam, and burying them below the question editor means
+    // scrolling past the whole question to change one number.
+    expect(urutan('<ExamSettings')).toBeLessThan(urutan('<QuestionEditor'));
+  });
+
+  it('menaruh impor Excel di bawah penyunting soalnya', () => {
+    // Impor dipakai sekali di awal; penyuntingan dipakai tiap kali.
+    // Import is used once at the start; editing is used every time.
+    expect(urutan('<ImportQuestions')).toBeGreaterThan(urutan('<QuestionEditor'));
+  });
+
+  it('tidak menampilkan tombol contoh Excel dua kali', () => {
+    // ImportQuestions sudah menggambar kotaknya sendiri lengkap dengan judul dan
+    // tombol contohnya; membungkusnya lagi menampilkan keduanya dua kali.
+    //
+    // ImportQuestions already draws its own box with its heading and template
+    // button; wrapping it again shows both of them twice.
+    expect(page).not.toMatch(/TemplateDownloadButton/);
+  });
+
+  it('menaruh hapus ujian di kepala, bukan di dasar halaman', () => {
+    // Di dasar, ia menjadi hal terakhir yang terbaca setiap kali admin menggulir
+    // mencari sesuatu yang lain -- dan tindakan yang memusnahkan hasil kerja
+    // peserta tidak layak menjadi tujuan akhir gulirannya.
+    //
+    // At the foot it becomes the last thing read every time an admin scrolls
+    // looking for something else -- and an action that destroys participant work
+    // does not deserve to be where scrolling ends.
+    expect(urutan('aria-label="Hapus ujian"')).toBeLessThan(urutan('<ExamSettings'));
+    expect(page).not.toMatch(/Hapus ujian ini/);
+  });
+
+  it('tetap menanyakan konfirmasi sebelum menghapus', () => {
+    // Ikon kecil lebih mudah tersenggol daripada tombol bertuliskan, sehingga
+    // konfirmasinya justru lebih dibutuhkan di sini.
+    //
+    // A small icon is easier to hit by accident than a labelled button, so the
+    // confirmation matters more here, not less.
+    const blok = page.slice(urutan('aria-label="Hapus ujian"'), urutan('</header>'));
+    expect(blok).toMatch(/confirm\(/);
+    expect(blok).toMatch(/tidak dapat dikembalikan/);
+  });
+});
