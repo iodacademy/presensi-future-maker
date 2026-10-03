@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { describeScope } from '@/features/survey/policy';
 import type { SurveyFormDocument } from '@/features/survey/types';
 import type { ClassSummary } from '@/features/classes/types';
+import { ImportSoalTab } from './import-soal-tab';
 
 /**
  * Pengaturan aplikasi.
@@ -22,9 +23,12 @@ import type { ClassSummary } from '@/features/classes/types';
  * then does not require tearing apart a page already shaped as a single
  * column.
  */
-type SettingsTab = 'survei';
+type SettingsTab = 'survei' | 'impor-soal';
 
-const TABS: [SettingsTab, string][] = [['survei', 'Survei Pertemuan']];
+const TABS: [SettingsTab, string][] = [
+  ['survei', 'Survei Pertemuan'],
+  ['impor-soal', 'Impor Soal Ujian'],
+];
 
 export default function AdminPengaturanPage() {
   const [tab, setTab] = useState<SettingsTab>('survei');
@@ -36,7 +40,7 @@ export default function AdminPengaturanPage() {
           Pengaturan
         </h1>
         <p style={{ color: 'var(--color-text-muted)', fontSize: '10px', marginTop: '2px' }}>
-          Survei yang diisi peserta pada kartu pertemuan, setelah kehadirannya tercatat.
+          Survei pertemuan dan impor soal ujian.
         </p>
       </div>
 
@@ -63,6 +67,7 @@ export default function AdminPengaturanPage() {
       </div>
 
       {tab === 'survei' && <SurveyTable />}
+      {tab === 'impor-soal' && <ImportSoalTab />}
     </AppShell>
   );
 }

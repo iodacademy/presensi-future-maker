@@ -14,6 +14,8 @@ const service = read('src/features/exams/service.ts');
 const ui = read('src/app/(admin)/admin/kelas/[classId]/import-questions-global.tsx');
 const route = read('src/app/api/exams/import/route.ts');
 const classPage = read('src/app/(admin)/admin/kelas/[classId]/page.tsx');
+const settingsPage = read('src/app/(admin)/admin/pengaturan/page.tsx');
+const tab = read('src/app/(admin)/admin/pengaturan/import-soal-tab.tsx');
 
 const fn = (() => {
   const i = service.indexOf('export async function importQuestionsForClass');
@@ -321,8 +323,50 @@ describe('penjagaan dan tampilannya', () => {
     expect(ui).toMatch(/rowErrors\.length - 12/);
   });
 
-  it('terpasang di tab ujian halaman kelas', () => {
-    expect(classPage).toMatch(/<ImportQuestionsGlobal/);
-    expect(classPage).toMatch(/exams=\{exams\}/);
+  it('terpasang sebagai tab di Pengaturan', () => {
+    expect(settingsPage).toMatch(/'impor-soal', 'Impor Soal Ujian'/);
+    expect(settingsPage).toMatch(/tab === 'impor-soal' && <ImportSoalTab \/>/);
+    expect(tab).toMatch(/<ImportQuestionsGlobal/);
+  });
+
+  it('hanya ada satu pintu ke impor yang mengganti soal', () => {
+    // Impor ini menghapus bank soal. Dua pintu ke tindakan merusak berarti dua
+    // tempat yang harus diperiksa saat ada yang salah, dan yang kedua kerap
+    // terlupakan saat penjagaannya diperbaiki.
+    //
+    // This import wipes a question bank. Two doors to a destructive action mean two
+    // places to check when something goes wrong, and the second is routinely
+    // forgotten when the safeguards are improved.
+    expect(classPage).not.toMatch(/ImportQuestionsGlobal/);
+  });
+
+  it('menuntut kelasnya dipilih sebelum berkasnya dapat diunggah', () => {
+    // Tombol pilih berkas yang aktif tanpa kelas akan menerima berkas lalu
+    // menolak seluruh barisnya, dan admin mengira berkasnya yang salah.
+    //
+    // A live file button with no class would accept a sheet and then refuse every
+    // row, and the admin would assume the sheet was at fault.
+    expect(tab).toMatch(/\{classId \? \(/);
+    expect(tab).toContain('Pilih kelas lebih dulu');
+  });
+
+  it('tidak meminta kelasnya sebagai kolom di dalam berkasnya', () => {
+    // "Kuis Pertemuan 1" ada di empat kelas dengan soal yang berbeda-beda, dan
+    // satu baris yang salah kelas akan menimpa bank soal kelas lain tanpa
+    // terlihat di mana pun.
+    //
+    // "Kuis Pertemuan 1" exists in four classes with different questions, and one
+    // row aimed at the wrong class would overwrite another class's question bank
+    // with nothing anywhere to show it.
+    expect(GLOBAL_TEMPLATE_HEADERS).not.toContain('Kelas');
+  });
+
+  it('menggambar ulang impornya saat kelasnya berganti', () => {
+    // Tanpa itu, pratinjau dan pesan dari kelas sebelumnya tertinggal di layar
+    // sementara kelas yang dituju sudah berbeda.
+    //
+    // Without it, the previous class's preview and messages linger on screen while
+    // the target class has already changed.
+    expect(tab).toMatch(/key=\{classId\}/);
   });
 });
