@@ -3,7 +3,7 @@
 import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
 import { deleteExamImage } from '../uploads/service';
-import type { Actor } from '../auth/types';
+import type { Actor, UserDocument } from '../auth/types';
 import {
   applyRemedialRule,
   attemptDeadline,
@@ -924,6 +924,154 @@ export async function submitAttempt(
  * Who has not taken it is no document at all, so those names can only surface
  * by comparing the class roster against the attempts that exist.
  */
+/**
+ * Rekap nilai seluruh ujian satu kelas, satu baris per peserta.
+ *
+ * Dibaca sekali untuk seluruh kelas, bukan satu ujian per panggilan: empat
+ * belas ujian lewat getExamRoster berarti dua puluh delapan kueri untuk satu
+ * berkas, dan peserta yang sama dibaca empat belas kali.
+ *
+ * Kolomnya berurut sebagaimana peserta menemuinya: pretest, kuis menurut
+ * tanggal pertemuannya, lalu posttest. Urutan abjad judul akan menaruh "Kuis
+ * Pertemuan 10" sebelum "Kuis Pertemuan 2".
+ *
+ * Satu kelas satu berkas, bukan satu jurusan: kuis pertemuan ketiga di
+ * Yogyakarta dan di Surabaya adalah ujian berbeda dengan soal berbeda, dan
+ * menyatukannya ke satu kolom menyajikan dua angka yang tidak sebanding seolah
+ * setara.
+ *
+ * Every exam's scores for one class, one row per participant.
+ *
+ * Read once for the whole class rather than one exam per call: fourteen exams
+ * through getExamRoster would be twenty-eight queries for one file, with the same
+ * participants read fourteen times.
+ *
+ * The columns run in the order a participant meets them: pretest, quizzes by their
+ * meeting date, then posttest. Sorting titles alphabetically would put "Kuis
+ * Pertemuan 10" before "Kuis Pertemuan 2".
+ *
+ * One class per file, not one stream: the third meeting's quiz in Yogyakarta and
+ * in Surabaya are different exams with different questions, and merging them into
+ * one column would present two incomparable numbers as if they were the same.
+ */
+export async function getClassExamScores(
+  actor: Actor,
+  classId: string
+): Promise<{
+  className: string;
+  programName: string;
+  city: string;
+  exams: { id: string; title: string; kind: ExamKind; passingScore: number }[];
+  rows: {
+    studentName: string;
+    email: string;
+    /** Nilai per ujian, searah dengan exams; null berarti tidak dikerjakan / Score per exam, aligned with exams; null means not attempted */
+    scores: (number | null)[];
+    /** Percobaan keberapa nilai itu diperoleh; null bila tidak dikerjakan / Which attempt produced it; null when not attempted */
+    attempts: (number | null)[];
+  }[];
+}> {
+  requireAdmin(actor);
+
+  const db = getAdminDb();
+  const [classSnap, examsSnap, studentsSnap, sessionsSnap] = await Promise.all([
+    db.collection('classes').doc(classId).get(),
+    db.collection('exams').where('classId', '==', classId).get(),
+    db
+      .collection('users')
+      .where('classId', '==', classId)
+      .where('role', '==', 'student')
+      .where('active', '==', true)
+      .get(),
+    db.collection('sessions').where('classId', '==', classId).get(),
+  ]);
+
+  if (!classSnap.exists) throw new Error('Kelas tidak ditemukan');
+  const kelas = classSnap.data() as { canonicalName: string; programName?: string; city: string };
+
+  const tanggalSesi = new Map<string, string>();
+  for (const d of sessionsSnap.docs) {
+    const sesi = d.data() as { id: string; date: string };
+    tanggalSesi.set(sesi.id, sesi.date);
+  }
+
+  // Pretest selalu di depan dan posttest selalu di belakang, apa pun tanggal
+  // ujiannya dibuat: keduanya menjepit perjalanan belajar peserta, dan
+  // membacanya berdampingan adalah alasan berkas ini dibuka.
+  //
+  // The pretest always leads and the posttest always trails, whatever date they
+  // were created: the two bracket a participant's progress, and reading them side
+  // by side is why this file is opened.
+  const urutanJenis: Record<string, number> = { pretest: 0, kuis: 1, posttest: 2 };
+  const exams = examsSnap.docs
+    .map((d) => d.data() as ExamDocument)
+    .sort((a, b) => {
+      const j = (urutanJenis[a.kind] ?? 1) - (urutanJenis[b.kind] ?? 1);
+      if (j !== 0) return j;
+      const ta = a.sessionId ? tanggalSesi.get(a.sessionId) ?? '' : '';
+      const tb = b.sessionId ? tanggalSesi.get(b.sessionId) ?? '' : '';
+      if (ta !== tb) return ta.localeCompare(tb);
+      return a.title.localeCompare(b.title, 'id');
+    })
+    .map((e) => ({ id: e.id, title: e.title, kind: e.kind, passingScore: e.passingScore }));
+
+  if (exams.length === 0) {
+    return { className: kelas.canonicalName, programName: kelas.programName ?? '', city: kelas.city, exams: [], rows: [] };
+  }
+
+  // Percobaan dibaca per ujian karena Firestore membatasi "in" pada tiga puluh
+  // nilai, dan satu kelas dapat memiliki lebih banyak ujian daripada itu.
+  // Dijalankan bersamaan, bukan berurutan.
+  //
+  // Attempts are read per exam because Firestore caps "in" at thirty values, and a
+  // class can hold more exams than that. Run together rather than in sequence.
+  const attemptSnaps = await Promise.all(
+    exams.map((e) => db.collection('examAttempts').where('examId', '==', e.id).get())
+  );
+
+  // Nilai tertinggi tiap peserta per ujian. Percobaan kedua yang lulus sudah
+  // dipatok pada KKM saat disimpan, sehingga yang tertinggi adalah yang berlaku.
+  //
+  // Each participant's highest score per exam. A passing second attempt was
+  // already capped at the passing score when stored, so the highest is the one
+  // that counts.
+  const nilai = new Map<string, Map<string, { score: number; attemptNumber: number }>>();
+  attemptSnaps.forEach((snap, i) => {
+    const peta = new Map<string, { score: number; attemptNumber: number }>();
+    for (const d of snap.docs) {
+      const a = d.data() as { studentId: string; status: string; score: number | null; attemptNumber: number };
+      if (a.status !== 'selesai' || a.score === null) continue;
+      const ada = peta.get(a.studentId);
+      if (!ada || a.score > ada.score) peta.set(a.studentId, { score: a.score, attemptNumber: a.attemptNumber });
+    }
+    nilai.set(exams[i].id, peta);
+  });
+
+  const rows = studentsSnap.docs
+    .map((d) => d.data() as UserDocument)
+    .sort((a, b) => a.name.localeCompare(b.name, 'id'))
+    .map((u) => ({
+      studentName: u.name,
+      email: u.email,
+      // Tidak dikerjakan bernilai null, bukan nol: nol berarti dikerjakan dan
+      // salah semua, dan menyamakan keduanya menurunkan rata-rata kelas dengan
+      // angka yang tidak pernah diperoleh siapa pun.
+      //
+      // Not attempted is null, not zero: zero means attempted and all wrong, and
+      // merging the two drags the class average down with a figure nobody earned.
+      scores: exams.map((e) => nilai.get(e.id)?.get(u.uid)?.score ?? null),
+      attempts: exams.map((e) => nilai.get(e.id)?.get(u.uid)?.attemptNumber ?? null),
+    }));
+
+  return {
+    className: kelas.canonicalName,
+    programName: kelas.programName ?? '',
+    city: kelas.city,
+    exams,
+    rows,
+  };
+}
+
 export async function getExamRoster(
   actor: Actor,
   examId: string

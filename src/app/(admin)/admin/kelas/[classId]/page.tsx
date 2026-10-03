@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { Plus, Pencil, Paperclip, Calendar, ArrowLeft, Users, X, Check, Trash2, Video } from 'lucide-react';
+import { Plus, Pencil, Paperclip, Calendar, ArrowLeft, Users, X, Check, Trash2, Video, Download } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -759,6 +759,36 @@ export default function CourseBuilderPage({
                 Dikerjakan setelah seluruh materi selesai. Memakai soal yang sama dengan pretest membuat selisih nilainya dapat dibandingkan.
               </p>
               <ExamBuilder classId={classId} sessionId={null} kind="posttest" />
+            </div>
+
+            <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
+
+            {/* Rekapnya di tab ini, bukan pada tiap ujian: yang dicari adalah
+                satu peserta di seluruh ujiannya, dan rekap per ujian menuntut
+                empat belas berkas untuk menjawabnya.
+
+                The recap sits on this tab rather than on each exam: what is sought
+                is one participant across every exam, and a per-exam recap would
+                need fourteen files to answer that. */}
+            <div>
+              <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>Rekap nilai ujian</h2>
+              <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', margin: '2px 0 10px', lineHeight: 1.55 }}>
+                Satu baris per peserta, satu kolom per ujian: pretest, tiap kuis pertemuan menurut tanggalnya, lalu postest.
+                Ujian yang tidak dikerjakan dibiarkan kosong, bukan diisi nol.
+              </p>
+              <a
+                href={`/api/exports/exams?classId=${encodeURIComponent(classId)}`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  padding: '9px 14px', borderRadius: '8px',
+                  border: '1px solid var(--color-border)', backgroundColor: '#ffffff',
+                  color: 'var(--color-text-main)', textDecoration: 'none',
+                  fontSize: '11px', fontWeight: 700,
+                }}
+              >
+                <Download size={12} strokeWidth={2} />
+                Unduh Rekap Nilai Ujian
+              </a>
             </div>
           </div>
         </div>
