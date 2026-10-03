@@ -219,10 +219,43 @@
 .sidebar {
   display: flex;
   flex-direction: column;
-  width: 280px;
+  width: 240px;
   flex-shrink: 0;
   border-right: 1px solid var(--color-border);
   background: var(--color-surface);
+}
+
+/*
+ * Panel kanan: pengaturan ujian dan impornya.
+ *
+ * Keduanya dipakai sesekali, bukan tiap kali soal disunting. Di jalur utama,
+ * keduanya menuntut admin menggulir melewatinya setiap berpindah soal; di kolom
+ * sendiri, keduanya terlihat tanpa menghalangi.
+ *
+ * Digulir sendiri seperti daftarnya, dengan alasan yang sama: kolom yang ikut
+ * menggulir bersama soal di tengah akan hilang dari pandangan justru ketika
+ * dipakai.
+ *
+ * The right panel: the exam's settings and its import.
+ *
+ * Both are used occasionally, not each time a question is edited. In the main
+ * path they make an admin scroll past them on every question; in their own column
+ * they stay visible without being in the way.
+ *
+ * It scrolls on its own like the list, for the same reason: a column that scrolls
+ * with the question in the middle leaves view exactly when it is used.
+ */
+.aside {
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  flex-shrink: 0;
+  min-height: 0;
+  overflow-y: auto;
+  gap: 14px;
+  padding: 20px 20px 20px 0;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-bg-app);
 }
 
 /* Daftarnya digulir sendiri, terpisah dari soal di kanan. Daftar yang ikut
@@ -367,7 +400,7 @@
 }
 
 .pane {
-  max-width: 720px;
+  max-width: 640px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -570,6 +603,30 @@
 
    On narrow screens the columns stack: a 280px list beside the editor leaves too
    little room for even one question sentence. */
+@media (max-width: 1180px) {
+  .aside {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+    overflow: visible;
+    padding: 16px;
+  }
+
+  .body {
+    flex-wrap: wrap;
+  }
+
+  .shell {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .main {
+    overflow: visible;
+  }
+}
+
 @media (max-width: 860px) {
   .shell {
     height: auto;

@@ -373,8 +373,6 @@ Hasil pengerjaan peserta ikut terhapus dan tidak dapat dikembalikan.`)) return;
               </div>
             )}
 
-            <ExamSettings exam={exam} onPatch={patchExam} />
-
             {current ? (
               <QuestionEditor
                 key={current.id}
@@ -388,36 +386,46 @@ Hasil pengerjaan peserta ikut terhapus dan tidak dapat dikembalikan.`)) return;
             ) : (
               <div className={s.card}>
                 <p className={s.empty}>
-                  Belum ada soal. Tambahkan satu lewat tombol di kiri, atau unggah berkas Excel di bawah.
+                  Belum ada soal. Tambahkan satu lewat tombol di kiri, atau unggah berkas Excel di kanan.
                 </p>
               </div>
             )}
-
-            {/* Tanpa kartu pembungkus: ImportQuestions sudah menggambar
-                kotaknya sendiri lengkap dengan judul dan tombol contohnya, dan
-                membungkusnya lagi menampilkan judul serta tombol itu dua kali.
-
-                No wrapping card: ImportQuestions already draws its own box with
-                its heading and template button, and wrapping it again shows both
-                of them twice. */}
-            <ImportQuestions examId={examId} onImported={reloadQuestions} />
-
-            {/* Rekap hanya untuk ujian yang sudah terbit: ujian draf belum
-                terlihat peserta, sehingga "0 dari 21" hanya menyesatkan.
-
-                The roster is for published exams only: a draft is not visible to
-                participants, so "0 of 21" would only mislead. */}
-            {exam.published && (
-              <div className={s.card}>
-                <div className={s.cardHead}>
-                  <h2 className={s.cardTitle}>Pengerjaan peserta</h2>
-                </div>
-                <ExamRoster examId={examId} />
-              </div>
-            )}
-
           </div>
         </main>
+
+        {/* Pengaturan dan impor di kolomnya sendiri: keduanya dipakai sesekali,
+            bukan tiap kali soal disunting, dan di jalur utama keduanya menuntut
+            admin menggulir melewatinya setiap berpindah soal.
+
+            Settings and import in their own column: both are used occasionally
+            rather than each time a question is edited, and in the main path they
+            make an admin scroll past them on every question. */}
+        <aside className={s.aside}>
+          <ExamSettings exam={exam} onPatch={patchExam} />
+
+          {/* Tanpa kartu pembungkus: ImportQuestions sudah menggambar kotaknya
+              sendiri lengkap dengan judul dan tombol contohnya, dan
+              membungkusnya lagi menampilkan judul serta tombol itu dua kali.
+
+              No wrapping card: ImportQuestions already draws its own box with its
+              heading and template button, and wrapping it again shows both of them
+              twice. */}
+          <ImportQuestions examId={examId} onImported={reloadQuestions} />
+
+          {/* Rekap hanya untuk ujian yang sudah terbit: ujian draf belum terlihat
+              peserta, sehingga "0 dari 21" hanya menyesatkan.
+
+              The roster is for published exams only: a draft is not visible to
+              participants, so "0 of 21" would only mislead. */}
+          {exam.published && (
+            <div className={s.card}>
+              <div className={s.cardHead}>
+                <h2 className={s.cardTitle}>Pengerjaan peserta</h2>
+              </div>
+              <ExamRoster examId={examId} />
+            </div>
+          )}
+        </aside>
       </div>
     </div>
   );

@@ -391,21 +391,49 @@ describe('soal yang belum lengkap', () => {
 describe('susunan panel penyunting', () => {
   const urutan = (nama: string) => page.indexOf(nama);
 
-  it('menaruh pengaturan ujian di atas penyunting soalnya', () => {
-    // Judul, durasi, dan KKM adalah hal pertama yang diperiksa admin saat
-    // membuka ujian, dan menguburnya di bawah penyunting soal berarti menggulir
-    // melewati seluruh soal untuk mengubah satu angka.
+  it('menaruh pengaturan dan impor di kolomnya sendiri', () => {
+    // Keduanya dipakai sesekali, bukan tiap kali soal disunting. Di jalur
+    // utama, keduanya menuntut admin menggulir melewatinya setiap berpindah
+    // soal.
     //
-    // The title, duration, and passing score are the first things an admin checks
-    // on opening an exam, and burying them below the question editor means
-    // scrolling past the whole question to change one number.
-    expect(urutan('<ExamSettings')).toBeLessThan(urutan('<QuestionEditor'));
+    // Both are used occasionally rather than each time a question is edited. In
+    // the main path they make an admin scroll past them on every question.
+    const aside = page.slice(urutan('<aside className={s.aside}'));
+    expect(aside).toContain('<ExamSettings');
+    expect(aside).toContain('<ImportQuestions');
+
+    const main = page.slice(urutan('<main className={s.main}'), urutan('</main>'));
+    expect(main).not.toContain('<ExamSettings');
+    expect(main).not.toContain('<ImportQuestions');
   });
 
-  it('menaruh impor Excel di bawah penyunting soalnya', () => {
-    // Impor dipakai sekali di awal; penyuntingan dipakai tiap kali.
-    // Import is used once at the start; editing is used every time.
-    expect(urutan('<ImportQuestions')).toBeGreaterThan(urutan('<QuestionEditor'));
+  it('menyisakan hanya penyunting soal di jalur utamanya', () => {
+    // Satu hal di tengah layar: yang disunting berulang kali tidak berbagi
+    // ruang dengan yang dibuka sesekali.
+    //
+    // One thing in the middle of the screen: what is edited repeatedly does not
+    // share space with what is opened occasionally.
+    const main = page.slice(urutan('<main className={s.main}'), urutan('</main>'));
+    expect(main).toContain('<QuestionEditor');
+  });
+
+  it('menggulir kolom kanannya sendiri, terpisah dari soalnya', () => {
+    // Kolom yang ikut menggulir bersama soal di tengah akan hilang dari
+    // pandangan justru ketika dipakai.
+    //
+    // A column that scrolls with the question in the middle leaves view exactly
+    // when it is used.
+    expect(css).toMatch(/\.aside \{[^}]*overflow-y: auto/s);
+    expect(css).toMatch(/\.aside \{[^}]*min-height: 0/s);
+  });
+
+  it('menumpuk kolom kanannya lebih dulu di layar sedang', () => {
+    // Tiga kolom di bawah seribu seratus delapan puluh piksel menyisakan ruang
+    // yang tidak cukup untuk kalimat soalnya.
+    //
+    // Three columns under 1180px leave too little room for the question's
+    // sentence.
+    expect(css).toMatch(/@media \(max-width: 1180px\)/);
   });
 
   it('tidak menampilkan tombol contoh Excel dua kali', () => {
