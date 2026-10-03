@@ -463,6 +463,203 @@ export async function deleteQuestion(actor: Actor, questionId: string): Promise<
 }
 
 /**
+ * Mengganti seluruh soal beberapa ujian sekaligus dari satu berkas.
+ *
+ * Mengganti, bukan menambahkan: berkas yang sama diimpor dua kali akan
+ * menggandakan seluruh soalnya, dan admin yang memperbaiki satu ejaan lalu
+ * mengimpor ulang mendapat dua salinan tiap soal.
+ *
+ * Ditulis dalam beberapa batch bila perlu. Satu batch Firestore menampung lima
+ * ratus operasi, sedangkan empat belas ujian berisi dua puluh soal menuntut
+ * seribu lebih -- satu batch akan menolak justru pada kelas yang paling lengkap
+ * soalnya.
+ *
+ * Penghapusan seluruh soal lama diselesaikan lebih dulu, baru soal barunya
+ * ditulis. Terbalik, kegagalan di tengah dapat menyisakan soal lama dan baru
+ * bersamaan dalam satu ujian, dan peserta mengerjakan soal rangkap.
+ *
+ * Replaces several exams' questions at once from one sheet.
+ *
+ * Replacing rather than appending: importing the same sheet twice would double
+ * every question, and an admin fixing one spelling then re-importing would get two
+ * copies of each.
+ *
+ * It all goes in one batch. Stopping halfway would leave some exams on the new
+ * questions and others on the old, with nothing to say which -- a worse state than
+ * failing outright.
+ */
+export async function importQuestionsForClass(
+  actor: Actor,
+  classId: string,
+  perExam: { examTitle: string; questions: { kind: QuestionKind; text: string; options: { text: string }[]; correctIndex: number; explanation: string }[] }[]
+): Promise<{ examCount: number; imported: number; replaced: number }> {
+  requireAdmin(actor);
+
+  if (perExam.length === 0) {
+    throw new Error('Tidak ada soal yang dapat diimpor');
+  }
+
+  const db = getAdminDb();
+  const examsSnap = await db.collection('exams').where('classId', '==', classId).get();
+  const exams = examsSnap.docs.map((d) => d.data() as ExamDocument);
+
+  const normal = (t: string) => t.trim().toLowerCase().replace(/\s+/g, ' ');
+  const petaUjian = new Map(exams.map((e) => [normal(e.title), e]));
+
+  // Judul diperiksa seluruhnya lebih dulu, sebelum satu soal pun ditulis: satu
+  // judul yang tidak dikenal di baris terakhir tidak boleh menyisakan ujian
+  // sebelumnya sudah terganti.
+  //
+  // Every title is checked first, before a single question is written: one unknown
+  // title in the last row must not leave the earlier exams already replaced.
+  const asing = perExam.filter((x) => !petaUjian.has(normal(x.examTitle)));
+  if (asing.length > 0) {
+    throw new Error(
+      `Ujian berikut tidak ada di kelas ini: ${asing.map((x) => x.examTitle).join(', ')}`
+    );
+  }
+
+  const sasaran = perExam.map((x) => ({ exam: petaUjian.get(normal(x.examTitle))!, questions: x.questions }));
+
+  // Soal lama dibaca sebelum apa pun ditulis, sekaligus untuk seluruh ujian
+  // yang disentuh.
+  //
+  // The old questions are read before anything is written, for every exam being
+  // touched at once.
+  const lamaSnaps = await Promise.all(
+    sasaran.map((t) => db.collection('examQuestions').where('examId', '==', t.exam.id).get())
+  );
+
+  // Gambar soal lama dihapus dari penyimpanan, di luar batch: batch Firestore
+  // hanya menulis dokumen, dan berkas penyimpanan tidak termasuk di dalamnya.
+  // Dilakukan sebelum batch karena gambar yang dokumennya sudah terhapus tidak
+  // dapat ditemukan lagi untuk dibersihkan.
+  //
+  // The old questions' images are deleted from storage, outside the batch: a
+  // Firestore batch only writes documents, and storage files are not among them.
+  // Done before the batch because an image whose document is already gone can no
+  // longer be found to clean up.
+  const semuaLama = lamaSnaps.flatMap((snap) => snap.docs.map((d) => d.data() as QuestionDocument));
+  await Promise.all(
+    semuaLama
+      .flatMap((q) => [q.imagePath, ...q.options.map((o) => o.imagePath)])
+      .filter((p): p is string => Boolean(p))
+      .map((p) => deleteExamImage(actor, p))
+  );
+
+  const now = new Date().toISOString();
+
+  /**
+   * Operasi yang dikumpulkan, lalu dijalankan dalam batch berukuran aman.
+   *
+   * Satu batch Firestore menampung lima ratus operasi. Menghitungnya sendiri
+   * jauh lebih murah daripada menemukan batasnya saat admin menekan impor pada
+   * kelas yang soalnya paling lengkap.
+   *
+   * Collected operations, then run in safely sized batches.
+   *
+   * One Firestore batch holds five hundred operations. Counting them here costs
+   * far less than discovering the limit when an admin presses import on the class
+   * with the fullest question bank.
+   */
+  const BATAS_BATCH = 400;
+
+  async function jalankan(tulis: ((b: FirebaseFirestore.WriteBatch) => void)[]) {
+    for (let i = 0; i < tulis.length; i += BATAS_BATCH) {
+      const batch = db.batch();
+      for (const t of tulis.slice(i, i + BATAS_BATCH)) t(batch);
+      await batch.commit();
+    }
+  }
+
+  const hapus: ((b: FirebaseFirestore.WriteBatch) => void)[] = [];
+  const tulis: ((b: FirebaseFirestore.WriteBatch) => void)[] = [];
+  let imported = 0;
+
+  lamaSnaps.forEach((snap) => {
+    for (const d of snap.docs) {
+      hapus.push((b) => b.delete(d.ref));
+      // Kunci yang tertinggal tanpa soalnya tidak pernah terbaca lagi, tetapi
+      // tetap memuat jawaban benar yang dapat dibaca siapa pun yang berwenang
+      // membaca koleksi itu kelak.
+      //
+      // A key left behind without its question is never read again, yet still
+      // holds a correct answer readable by whoever may later read that collection.
+      hapus.push((b) => b.delete(db.collection('examAnswerKeys').doc(d.id)));
+    }
+  });
+
+  for (const { exam, questions } of sasaran) {
+    questions.forEach((p, i) => {
+      const options = p.options.map((o) => ({ id: crypto.randomUUID(), text: o.text.trim() }));
+      const correct = options[p.correctIndex];
+
+      // Divalidasi ulang meski pembacanya sudah memeriksa: berkas dibaca di
+      // peramban, dan muatan yang dikirim ke endpoint ini dapat diubah sebelum
+      // tiba.
+      //
+      // Revalidated although the parser already checked: the sheet is read in the
+      // browser, and the payload sent to this endpoint can be altered before it
+      // arrives.
+      validateQuestion({
+        kind: p.kind,
+        text: p.text,
+        options,
+        correctOptionId: correct?.id ?? '',
+      });
+
+      const id = crypto.randomUUID();
+
+      tulis.push((b) =>
+        b.set(db.collection('examQuestions').doc(id), {
+          id,
+          examId: exam.id,
+          kind: p.kind,
+          text: p.text.trim(),
+          imageUrl: null,
+          imagePath: null,
+          options,
+          order: i + 1,
+          createdAt: now,
+          updatedAt: now,
+        } satisfies QuestionDocument)
+      );
+
+      tulis.push((b) =>
+        b.set(db.collection('examAnswerKeys').doc(id), {
+          id,
+          examId: exam.id,
+          correctOptionId: correct.id,
+          explanation: p.explanation.trim(),
+          updatedAt: now,
+        } satisfies AnswerKeyDocument)
+      );
+
+      imported += 1;
+    });
+
+    tulis.push((b) =>
+      b.update(db.collection('exams').doc(exam.id), {
+        questionCount: questions.length,
+        updatedAt: now,
+      })
+    );
+  }
+
+  // Penghapusannya diselesaikan lebih dulu: terbalik, kegagalan di tengah dapat
+  // menyisakan soal lama dan baru bersamaan dalam satu ujian, dan peserta
+  // mengerjakan soal rangkap.
+  //
+  // The deletions finish first: the other way round, a failure midway could leave
+  // old and new questions together in one exam, and participants would sit
+  // duplicated questions.
+  await jalankan(hapus);
+  await jalankan(tulis);
+
+  return { examCount: sasaran.length, imported, replaced: semuaLama.length };
+}
+
+/**
  * Mengurutkan ulang soal sebuah ujian.
  *
  * Seluruh urutan dikirim sekaligus, bukan "pindahkan yang ini ke sana":

@@ -11,6 +11,8 @@ import { SessionMaterials } from './session-materials';
 import { SessionWorkingPaper } from './session-working-paper';
 import { SubmissionRoster } from './submission-roster';
 import { ExamBuilder } from './exam-builder';
+import { ImportQuestionsGlobal } from './import-questions-global';
+import type { ExamDocument } from '@/features/exams/types';
 import { TASK_KIND_LABELS } from '@/features/tasks/types';
 import { formatDateTimeWib } from '@/lib/time';
 import type { TaskSummary, TaskKind } from '@/features/tasks/types';
@@ -51,6 +53,7 @@ export default function CourseBuilderPage({
   const [classData, setClassData] = useState<ClassDocument | null>(null);
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [sessions, setSessions] = useState<SessionDocument[]>([]);
+  const [exams, setExams] = useState<ExamDocument[]>([]);
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   // Satu sesi bisa punya beberapa rekaman (breakout room), jadi form isiannya
@@ -126,6 +129,20 @@ export default function CourseBuilderPage({
   //
   // Recordings reuse the schedule already created under the Jadwal menu; the
   // session list is not retyped here.
+  // Daftar ujian dipakai impor global untuk mencocokkan kolom Ujian pada
+  // berkasnya, dan untuk menyebut judul yang berlaku di layar.
+  //
+  // The exam list is used by the global import to match its sheet's Ujian column,
+  // and to name the valid titles on screen.
+  async function loadExams() {
+    try {
+      const res = await fetch(`/api/exams?classId=${encodeURIComponent(classId)}`);
+      if (res.ok) setExams((await res.json()).exams || []);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   async function loadSessions() {
     const res = await fetch(`/api/sessions?classId=${encodeURIComponent(classId)}`);
     if (res.ok) {
@@ -185,7 +202,7 @@ export default function CourseBuilderPage({
     async function loadAll() {
       setLoading(true);
       try {
-        await Promise.all([loadClass(), loadTasks(), loadMentors(), loadSessions()]);
+        await Promise.all([loadClass(), loadTasks(), loadMentors(), loadSessions(), loadExams()]);
       } catch (e) {
         console.error(e);
       } finally {
@@ -759,6 +776,27 @@ export default function CourseBuilderPage({
                 Dikerjakan setelah seluruh materi selesai. Memakai soal yang sama dengan pretest membuat selisih nilainya dapat dibandingkan.
               </p>
               <ExamBuilder classId={classId} sessionId={null} kind="posttest" />
+            </div>
+
+            <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
+
+            {/* Impor seluruh ujian di tab ini, bukan pada tiap ujian: dua puluh
+                kuis berarti dua puluh berkas dan dua puluh kali membuka halaman
+                yang berbeda.
+
+                The whole-class import sits on this tab rather than on each exam:
+                twenty quizzes would mean twenty files and twenty visits to
+                different pages. */}
+            <div>
+              <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>Impor soal seluruh ujian</h2>
+              <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', margin: '2px 0 10px', lineHeight: 1.55 }}>
+                Satu berkas memuat soal pretest, tiap kuis pertemuan, dan postest sekaligus.
+              </p>
+              <ImportQuestionsGlobal
+                classId={classId}
+                exams={exams}
+                onImported={loadExams}
+              />
             </div>
 
             <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
