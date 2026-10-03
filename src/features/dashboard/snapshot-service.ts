@@ -579,7 +579,34 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   //
   // Every meeting is shown, including ones not yet held: the table displays the
   // whole schedule, and a meeting not yet held carries null.
-  const sesiTampil = sessions;
+  // Sesi dikelompokkan per kelas. Satu peserta hanya punya kolom untuk sesi
+  // kelasnya sendiri: menyatukan sesi seluruh kelas memberi tiap peserta puluhan
+  // kolom yang bukan jadwalnya, dan tiap kolom itu terhitung "tidak hadir"
+  // sehingga kehadirannya jatuh ke angka yang tidak pernah terjadi.
+  //
+  // Sessions are grouped per class. A participant has columns only for their own
+  // class's sessions: pooling every class's sessions gives each participant dozens
+  // of columns that are not their schedule, and each counts as "absent", dropping
+  // their attendance to a figure that never happened.
+  const sesiPerKelasId = new Map<string, SessionDocument[]>();
+  for (const sesi of sessions) {
+    for (const cid of sesi.classIds ?? [sesi.classId]) {
+      if (!sesiPerKelasId.has(cid)) sesiPerKelasId.set(cid, []);
+      sesiPerKelasId.get(cid)!.push(sesi);
+    }
+  }
+
+  // Label kolomnya diambil dari kelas dengan sesi terbanyak, sehingga tabelnya
+  // punya cukup kolom untuk tiap kelas. Kelas yang sesinya lebih sedikit
+  // menyisakan kolom kosong di ujungnya, bukan kolom milik kelas lain.
+  //
+  // The column labels come from the class with the most sessions, so the table has
+  // enough columns for every class. A class with fewer sessions leaves blank
+  // columns at the end rather than another class's columns.
+  const sesiTampil = [...sesiPerKelasId.values()].reduce<SessionDocument[]>(
+    (terpanjang, daftar) => (daftar.length > terpanjang.length ? daftar : terpanjang),
+    []
+  );
 
   const roster = aktif
     .concat(students.filter((s) => !s.active))
@@ -587,12 +614,22 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
       const cid = s.classId ?? '';
       const kelas = classes.find((c) => c.id === cid);
 
-      const attendance = sesiTampil.map((sesi) => {
-        // Pertemuan yang belum berlangsung bernilai null, bukan false: tidak
-        // hadir dan belum berjalan menuntut tindakan yang berbeda.
+      // Hanya sesi kelasnya sendiri, dipadkan sampai sepanjang kolom tabelnya.
+      // Only their own class's sessions, padded to the table's column count.
+      const sesiKelas = sesiPerKelasId.get(cid) ?? [];
+      const attendance = sesiTampil.map((_, i) => {
+        const sesi = sesiKelas[i];
+        // Kolom di luar jadwal kelasnya bernilai null, bukan false: kelas yang
+        // sesinya lebih sedikit tidak boleh terbaca sebagai peserta yang membolos.
         //
-        // A meeting not yet held is null, not false: absent and not-yet-held
-        // call for different action.
+        // A column beyond their class's schedule is null, not false: a class with
+        // fewer sessions must not read as a participant skipping them.
+        if (!sesi) return null;
+        // Pertemuan yang belum berlangsung juga bernilai null: tidak hadir dan
+        // belum berjalan menuntut tindakan yang berbeda.
+        //
+        // A meeting not yet held is also null: absent and not-yet-held call for
+        // different action.
         if (sesi.startsAt > nowIso) return null;
         return hadirPerSesi.get(sesi.id)?.has(s.uid) ?? false;
       });
@@ -679,7 +716,20 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     ranking,
     alerts,
     roster,
-    sessionLabels: sesiTampil.map((x) => x.title),
+    // Judulnya hanya dipakai bila seluruh kelas memakai judul yang sama pada
+    // urutan itu. Kelas yang pertemuan ketiganya "Design Thinking" dan kelas
+    // yang ketiganya "Data Cleaning" tidak dapat diwakili satu judul, dan
+    // keterangan yang salah lebih buruk daripada tanpa keterangan.
+    //
+    // The title is used only when every class shares it at that position. A class
+    // whose third meeting is "Design Thinking" and one whose third is "Data
+    // Cleaning" cannot share one title, and a wrong caption is worse than none.
+    sessionLabels: sesiTampil.map((_, i) => {
+      const judul = [...sesiPerKelasId.values()]
+        .map((daftar) => daftar[i]?.title)
+        .filter((t): t is string => Boolean(t));
+      return new Set(judul).size === 1 ? judul[0] : `Pertemuan ${i + 1}`;
+    }),
     quizLabels: kuisUrut.map((e) => e.title),
     taskLabels: tasks.map((t) => t.title),
     thresholds: ALERT_THRESHOLDS,

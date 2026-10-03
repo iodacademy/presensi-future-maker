@@ -424,3 +424,75 @@ describe('singkatan daerah', () => {
     expect(page).toMatch(/replace\(\/\[aeiou\]\/gi, ''\)/);
   });
 });
+
+/**
+ * Tiap peserta hanya punya kolom untuk sesi kelasnya sendiri.
+ *
+ * Menyatukan sesi seluruh kelas memberi tiap peserta puluhan kolom yang bukan
+ * jadwalnya, dan tiap kolom itu terhitung "tidak hadir" sehingga kehadirannya
+ * jatuh ke angka yang tidak pernah terjadi.
+ *
+ * A participant has columns only for their own class's sessions.
+ *
+ * Pooling every class's sessions gives each participant dozens of columns that are
+ * not their schedule, and each counts as "absent", dropping their attendance to a
+ * figure that never happened.
+ */
+describe('kolom kehadiran per kelas', () => {
+  it('mengelompokkan sesinya per kelas, bukan menyatukan semuanya', () => {
+    expect(service).toMatch(/const sesiPerKelasId = new Map<string, SessionDocument\[\]>/);
+    // Kelas gabungan (onboarding) muncul pada tiap kelas yang menghadirinya.
+    // A shared session (onboarding) appears under every class attending it.
+    expect(service).toMatch(/for \(const cid of sesi\.classIds \?\? \[sesi\.classId\]\)/);
+  });
+
+  it('tidak memberi peserta kolom milik kelas lain', () => {
+    // Empat kelas berisi dua belas pertemuan masing-masing menghasilkan lima
+    // puluh empat kolom bila disatukan, dan empat puluh dua di antaranya bukan
+    // jadwal peserta mana pun yang melihatnya.
+    //
+    // Four classes of twelve meetings each yield fifty-four columns when pooled,
+    // and forty-two of them are not the schedule of any participant looking at it.
+    const blok = service.slice(service.indexOf('const sesiKelas ='), service.indexOf('const sudah ='));
+    expect(blok).toMatch(/sesiPerKelasId\.get\(cid\)/);
+    expect(blok).not.toMatch(/sesiTampil\.map\(\(sesi\)/);
+  });
+
+  it('menandai kolom di luar jadwal kelasnya sebagai belum berjalan', () => {
+    // Kelas yang sesinya lebih sedikit tidak boleh terbaca sebagai peserta yang
+    // membolos pada pertemuan yang tidak pernah dijadwalkan untuknya.
+    //
+    // A class with fewer sessions must not read as a participant skipping meetings
+    // that were never scheduled for them.
+    const blok = service.slice(service.indexOf('const sesiKelas ='), service.indexOf('const sudah ='));
+    expect(blok).toMatch(/if \(!sesi\) return null;/);
+  });
+
+  it('memakai judul sesi hanya bila seluruh kelas memakai judul yang sama', () => {
+    // Kelas yang pertemuan ketiganya "Design Thinking" dan kelas yang ketiganya
+    // "Data Cleaning" tidak dapat diwakili satu judul, dan keterangan yang salah
+    // lebih buruk daripada tanpa keterangan.
+    //
+    // A class whose third meeting is "Design Thinking" and one whose third is
+    // "Data Cleaning" cannot share one title, and a wrong caption is worse than
+    // none.
+    const blok = service.slice(service.indexOf('sessionLabels:'), service.indexOf('quizLabels:'));
+    expect(blok).toMatch(/new Set\(judul\)\.size === 1 \? judul\[0\] : `Pertemuan \$\{i \+ 1\}`/);
+  });
+
+  it('melebarkan peta panasnya seiring jumlah kolomnya', () => {
+    // Lima puluh kolom pada lebar tetap tujuh ratus piksel menjadi sebelas
+    // piksel masing-masing, dan angkanya bertindihan sampai tidak terbaca.
+    //
+    // Fifty columns at a fixed seven hundred pixels become eleven pixels each, and
+    // the figures overlap until they cannot be read.
+    expect(charts).toMatch(/const lebar = minWidth \?\? \d+ \+ columns\.length \* \d+/);
+    expect(charts).toMatch(/minWidth: lebar/);
+    // Tidak ada pemanggil yang memaksanya nol: lebar nol mengembalikan
+    // perasan yang sama pada kotak yang lebih sempit.
+    //
+    // No caller forces it to zero: a zero width restores the same squeeze inside a
+    // narrower box.
+    expect(page).not.toMatch(/minWidth=\{0\}/);
+  });
+});

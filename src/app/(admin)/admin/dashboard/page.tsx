@@ -377,7 +377,6 @@ function DashboardBody({
                 cities={cities}
                 columnLabel="Tugas"
                 columns={snapshot.taskLabels}
-                minWidth={0}
                 valueFor={(kota, i) => {
                   const baris = perKota.get(kota) ?? [];
                   const terbuka = baris.filter((r) => r.taskSubmitted[i] !== null);

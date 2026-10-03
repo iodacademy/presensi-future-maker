@@ -75,13 +75,14 @@ export function Heatmap({
   columnLabel,
   columns,
   valueFor,
-  minWidth = 720,
+  minWidth,
 }: {
   cities: string[];
   columnLabel: string;
   columns: string[];
   /** Terhitung dan totalnya, atau null bila belum berjalan / The count and its total, or null when not yet started */
   valueFor: (city: string, index: number) => { hit: number; total: number } | null;
+  /** Lebar terkecilnya; bila kosong, dihitung dari jumlah kolomnya / Its minimum width; when absent, derived from the column count */
   minWidth?: number;
 }) {
   if (columns.length === 0) {
@@ -91,11 +92,21 @@ export function Heatmap({
   const kelas = (p: number) => (p >= 85 ? s.ok : p >= 70 ? s.wr : s.bd);
   const baris = cities.length > 1 ? [...cities, 'Semua'] : cities;
 
+  // Lebar terkecilnya tumbuh seiring jumlah kolomnya. Lebar tetap membuat lima
+  // puluh kolom diperas menjadi sebelas piksel masing-masing, dan "100%"
+  // bertindihan dengan "21/25" di bawahnya sampai keduanya tidak terbaca --
+  // lebih baik digulir daripada tidak terbaca.
+  //
+  // The minimum width grows with the column count. A fixed width squeezes fifty
+  // columns into eleven pixels each, and "100%" overlaps the "21/25" beneath it
+  // until neither can be read -- better scrolled than unreadable.
+  const lebar = minWidth ?? 90 + columns.length * 52;
+
   return (
     <div className={s.scroll}>
       <div
         className={s.hm}
-        style={{ gridTemplateColumns: `90px repeat(${columns.length}, minmax(0, 1fr))`, minWidth }}
+        style={{ gridTemplateColumns: `90px repeat(${columns.length}, minmax(0, 1fr))`, minWidth: lebar }}
       >
         <div />
         {columns.map((c, i) => (
