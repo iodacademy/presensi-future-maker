@@ -11,7 +11,7 @@ import {
   parseGlobalQuestionRows,
   type ParsedQuestion,
 } from '@/features/exams/import-policy';
-import type { ExamDocument } from '@/features/exams/types';
+import { EXAM_KIND_LABELS, type ExamDocument, type ExamKind } from '@/features/exams/types';
 
 /**
  * Impor soal seluruh ujian satu kelas dari satu berkas.
@@ -44,6 +44,7 @@ export function ImportQuestionsGlobal({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<Map<string, ParsedQuestion[]> | null>(null);
+  const [newExams, setNewExams] = useState<{ title: string; kind: ExamKind }[]>([]);
   const [rowErrors, setRowErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +88,8 @@ export function ImportQuestionsGlobal({
           return;
         }
 
-        const { perExam, errors } = parseGlobalQuestionRows(rows, judul);
+        const { perExam, newExams: baru, errors } = parseGlobalQuestionRows(rows, judul);
+        setNewExams(baru);
         setRowErrors(errors);
         setPreview(perExam.size > 0 ? perExam : null);
         if (perExam.size === 0 && errors.length === 0) {
@@ -115,7 +117,12 @@ export function ImportQuestionsGlobal({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Gagal mengimpor soal');
-      setDone(`${data.imported} soal masuk ke ${data.examCount} ujian${data.replaced > 0 ? `, menggantikan ${data.replaced} soal lama` : ''}`);
+      setDone(
+        `${data.imported} soal masuk ke ${data.examCount} ujian` +
+          (data.created > 0 ? `, ${data.created} di antaranya ujian baru berstatus draf` : '') +
+          (data.replaced > 0 ? `, menggantikan ${data.replaced} soal lama` : '')
+      );
+      setNewExams([]);
       setPreview(null);
       setRowErrors([]);
       onImported();
@@ -144,16 +151,19 @@ export function ImportQuestionsGlobal({
 
       <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.6 }}>
         Satu berkas untuk seluruh ujian kelas ini. Kolom <strong>{GLOBAL_HEADER}</strong> menentukan soal itu milik ujian
-        yang mana, ditulis persis seperti judulnya. Soal yang sudah ada pada ujian yang disebut berkas ini akan
-        digantikan.
+        yang mana. Ujian yang belum ada dibuat otomatis sebagai draf; jenisnya dibaca dari awal judulnya (Kuis, Pretest,
+        atau Postest), dan kuis dipasangkan ke pertemuan yang judulnya cocok. Soal yang sudah ada pada ujian yang disebut
+        berkas ini akan digantikan.
       </p>
 
-      {judul.length === 0 ? (
-        <p style={{ fontSize: '11px', color: 'var(--color-warning)', fontWeight: 600, margin: 0 }}>
-          Belum ada ujian di kelas ini. Buat ujiannya lebih dulu, lalu impor soalnya.
-        </p>
-      ) : (
-        <>
+      {/* Tombolnya tersedia meski kelasnya belum punya ujian: impor inilah yang
+          membuatnya. Menahannya sampai ujian dibuat satu per satu mengembalikan
+          pekerjaan yang hendak dihindari.
+
+          The buttons are available even when the class has no exams yet: this
+          import is what creates them. Holding them back until exams are made one
+          by one brings back the very work it exists to avoid. */}
+      <>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             <Button variant="secondary" onClick={unduhContoh} style={{ fontSize: '11px', padding: '8px 12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
               <Download size={12} strokeWidth={2} /> Unduh Contoh Excel
@@ -171,16 +181,17 @@ export function ImportQuestionsGlobal({
               The valid exam titles are named on screen. Left to guesswork, an admin
               types "Kuis 1" while the exam is called "Kuis Pertemuan 1", and every
               row is refused. */}
-          <details>
-            <summary style={{ fontSize: '10px', color: 'var(--color-primary)', cursor: 'pointer', fontWeight: 600 }}>
-              Judul ujian yang berlaku ({judul.length})
-            </summary>
-            <ul style={{ margin: '6px 0 0', paddingLeft: '18px', fontSize: '10px', color: 'var(--color-text-muted)', lineHeight: 1.7 }}>
-              {judul.map((j) => <li key={j}>{j}</li>)}
-            </ul>
-          </details>
-        </>
-      )}
+          {judul.length > 0 && (
+            <details>
+              <summary style={{ fontSize: '10px', color: 'var(--color-primary)', cursor: 'pointer', fontWeight: 600 }}>
+                Ujian yang sudah ada ({judul.length})
+              </summary>
+              <ul style={{ margin: '6px 0 0', paddingLeft: '18px', fontSize: '10px', color: 'var(--color-text-muted)', lineHeight: 1.7 }}>
+                {judul.map((j) => <li key={j}>{j}</li>)}
+              </ul>
+            </details>
+          )}
+      </>
 
       {error && (
         <div role="alert" style={{ fontSize: '11px', color: 'var(--color-danger)', backgroundColor: 'var(--color-danger-light)', padding: '9px 11px', borderRadius: '8px' }}>
@@ -219,9 +230,21 @@ export function ImportQuestionsGlobal({
           <div style={{ maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {[...preview.entries()].map(([nama, soal]) => (
               <div key={nama} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', padding: '7px 10px', borderRadius: '8px', backgroundColor: 'var(--color-bg-app)' }}>
-                <span style={{ flex: 1, minWidth: 0, color: 'var(--color-text-main)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ flex: 1, minWidth: 0, color: 'var(--color-text-main)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={nama}>
                   {nama}
                 </span>
+                {/* Ujian baru ditandai di barisnya sendiri. Salah ketik seperti
+                    "Kuis Pertemuan I" hanya terlihat sebagai salah ketik bila
+                    tampil sebagai ujian baru di samping ujian yang seharusnya.
+
+                    A new exam is flagged on its own row. A typo like "Kuis
+                    Pertemuan I" only shows up as one when it appears as a new exam
+                    beside the exam it was meant to be. */}
+                {newExams.some((b) => b.title === nama) && (
+                  <span style={{ flexShrink: 0, fontSize: '9px', fontWeight: 700, padding: '2px 7px', borderRadius: '10px', backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary)' }}>
+                    BARU · {EXAM_KIND_LABELS[newExams.find((b) => b.title === nama)!.kind]}
+                  </span>
+                )}
                 <span style={{ flexShrink: 0, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>
                   {soal.length} soal
                 </span>
@@ -238,6 +261,13 @@ export function ImportQuestionsGlobal({
               pressed, not after. This replacement wipes out questions that may have
               taken hours, and that number is the only sign the sheet is aimed at
               the wrong exams. */}
+          {newExams.length > 0 && (
+            <div style={{ fontSize: '10px', color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-light)', padding: '9px 11px', borderRadius: '8px', lineHeight: 1.6 }}>
+              <strong>{newExams.length} ujian baru akan dibuat</strong> sebagai draf. Periksa judulnya di atas: salah ketik akan
+              menjadi ujian terpisah. Terbitkan dari halaman kelas setelah soalnya diperiksa.
+            </div>
+          )}
+
           {akanTerganti > 0 && (
             <div style={{ fontSize: '10px', color: '#7a5f00', backgroundColor: 'var(--color-warning-light)', padding: '9px 11px', borderRadius: '8px', lineHeight: 1.6 }}>
               <strong>{akanTerganti} soal yang sudah ada akan terhapus</strong> dan digantikan isi berkas ini. Soal pada ujian
@@ -246,7 +276,7 @@ export function ImportQuestionsGlobal({
           )}
 
           <div style={{ display: 'flex', gap: '7px' }}>
-            <Button variant="secondary" onClick={() => { setPreview(null); setRowErrors([]); }} disabled={busy} style={{ fontSize: '11px', padding: '8px 12px' }}>
+            <Button variant="secondary" onClick={() => { setPreview(null); setRowErrors([]); setNewExams([]); }} disabled={busy} style={{ fontSize: '11px', padding: '8px 12px' }}>
               Batal
             </Button>
             <Button variant="primary" onClick={kirim} disabled={busy || total === 0} style={{ fontSize: '11px', padding: '8px 12px' }}>

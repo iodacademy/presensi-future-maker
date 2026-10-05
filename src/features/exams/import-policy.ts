@@ -1,5 +1,5 @@
 // Pembacaan berkas soal dari spreadsheet / Reading a question sheet from a spreadsheet
-import type { QuestionKind } from './types';
+import type { ExamKind, QuestionKind } from './types';
 
 export interface ParsedQuestion {
   kind: QuestionKind;
@@ -187,42 +187,91 @@ export const GLOBAL_HEADER = 'Ujian';
 export const GLOBAL_TEMPLATE_HEADERS = [GLOBAL_HEADER, ...TEMPLATE_HEADERS] as const;
 
 export interface GlobalParseResult {
-  /** Soal per nama ujian, sebagaimana tertulis di berkasnya / Questions per exam name, as written in the sheet */
+  /** Soal per judul ujian / Questions per exam title */
   perExam: Map<string, ParsedQuestion[]>;
+  /**
+   * Ujian yang belum ada di kelasnya dan akan dibuat saat impor.
+   *
+   * Disebut terpisah supaya pratinjaunya dapat menampilkannya sebelum tombol
+   * impor ditekan: salah ketik "Kuis Pertemuan I" baru terlihat sebagai salah
+   * ketik bila muncul di daftar ujian baru, bukan diam-diam menjadi ujian kembar.
+   *
+   * Exams not yet in the class, to be created by the import.
+   *
+   * Named separately so the preview can show them before the import button is
+   * pressed: a typo like "Kuis Pertemuan I" only shows up as a typo when it appears
+   * in the list of new exams, rather than silently becoming a twin exam.
+   */
+  newExams: { title: string; kind: ExamKind }[];
   errors: string[];
+}
+
+/**
+ * Menentukan jenis ujian dari awal judulnya.
+ *
+ * Dibaca dari awal judul saja, bukan dari kata di mana pun: "Kuis Persiapan
+ * Postest" adalah kuis, dan mencari kata "postest" di seluruh judul akan
+ * membuatnya menjadi postest.
+ *
+ * Works out an exam's kind from the start of its title.
+ *
+ * Read from the start of the title only, not from a word anywhere in it: "Kuis
+ * Persiapan Postest" is a quiz, and looking for "postest" anywhere would turn it
+ * into a posttest.
+ */
+export function jenisDariJudul(judul: string): ExamKind | null {
+  const awal = judul.trim().toLowerCase();
+  if (/^(kuis|quiz)\b/.test(awal)) return 'kuis';
+  if (/^pre-?\s?test\b/.test(awal)) return 'pretest';
+  if (/^(post-?\s?test|postest)\b/.test(awal)) return 'posttest';
+  return null;
+}
+
+/** Dicocokkan tanpa huruf besar-kecil dan spasi berlebih / Matched ignoring case and stray whitespace */
+export function normalJudul(t: string): string {
+  return t.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 /**
  * Membaca berkas yang memuat soal beberapa ujian sekaligus.
  *
- * Nama ujiannya dicocokkan dengan ujian yang sudah ada, bukan dipakai membuat
- * ujian baru: satu salah ketik -- "Kuis Pertemuan I" dengan huruf i -- akan
- * membuat ujian kembar yang tidak pernah terbit, tidak terlihat peserta, dan
- * tidak disadari siapa pun sampai nilainya tidak muncul.
+ * Judul yang sudah ada di kelasnya dipakai apa adanya. Judul yang belum ada
+ * akan dibuat sebagai ujian baru, dengan jenis yang dibaca dari awal judulnya.
+ * Membuat empat belas ujian satu per satu sebelum dapat mengimpor soalnya
+ * adalah pekerjaan yang justru ingin dihindari dengan impor ini.
+ *
+ * Judul yang jenisnya tidak terbaca ditolak, bukan ditebak: ujian yang salah
+ * jenis tampil di tempat yang salah bagi peserta, misalnya pretest yang muncul
+ * di kartu pertemuan.
  *
  * Reads a sheet holding several exams' questions.
  *
- * Exam names are matched against existing exams rather than used to create new
- * ones: one typo -- "Kuis Pertemuan I" with a letter i -- would spawn a twin exam
- * that is never published, never seen by participants, and noticed by nobody until
- * its scores fail to appear.
+ * Titles already in the class are used as they are. Titles not yet there become
+ * new exams, their kind read from the start of the title. Creating fourteen exams
+ * one by one before the questions can be imported is the very work this import
+ * exists to avoid.
+ *
+ * A title whose kind cannot be read is refused rather than guessed: an exam of the
+ * wrong kind shows up in the wrong place for participants, such as a pretest
+ * appearing on a meeting card.
  */
 export function parseGlobalQuestionRows(
   rows: Record<string, unknown>[],
-  /** Judul ujian yang tersedia di kelasnya / The exam titles available in the class */
+  /** Judul ujian yang sudah ada di kelasnya / The exam titles already in the class */
   judulTersedia: string[]
 ): GlobalParseResult {
   const perExam = new Map<string, ParsedQuestion[]>();
   const errors: string[] = [];
 
-  // Dicocokkan tanpa memperhatikan huruf besar-kecil dan spasi berlebih, sama
-  // seperti judul kolomnya: berkas yang disusun ulang di Excel kerap membawa
-  // spasi di ujung selnya.
+  // Kuncinya judul yang dinormalkan, nilainya ejaan yang dipakai: ejaan resmi
+  // untuk ujian yang sudah ada, ejaan pertama yang ditemui untuk ujian baru.
+  // Tanpa itu, "Kuis Pertemuan 1" dan "kuis pertemuan 1 " menjadi dua ujian.
   //
-  // Matched ignoring case and stray whitespace, as the column headers are: a sheet
-  // reworked in Excel often carries trailing spaces in its cells.
-  const normal = (t: string) => t.trim().toLowerCase().replace(/\s+/g, ' ');
-  const petaJudul = new Map(judulTersedia.map((j) => [normal(j), j]));
+  // Keyed by the normalised title, valued by the spelling used: the official
+  // spelling for existing exams, the first spelling met for new ones. Without that,
+  // "Kuis Pertemuan 1" and "kuis pertemuan 1 " would become two exams.
+  const petaJudul = new Map(judulTersedia.map((j) => [normalJudul(j), j]));
+  const baru = new Map<string, { title: string; kind: ExamKind }>();
 
   rows.forEach((row, i) => {
     const nomor = i + 2;
@@ -230,23 +279,25 @@ export function parseGlobalQuestionRows(
     const kosong = GLOBAL_TEMPLATE_HEADERS.every((h) => !ambilKolom(row, h));
     if (kosong) return;
 
-    const namaUjian = ambilKolom(row, GLOBAL_HEADER);
+    const namaUjian = ambilKolom(row, GLOBAL_HEADER).replace(/\s+/g, ' ');
     if (!namaUjian) {
       errors.push(`Baris ${nomor}: kolom ${GLOBAL_HEADER} masih kosong`);
       return;
     }
 
-    const cocok = petaJudul.get(normal(namaUjian));
-    if (!cocok) {
-      // Judul yang tersedia disebutkan. Ditolak tanpa menyebut pilihannya,
-      // admin menebak-nebak ejaan yang benar sambil membuka tab lain.
-      //
-      // The available titles are named. Refused without them, an admin guesses at
-      // the right spelling with another tab open.
-      errors.push(
-        `Baris ${nomor}: ujian "${namaUjian}" tidak ada di kelas ini. Yang tersedia: ${judulTersedia.join(', ') || 'belum ada ujian'}`
-      );
-      return;
+    const kunci = normalJudul(namaUjian);
+    let judul = petaJudul.get(kunci);
+
+    if (!judul) {
+      const kind = jenisDariJudul(namaUjian);
+      if (!kind) {
+        errors.push(
+          `Baris ${nomor}: jenis ujian "${namaUjian}" tidak terbaca. Awali judulnya dengan Kuis, Pretest, atau Postest`
+        );
+        return;
+      }
+      if (!baru.has(kunci)) baru.set(kunci, { title: namaUjian, kind });
+      judul = baru.get(kunci)!.title;
     }
 
     // Barisnya dibaca pembaca yang sudah ada, sehingga aturan jawabannya,
@@ -266,11 +317,18 @@ export function parseGlobalQuestionRows(
       return;
     }
 
-    if (!perExam.has(cocok)) perExam.set(cocok, []);
-    perExam.get(cocok)!.push(...hasil.questions);
+    if (!perExam.has(judul)) perExam.set(judul, []);
+    perExam.get(judul)!.push(...hasil.questions);
   });
 
-  return { perExam, errors };
+  // Ujian baru yang semua barisnya gagal tidak ikut dibuat: ujian kosong yang
+  // tercipta dari baris yang ditolak hanya menambah satu hal untuk dihapus.
+  //
+  // A new exam whose rows all failed is not created: an empty exam born of refused
+  // rows only adds one more thing to delete.
+  const newExams = [...baru.values()].filter((b) => perExam.has(b.title));
+
+  return { perExam, newExams, errors };
 }
 
 /**

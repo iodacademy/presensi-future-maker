@@ -47,8 +47,6 @@ export function ImportSoalTab() {
 
   useEffect(() => { loadExams(); }, [loadExams]);
 
-  const terpilih = classes.find((c) => c.id === classId);
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '640px' }}>
       <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.6 }}>
@@ -103,11 +101,6 @@ export function ImportSoalTab() {
         </p>
       )}
 
-      {terpilih && exams.length === 0 && (
-        <p style={{ fontSize: '11px', color: 'var(--color-warning)', fontWeight: 600, margin: 0 }}>
-          {terpilih.canonicalName} belum punya ujian. Buat ujiannya lebih dulu di halaman kelas, lalu impor soalnya di sini.
-        </p>
-      )}
     </div>
   );
 }

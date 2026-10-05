@@ -1,8 +1,10 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { cariSesiKuis } from '@/features/exams/service';
 import { resolve } from 'node:path';
 import {
+  jenisDariJudul,
   GLOBAL_HEADER,
   GLOBAL_TEMPLATE_HEADERS,
   globalTemplateRows,
@@ -22,6 +24,27 @@ const fn = (() => {
   const j = service.indexOf('\nexport ', i + 1);
   return service.slice(i, j < 0 ? undefined : j);
 })();
+
+/**
+ * Menegaskan bahwa a muncul sebelum b, dan keduanya benar-benar ada.
+ *
+ * indexOf mengembalikan -1 untuk yang hilang, dan -1 selalu lebih kecil dari
+ * posisi mana pun: tes urutan yang tidak memeriksa keberadaannya tetap hijau
+ * justru ketika penjagaannya dihapus.
+ *
+ * Asserts that a appears before b, and that both actually exist.
+ *
+ * indexOf returns -1 for something missing, and -1 is smaller than any position:
+ * an ordering test that does not check existence stays green exactly when the
+ * safeguard is deleted.
+ */
+function sebelum(teks: string, a: string, b: string) {
+  const i = teks.indexOf(a);
+  const j = teks.indexOf(b);
+  expect(i, `tidak ditemukan: ${a}`).toBeGreaterThan(-1);
+  expect(j, `tidak ditemukan: ${b}`).toBeGreaterThan(-1);
+  expect(i, `${a} harus sebelum ${b}`).toBeLessThan(j);
+}
 
 const JUDUL = ['Pretest Kelas', 'Kuis Pertemuan 1', 'Kuis Pertemuan 2', 'Postest Kelas'];
 
@@ -73,24 +96,74 @@ describe('membaca berkas banyak ujian', () => {
     expect(perExam.has('Kuis Pertemuan 2')).toBe(true);
   });
 
-  it('menolak nama ujian yang tidak ada dan menyebut yang tersedia', () => {
-    // Satu salah ketik -- "Kuis Pertemuan I" dengan huruf i -- akan membuat
-    // ujian kembar yang tidak pernah terbit, tidak terlihat peserta, dan tidak
-    // disadari siapa pun sampai nilainya tidak muncul.
+  it('menandai judul yang belum ada sebagai ujian baru, bukan menolaknya', () => {
+    // Membuat empat belas ujian satu per satu sebelum dapat mengimpor soalnya
+    // adalah pekerjaan yang justru ingin dihindari dengan impor ini.
     //
-    // One typo -- "Kuis Pertemuan I" with a letter i -- would spawn a twin exam
-    // that is never published, never seen by participants, and noticed by nobody
-    // until its scores fail to appear.
-    const { perExam, errors } = parseGlobalQuestionRows([baris('Kuis Pertemuan I')], JUDUL);
+    // Creating fourteen exams one by one before the questions can be imported is
+    // the very work this import exists to avoid.
+    const { perExam, newExams, errors } = parseGlobalQuestionRows(
+      [baris('Pretest Kelas'), baris('Kuis Pertemuan 5: Distribusi'), baris('Kuis Pertemuan 5: Distribusi')],
+      ['Pretest Kelas']
+    );
+    expect(errors).toEqual([]);
+    expect(perExam.get('Kuis Pertemuan 5: Distribusi')).toHaveLength(2);
+    // Ujian yang sudah ada tidak ikut terdaftar sebagai baru.
+    // An existing exam is not listed as new.
+    expect(newExams).toEqual([{ title: 'Kuis Pertemuan 5: Distribusi', kind: 'kuis' }]);
+  });
+
+  it('menyatukan ejaan berbeda dari judul baru yang sama', () => {
+    // Tanpa itu, "Kuis Pertemuan 1" dan "kuis  pertemuan 1 " menjadi dua ujian
+    // terpisah dengan soal yang terbelah di antara keduanya.
+    //
+    // Without it, "Kuis Pertemuan 1" and "kuis  pertemuan 1 " would become two
+    // separate exams with the questions split between them.
+    const { perExam, newExams } = parseGlobalQuestionRows(
+      [baris('Kuis Pertemuan 1'), baris('kuis  pertemuan 1 ')],
+      []
+    );
+    expect(newExams).toHaveLength(1);
+    expect(perExam.get('Kuis Pertemuan 1')).toHaveLength(2);
+  });
+
+  it('menampilkan salah ketik sebagai ujian baru, bukan menyatukannya diam-diam', () => {
+    // "Kuis Pertemuan I" dengan huruf i bukan "Kuis Pertemuan 1". Menyamakannya
+    // adalah menebak; yang benar adalah menampilkannya sebagai ujian baru di
+    // pratinjau supaya admin melihatnya sebelum menekan impor.
+    //
+    // "Kuis Pertemuan I" with a letter i is not "Kuis Pertemuan 1". Treating them as
+    // one would be a guess; the right thing is to show it as a new exam in the
+    // preview so the admin sees it before pressing import.
+    const { newExams } = parseGlobalQuestionRows([baris('Kuis Pertemuan I')], ['Kuis Pertemuan 1']);
+    expect(newExams.map((b) => b.title)).toEqual(['Kuis Pertemuan I']);
+    expect(ui).toMatch(/BARU · \{EXAM_KIND_LABELS/);
+    expect(ui).toContain('ujian baru akan dibuat');
+  });
+
+  it('menolak judul yang jenisnya tidak terbaca', () => {
+    // Ujian yang salah jenis tampil di tempat yang salah bagi peserta, misalnya
+    // pretest yang muncul di kartu pertemuan.
+    //
+    // An exam of the wrong kind shows up in the wrong place for participants, such
+    // as a pretest appearing on a meeting card.
+    const { perExam, newExams, errors } = parseGlobalQuestionRows([baris('Ujian Akhir Bab 3')], []);
     expect(perExam.size).toBe(0);
-    expect(errors).toHaveLength(1);
-    expect(errors[0]).toContain('tidak ada di kelas ini');
-    // Judulnya disebutkan: ditolak tanpa menyebut pilihannya, admin menebak
-    // ejaan yang benar sambil membuka tab lain.
+    expect(newExams).toEqual([]);
+    expect(errors[0]).toContain('Awali judulnya dengan Kuis, Pretest, atau Postest');
+  });
+
+  it('tidak membuat ujian baru yang seluruh barisnya gagal', () => {
+    // Ujian kosong yang tercipta dari baris yang ditolak hanya menambah satu hal
+    // untuk dihapus.
     //
-    // The titles are named: refused without them, an admin guesses at the right
-    // spelling with another tab open.
-    expect(errors[0]).toContain('Kuis Pertemuan 1');
+    // An empty exam born of refused rows only adds one more thing to delete.
+    const { newExams, errors } = parseGlobalQuestionRows(
+      [{ ...baris('Kuis Pertemuan 9'), Jawaban: 'Z' }],
+      []
+    );
+    expect(errors).toHaveLength(1);
+    expect(newExams).toEqual([]);
   });
 
   it('menolak baris yang kolom ujiannya kosong', () => {
@@ -211,7 +284,7 @@ describe('mengganti soal lama', () => {
     //
     // The other way round, a failure midway could leave old and new questions
     // together in one exam, and participants would sit duplicated questions.
-    expect(fn.indexOf('await jalankan(hapus)')).toBeLessThan(fn.indexOf('await jalankan(tulis)'));
+    sebelum(fn, 'await jalankan(hapus)', 'await jalankan(tulis)');
   });
 
   it('memeriksa seluruh judulnya sebelum satu soal pun ditulis', () => {
@@ -220,8 +293,7 @@ describe('mengganti soal lama', () => {
     //
     // One unknown title in the last row must not leave the earlier exams already
     // replaced.
-    expect(fn.indexOf('if (asing.length > 0)')).toBeLessThan(fn.indexOf('const batch'));
-    expect(fn.indexOf('if (asing.length > 0)')).toBeLessThan(fn.indexOf('await jalankan'));
+    sebelum(fn, 'if (asing.length > 0)', 'await jalankan');
   });
 
   it('menghapus gambar soal lama dari penyimpanan', () => {
@@ -232,7 +304,7 @@ describe('mengganti soal lama', () => {
     // A Firestore batch only writes documents; an image whose document is gone can
     // no longer be found to clean up, and is still billed.
     expect(fn).toMatch(/deleteExamImage\(actor, p\)/);
-    expect(fn.indexOf('deleteExamImage')).toBeLessThan(fn.indexOf('await jalankan(hapus)'));
+    sebelum(fn, 'deleteExamImage', 'await jalankan(hapus)');
   });
 
   it('menyetel ulang jumlah soalnya, bukan menambahkannya', () => {
@@ -368,5 +440,165 @@ describe('penjagaan dan tampilannya', () => {
     // Without it, the previous class's preview and messages linger on screen while
     // the target class has already changed.
     expect(tab).toMatch(/key=\{classId\}/);
+  });
+});
+
+/**
+ * Jenis ujian baru dibaca dari awal judulnya.
+ *
+ * The kind of a new exam is read from the start of its title.
+ */
+describe('jenis ujian dari judulnya', () => {
+  it('mengenali kuis, pretest, dan postest', () => {
+    expect(jenisDariJudul('Kuis Pertemuan 3: Content Strategy')).toBe('kuis');
+    expect(jenisDariJudul('Pretest Kelas')).toBe('pretest');
+    expect(jenisDariJudul('Pre-test Awal')).toBe('pretest');
+    expect(jenisDariJudul('Postest Kelas')).toBe('posttest');
+    expect(jenisDariJudul('Posttest Kelas')).toBe('posttest');
+    expect(jenisDariJudul('  KUIS 1')).toBe('kuis');
+  });
+
+  it('membaca awal judulnya saja, bukan kata di mana pun', () => {
+    // "Kuis Persiapan Postest" adalah kuis; mencari kata "postest" di seluruh
+    // judul akan membuatnya menjadi postest dan memindahkannya dari kartu
+    // pertemuannya.
+    //
+    // "Kuis Persiapan Postest" is a quiz; looking for "postest" anywhere in the
+    // title would make it a posttest and move it off its meeting card.
+    expect(jenisDariJudul('Kuis Persiapan Postest')).toBe('kuis');
+    expect(jenisDariJudul('Latihan Pretest')).toBe(null);
+  });
+
+  it('tidak menebak judul tanpa awalan yang dikenal', () => {
+    expect(jenisDariJudul('Ujian Akhir')).toBe(null);
+    expect(jenisDariJudul('Kuisioner Kepuasan')).toBe(null);
+  });
+});
+
+/**
+ * Kuis baru dipasangkan ke pertemuannya.
+ *
+ * Kuis wajib terikat pada satu pertemuan: tanpa sesi induknya, peserta tidak
+ * punya tempat menemukannya.
+ *
+ * A new quiz is paired with its meeting.
+ *
+ * A quiz must hang off one meeting: without its parent session, participants have
+ * nowhere to find it.
+ */
+describe('memasangkan kuis ke pertemuannya', () => {
+  const SESI = [
+    { id: 's1', title: 'Pertemuan 1: Fondasi Strategi dan Riset dengan AI' },
+    { id: 's3', title: 'Pertemuan 3: Content Strategy dan Brand Voice Engine' },
+    { id: 's10', title: 'Pertemuan 10: Fondasi Paid Ads Meta dan TikTok' },
+  ];
+
+  it('mencocokkan persis dengan judul sesinya lebih dulu', () => {
+    // Judul bawaan sebuah kuis adalah "Kuis" disusul judul sesinya, sehingga
+    // berkas yang memakai judul bawaan cocok persis.
+    //
+    // A quiz's default title is "Kuis" followed by its session's title, so a sheet
+    // using default titles matches exactly.
+    expect(cariSesiKuis('Kuis Pertemuan 3: Content Strategy dan Brand Voice Engine', SESI)?.id).toBe('s3');
+  });
+
+  it('jatuh ke nomor pertemuannya bila judulnya berbeda', () => {
+    expect(cariSesiKuis('Kuis Pertemuan 1', SESI)?.id).toBe('s1');
+  });
+
+  it('tidak tertukar antara pertemuan 1 dan pertemuan 10', () => {
+    // Pencocokan awalan teks akan menemukan "Pertemuan 10" saat mencari
+    // "Pertemuan 1".
+    //
+    // Prefix matching on text would find "Pertemuan 10" when looking for
+    // "Pertemuan 1".
+    expect(cariSesiKuis('Kuis Pertemuan 1', SESI)?.id).toBe('s1');
+    expect(cariSesiKuis('Kuis Pertemuan 10', SESI)?.id).toBe('s10');
+  });
+
+  it('tidak memilih saat dua sesi memakai nomor yang sama', () => {
+    // Dua sesi bernomor sama tidak dapat dipilih tanpa menebak, dan kuis yang
+    // menempel di pertemuan yang salah dikerjakan pada hari yang salah.
+    //
+    // Two sessions sharing a number cannot be picked between without guessing, and
+    // a quiz on the wrong meeting is sat on the wrong day.
+    const kembar = [...SESI, { id: 's3b', title: 'Pertemuan 3: Sesi Susulan' }];
+    expect(cariSesiKuis('Kuis Pertemuan 3', kembar)).toBe(null);
+  });
+
+  it('mengembalikan null bila tidak ada pertemuan yang cocok', () => {
+    expect(cariSesiKuis('Kuis Pertemuan 99', SESI)).toBe(null);
+    expect(cariSesiKuis('Kuis Bonus', SESI)).toBe(null);
+  });
+});
+
+describe('membuat ujian baru di server', () => {
+  it('memeriksa seluruh ujian baru sebelum satu dokumen pun ditulis', () => {
+    // Kuis di baris terakhir yang tidak menemukan pertemuannya tidak boleh
+    // menyisakan tiga belas ujian lain sudah terbuat dan terisi.
+    //
+    // A quiz in the last row that cannot find its meeting must not leave thirteen
+    // other exams already created and filled.
+    // Posisinya dipastikan ada lebih dulu: indexOf mengembalikan -1 untuk yang
+    // hilang, dan -1 selalu lebih kecil dari posisi mana pun -- tes urutan
+    // tanpa ini tetap hijau justru ketika pemeriksaannya dihapus.
+    //
+    // Its position is confirmed to exist first: indexOf returns -1 for something
+    // missing, and -1 is smaller than any position -- an ordering test without this
+    // stays green exactly when the check is deleted.
+    const periksa = fn.indexOf('if (masalah.length > 0)');
+    expect(periksa).toBeGreaterThan(-1);
+    expect(periksa).toBeLessThan(fn.indexOf('await jalankan('));
+    expect(periksa).toBeLessThan(fn.indexOf('deleteExamImage'));
+  });
+
+  it('menolak kuis baru yang tidak menemukan pertemuannya', () => {
+    expect(fn).toMatch(/pertemuannya tidak ditemukan di jadwal kelas ini/);
+  });
+
+  it('membiarkan ujian barunya sebagai draf', () => {
+    // Menerbitkannya sendiri berarti seratus soal langsung terlihat peserta
+    // sebelum admin sempat memeriksanya sekali pun.
+    //
+    // Publishing it automatically would put a hundred questions in front of
+    // participants before an admin has checked even one.
+    const blok = fn.slice(fn.indexOf('const exam: ExamDocument = {'), fn.indexOf('ujianBaru.push(exam)'));
+    expect(blok).toMatch(/published: false/);
+  });
+
+  it('menulis ujian barunya sebelum soal-soalnya', () => {
+    // Soal yang menunjuk ujian yang belum ada akan menjadi yatim bila batch
+    // berikutnya gagal.
+    //
+    // A question pointing at an exam that does not exist yet would be orphaned if
+    // a later batch failed.
+    const ujian = fn.indexOf('for (const exam of ujianBaru)');
+    expect(ujian).toBeGreaterThan(-1);
+    expect(ujian).toBeLessThan(fn.indexOf("collection('examQuestions').doc(id)"));
+  });
+
+  it('membaca sesi gabungan juga', () => {
+    // Sesi gabungan hanya memuat classIds; tanpa membacanya, kuis untuk onboarding
+    // bersama tidak pernah menemukan sesinya.
+    //
+    // Shared sessions carry only classIds; without reading them, a quiz for a shared
+    // onboarding never finds its session.
+    expect(fn).toMatch(/where\('classIds', 'array-contains', classId\)/);
+  });
+
+  it('menyebut berapa ujian yang dibuat', () => {
+    expect(fn).toMatch(/created: ujianBaru\.length/);
+    expect(ui).toMatch(/data\.created > 0/);
+  });
+
+  it('tetap menyediakan tombolnya saat kelas belum punya ujian', () => {
+    // Impor inilah yang membuat ujiannya; menahan tombolnya sampai ujian dibuat
+    // satu per satu mengembalikan pekerjaan yang hendak dihindari.
+    //
+    // This import is what creates the exams; holding the buttons back until exams
+    // are made one by one brings back the very work it exists to avoid.
+    expect(ui).not.toMatch(/judul\.length === 0 \? \(/);
+    expect(ui).not.toContain('Buat ujiannya lebih dulu');
+    expect(tab).not.toContain('belum punya ujian');
   });
 });

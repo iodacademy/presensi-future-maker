@@ -3,6 +3,7 @@
 import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
 import { deleteExamImage } from '../uploads/service';
+import { jenisDariJudul, normalJudul } from './import-policy';
 import type { Actor, UserDocument } from '../auth/types';
 import {
   applyRemedialRule,
@@ -463,6 +464,34 @@ export async function deleteQuestion(actor: Actor, questionId: string): Promise<
 }
 
 /**
+ * Mencari pertemuan untuk kuis yang dibuat lewat impor.
+ *
+ * Pertama dicocokkan dengan judul sesinya: judul bawaan sebuah kuis adalah
+ * "Kuis" disusul judul sesinya, sehingga berkas yang memakai judul bawaan
+ * cocok persis. Bila tidak, dicocokkan dengan nomor pertemuannya, asalkan
+ * hanya satu sesi yang memakai nomor itu -- dua sesi bernomor sama tidak dapat
+ * dipilih tanpa menebak.
+ *
+ * Finds the meeting for a quiz created by the import.
+ *
+ * First it matches on the session title: a quiz's default title is "Kuis"
+ * followed by its session's title, so a sheet using default titles matches
+ * exactly. Failing that, it matches on the meeting number, provided only one
+ * session uses that number -- two sessions sharing a number cannot be picked
+ * between without guessing.
+ */
+export function cariSesiKuis<T extends { title: string }>(judulKuis: string, sesi: T[]): T | null {
+  const tanpaAwalan = normalJudul(judulKuis.replace(/^\s*(kuis|quiz)\b\s*/i, ''));
+  const persis = sesi.find((x) => normalJudul(x.title) === tanpaAwalan);
+  if (persis) return persis;
+
+  const nomor = judulKuis.match(/pertemuan\s*(\d+)/i)?.[1];
+  if (!nomor) return null;
+  const senomor = sesi.filter((x) => x.title.match(/pertemuan\s*(\d+)/i)?.[1] === nomor);
+  return senomor.length === 1 ? senomor[0] : null;
+}
+
+/**
  * Mengganti seluruh soal beberapa ujian sekaligus dari satu berkas.
  *
  * Mengganti, bukan menambahkan: berkas yang sama diimpor dua kali akan
@@ -492,7 +521,7 @@ export async function importQuestionsForClass(
   actor: Actor,
   classId: string,
   perExam: { examTitle: string; questions: { kind: QuestionKind; text: string; options: { text: string }[]; correctIndex: number; explanation: string }[] }[]
-): Promise<{ examCount: number; imported: number; replaced: number }> {
+): Promise<{ examCount: number; created: number; imported: number; replaced: number }> {
   requireAdmin(actor);
 
   if (perExam.length === 0) {
@@ -503,23 +532,91 @@ export async function importQuestionsForClass(
   const examsSnap = await db.collection('exams').where('classId', '==', classId).get();
   const exams = examsSnap.docs.map((d) => d.data() as ExamDocument);
 
-  const normal = (t: string) => t.trim().toLowerCase().replace(/\s+/g, ' ');
-  const petaUjian = new Map(exams.map((e) => [normal(e.title), e]));
+  const petaUjian = new Map(exams.map((e) => [normalJudul(e.title), e]));
 
-  // Judul diperiksa seluruhnya lebih dulu, sebelum satu soal pun ditulis: satu
-  // judul yang tidak dikenal di baris terakhir tidak boleh menyisakan ujian
-  // sebelumnya sudah terganti.
-  //
-  // Every title is checked first, before a single question is written: one unknown
-  // title in the last row must not leave the earlier exams already replaced.
-  const asing = perExam.filter((x) => !petaUjian.has(normal(x.examTitle)));
+  /**
+   * Ujian yang belum ada disiapkan di memori lebih dulu, belum ditulis.
+   *
+   * Seluruh judul baru diperiksa sebelum satu dokumen pun ditulis: kuis di baris
+   * terakhir yang tidak menemukan pertemuannya tidak boleh menyisakan tiga belas
+   * ujian lain sudah terbuat dan terisi.
+   *
+   * Exams not yet present are prepared in memory first, not written.
+   *
+   * Every new title is checked before a single document is written: a quiz in the
+   * last row that cannot find its meeting must not leave thirteen other exams
+   * already created and filled.
+   */
+  const asing = perExam.filter((x) => !petaUjian.has(normalJudul(x.examTitle)));
+  const ujianBaru: ExamDocument[] = [];
+
   if (asing.length > 0) {
-    throw new Error(
-      `Ujian berikut tidak ada di kelas ini: ${asing.map((x) => x.examTitle).join(', ')}`
-    );
+    // Sesi lama hanya memuat classId, sesi gabungan memuat classIds. Keduanya
+    // dibaca supaya kuis untuk onboarding bersama tetap menemukan sesinya.
+    //
+    // Older sessions carry only classId, shared ones carry classIds. Both are read
+    // so a quiz for a shared onboarding still finds its session.
+    const [sendiri, gabungan] = await Promise.all([
+      db.collection('sessions').where('classId', '==', classId).get(),
+      db.collection('sessions').where('classIds', 'array-contains', classId).get(),
+    ]);
+    const sesi = new Map<string, { id: string; title: string }>();
+    for (const d of [...sendiri.docs, ...gabungan.docs]) {
+      const x = d.data() as { id: string; title: string };
+      sesi.set(x.id, { id: x.id, title: x.title });
+    }
+    const daftarSesi = [...sesi.values()];
+
+    const masalah: string[] = [];
+    const now = new Date().toISOString();
+
+    for (const x of asing) {
+      const kind = jenisDariJudul(x.examTitle);
+      if (!kind) {
+        masalah.push(`"${x.examTitle}": jenisnya tidak terbaca, awali judulnya dengan Kuis, Pretest, atau Postest`);
+        continue;
+      }
+
+      let sessionId: string | null = null;
+      if (kind === 'kuis') {
+        const cocok = cariSesiKuis(x.examTitle, daftarSesi);
+        if (!cocok) {
+          masalah.push(`"${x.examTitle}": pertemuannya tidak ditemukan di jadwal kelas ini`);
+          continue;
+        }
+        sessionId = cocok.id;
+      }
+
+      const exam: ExamDocument = {
+        id: crypto.randomUUID(),
+        classId,
+        kind,
+        sessionId,
+        title: x.examTitle.trim().replace(/\s+/g, ' '),
+        description: '',
+        durationMinutes: null,
+        passingScore: DEFAULT_PASSING_SCORE,
+        dueAt: null,
+        questionCount: 0,
+        // Ujian baru tetap draf. Menerbitkannya sendiri berarti seratus soal
+        // langsung terlihat peserta sebelum admin sempat memeriksanya sekali pun.
+        //
+        // A new exam stays a draft. Publishing it automatically would put a hundred
+        // questions in front of participants before an admin has checked even one.
+        published: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      ujianBaru.push(exam);
+      petaUjian.set(normalJudul(exam.title), exam);
+    }
+
+    if (masalah.length > 0) {
+      throw new Error(`Ujian berikut tidak dapat dibuat:\n${masalah.join('\n')}`);
+    }
   }
 
-  const sasaran = perExam.map((x) => ({ exam: petaUjian.get(normal(x.examTitle))!, questions: x.questions }));
+  const sasaran = perExam.map((x) => ({ exam: petaUjian.get(normalJudul(x.examTitle))!, questions: x.questions }));
 
   // Soal lama dibaca sebelum apa pun ditulis, sekaligus untuk seluruh ujian
   // yang disentuh.
@@ -589,6 +686,17 @@ export async function importQuestionsForClass(
     }
   });
 
+  // Ujian baru ditulis di depan antrean, sebelum soal-soalnya: soal yang
+  // menunjuk ujian yang belum ada akan tampil sebagai yatim bila batch
+  // berikutnya gagal.
+  //
+  // New exams go at the head of the queue, ahead of their questions: a question
+  // pointing at an exam that does not exist yet would be orphaned if a later batch
+  // failed.
+  for (const exam of ujianBaru) {
+    tulis.push((b) => b.set(db.collection('exams').doc(exam.id), exam));
+  }
+
   for (const { exam, questions } of sasaran) {
     questions.forEach((p, i) => {
       const options = p.options.map((o) => ({ id: crypto.randomUUID(), text: o.text.trim() }));
@@ -656,7 +764,7 @@ export async function importQuestionsForClass(
   await jalankan(hapus);
   await jalankan(tulis);
 
-  return { examCount: sasaran.length, imported, replaced: semuaLama.length };
+  return { examCount: sasaran.length, created: ujianBaru.length, imported, replaced: semuaLama.length };
 }
 
 /**
