@@ -49,6 +49,9 @@ export function ImportQuestionsGlobal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  // Ujian hasil impor yang masih draf, menunggu keputusan statusnya.
+  // Imported exams still in draft, awaiting a decision on their status.
+  const [menungguStatus, setMenungguStatus] = useState<string[]>([]);
 
   const judul = exams.map((e) => e.title);
 
@@ -125,6 +128,14 @@ export function ImportQuestionsGlobal({
       setNewExams([]);
       setPreview(null);
       setRowErrors([]);
+      // Statusnya ditanyakan setelah impornya berhasil, bukan sebelumnya: soal
+      // yang gagal masuk tidak boleh sempat diterbitkan, dan pilihan sebelum
+      // impor dibuat tanpa tahu ujian mana yang benar-benar terisi.
+      //
+      // The status is asked once the import has succeeded, not before: questions
+      // that failed to land must never get published, and a choice made before
+      // the import is made without knowing which exams actually got filled.
+      setMenungguStatus(data.draftExamIds ?? []);
       onImported();
     } catch (e) {
       setError((e as Error).message);
@@ -285,6 +296,122 @@ export function ImportQuestionsGlobal({
           </div>
         </div>
       )}
+
+      {menungguStatus.length > 0 && (
+        <StatusDialog
+          classId={classId}
+          examIds={menungguStatus}
+          onDone={(pesan) => {
+            setMenungguStatus([]);
+            if (pesan) setDone((d) => `${d ?? ''}. ${pesan}`);
+            onImported();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Konfirmasi status ujian setelah impor selesai.
+ *
+ * Pilihannya hanya dua -- semua terbit atau semua tetap draf -- bukan per
+ * ujian: memilih empat belas status satu per satu adalah pekerjaan halaman
+ * kelas, dan dialog ini ada untuk keputusan yang diambil sekaligus.
+ *
+ * Akibat menerbitkan disebut terang: tidak ada pembatasan menurut tanggal
+ * pertemuan, sehingga kuis pertemuan terakhir pun dapat dikerjakan hari itu
+ * juga. Admin yang tidak tahu ini akan menerbitkan semuanya demi kepraktisan,
+ * lalu mendapati peserta mengerjakan kuis materi yang belum diajarkan.
+ *
+ * Confirms the exams' status once the import finishes.
+ *
+ * There are only two choices -- all published or all kept as drafts -- not one
+ * per exam: choosing fourteen statuses one by one is the class page's job, and
+ * this dialog exists for a decision made all at once.
+ *
+ * The consequence of publishing is stated plainly: nothing gates exams by meeting
+ * date, so even the final meeting's quiz can be taken that same day. An admin
+ * unaware of this would publish everything for convenience and then find
+ * participants sitting quizzes on material not yet taught.
+ */
+function StatusDialog({
+  classId,
+  examIds,
+  onDone,
+}: {
+  classId: string;
+  examIds: string[];
+  onDone: (pesan: string | null) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function terbitkan() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/exams/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ classId, examIds }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal menerbitkan ujian');
+      onDone(`${data.published} ujian terbit`);
+    } catch (e) {
+      // Dialognya tetap terbuka saat gagal: menutupnya membuat admin mengira
+      // ujiannya sudah terbit padahal masih draf.
+      //
+      // The dialog stays open on failure: closing it would have the admin believe
+      // the exams were published while they are still drafts.
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="status-impor-judul"
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100, padding: '16px',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      {/* Tidak tertutup dengan mengeklik latarnya: menutupnya tanpa memilih
+          adalah keputusan "biarkan draf" yang diambil tanpa sengaja.
+
+          It does not close on a backdrop click: closing it without choosing would
+          be a "keep as drafts" decision taken by accident. */}
+      <div style={{ backgroundColor: 'var(--color-surface)', borderRadius: '12px', padding: '22px', width: '100%', maxWidth: '440px' }}>
+        <h2 id="status-impor-judul" style={{ fontFamily: 'var(--font-heading)', fontSize: '15px', fontWeight: 700, margin: '0 0 6px', color: 'var(--color-text-main)' }}>
+          Impor selesai. Terbitkan sekarang?
+        </h2>
+        <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', margin: '0 0 12px', lineHeight: 1.6 }}>
+          <strong>{examIds.length} ujian</strong> dari impor ini masih berstatus draf dan belum terlihat peserta.
+        </p>
+
+        <div style={{ fontSize: '11px', color: '#7a5f00', backgroundColor: 'var(--color-warning-light)', padding: '10px 12px', borderRadius: '8px', lineHeight: 1.6, marginBottom: '14px' }}>
+          Bila diterbitkan, <strong>seluruhnya langsung dapat dikerjakan peserta hari ini</strong>, termasuk kuis untuk
+          pertemuan yang belum berlangsung. Ujian tidak terbuka mengikuti tanggal pertemuannya.
+        </div>
+
+        {error && (
+          <p role="alert" style={{ fontSize: '11px', color: 'var(--color-danger)', margin: '0 0 12px', whiteSpace: 'pre-line' }}>{error}</p>
+        )}
+
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <Button variant="secondary" onClick={() => onDone('Seluruhnya tetap draf')} disabled={busy} style={{ fontSize: '11px', padding: '9px 14px' }}>
+            Biarkan Draf
+          </Button>
+          <Button variant="primary" onClick={terbitkan} disabled={busy} style={{ fontSize: '11px', padding: '9px 14px' }}>
+            {busy ? 'Menerbitkan...' : `Terbitkan Semua (${examIds.length})`}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

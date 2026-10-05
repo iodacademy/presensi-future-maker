@@ -602,3 +602,93 @@ describe('membuat ujian baru di server', () => {
     expect(tab).not.toContain('belum punya ujian');
   });
 });
+
+/**
+ * Status ujian ditanyakan setelah impornya selesai.
+ *
+ * The exams' status is asked once the import finishes.
+ */
+describe('konfirmasi status setelah impor', () => {
+  const terbit = (() => {
+    const i = service.indexOf('export async function publishExams');
+    const j = service.indexOf('\nexport ', i + 1);
+    return service.slice(i, j < 0 ? undefined : j);
+  })();
+  const rutePublish = read('src/app/api/exams/publish/route.ts');
+
+  it('menanyakannya setelah impor berhasil, bukan sebelumnya', () => {
+    // Soal yang gagal masuk tidak boleh sempat diterbitkan, dan pilihan sebelum
+    // impor dibuat tanpa tahu ujian mana yang benar-benar terisi.
+    //
+    // Questions that failed to land must never get published, and a choice made
+    // before the import is made without knowing which exams actually got filled.
+    const kirimBlok = ui.slice(ui.indexOf('async function kirim()'), ui.indexOf('const total ='));
+    sebelum(kirimBlok, "if (!res.ok) throw new Error(data.error || 'Gagal mengimpor soal')", 'setMenungguStatus(data.draftExamIds');
+  });
+
+  it('hanya menanyakan ujian yang memang masih draf', () => {
+    // Ujian yang sudah terbit sebelum impor tidak perlu ditanyakan lagi, dan
+    // menyebutnya dalam hitungan membuat angkanya menyesatkan.
+    //
+    // An exam already published before the import needs no asking, and counting
+    // it would make the number misleading.
+    expect(fn).toMatch(/draftExamIds: sasaran\.filter\(\(t\) => !t\.exam\.published\)/);
+    expect(ui).toMatch(/\{menungguStatus\.length > 0 && \(/);
+  });
+
+  it('menyebut bahwa ujian yang terbit langsung dapat dikerjakan hari itu', () => {
+    // Tidak ada pembatasan menurut tanggal pertemuan. Admin yang tidak tahu ini
+    // akan menerbitkan semuanya, lalu mendapati peserta mengerjakan kuis materi
+    // yang belum diajarkan.
+    //
+    // Nothing gates exams by meeting date. An admin unaware of this would publish
+    // everything and then find participants sitting quizzes on untaught material.
+    expect(ui).toContain('langsung dapat dikerjakan peserta hari ini');
+    expect(ui).toContain('pertemuan yang belum berlangsung');
+  });
+
+  it('tidak tertutup dengan mengeklik latarnya', () => {
+    // Menutupnya tanpa memilih adalah keputusan "biarkan draf" yang diambil
+    // tanpa sengaja.
+    //
+    // Closing it without choosing would be a "keep as drafts" decision taken by
+    // accident.
+    const dialog = ui.slice(ui.indexOf('function StatusDialog'));
+    expect(dialog.slice(0, dialog.indexOf('aria-labelledby="status-impor-judul"') + 200)).not.toMatch(/onClick=/);
+  });
+
+  it('tetap terbuka bila penerbitannya gagal', () => {
+    // Menutupnya membuat admin mengira ujiannya sudah terbit padahal masih draf.
+    // Closing it would have the admin believe the exams are published while they
+    // are still drafts.
+    const blok = ui.slice(ui.indexOf('async function terbitkan()'), ui.indexOf('return (', ui.indexOf('async function terbitkan()')));
+    const tangkap = blok.slice(blok.indexOf('catch'));
+    expect(tangkap).not.toMatch(/onDone/);
+    expect(tangkap).toMatch(/setError/);
+  });
+
+  it('memeriksa seluruh ujiannya sebelum menerbitkan satu pun', () => {
+    // Terbit sebagian berarti peserta melihat kuis pertemuan 3 tanpa kuis
+    // pertemuan 2, dan tidak ada yang memberi tahu bagian mana yang tertinggal.
+    //
+    // A partial publish would show the meeting 3 quiz without meeting 2's, with
+    // nothing saying which ones were left behind.
+    sebelum(terbit, 'if (masalah.length > 0)', 'batch.commit()');
+    expect(terbit).toMatch(/const batch = db\.batch\(\)/);
+  });
+
+  it('menolak ujian dari kelas lain', () => {
+    expect(terbit).toMatch(/exam\.classId !== classId/);
+  });
+
+  it('memakai aturan terbit yang sama dengan menerbitkan satu per satu', () => {
+    // Ujian tanpa soal menolak setiap peserta yang membukanya.
+    // An exam with no questions turns away every participant who opens it.
+    expect(terbit).toMatch(/canPublishExam\(exam\)/);
+  });
+
+  it('dijaga perannya', () => {
+    expect(terbit).toMatch(/requireAdmin\(actor\)/);
+    expect(rutePublish).toMatch(/actor\.role !== 'admin'/);
+  });
+});

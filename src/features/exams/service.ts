@@ -521,7 +521,7 @@ export async function importQuestionsForClass(
   actor: Actor,
   classId: string,
   perExam: { examTitle: string; questions: { kind: QuestionKind; text: string; options: { text: string }[]; correctIndex: number; explanation: string }[] }[]
-): Promise<{ examCount: number; created: number; imported: number; replaced: number }> {
+): Promise<{ examCount: number; created: number; imported: number; replaced: number; draftExamIds: string[] }> {
   requireAdmin(actor);
 
   if (perExam.length === 0) {
@@ -764,7 +764,81 @@ export async function importQuestionsForClass(
   await jalankan(hapus);
   await jalankan(tulis);
 
-  return { examCount: sasaran.length, created: ujianBaru.length, imported, replaced: semuaLama.length };
+  return {
+    examCount: sasaran.length,
+    created: ujianBaru.length,
+    imported,
+    replaced: semuaLama.length,
+    // Ujian yang disentuh impor ini dan belum terbit, untuk ditanyakan
+    // statusnya kepada admin setelah impornya selesai.
+    //
+    // Exams this import touched that are not yet published, so the admin can be
+    // asked about their status once the import finishes.
+    draftExamIds: sasaran.filter((t) => !t.exam.published).map((t) => t.exam.id),
+  };
+}
+
+/**
+ * Menerbitkan beberapa ujian satu kelas sekaligus.
+ *
+ * Seluruhnya diperiksa lebih dulu, lalu ditulis dalam satu batch: terbit
+ * sebagian berarti peserta melihat kuis pertemuan 3 tanpa kuis pertemuan 2,
+ * dan tidak ada yang memberi tahu admin bagian mana yang tertinggal.
+ *
+ * Id yang bukan milik kelas itu ditolak. Tanpa pemeriksaan ini, satu id dari
+ * kelas lain akan menerbitkan ujian yang bukan urusan halaman ini.
+ *
+ * Publishes several of one class's exams at once.
+ *
+ * Everything is checked first, then written in one batch: a partial publish would
+ * show participants the meeting 3 quiz without meeting 2's, with nothing telling
+ * the admin which ones were left behind.
+ *
+ * An id not belonging to that class is refused. Without this check, one id from
+ * another class would publish an exam this page has no business touching.
+ */
+export async function publishExams(actor: Actor, classId: string, examIds: string[]): Promise<{ published: number }> {
+  requireAdmin(actor);
+
+  const unik = [...new Set(examIds)];
+  if (unik.length === 0) return { published: 0 };
+  // Satu batch Firestore menampung lima ratus operasi; satu kelas tidak
+  // pernah mendekati itu, tetapi muatan dari peramban dapat diubah.
+  //
+  // One Firestore batch holds five hundred operations; no class comes close, but a
+  // payload from the browser can be altered.
+  if (unik.length > 400) throw new Error('Terlalu banyak ujian sekaligus');
+
+  const db = getAdminDb();
+  const snaps = await Promise.all(unik.map((id) => db.collection('exams').doc(id).get()));
+
+  const masalah: string[] = [];
+  for (const snap of snaps) {
+    if (!snap.exists) {
+      masalah.push(`Ujian ${snap.id} tidak ditemukan`);
+      continue;
+    }
+    const exam = snap.data() as ExamDocument;
+    if (exam.classId !== classId) {
+      masalah.push(`"${exam.title}" bukan milik kelas ini`);
+      continue;
+    }
+    // Aturan yang sama dengan menerbitkan satu per satu: ujian tanpa soal
+    // menolak setiap peserta yang membukanya.
+    //
+    // The same rule as publishing one at a time: an exam with no questions turns
+    // away every participant who opens it.
+    const { allowed, reason } = canPublishExam(exam);
+    if (!allowed) masalah.push(`"${exam.title}": ${reason}`);
+  }
+  if (masalah.length > 0) throw new Error(masalah.join('\n'));
+
+  const now = new Date().toISOString();
+  const batch = db.batch();
+  for (const snap of snaps) batch.update(snap.ref, { published: true, updatedAt: now });
+  await batch.commit();
+
+  return { published: snaps.length };
 }
 
 /**
