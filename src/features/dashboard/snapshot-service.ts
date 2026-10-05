@@ -19,7 +19,6 @@ import type {
   AlertStudent,
   AlertThresholds,
   DashboardSnapshot,
-  SeriesPoint,
   ProfileRow,
   SurveyQuestionPoint,
   LoginPoint,
@@ -62,6 +61,7 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  * 2: kolom kehadiran dikelompokkan per kelas. Sebelumnya tiap peserta diberi
  *    kolom untuk sesi seluruh kelas, sehingga kehadirannya jatuh ke angka yang
  *    tidak pernah terjadi.
+ * 3: kolom tugas dan kuis dikelompokkan per kelas, dengan alasan yang sama.
  *
  * The snapshot's shape version. Raised whenever the way figures are computed
  * changes such that old ones become wrong, not whenever a field is added: a new
@@ -71,8 +71,9 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  * 2: attendance columns grouped per class. Previously each participant was given
  *    columns for every class's sessions, dropping their attendance to a figure
  *    that never happened.
+ * 3: task and quiz columns grouped per class, for the same reason.
  */
-export const SNAPSHOT_VERSION = 2;
+export const SNAPSHOT_VERSION = 3;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -222,54 +223,27 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   }
 
   const nowIso = new Date().toISOString();
-  const attendancePerSession: SeriesPoint[] = sessions.map((s) => ({
-    label: s.title,
-    // Pertemuan yang belum berlangsung bernilai null, bukan nol: nol berarti
-    // tidak ada yang hadir, dan grafiknya akan menunjukkan kemerosotan yang
-    // tidak pernah terjadi.
-    //
-    // A meeting not yet held is null, not zero: zero means nobody attended, and
-    // the chart would show a collapse that never happened.
-    value: s.startsAt > nowIso ? null : persen(hadirPerSesi.get(s.id)?.size ?? 0, aktif.length),
-    detail: s.date,
-  }));
-
-  // --- tugas: pengumpulan dan nilainya --------------------------------
-  const tasks = tasksSnap.docs
-    .map((d) => d.data() as { id: string; title: string; order: number; kind: string })
-    .filter((t) => t.kind !== 'capstone')
-    .sort((a, b) => a.order - b.order);
-
-  const kumpulPerTugas = new Map<string, number>();
-  const nilaiPerTugas = new Map<string, number[]>();
-  for (const d of submissionsSnap.docs) {
-    const s = d.data() as { taskId: string; studentId: string; score: number | null };
-    if (!aktifIds.has(s.studentId)) continue;
-    kumpulPerTugas.set(s.taskId, (kumpulPerTugas.get(s.taskId) ?? 0) + 1);
-    if (s.score !== null && s.score !== undefined) {
-      if (!nilaiPerTugas.has(s.taskId)) nilaiPerTugas.set(s.taskId, []);
-      nilaiPerTugas.get(s.taskId)!.push(s.score);
-    }
+  // --- tugas: dikelompokkan per kelas ---------------------------------
+  // Tiap kelas punya deret tugasnya sendiri, diurutkan menurut nomornya. Kolom
+  // ke-n pada tabel adalah tugas ke-n kelas peserta itu. Menyatukan tugas
+  // seluruh kelas menjadi satu deret membuat kolom "Tugas 2" milik satu kelas
+  // saja, dan peserta kelas lain -- yang tidak mungkin mengumpulkannya --
+  // terhitung nol persen begitu tenggatnya lewat.
+  //
+  // Each class has its own run of tasks, ordered by number. Column n in the table
+  // is the nth task of that participant's class. Pooling every class's tasks into
+  // one run makes the "Tugas 2" column belong to one class alone, and participants
+  // from other classes -- who cannot possibly submit it -- count as zero percent
+  // once its deadline passes.
+  const tugasPerKelasId = new Map<string, { id: string; title: string; order: number }[]>();
+  for (const d of tasksSnap.docs) {
+    const t = d.data() as { id: string; title: string; order: number; kind: string; classId: string };
+    if (t.kind === 'capstone') continue;
+    if (!tugasPerKelasId.has(t.classId)) tugasPerKelasId.set(t.classId, []);
+    tugasPerKelasId.get(t.classId)!.push(t);
   }
-
-  const submissionPerTask: SeriesPoint[] = tasks.map((t) => ({
-    label: t.title,
-    value: persen(kumpulPerTugas.get(t.id) ?? 0, aktif.length),
-  }));
-
-  const scorePerTask: SeriesPoint[] = tasks.map((t) => {
-    const nilai = nilaiPerTugas.get(t.id) ?? [];
-    return {
-      label: t.title,
-      // Tugas yang belum ada nilainya bernilai null: nol akan terbaca sebagai
-      // seluruh peserta mendapat nol.
-      //
-      // A task with no scores yet is null: zero would read as everyone scoring
-      // zero.
-      value: nilai.length === 0 ? null : Math.round(nilai.reduce((a, b) => a + b, 0) / nilai.length),
-      detail: `${nilai.length} dinilai`,
-    };
-  });
+  for (const daftar of tugasPerKelasId.values()) daftar.sort((a, b) => a.order - b.order);
+  const kolomTugas = Math.max(0, ...[...tugasPerKelasId.values()].map((d) => d.length));
 
   // --- kuis per sesi dan learning gain --------------------------------
   const exams = examsSnap.docs.map((d) => d.data() as { id: string; title: string; kind: string; classId: string; sessionId: string | null });
@@ -290,10 +264,6 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     if (nilai.length === 0) return null;
     return Math.round(nilai.reduce((a, b) => a + b, 0) / nilai.length);
   };
-
-  const quizPerSession: SeriesPoint[] = exams
-    .filter((e) => e.kind === 'kuis')
-    .map((e) => ({ label: e.title, value: rataUjian(e.id) }));
 
   const learningGain = classes.map((c) => {
     const pre = exams.find((e) => e.classId === c.id && e.kind === 'pretest');
@@ -594,7 +564,43 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   // The quiz and task order is fixed here so the table's columns line up across
   // participants. Sorting per participant would have the "Kuis 3" column hold a
   // different quiz on each row.
-  const kuisUrut = exams.filter((e) => e.kind === 'kuis');
+  // Kuis dikelompokkan per kelas dan diurutkan menurut tanggal pertemuannya,
+  // dengan alasan yang sama seperti tugas: kuis pertemuan 3 Surabaya bukan
+  // kuis pertemuan 3 Semarang, dan peserta Semarang tidak dapat mengerjakan
+  // milik Surabaya.
+  //
+  // Quizzes are grouped per class and ordered by their meeting's date, for the
+  // same reason as tasks: Surabaya's meeting 3 quiz is not Semarang's, and a
+  // Semarang participant cannot sit Surabaya's.
+  const tanggalSesi = new Map(sessions.map((x) => [x.id, x.date]));
+  const kuisPerKelasId = new Map<string, typeof exams>();
+  for (const e of exams) {
+    if (e.kind !== 'kuis') continue;
+    if (!kuisPerKelasId.has(e.classId)) kuisPerKelasId.set(e.classId, []);
+    kuisPerKelasId.get(e.classId)!.push(e);
+  }
+  for (const daftar of kuisPerKelasId.values()) {
+    daftar.sort((a, b) => {
+      const ta = a.sessionId ? tanggalSesi.get(a.sessionId) ?? '' : '';
+      const tb = b.sessionId ? tanggalSesi.get(b.sessionId) ?? '' : '';
+      return ta.localeCompare(tb) || a.title.localeCompare(b.title, 'id');
+    });
+  }
+  const kolomKuis = Math.max(0, ...[...kuisPerKelasId.values()].map((d) => d.length));
+
+  /**
+   * Label kolom ke-n: judul bersama bila seluruh kelas memakai judul yang sama
+   * pada urutan itu, selainnya nomornya saja. Keterangan yang salah lebih buruk
+   * daripada tanpa keterangan.
+   *
+   * Column n's label: the shared title when every class uses the same title at
+   * that position, otherwise just its number. A wrong caption is worse than none.
+   */
+  const labelKolom = (per: Map<string, { title: string }[]>, jumlah: number, awalan: string) =>
+    Array.from({ length: jumlah }, (_, i) => {
+      const judul = [...per.values()].map((d) => d[i]?.title).filter((t): t is string => Boolean(t));
+      return new Set(judul).size === 1 ? judul[0] : `${awalan} ${i + 1}`;
+    });
   // Seluruh pertemuan ditampilkan, termasuk yang belum berjalan: tabelnya
   // memperlihatkan jadwal utuh, dan pertemuan yang belum berjalan bernilai null.
   //
@@ -688,9 +694,25 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         pretest: pre ? (nilaiTertinggi.get(pre.id)?.get(s.uid) ?? null) : null,
         posttest: post ? (nilaiTertinggi.get(post.id)?.get(s.uid) ?? null) : null,
         capstone: nilaiCapstone.get(s.uid) ?? null,
-        quizScores: kuisUrut.map((e) => nilaiTertinggi.get(e.id)?.get(s.uid) ?? null),
-        taskScores: tasks.map((t) => tugasSiswa?.get(t.id) ?? null),
-        taskSubmitted: tasks.map((t) => {
+        // Hanya kuis dan tugas kelasnya sendiri, dipadkan sampai jumlah kolom
+        // terbanyak. Kolom di luar deret kelasnya bernilai null: kelas yang
+        // tugasnya lebih sedikit tidak boleh terbaca sebagai yang tidak
+        // mengumpulkan.
+        //
+        // Only their own class's quizzes and tasks, padded to the widest column
+        // count. A column beyond their class's run is null: a class with fewer
+        // tasks must not read as one that failed to submit.
+        quizScores: Array.from({ length: kolomKuis }, (_, i) => {
+          const e = kuisPerKelasId.get(cid)?.[i];
+          return e ? nilaiTertinggi.get(e.id)?.get(s.uid) ?? null : null;
+        }),
+        taskScores: Array.from({ length: kolomTugas }, (_, i) => {
+          const t = tugasPerKelasId.get(cid)?.[i];
+          return t ? tugasSiswa?.get(t.id) ?? null : null;
+        }),
+        taskSubmitted: Array.from({ length: kolomTugas }, (_, i) => {
+          const t = tugasPerKelasId.get(cid)?.[i];
+          if (!t) return null;
           if (terkumpulPerSiswa.get(s.uid)?.has(t.id)) return true;
           // Tenggat yang belum lewat bernilai null, bukan false: peserta masih
           // punya waktu, dan menandainya sebagai tidak mengumpulkan membuat
@@ -726,10 +748,6 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     profilePendingByCity,
     phases,
     phaseCaption,
-    attendancePerSession,
-    submissionPerTask,
-    scorePerTask,
-    quizPerSession,
     learningGain,
     mentoring,
     surveys,
@@ -752,8 +770,8 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         .filter((t): t is string => Boolean(t));
       return new Set(judul).size === 1 ? judul[0] : `Pertemuan ${i + 1}`;
     }),
-    quizLabels: kuisUrut.map((e) => e.title),
-    taskLabels: tasks.map((t) => t.title),
+    quizLabels: labelKolom(kuisPerKelasId, kolomKuis, 'Kuis'),
+    taskLabels: labelKolom(tugasPerKelasId, kolomTugas, 'Tugas'),
     thresholds: ALERT_THRESHOLDS,
   };
 }

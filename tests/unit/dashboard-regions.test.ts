@@ -242,7 +242,7 @@ describe('status pengumpulan tugas', () => {
     //
     // The participant still has time, and marking it late would have an admin
     // contact someone who is not late.
-    const blok = service.slice(service.indexOf('taskSubmitted: tasks.map'), service.indexOf('status: (!s.active'));
+    const blok = service.slice(service.indexOf('taskSubmitted: Array.from'), service.indexOf('status: (!s.active'));
     expect(blok).toMatch(/if \(!tenggat \|\| tenggat > nowIso\) return null;/);
   });
 
@@ -537,3 +537,84 @@ describe('versi bentuk ringkasan', () => {
     expect(SNAPSHOT_VERSION).toBeGreaterThanOrEqual(2);
   });
 });
+
+/**
+ * Tiap peserta hanya punya kolom untuk tugas dan kuis kelasnya sendiri.
+ *
+ * Menyatukan tugas seluruh kelas menjadi satu deret membuat kolom "Tugas 2"
+ * milik satu kelas saja, dan peserta kelas lain -- yang tidak mungkin
+ * mengumpulkannya -- terhitung nol persen begitu tenggatnya lewat.
+ *
+ * Each participant has columns only for their own class's tasks and quizzes.
+ *
+ * Pooling every class's tasks into one run makes the "Tugas 2" column belong to
+ * one class alone, and participants from other classes -- who cannot possibly
+ * submit it -- count as zero percent once its deadline passes.
+ */
+describe('kolom tugas dan kuis per kelas', () => {
+  it('mengelompokkan tugasnya per kelas, bukan satu deret untuk semua', () => {
+    expect(service).toMatch(/const tugasPerKelasId = new Map/);
+    expect(service).toMatch(/tugasPerKelasId\.get\(t\.classId\)!\.push\(t\)/);
+    expect(service).not.toMatch(/const tasks = tasksSnap\.docs/);
+  });
+
+  it('mengelompokkan kuisnya per kelas, bukan satu deret untuk semua', () => {
+    // Kuis pertemuan 3 Surabaya bukan kuis pertemuan 3 Semarang.
+    // Surabaya's meeting 3 quiz is not Semarang's.
+    expect(service).toMatch(/const kuisPerKelasId = new Map/);
+    expect(service).not.toMatch(/const kuisUrut = exams\.filter/);
+  });
+
+  it('mengurutkan kuis menurut tanggal pertemuannya', () => {
+    expect(service).toMatch(/tanggalSesi\.get\(a\.sessionId\)/);
+  });
+
+  it('mengambil tugas dan kuis dari kelas peserta itu sendiri', () => {
+    const blok = service.slice(service.indexOf('quizScores: Array.from'), service.indexOf('status: (!s.active'));
+    expect(blok).toMatch(/kuisPerKelasId\.get\(cid\)\?\.\[i\]/);
+    expect(blok.match(/tugasPerKelasId\.get\(cid\)\?\.\[i\]/g)).toHaveLength(2);
+  });
+
+  it('menandai kolom di luar deret kelasnya sebagai kosong, bukan tidak mengumpulkan', () => {
+    // Kelas yang tugasnya lebih sedikit tidak boleh terbaca sebagai yang tidak
+    // mengumpulkan.
+    //
+    // A class with fewer tasks must not read as one that failed to submit.
+    const blok = service.slice(service.indexOf('taskSubmitted: Array.from'), service.indexOf('status: (!s.active'));
+    sebelumTeks(blok, 'if (!t) return null;', 'return false;');
+  });
+
+  it('memakai judul bersama hanya bila seluruh kelas sepakat', () => {
+    expect(service).toMatch(/new Set\(judul\)\.size === 1 \? judul\[0\] : `\$\{awalan\} \$\{i \+ 1\}`/);
+    expect(service).toMatch(/taskLabels: labelKolom\(tugasPerKelasId, kolomTugas, 'Tugas'\)/);
+  });
+
+  it('tidak lagi menyimpan agregat yang dihitung dari deret campuran', () => {
+    // Medan-medan ini tidak dipakai halaman mana pun, dan angkanya salah:
+    // tugas, kuis, dan kehadiran seluruh kelas dibagi dengan seluruh peserta.
+    //
+    // These fields are used by no page, and their figures were wrong: every
+    // class's tasks, quizzes, and attendance divided by every participant.
+    for (const medan of ['attendancePerSession', 'submissionPerTask', 'scorePerTask', 'quizPerSession']) {
+      expect(types, medan).not.toContain(medan);
+      expect(service, medan).not.toContain(medan);
+    }
+  });
+
+  it('menaikkan versi ringkasannya supaya ringkasan lama dihitung ulang', () => {
+    // Tanpa ini, ringkasan hari ini yang sudah tersimpan tetap menampilkan
+    // nol persen sampai umurnya habis.
+    //
+    // Without this, today's already-stored snapshot keeps showing zero percent
+    // until it ages out.
+    expect(SNAPSHOT_VERSION).toBeGreaterThanOrEqual(3);
+  });
+});
+
+function sebelumTeks(teks: string, a: string, b: string) {
+  const i = teks.indexOf(a);
+  const j = teks.indexOf(b);
+  expect(i, `tidak ditemukan: ${a}`).toBeGreaterThan(-1);
+  expect(j, `tidak ditemukan: ${b}`).toBeGreaterThan(-1);
+  expect(i).toBeLessThan(j);
+}

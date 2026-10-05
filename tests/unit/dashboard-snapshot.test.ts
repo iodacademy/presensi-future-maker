@@ -106,11 +106,20 @@ describe('perhitungan angkanya', () => {
     //
     // Zero means nobody attended, and the chart would show a collapse that
     // never happened.
-    expect(compute).toMatch(/s\.startsAt > nowIso \? null/);
+    expect(compute).toMatch(/if \(sesi\.startsAt > nowIso\) return null;/);
   });
 
   it('menandai tugas yang belum dinilai sebagai null', () => {
-    expect(compute).toMatch(/nilai\.length === 0 \? null/);
+    // Nilai yang belum ada bernilai null di tiap kolom peserta, dan rata-rata di
+    // peramban mengembalikan null bila tidak ada yang terukur: nol akan
+    // terbaca sebagai seluruh peserta mendapat nol.
+    //
+    // A missing score is null in each participant column, and the browser's
+    // average returns null when nothing was measured: zero would read as everyone
+    // scoring zero.
+    expect(compute).toMatch(/return t \? tugasSiswa\?\.get\(t\.id\) \?\? null : null;/);
+    const page = read('src/app/(admin)/admin/dashboard/page.tsx');
+    expect(page).toMatch(/if \(ada\.length === 0\) return null;/);
   });
 
   it('memakai nilai tertinggi tiap ujian per peserta', () => {
@@ -165,7 +174,7 @@ describe('perhitungan angkanya', () => {
     //
     // The capstone carries its own weight in the final score; counting it as a
     // daily task would count it twice.
-    expect(compute).toMatch(/t\.kind !== 'capstone'/);
+    expect(compute).toMatch(/if \(t\.kind === 'capstone'\) continue;/);
   });
 
   it('menghitung peringkat dari rata-rata tiga angka yang sama dengan daftar siaga', () => {
@@ -229,8 +238,14 @@ describe('tabel peserta', () => {
     //
     // Sorting per participant would have the "Kuis 3" column hold a different
     // quiz on each row.
-    expect(compute).toMatch(/kuisUrut\.map\(\(e\) =>/);
-    expect(compute).toMatch(/tasks\.map\(\(t\) =>/);
+    // Urutannya dikunci per kelas, dan jumlah kolomnya sama untuk seluruh
+    // peserta supaya barisnya sejajar.
+    //
+    // The order is fixed per class, and the column count is the same for every
+    // participant so the rows line up.
+    expect(compute).toMatch(/daftar\.sort\(\(a, b\) => a\.order - b\.order\)/);
+    expect(compute).toMatch(/quizScores: Array\.from\(\{ length: kolomKuis \}/);
+    expect(compute).toMatch(/taskScores: Array\.from\(\{ length: kolomTugas \}/);
   });
 
   it('menyertakan label kolomnya pada ringkasan', () => {

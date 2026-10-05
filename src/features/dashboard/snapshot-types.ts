@@ -28,15 +28,6 @@ export interface ClassSnapshot {
   droppedOut: number;
 }
 
-/** Satu titik pada grafik batang berlabel / One point on a labelled bar chart */
-export interface SeriesPoint {
-  label: string;
-  /** Null berarti belum berjalan, berbeda dari nol / Null means not started yet, distinct from zero */
-  value: number | null;
-  /** Keterangan tambahan pada tooltip atau sumbu / Extra caption for a tooltip or axis */
-  detail?: string;
-}
-
 export interface SurveySummaryPoint {
   formId: string;
   formTitle: string;
@@ -320,14 +311,6 @@ export interface DashboardSnapshot {
    */
   phaseCaption: string;
 
-  /** Kehadiran per pertemuan, dalam persen peserta aktif / Attendance per meeting, as a percentage of active participants */
-  attendancePerSession: SeriesPoint[];
-  /** Pengumpulan per tugas, dalam persen peserta aktif / Submissions per task, as a percentage of active participants */
-  submissionPerTask: SeriesPoint[];
-  /** Rata-rata nilai per tugas / Average score per task */
-  scorePerTask: SeriesPoint[];
-  /** Rata-rata nilai kuis per sesi / Average quiz score per session */
-  quizPerSession: SeriesPoint[];
 
   /** Rata-rata pretest dan postest tiap kelas, untuk learning gain / Each class's pretest and posttest averages, for learning gain */
   learningGain: { className: string; pretest: number | null; posttest: number | null }[];
