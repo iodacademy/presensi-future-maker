@@ -128,7 +128,7 @@ describe('aktivitas login', () => {
     // Participants open the app from a home-screen icon for days without passing
     // through login again, and the chart would show zero on exactly the days they
     // were most active.
-    const masuk = read('src/app/api/auth/session/route.ts');
+    const masuk = read('src/app/api/auth/login/route.ts');
     expect(masuk).not.toMatch(/recordDailyLogin/);
   });
 

@@ -3,8 +3,6 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { signInWithCustomToken } from 'firebase/auth';
-import { getClientAuth } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getRoleRedirectPath } from '@/features/auth/paths';
@@ -23,47 +21,30 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // 1. Minta custom token dari backend / Request custom token from backend
-      const tokenRes = await fetch('/api/auth/token', {
+      // Satu permintaan: server menukar email menjadi sesi seluruhnya. Peramban
+      // tidak lagi menghubungi server Google, sehingga jaringan yang
+      // memblokirnya tidak dapat menggagalkan login.
+      //
+      // One request: the server turns the email into a session entirely. The
+      // browser no longer contacts Google's servers, so a network blocking them
+      // cannot fail the login.
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-
-      if (!tokenRes.ok) {
-        const data = await tokenRes.json();
+      const data = (await res.json().catch(() => ({}))) as { role?: Role; error?: string };
+      if (!res.ok || !data.role) {
         throw new Error(data.error || 'Email tidak terdaftar atau tidak aktif');
       }
-
-      const { customToken, role } = (await tokenRes.json()) as {
-        customToken: string;
-        role: Role;
-      };
-
-      // 2. Sign in dengan Firebase Client SDK untuk mendapatkan ID token
-      // Sign in with Firebase Client SDK to retrieve ID token
-      const auth = getClientAuth();
-      const userCredential = await signInWithCustomToken(auth, customToken);
-      const idToken = await userCredential.user.getIdToken();
-
-      // 3. Tukar ID token menjadi session cookie HttpOnly di backend
-      // Exchange ID token for HttpOnly session cookie on backend
-      const sessionRes = await fetch('/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      });
-
-      if (!sessionRes.ok) {
-        throw new Error('Gagal membuat sesi masuk');
-      }
+      const role = data.role;
 
       // 4. Arahkan ke beranda sesuai peran / Redirect to role destination
       const destination = getRoleRedirectPath(role);
       router.push(destination);
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan saat masuk');
+    } catch (err) {
+      setError(pesanGagal(err));
     } finally {
       setLoading(false);
     }
@@ -136,4 +117,23 @@ export default function LoginPage() {
       </div>
     </main>
   );
+}
+
+/**
+ * Pesan untuk kegagalan yang terjadi sebelum server sempat menjawab.
+ *
+ * fetch melempar TypeError ("Failed to fetch") saat koneksi peserta sendiri
+ * putus. Menampilkannya apa adanya tidak memberi tahu peserta apa yang harus
+ * dilakukan.
+ *
+ * The message for a failure that happens before the server could answer.
+ *
+ * fetch throws a TypeError ("Failed to fetch") when the participant's own
+ * connection drops. Showing it verbatim tells them nothing about what to do.
+ */
+function pesanGagal(err: unknown): string {
+  if (err instanceof TypeError) {
+    return 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda, lalu coba lagi.';
+  }
+  return (err as Error)?.message || 'Terjadi kesalahan saat masuk';
 }

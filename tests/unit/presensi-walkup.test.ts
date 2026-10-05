@@ -41,9 +41,13 @@ describe('presensi tanpa sesi', () => {
     // An address is not a secret. A path recording attendance from one alone
     // would let anyone mark someone else present, so the existing sign-in flow
     // is reused as it is.
-    expect(page).toContain('/api/auth/token');
-    expect(page).toContain('/api/auth/session');
-    expect(page).toContain('signInWithCustomToken');
+    // Surelnya hanya dikirim ke jalur masuk, yang menukarnya menjadi session
+    // cookie bertanda tangan; pencatatan kehadirannya membaca sesi itu.
+    //
+    // The address is only sent to the sign-in path, which turns it into a signed
+    // session cookie; recording attendance reads that session.
+    expect(page).toContain("fetch('/api/auth/login'");
+    expect(page.match(/JSON\.stringify\(\{ email \}\)/g)).toHaveLength(1);
   });
 
   it('mencatat kehadiran segera setelah sesi terbentuk', () => {

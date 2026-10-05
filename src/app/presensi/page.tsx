@@ -3,11 +3,9 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signInWithCustomToken } from 'firebase/auth';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getClientAuth } from '@/lib/firebase/client';
 
 function PresensiContent() {
   const searchParams = useSearchParams();
@@ -107,28 +105,25 @@ function PresensiContent() {
     setError(null);
 
     try {
-      const tokenRes = await fetch('/api/auth/token', {
+      // Sesinya dibuat seluruhnya di server, sama seperti halaman masuk:
+      // peserta yang memindai QR di ruang kelas sering memakai wifi kampus, dan
+      // wifi seperti itulah yang paling sering memblokir server Google.
+      //
+      // The session is made entirely on the server, as on the login page:
+      // participants scanning the QR in class often use campus wifi, and that is
+      // exactly the kind of network most likely to block Google's servers.
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-      const tokenData = await tokenRes.json();
-      if (!tokenRes.ok) throw new Error(tokenData.error || 'Email tidak terdaftar atau tidak aktif');
-
-      const credential = await signInWithCustomToken(getClientAuth(), tokenData.customToken);
-      const idToken = await credential.user.getIdToken();
-
-      const sessionRes = await fetch('/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      });
-      if (!sessionRes.ok) throw new Error('Gagal membuat sesi masuk');
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error || 'Email tidak terdaftar atau tidak aktif');
 
       setNeedsEmail(false);
       await recordAttendance();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(pesanGagal(err));
     } finally {
       setSigningIn(false);
     }
@@ -301,4 +296,23 @@ export default function PresensiPage() {
       <PresensiContent />
     </Suspense>
   );
+}
+
+/**
+ * Pesan untuk kegagalan yang terjadi sebelum server sempat menjawab.
+ *
+ * fetch melempar TypeError ("Failed to fetch") saat koneksi peserta sendiri
+ * putus. Menampilkannya apa adanya tidak memberi tahu peserta apa yang harus
+ * dilakukan.
+ *
+ * The message for a failure that happens before the server could answer.
+ *
+ * fetch throws a TypeError ("Failed to fetch") when the participant's own
+ * connection drops. Showing it verbatim tells them nothing about what to do.
+ */
+function pesanGagal(err: unknown): string {
+  if (err instanceof TypeError) {
+    return 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda, lalu coba lagi.';
+  }
+  return (err as Error)?.message || 'Terjadi kesalahan saat masuk';
 }

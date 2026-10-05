@@ -16,6 +16,50 @@ export async function createSessionCookieFromIdToken(idToken: string): Promise<s
   return auth.createSessionCookie(idToken, { expiresIn: SESSION_EXPIRES_MS });
 }
 
+/**
+ * Menukar custom token menjadi session cookie, seluruhnya di server.
+ *
+ * Penukaran ke ID token dulu dikerjakan peramban lewat Firebase Client SDK,
+ * yang menghubungi identitytoolkit.googleapis.com langsung dari laptop
+ * peserta. Jaringan kampus, antivirus, atau pemblokir iklan yang menahan
+ * googleapis.com menggagalkan login dengan "auth/network-request-failed",
+ * padahal situs kita sendiri terjangkau. Dari server, jalurnya selalu tersedia.
+ *
+ * Exchanges a custom token for a session cookie, entirely on the server.
+ *
+ * The exchange for an ID token used to happen in the browser through the Firebase
+ * Client SDK, calling identitytoolkit.googleapis.com straight from the
+ * participant's laptop. A campus network, antivirus, or ad blocker holding back
+ * googleapis.com failed the login with "auth/network-request-failed", even though
+ * our own site was reachable. From the server that path is always available.
+ */
+export async function createSessionCookieFromCustomToken(customToken: string): Promise<string> {
+  const key = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  if (!key) throw new Error('NEXT_PUBLIC_FIREBASE_API_KEY belum diatur');
+
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${encodeURIComponent(key)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: customToken, returnSecureToken: true }),
+      // Dibatasi waktunya: permintaan yang menggantung menahan peserta pada
+      // tombol "Memproses..." tanpa pernah diberi tahu apa yang terjadi.
+      //
+      // Time-limited: a hanging request holds the participant on a "Memproses..."
+      // button without ever telling them what happened.
+      signal: AbortSignal.timeout(10_000),
+    }
+  );
+
+  const data = (await res.json().catch(() => ({}))) as { idToken?: string; error?: { message?: string } };
+  if (!res.ok || !data.idToken) {
+    throw new Error(`Penukaran token ditolak: ${data.error?.message ?? res.status}`);
+  }
+
+  return createSessionCookieFromIdToken(data.idToken);
+}
+
 // Cache actor per proses server berumur pendek supaya navigasi beruntun (klik
 // menu berkali-kali dalam beberapa detik) tidak menembak Firestore tiap kali.
 // Fungsi ini dipanggil di 57+ tempat (tiap halaman + tiap API route), jadi
