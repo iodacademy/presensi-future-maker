@@ -6,6 +6,8 @@ import {
   canBookMentoringSlot,
   SLOT_DURATION_MINUTES,
   MAX_MENTORING_QUOTA,
+  isSlotPast,
+  canStudentCancelBooking,
 } from '../../src/features/mentoring/policy';
 
 describe('Mentoring Policy', () => {
@@ -101,5 +103,35 @@ describe('Mentoring Policy', () => {
   it('verifies slot constants', () => {
     expect(SLOT_DURATION_MINUTES).toBe(45);
     expect(MAX_MENTORING_QUOTA).toBe(2);
+  });
+});
+
+describe('jadwal mentoring yang sudah lewat', () => {
+  const now = '2026-10-07T10:00:00.000Z';
+
+  it('menganggap slot yang sudah dimulai sebagai lewat', () => {
+    expect(isSlotPast('2026-10-07T09:00:00.000Z', now)).toBe(true);
+    expect(isSlotPast(now, now)).toBe(true);
+    expect(isSlotPast('2026-10-08T09:00:00.000Z', now)).toBe(false);
+  });
+
+  it('menolak booking slot yang sudah lewat meski kuota dan slotnya tersedia', () => {
+    const r = canBookMentoringSlot({ currentQuotaUsed: 0, isSlotAvailable: true, isAssignedMentor: true, isPast: true });
+    expect(r.canBook).toBe(false);
+    expect(r.reason).toMatch(/sudah lewat/);
+  });
+});
+
+describe('pembatalan booking oleh peserta', () => {
+  const base = { bookingStudentId: 'u1', actorId: 'u1', status: 'confirmed' as const, startsAt: '2026-10-08T09:00:00.000Z', nowIso: '2026-10-07T10:00:00.000Z' };
+
+  it('mengizinkan pemilik membatalkan sebelum sesi dimulai', () => {
+    expect(canStudentCancelBooking(base).canCancel).toBe(true);
+  });
+
+  it('menolak booking milik orang lain, yang sudah batal, atau yang sudah dimulai', () => {
+    expect(canStudentCancelBooking({ ...base, actorId: 'u2' }).canCancel).toBe(false);
+    expect(canStudentCancelBooking({ ...base, status: 'cancelled' }).canCancel).toBe(false);
+    expect(canStudentCancelBooking({ ...base, startsAt: '2026-10-07T09:00:00.000Z' }).canCancel).toBe(false);
   });
 });

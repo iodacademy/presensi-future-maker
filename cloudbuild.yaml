@@ -87,21 +87,20 @@ steps:
       # Rahasia sungguhan diambil dari Secret Manager saat runtime, bukan
       # dibekukan ke dalam image.
       #
-      # GOOGLE_CALENDAR_GAS_* belum disertakan: Secret Manager menolak payload
-      # kosong, dan Workspace bootcamp belum tersambung. Klien kalender memang
-      # dirancang berjalan tanpa keduanya -- mentoring tetap dapat dipesan,
-      # hanya tanpa tautan Meet otomatis. Tambahkan ke baris ini setelah kedua
-      # secret berisi nilai sungguhan.
+      # GOOGLE_CALENDAR_GAS_* menyambungkan booking mentoring ke Google
+      # Calendar dan Meet lewat jembatan Apps Script (scripts/apps-script).
+      # Kedua secret wajib sudah ada di Secret Manager sebelum push: --set-secrets
+      # menggantikan seluruh daftar secret, dan secret yang tidak ada membuat
+      # deploy gagal.
       #
       # Real secrets are read from Secret Manager at runtime, not baked into the
       # image.
       #
-      # GOOGLE_CALENDAR_GAS_* is not included yet: Secret Manager rejects an
-      # empty payload, and the bootcamp Workspace is not connected. The calendar
-      # client is designed to run without both -- mentoring stays bookable, just
-      # without an automatic Meet link. Add them to this line once both secrets
-      # hold real values.
-      - --set-secrets=QR_TOKEN_SECRET=qr-token-secret:latest
+      # GOOGLE_CALENDAR_GAS_* connects mentoring bookings to Google Calendar and
+      # Meet through the Apps Script bridge (scripts/apps-script). Both secrets
+      # must exist in Secret Manager before pushing: --set-secrets replaces the
+      # whole secret list, and a missing secret fails the deploy.
+      - --set-secrets=QR_TOKEN_SECRET=qr-token-secret:latest,GOOGLE_CALENDAR_GAS_URL=google-calendar-gas-url:latest,GOOGLE_CALENDAR_GAS_SECRET=google-calendar-gas-secret:latest
       # Nol instance saat sepi. Instance yang menyala 24 jam menghabiskan
       # ~2,6 juta vCPU-detik sebulan, jauh melampaui kuota gratis 180.000,
       # sedangkan pemakaian bootcamp yang sesungguhnya masuk kuota itu dengan

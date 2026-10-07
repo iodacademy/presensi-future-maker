@@ -107,7 +107,18 @@ export function canBookMentoringSlot(params: {
   currentQuotaUsed: number;
   isSlotAvailable: boolean;
   isAssignedMentor: boolean;
+  /** Slot sudah dimulai atau lewat / The slot has started or passed */
+  isPast?: boolean;
 }): { canBook: boolean; reason?: string } {
+  // Diperiksa lebih dulu: slot yang sudah lewat tidak dapat diikuti, apa pun
+  // kuota dan statusnya.
+  //
+  // Checked first: a slot that has passed cannot be attended, whatever the
+  // quota and status.
+  if (params.isPast) {
+    return { canBook: false, reason: 'Jadwal mentoring ini sudah lewat. Silakan pilih slot lain.' };
+  }
+
   if (params.currentQuotaUsed >= MAX_MENTORING_QUOTA) {
     return {
       canBook: false,
@@ -130,4 +141,51 @@ export function canBookMentoringSlot(params: {
   }
 
   return { canBook: true };
+}
+
+/**
+ * Menentukan apakah sebuah slot sudah dimulai atau lewat.
+ *
+ * Diukur dari jam mulainya, bukan jam selesai: sesi yang sedang berjalan
+ * pun sudah terlambat untuk dipesan atau dibatalkan.
+ *
+ * Determines whether a slot has started or passed.
+ *
+ * Measured from its start time, not its end: a session already running is too
+ * late to book or cancel.
+ */
+export function isSlotPast(startsAt: string, nowIso: string): boolean {
+  return startsAt <= nowIso;
+}
+
+/**
+ * Menentukan apakah peserta boleh membatalkan bookingnya sendiri.
+ *
+ * Hanya pemilik booking, hanya booking yang masih aktif, dan hanya sebelum
+ * sesinya dimulai: membatalkan sesi yang sudah berjalan akan mengembalikan
+ * kuota untuk sesi yang sudah dipakai mentor.
+ *
+ * Determines whether a participant may cancel their own booking.
+ *
+ * Only the booking's owner, only an active booking, and only before the
+ * session starts: cancelling a session already running would return quota for
+ * time the mentor already spent.
+ */
+export function canStudentCancelBooking(params: {
+  bookingStudentId: string;
+  actorId: string;
+  status: 'confirmed' | 'cancelled';
+  startsAt: string;
+  nowIso: string;
+}): { canCancel: boolean; reason?: string } {
+  if (params.bookingStudentId !== params.actorId) {
+    return { canCancel: false, reason: 'Anda hanya dapat membatalkan booking milik sendiri.' };
+  }
+  if (params.status === 'cancelled') {
+    return { canCancel: false, reason: 'Booking ini sudah dibatalkan.' };
+  }
+  if (isSlotPast(params.startsAt, params.nowIso)) {
+    return { canCancel: false, reason: 'Sesi sudah dimulai atau lewat sehingga tidak dapat dibatalkan.' };
+  }
+  return { canCancel: true };
 }

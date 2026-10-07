@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Video, Users } from 'lucide-react';
+import { Video, CalendarX2, CheckCircle2 } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import { Button } from '@/components/ui/button';
 import type { MentoringStudentView, MentoringSlotDocument } from '@/features/mentoring/types';
 import type { Phase } from '@/features/assignments/types';
+import { isSlotPast } from '@/features/mentoring/policy';
+import { formatLongDateWib } from '@/lib/time';
 
 export default function StudentMentoringPage() {
   const [phase, setPhase] = useState<Phase>('bootcamp');
@@ -17,6 +19,8 @@ export default function StudentMentoringPage() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [cancelSlot, setCancelSlot] = useState<MentoringSlotDocument | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   async function loadMentoringView() {
     try {
@@ -69,6 +73,28 @@ export default function StudentMentoringPage() {
     }
   }
 
+  async function performCancel(slot: MentoringSlotDocument) {
+    if (!slot.bookingId) return;
+    setCancelLoading(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      const res = await fetch(`/api/mentoring/bookings/${slot.bookingId}/cancel`, { method: 'POST' });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error || 'Gagal membatalkan jadwal');
+      setCancelSlot(null);
+      setActionSuccess('Jadwal mentoring dibatalkan. Kuota dikembalikan dan undangan di Google Calendar ikut dihapus.');
+      loadMentoringView();
+    } catch (err: any) {
+      setCancelSlot(null);
+      setActionError(err.message);
+    } finally {
+      setCancelLoading(false);
+    }
+  }
+
+  const nowIso = new Date().toISOString();
+  const pastMine = (data?.slots ?? []).filter((sl) => sl.isMyBooking && isSlotPast(sl.startsAt, nowIso));
   const assignedMentor = data?.assignedMentor;
   const quotaUsed = data?.quotaUsed || 0;
   const maxQuota = data?.maxQuota || 2;
@@ -119,7 +145,9 @@ export default function StudentMentoringPage() {
       <div className="student-topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--color-student-border)', padding: '18px 28px', paddingRight: '200px', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: 'var(--color-text-main)' }}>Sesi Mentoring 1-on-1</h1>
-          <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>Pilih slot waktu yang tersedia untuk sesi privat dengan mentormu</p>
+          <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+            {assignedMentor ? <>Mentor kamu: <b style={{ color: 'var(--color-text-main)' }}>{assignedMentor.name}</b> · pilih slot waktu yang tersedia</> : 'Pilih slot waktu yang tersedia untuk sesi privat dengan mentormu'}
+          </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <div style={{ padding: '7px 14px', borderRadius: '20px', backgroundColor: '#fff8e5', border: '1px solid var(--color-highlight-yellow)', color: 'var(--color-highlight-yellow-text)', fontSize: '11px', fontWeight: 700 }}>
@@ -163,41 +191,49 @@ export default function StudentMentoringPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {data?.slots.map((slot) => {
                     const isBookedByMe = slot.isMyBooking;
-                    const isAvailable = slot.status === 'available';
+                    // Slot yang sudah dimulai tidak dapat dipilih maupun dibatalkan.
+                    // A slot that has started can be neither picked nor cancelled.
+                    const isPast = isSlotPast(slot.startsAt, nowIso);
+                    const isAvailable = slot.status === 'available' && !isPast;
 
                     return (
                       <div
                         key={slot.id}
                         style={{
-                          backgroundColor: isBookedByMe ? 'var(--color-success-light)' : '#ffffff',
-                          border: isBookedByMe ? '1px solid var(--color-success)' : isAvailable ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                          borderRadius: '12px', padding: '16px',
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          backgroundColor: isPast ? '#f4f4f5' : isBookedByMe ? 'var(--color-success-light)' : '#ffffff',
+                          border: isPast ? '1px solid var(--color-student-border)' : isBookedByMe ? '1px solid var(--color-success)' : isAvailable ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                          borderRadius: '12px', padding: '16px', opacity: isPast ? 0.75 : 1,
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
                         }}
                       >
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
-                            <strong style={{ fontSize: '12px', color: 'var(--color-text-main)' }}>{slot.date} - {slot.startTime}</strong>
+                            <strong style={{ fontSize: '12px', color: isPast ? 'var(--color-text-muted)' : 'var(--color-text-main)' }}>{formatLongDateWib(slot.date)}</strong>
                             <span style={{
                               fontSize: '8px', fontWeight: 700, padding: '3px 8px', borderRadius: '10px',
-                              backgroundColor: isBookedByMe ? 'var(--color-success)' : isAvailable ? 'var(--color-highlight-yellow)' : 'var(--color-text-faint)',
-                              color: isBookedByMe ? '#ffffff' : isAvailable ? 'var(--color-highlight-yellow-text)' : '#ffffff',
+                              backgroundColor: isPast ? '#a1a1aa' : isBookedByMe ? 'var(--color-success)' : isAvailable ? 'var(--color-highlight-yellow)' : 'var(--color-text-faint)',
+                              color: isPast ? '#ffffff' : isBookedByMe ? '#ffffff' : isAvailable ? 'var(--color-highlight-yellow-text)' : '#ffffff',
                             }}>
-                              {isBookedByMe ? 'BOOKING SAYA' : isAvailable ? 'TERSEDIA' : 'PENUH'}
+                              {isPast ? (isBookedByMe ? 'SELESAI' : 'SUDAH LEWAT') : isBookedByMe ? 'BOOKING SAYA' : isAvailable ? 'TERSEDIA' : 'PENUH'}
                             </span>
                           </div>
                           <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-                            {slot.startTime} - {slot.endTime} WIB - Google Meet - Privat 1-on-1 (45 menit)
+                            {slot.startTime} - {slot.endTime} WIB · Mentor {slot.mentorName} · Google Meet · Privat 1-on-1 (45 menit)
                           </div>
                         </div>
 
-                        {isBookedByMe ? (
-                          // Tanpa tautan, tombol tidak boleh terlihat dapat diklik: pengguna
-                          // yang menekan href="#" mengira Meet gagal dibuka.
-                          //
-                          // With no link the button must not look clickable: a user pressing
-                          // href="#" would think Meet failed to open.
-                          slot.meetUrl ? (
+                        {isPast ? (
+                          <Button variant="secondary" disabled style={{ fontSize: '11px', opacity: 0.6, padding: '8px 14px' }}>
+                            {isBookedByMe ? 'Sesi selesai' : 'Sudah lewat'}
+                          </Button>
+                        ) : isBookedByMe ? (
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {/* Tanpa tautan, tombol tidak boleh terlihat dapat diklik: pengguna
+                              yang menekan href="#" mengira Meet gagal dibuka.
+
+                              With no link the button must not look clickable: a user pressing
+                              href="#" would think Meet failed to open. */}
+                          {slot.meetUrl ? (
                             <a href={slot.meetUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
                               <Button variant="secondary" style={{ border: '1px solid var(--color-success)', color: 'var(--color-success)', fontSize: '11px', padding: '8px 14px' }}>
                                 <Video size={13} strokeWidth={2} /> Masuk Meet
@@ -207,7 +243,16 @@ export default function StudentMentoringPage() {
                             <Button variant="secondary" disabled style={{ fontSize: '11px', opacity: 0.6, padding: '8px 14px' }}>
                               Link menyusul
                             </Button>
-                          )
+                          )}
+                            <Button
+                              variant="secondary"
+                              onClick={() => setCancelSlot(slot)}
+                              disabled={cancelLoading}
+                              style={{ fontSize: '11px', padding: '8px 14px', color: 'var(--color-danger)', border: '1px solid var(--color-danger)' }}
+                            >
+                              <CalendarX2 size={13} strokeWidth={2} /> Batalkan
+                            </Button>
+                          </div>
                         ) : isAvailable ? (
                           <Button variant="primary" disabled={bookingLoading || remainingQuota <= 0} onClick={() => performBooking(slot.id, false)} style={{ fontSize: '11px', padding: '8px 14px' }}>
                             {bookingLoading && bookingSlotId === slot.id ? 'Membooking...' : 'Pilih Slot Ini'}
@@ -224,7 +269,9 @@ export default function StudentMentoringPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {/* Info Kuota mobile (node 11:3028) -- versi ringkas untuk mobile */}
-              <div className="student-mobile-only" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff8e5', border: '1px solid var(--color-highlight-yellow)', borderRadius: '10px', padding: '10px' }}>
+              {/* Tanpa display inline: gaya inline mengalahkan class yang menyembunyikannya di desktop.
+                  No inline display: an inline style beats the class that hides it on desktop. */}
+              <div className="student-mobile-only" style={{ textAlign: 'center', backgroundColor: '#fff8e5', border: '1px solid var(--color-highlight-yellow)', borderRadius: '10px', padding: '10px' }}>
                 <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-highlight-yellow-text)' }}>Sisa kuota: {remainingQuota} / {maxQuota} - Ideal minggu 2</span>
               </div>
 
@@ -235,18 +282,53 @@ export default function StudentMentoringPage() {
                   <li>Kuota maksimal: 2 kali per peserta selama fase {phase === 'bootcamp' ? 'Bootcamp' : 'Magang'}.</li>
                   <li>Idealnya ambil 1 sesi di minggu pertama, 1 sesi di minggu kedua.</li>
                   <li>Link Google Meet otomatis dikirim ke Google Calendar kamu.</li>
+                  <li>Pengingat dikirim ke email kamu 1 jam dan 10 menit sebelum sesi dimulai.</li>
                 </ul>
               </div>
 
               {/* Riwayat Sesi Selesai (node 15:309) */}
               <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--color-border)', borderRadius: '14px', padding: '18px' }}>
                 <h3 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '8px' }}>Riwayat Sesi Selesai</h3>
-                <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', margin: 0 }}>Belum ada sesi yang selesai.</p>
+                {pastMine.length === 0 ? (
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', margin: 0 }}>Belum ada sesi yang selesai.</p>
+                ) : (
+                  <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {pastMine.map((sl) => (
+                      <li key={sl.id} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '11px' }}>
+                        <CheckCircle2 size={14} color="var(--color-success)" style={{ flexShrink: 0, marginTop: '1px' }} />
+                        <span>
+                          <b style={{ color: 'var(--color-text-main)' }}>{formatLongDateWib(sl.date)}</b>
+                          <span style={{ display: 'block', color: 'var(--color-text-muted)' }}>{sl.startTime}-{sl.endTime} WIB · Mentor {sl.mentorName}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {cancelSlot && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, padding: '16px' }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="cancel-title" style={{ backgroundColor: '#ffffff', borderRadius: '12px', width: '100%', maxWidth: '420px', padding: '22px' }}>
+            <h3 id="cancel-title" style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '8px' }}>Batalkan jadwal mentoring?</h3>
+            <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', lineHeight: 1.5, marginBottom: '6px' }}>
+              {formatLongDateWib(cancelSlot.date)}, {cancelSlot.startTime}-{cancelSlot.endTime} WIB bersama Mentor {cancelSlot.mentorName}.
+            </p>
+            <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', lineHeight: 1.5, marginBottom: '18px' }}>
+              Slot akan dibuka kembali untuk peserta lain, kuota kamu dikembalikan, dan undangan di Google Calendar ikut dihapus.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+              <Button variant="secondary" onClick={() => setCancelSlot(null)} disabled={cancelLoading}>Tidak jadi</Button>
+              <Button variant="danger" onClick={() => performCancel(cancelSlot)} disabled={cancelLoading}>
+                {cancelLoading ? 'Membatalkan...' : 'Ya, Batalkan'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmEarlySlot && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, padding: '16px' }}>

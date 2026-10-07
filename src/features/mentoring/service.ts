@@ -17,6 +17,8 @@ import {
   canBookMentoringSlot,
   isSecondSessionEarlyWeek,
   MAX_MENTORING_QUOTA,
+  isSlotPast,
+  canStudentCancelBooking,
 } from './policy';
 import { getStudentAssignment } from '../assignments/service';
 import {
@@ -210,6 +212,7 @@ export async function bookMentoringSlot(
     currentQuotaUsed,
     isSlotAvailable: slotData.status === 'available',
     isAssignedMentor,
+    isPast: isSlotPast(slotData.startsAt, new Date().toISOString()),
   });
 
   if (!eligibility.canBook) {
@@ -353,31 +356,74 @@ export async function cancelBookingByAdmin(actor: Actor, bookingId: string): Pro
   if (actor.role !== 'admin') {
     throw new Error('Hanya admin yang diizinkan membatalkan sesi mentoring');
   }
+  await releaseBooking(bookingId, () => null);
+}
 
+/**
+ * Peserta membatalkan bookingnya sendiri sebelum sesi dimulai. Slot kembali
+ * tersedia, kuotanya dikembalikan, dan event Google Calendar-nya dihapus --
+ * sama seperti pembatalan oleh admin.
+ *
+ * A participant cancels their own booking before the session starts. The slot
+ * becomes available again, the quota is returned, and its Google Calendar
+ * event is removed -- the same as an admin cancellation.
+ */
+export async function cancelBookingByStudent(actor: Actor, bookingId: string): Promise<void> {
+  if (actor.role !== 'student') {
+    throw new Error('Hanya peserta yang dapat membatalkan booking miliknya');
+  }
+  await releaseBooking(bookingId, (booking) => {
+    const check = canStudentCancelBooking({
+      bookingStudentId: booking.studentId,
+      actorId: actor.uid,
+      status: booking.status,
+      startsAt: booking.startsAt,
+      nowIso: new Date().toISOString(),
+    });
+    return check.canCancel ? null : check.reason ?? 'Booking tidak dapat dibatalkan';
+  });
+}
+
+/**
+ * Melepaskan satu booking: booking ditandai batal, slot kembali kosong, kuota
+ * dikembalikan, lalu event kalendernya dihapus.
+ *
+ * `reject` diperiksa di dalam transaksi terhadap data terbaru, sehingga dua
+ * pembatalan yang hampir bersamaan tidak mengembalikan kuota dua kali.
+ *
+ * Releases one booking: the booking is marked cancelled, the slot returns to
+ * empty, the quota is returned, then its calendar event is removed.
+ *
+ * `reject` is checked inside the transaction against the latest data, so two
+ * near-simultaneous cancellations never return the quota twice.
+ */
+async function releaseBooking(
+  bookingId: string,
+  reject: (booking: MentoringBookingDocument) => string | null
+): Promise<void> {
   const db = getAdminDb();
   const bookingRef = db.collection('bookings').doc(bookingId);
-  const bookingDoc = await bookingRef.get();
-
-  if (!bookingDoc.exists) {
-    throw new Error('Booking tidak ditemukan');
-  }
-
-  const booking = bookingDoc.data() as MentoringBookingDocument;
-  if (booking.status === 'cancelled') {
-    return; // Sudah dibatalkan sebelumnya / Already cancelled
-  }
-
   const now = new Date().toISOString();
-  const slotRef = db.collection('mentoringSlots').doc(booking.slotId);
-  const quotaRef = db.collection('mentoringQuotas').doc(`${booking.studentId}_${booking.phase}`);
 
-  await db.runTransaction(async (transaction) => {
+  const released = await db.runTransaction(async (transaction) => {
+    const bookingSnap = await transaction.get(bookingRef);
+    if (!bookingSnap.exists) {
+      throw new Error('Booking tidak ditemukan');
+    }
+    const booking = bookingSnap.data() as MentoringBookingDocument;
+    const reason = reject(booking);
+    if (reason) throw new Error(reason);
+    if (booking.status === 'cancelled') {
+      return null; // Sudah dibatalkan sebelumnya / Already cancelled
+    }
+
+    const slotRef = db.collection('mentoringSlots').doc(booking.slotId);
+    const quotaRef = db.collection('mentoringQuotas').doc(`${booking.studentId}_${booking.phase}`);
     // Kuota dibaca lebih dulu: Firestore membatalkan transaksi bila ada
-    // pembacaan setelah penulisan pertama, dan sebelumnya pembacaan ini berada
-    // di bawah ketiga update.
+    // pembacaan setelah penulisan pertama.
     //
     // The quota is read first: Firestore aborts a transaction on any read after
-    // the first write, and this read previously sat below all three updates.
+    // the first write.
     const quotaSnap = await transaction.get(quotaRef);
 
     transaction.update(bookingRef, {
@@ -407,6 +453,7 @@ export async function cancelBookingByAdmin(actor: Actor, bookingId: string): Pro
       count: Math.max(0, current - 1),
       updatedAt: now,
     });
+    return booking;
   });
 
   // Pembatalan di Google dilakukan sesudah transaksi agar percobaan ulang
@@ -416,13 +463,13 @@ export async function cancelBookingByAdmin(actor: Actor, bookingId: string): Pro
   // The Google-side cancellation runs after the transaction so that transaction
   // retries do not call Google repeatedly. A failure here leaves an orphan
   // event on the calendar rather than a half-cancelled booking.
-  if (booking.calendarEventId && isCalendarConfigured()) {
+  if (released?.calendarEventId && isCalendarConfigured()) {
     try {
-      await cancelCalendarEvent(booking.calendarEventId);
+      await cancelCalendarEvent(released.calendarEventId);
     } catch (error) {
       console.error('[mentoring] gagal membatalkan event kalender', {
         bookingId,
-        calendarEventId: booking.calendarEventId,
+        calendarEventId: released.calendarEventId,
         error,
       });
     }
