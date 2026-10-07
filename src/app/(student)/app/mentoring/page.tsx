@@ -192,7 +192,7 @@ export default function StudentMentoringPage() {
               <h2 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '10px' }}>Daftar Slot Mentoring</h2>
               {data?.slots.length === 0 ? (
                 <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px dashed var(--color-border)', padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '12px' }}>
-                  Mentor belum membuka slot jadwal untuk fase ini.
+                  Belum ada slot yang bisa dipilih untuk fase ini. Slot baru akan muncul di sini begitu mentor membukanya.
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

@@ -157,7 +157,18 @@ export async function getMentoringViewForStudent(
   const mentorData = mentorDoc.data() as UserDocument;
 
   const rawSlots = slotsSnap.docs.map((d) => d.data() as MentoringSlotDocument);
+  const nowIso = new Date().toISOString();
+  // Peserta hanya menerima slot yang masih dapat dipilih dan booking miliknya
+  // sendiri. Slot yang dibooking peserta lain memuat nama dan tautan Meet
+  // orang itu; menyembunyikannya di tampilan saja tetap membiarkannya
+  // terbaca dari peramban.
+  //
+  // A participant receives only slots still open to pick and their own
+  // bookings. A slot booked by someone else carries that person's name and
+  // Meet link; hiding it in the view alone would leave it readable in the
+  // browser.
   const slots = rawSlots
+    .filter((s) => s.studentId === actor.uid || (s.status === 'available' && !isSlotPast(s.startsAt, nowIso)))
     .map((s) => ({
       ...s,
       isMyBooking: s.studentId === actor.uid,

@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { MapPin, QrCode } from 'lucide-react';
+import { MapPin, QrCode, Video, CalendarDays, Clock, Users, ChevronRight } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import { HomePerformance } from './home-performance';
+import { formatLongDateWib } from '@/lib/time';
 import type { StudentHomeData } from '@/features/dashboard/types';
 
 export default function StudentHomePage() {
@@ -29,6 +30,7 @@ export default function StudentHomePage() {
   const activeSession = data?.activeSession;
   const nextSession = data?.nextSession;
   const progress = data?.progress;
+  const mentoring = data?.nearestMentoring;
   const studentName = data?.studentName || 'Peserta';
   const className = data?.className || '-';
 
@@ -101,6 +103,47 @@ export default function StudentHomePage() {
                   <p style={{ fontSize: '10px', color: 'var(--color-text-faint)', marginTop: '4px' }}>
                     {nextSession ? `${nextSession.timeStr} - Presensi otomatis terbuka saat sesi mulai.` : 'Instruktur akan menambahkan jadwal pertemuan kelas Anda.'}
                   </p>
+                </div>
+              )}
+
+              {/* Mentoring terdekat yang sudah dibooking: tanggalnya ditonjolkan dan
+                  tautan Meet dapat langsung dibuka, tanpa membuka menu Mentoring.
+
+                  The nearest booked mentoring: its date stands out and the Meet
+                  link opens directly, without going to the Mentoring menu. */}
+              {mentoring && (
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', border: '1px solid var(--color-border)', borderLeft: '4px solid #0e9f6e', padding: '16px 18px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '14px' }}>
+                  <span style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#def7ec', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Users size={22} color="#0e9f6e" strokeWidth={2} />
+                  </span>
+                  <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#0e9f6e', letterSpacing: '0.04em' }}>MENTORING TERJADWAL</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-heading)', fontSize: '17px', fontWeight: 700, color: 'var(--color-text-main)', marginTop: '2px' }}>
+                      <CalendarDays size={17} color="var(--color-primary)" /> {formatLongDateWib(mentoring.date)}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                      <Clock size={13} color="var(--color-primary)" /> {mentoring.timeStr} · bersama Mentor {mentoring.mentorName}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {mentoring.meetUrl ? (
+                      <a
+                        href={mentoring.meetUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', backgroundColor: '#0e9f6e', color: '#ffffff', fontSize: '12px', fontWeight: 700, textDecoration: 'none' }}
+                      >
+                        <Video size={15} /> Buka Google Meet
+                      </a>
+                    ) : (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', backgroundColor: 'var(--color-bg-student)', color: 'var(--color-text-muted)', fontSize: '12px', fontWeight: 600 }}>
+                        Link Meet menyusul
+                      </span>
+                    )}
+                    <Link href="/app/mentoring" style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--color-border)', color: 'var(--color-text-main)', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
+                      Detail <ChevronRight size={14} />
+                    </Link>
+                  </div>
                 </div>
               )}
 
