@@ -327,19 +327,34 @@ async function attachCalendarEvent(
       mentorEmail,
     });
 
-    const updatedAt = new Date().toISOString();
-    await Promise.all([
-      db.collection('bookings').doc(bookingId).update({
-        meetUrl: result.meetUrl,
-        calendarEventId: result.eventId,
-      }),
-      db.collection('mentoringSlots').doc(slot.id).update({
-        meetUrl: result.meetUrl,
-        calendarEventId: result.eventId,
-        updatedAt,
-      }),
-    ]);
+    // Ditulis hanya bila booking masih aktif dan slot masih miliknya. Membuat
+    // event dapat memakan hingga 20 detik; bila dalam jeda itu booking dibatalkan
+    // dan slotnya diambil peserta lain, menulis tanpa memeriksa akan memasang
+    // tautan Meet peserta pertama pada slot peserta kedua, dan undangan pertama
+    // tertinggal tanpa pernah dibatalkan.
+    //
+    // Written only while the booking is still active and the slot still belongs
+    // to it. Creating the event can take up to 20 seconds; if the booking is
+    // cancelled and the slot taken by someone else in that gap, writing without
+    // checking would put the first participant's Meet link on the second
+    // participant's slot, and the first invitation would linger, never cancelled.
+    const bookingRef = db.collection('bookings').doc(bookingId);
+    const slotRef = db.collection('mentoringSlots').doc(slot.id);
+    const stillMine = await db.runTransaction(async (tx) => {
+      const [bookingSnap, slotSnap] = await Promise.all([tx.get(bookingRef), tx.get(slotRef)]);
+      const booking = bookingSnap.data() as MentoringBookingDocument | undefined;
+      const current = slotSnap.data() as MentoringSlotDocument | undefined;
+      if (booking?.status !== 'confirmed' || current?.bookingId !== bookingId) return false;
 
+      tx.update(bookingRef, { meetUrl: result.meetUrl, calendarEventId: result.eventId });
+      tx.update(slotRef, { meetUrl: result.meetUrl, calendarEventId: result.eventId, updatedAt: new Date().toISOString() });
+      return true;
+    });
+
+    if (!stillMine) {
+      await cancelCalendarEvent(result.eventId);
+      return null;
+    }
     return result.meetUrl;
   } catch (error) {
     console.error('[mentoring] gagal membuat event kalender', { bookingId, error });
