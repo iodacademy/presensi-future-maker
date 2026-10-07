@@ -169,3 +169,9 @@ h1, h2, h3, h4, h5, h6 {
   .student-topbar { display: flex; }
   .student-content-grid { display: grid; align-items: start; }
 }
+
+/* Ikon pemuatan berputar; dihentikan bila pengguna meminta gerak dikurangi.
+   Spinning loading icon; stopped when the user asks for reduced motion. */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }

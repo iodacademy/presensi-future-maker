@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Video, CalendarX2, CheckCircle2 } from 'lucide-react';
+import { Video, CalendarX2, CheckCircle2, CalendarDays, Clock, Loader2 } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import { Button } from '@/components/ui/button';
 import type { MentoringStudentView, MentoringSlotDocument } from '@/features/mentoring/types';
@@ -20,6 +20,9 @@ export default function StudentMentoringPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [cancelSlot, setCancelSlot] = useState<MentoringSlotDocument | null>(null);
+  // Modal selama Apps Script membuat undangan dan Meet (hingga ~20 detik), lalu hasilnya.
+  // A modal while Apps Script creates the invitation and Meet (up to ~20 seconds), then its result.
+  const [scheduling, setScheduling] = useState<{ slot: MentoringSlotDocument; done: boolean; meetUrl: string | null } | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
 
   async function loadMentoringView() {
@@ -43,6 +46,8 @@ export default function StudentMentoringPage() {
     setBookingLoading(true);
     setActionError(null);
     setActionSuccess(null);
+    const target = data?.slots.find((s) => s.id === slotId);
+    if (target) setScheduling({ slot: target, done: false, meetUrl: null });
 
     try {
       const res = await fetch('/api/mentoring/student', {
@@ -54,6 +59,7 @@ export default function StudentMentoringPage() {
       const resData = await res.json();
       if (!res.ok) {
         if (resData.error && resData.error.startsWith('KONFIRMASI_MINGGU_PERTAMA:')) {
+          setScheduling(null);
           const slot = data?.slots.find((s) => s.id === slotId) || null;
           setConfirmEarlySlot(slot);
           setBookingSlotId(slotId);
@@ -64,9 +70,10 @@ export default function StudentMentoringPage() {
 
       setConfirmEarlySlot(null);
       setBookingSlotId(null);
-      setActionSuccess('Slot berhasil dibooking! Tautan Google Meet telah disiapkan.');
+      setScheduling((cur) => (cur ? { ...cur, done: true, meetUrl: resData.meetUrl ?? null } : null));
       loadMentoringView();
     } catch (err: any) {
+      setScheduling(null);
       setActionError(err.message);
     } finally {
       setBookingLoading(false);
@@ -206,19 +213,28 @@ export default function StudentMentoringPage() {
                           display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
                         }}
                       >
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
-                            <strong style={{ fontSize: '12px', color: isPast ? 'var(--color-text-muted)' : 'var(--color-text-main)' }}>{formatLongDateWib(slot.date)}</strong>
-                            <span style={{
-                              fontSize: '8px', fontWeight: 700, padding: '3px 8px', borderRadius: '10px',
-                              backgroundColor: isPast ? '#a1a1aa' : isBookedByMe ? 'var(--color-success)' : isAvailable ? 'var(--color-highlight-yellow)' : 'var(--color-text-faint)',
-                              color: isPast ? '#ffffff' : isBookedByMe ? '#ffffff' : isAvailable ? 'var(--color-highlight-yellow-text)' : '#ffffff',
-                            }}>
-                              {isPast ? (isBookedByMe ? 'SELESAI' : 'SUDAH LEWAT') : isBookedByMe ? 'BOOKING SAYA' : isAvailable ? 'TERSEDIA' : 'PENUH'}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-                            {slot.startTime} - {slot.endTime} WIB · Mentor {slot.mentorName} · Google Meet · Privat 1-on-1 (45 menit)
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', minWidth: 0, flex: '1 1 260px' }}>
+                          <span style={{ width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: 700, color: '#ffffff', backgroundColor: isPast ? '#a1a1aa' : 'var(--color-primary)' }}>
+                            {slot.mentorName.charAt(0).toUpperCase()}
+                          </span>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Mentor</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <strong style={{ fontSize: '14px', color: isPast ? 'var(--color-text-muted)' : 'var(--color-text-main)' }}>{slot.mentorName}</strong>
+                              <span style={{
+                                fontSize: '8px', fontWeight: 700, padding: '3px 8px', borderRadius: '10px',
+                                backgroundColor: isPast ? '#a1a1aa' : isBookedByMe ? 'var(--color-success)' : isAvailable ? 'var(--color-highlight-yellow)' : 'var(--color-text-faint)',
+                                color: isPast ? '#ffffff' : isBookedByMe ? '#ffffff' : isAvailable ? 'var(--color-highlight-yellow-text)' : '#ffffff',
+                              }}>
+                                {isPast ? (isBookedByMe ? 'SELESAI' : 'SUDAH LEWAT') : isBookedByMe ? 'BOOKING SAYA' : isAvailable ? 'TERSEDIA' : 'PENUH'}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 600, color: isPast ? 'var(--color-text-muted)' : 'var(--color-text-main)', marginTop: '6px' }}>
+                              <CalendarDays size={13} color="var(--color-primary)" /> {formatLongDateWib(slot.date)}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                              <Clock size={13} color="var(--color-primary)" /> {slot.startTime} - {slot.endTime} WIB · Google Meet · 45 menit
+                            </div>
                           </div>
                         </div>
 
@@ -309,6 +325,47 @@ export default function StudentMentoringPage() {
           </div>
         )}
       </div>
+
+      {scheduling && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 70, padding: '16px' }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="scheduling-title" aria-busy={!scheduling.done} style={{ backgroundColor: '#ffffff', borderRadius: '14px', width: '100%', maxWidth: '400px', padding: '26px 22px', textAlign: 'center' }}>
+            {!scheduling.done ? (
+              <>
+                <Loader2 size={40} color="var(--color-primary)" className="spin" style={{ margin: '0 auto 14px', display: 'block' }} />
+                <h3 id="scheduling-title" style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '6px' }}>Sedang menjadwalkan...</h3>
+                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', lineHeight: 1.5, margin: 0 }}>
+                  Membuat undangan Google Calendar dan link Google Meet bersama Mentor {scheduling.slot.mentorName}. Mohon tunggu dan jangan tutup halaman ini.
+                </p>
+                <p role="status" style={{ fontSize: '11px', color: 'var(--color-text-faint)', marginTop: '12px' }}>Biasanya selesai dalam 5-20 detik</p>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={44} color="var(--color-success)" style={{ margin: '0 auto 12px', display: 'block' }} />
+                <h3 id="scheduling-title" style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '6px' }}>Jadwal berhasil dibuat</h3>
+                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', lineHeight: 1.5, margin: '0 0 4px' }}>
+                  Mentor {scheduling.slot.mentorName}<br />
+                  {formatLongDateWib(scheduling.slot.date)}, {scheduling.slot.startTime}-{scheduling.slot.endTime} WIB
+                </p>
+                <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', lineHeight: 1.5, margin: '8px 0 16px' }}>
+                  {scheduling.meetUrl
+                    ? 'Undangan Google Calendar sudah dikirim ke email kamu dan mentor. Pengingat menyusul 1 jam dan 10 menit sebelum sesi.'
+                    : 'Slot sudah menjadi milikmu. Undangan dan link Meet sedang disiapkan dan akan menyusul.'}
+                </p>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  {scheduling.meetUrl && (
+                    <a href={scheduling.meetUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                      <Button variant="secondary" style={{ border: '1px solid var(--color-success)', color: 'var(--color-success)' }}>
+                        <Video size={14} strokeWidth={2} /> Buka link Meet
+                      </Button>
+                    </a>
+                  )}
+                  <Button variant="primary" onClick={() => setScheduling(null)}>Tutup</Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {cancelSlot && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, padding: '16px' }}>
