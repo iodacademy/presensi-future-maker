@@ -78,4 +78,27 @@ export interface StudentHomeData {
     deadlineLabel: string;
   }[];
   progress: StudentHomeProgress;
+  performance: StudentPerformance;
+}
+
+/**
+ * Laporan performa peserta untuk grafik beranda. Disusun dari data yang sudah
+ * dibaca beranda, sehingga tidak menambah baca Firestore.
+ *
+ * The participant's performance report for the home charts. Built from data the
+ * home already reads, so it adds no Firestore reads.
+ */
+export interface StudentPerformance {
+  /** Satu baris per pertemuan, urut waktu / One row per meeting, in time order */
+  attendance: { sessionId: string; title: string; startsAt: string; status: 'hadir' | 'izin' | 'sakit' | 'alpa' | 'mendatang' }[];
+  /** Satu baris per kuis terbit, urut waktu pertemuannya / One row per published quiz, in meeting order */
+  quizzes: { id: string; title: string; kind: ExamKind; bestScore: number | null; passingScore: number; passed: boolean; attempts: number }[];
+  /** Satu baris per tugas terbit / One row per published task */
+  tasks: { id: string; title: string; kind: TaskKind; dueAt: string | null; status: 'dinilai' | 'menunggu' | 'belum' | 'lewat'; score: number | null; late: boolean }[];
+}
+
+/** Survei dan kuis yang belum dikerjakan peserta / Surveys and quizzes a participant has not done yet */
+export interface StudentReminders {
+  surveys: { formId: string; formTitle: string; sessionId: string; sessionTitle: string }[];
+  exams: { id: string; title: string; dueAt: string | null; sessionTitle: string | null }[];
 }

@@ -100,8 +100,8 @@ export default function StudentProgramPage() {
   };
 
   return (
-    <StudentShell userName="Peserta">
-      <div className="student-mobile-header" style={{ backgroundColor: 'var(--color-primary)', padding: '24px 16px 18px', paddingRight: '120px' }}>
+    <StudentShell>
+      <div className="student-mobile-header" style={{ backgroundColor: 'var(--color-primary)', padding: '24px 16px 18px', paddingRight: '110px' }}>
         <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: '#ffffff', margin: 0 }}>
           Overview Program
         </h1>
@@ -118,7 +118,7 @@ export default function StudentProgramPage() {
           padding: '18px 28px',
           // Ruang bagi menu akun yang mengambang di sudut kanan atas shell.
           // Room for the account menu floating at the shell's top-right.
-          paddingRight: '150px',
+          paddingRight: '200px',
           justifyContent: 'space-between',
           alignItems: 'center',
         }}

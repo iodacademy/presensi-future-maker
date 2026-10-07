@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { formatTimeWib, formatDateWib, formatDateTimeWib } from '../../src/lib/time';
+import { formatTimeWib, formatDateWib, formatDateTimeWib, formatLongDateTimeWib, formatLongDateWib } from '../../src/lib/time';
 
 /**
  * Seluruh stempel waktu disimpan sebagai ISO UTC sedangkan program berjalan di
@@ -98,5 +98,41 @@ describe('penyajian stempel waktu di antarmuka', () => {
     // the timezone conversion entirely.
     const source = readFileSync(resolve(process.cwd(), file), 'utf-8');
     expect(source).not.toMatch(/(recordedAt|submittedAt|gradedAt|createdAt)\??\.slice\(/);
+  });
+});
+
+describe('formatLongDateTimeWib', () => {
+  it('menulis hari, tanggal, bulan, tahun, dan jam WIB', () => {
+    // 16.59 UTC adalah 23.59 WIB pada hari yang sama.
+    // 16:59 UTC is 23:59 WIB on the same day.
+    expect(formatLongDateTimeWib('2026-10-09T16:59:00.000Z')).toBe('Jumat, 9 Oktober 2026, 23.59 WIB');
+  });
+
+  it('memakai tanggal WIB, bukan UTC', () => {
+    // 20.00 UTC tanggal 9 sudah tanggal 10 pukul 03.00 WIB.
+    // 20:00 UTC on the 9th is already 03:00 WIB on the 10th.
+    expect(formatLongDateTimeWib('2026-10-09T20:00:00.000Z')).toBe('Sabtu, 10 Oktober 2026, 03.00 WIB');
+  });
+
+  it('mengembalikan tanda strip untuk nilai kosong atau rusak', () => {
+    expect(formatLongDateTimeWib(null)).toBe('-');
+    expect(formatLongDateTimeWib('bukan tanggal')).toBe('-');
+  });
+});
+
+describe('formatLongDateWib', () => {
+  it('menulis hari dan tanggal lengkap dari tanggal kalender WIB', () => {
+    expect(formatLongDateWib('2026-10-02')).toBe('Jumat, 2 Oktober 2026');
+  });
+
+  it('tidak bergeser sehari walau dibaca di zona lain', () => {
+    // Tanggal kalender dibaca sebagai tengah malam WIB.
+    // A calendar date is read as WIB midnight.
+    expect(formatLongDateWib('2026-01-01')).toBe('Kamis, 1 Januari 2026');
+  });
+
+  it('mengembalikan tanda strip untuk masukan rusak', () => {
+    expect(formatLongDateWib('2026-1-1')).toBe('-');
+    expect(formatLongDateWib(null)).toBe('-');
   });
 });

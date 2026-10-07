@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { FileText, Presentation, Sheet, File, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { MaterialLink } from '@/features/tasks/types';
+import type { MaterialLink, MaterialCategory } from '@/features/tasks/types';
+import { MATERIAL_CATEGORY_LABELS, materialCategory } from '@/features/tasks/types';
 import type { SessionDocument } from '@/features/attendance/types';
 
 const KIND_ICONS: Record<MaterialLink['kind'], React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>> = {
@@ -16,7 +17,76 @@ const KIND_ICONS: Record<MaterialLink['kind'], React.ComponentType<{ size?: numb
 
 interface SessionMaterialsProps {
   session: SessionDocument;
+  category: MaterialCategory;
   onChanged: () => void;
+}
+
+const PLACEHOLDERS: Record<MaterialCategory, string> = {
+  presentasi: 'Slide Pertemuan 1',
+  tambahan: 'Artikel / Referensi',
+  praktik: 'Instruksi Praktik',
+};
+
+type MoveTarget = 'rekaman' | MaterialCategory;
+const MOVE_LABELS: Record<MoveTarget, string> = { rekaman: 'Rekaman', ...MATERIAL_CATEGORY_LABELS };
+
+/**
+ * Pilihan "Pindahkan ke..." untuk satu isi pertemuan. Dipakai baris rekaman
+ * maupun baris bahan, sehingga isi yang salah golongan dapat dipindah tanpa
+ * dihapus dan diketik ulang.
+ *
+ * A "Move to..." picker for one meeting item. Used by both recording and
+ * material rows, so a misfiled item can be moved without deleting and
+ * retyping it.
+ */
+export function MoveContentSelect({ sessionId, itemId, current, label, onMoved }: {
+  sessionId: string;
+  itemId: string;
+  current: MoveTarget;
+  label: string;
+  onMoved: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function move(to: MoveTarget) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/content`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId, to }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal memindahkan');
+      onMoved();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <select
+        value=""
+        disabled={busy}
+        aria-label={`Pindahkan ${label}`}
+        onChange={(e) => e.target.value && move(e.target.value as MoveTarget)}
+        style={{ fontSize: '10px', padding: '3px 4px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: '#ffffff', color: 'var(--color-text-muted)', flexShrink: 0, maxWidth: '120px' }}
+      >
+        <option value="">{busy ? 'Memindahkan...' : 'Pindahkan ke...'}</option>
+        {(Object.keys(MOVE_LABELS) as MoveTarget[])
+          .filter((t) => t !== current)
+          .map((t) => (
+            <option key={t} value={t}>{MOVE_LABELS[t]}</option>
+          ))}
+      </select>
+      {error && <span role="alert" style={{ fontSize: '10px', color: 'var(--color-danger)', flexShrink: 0 }}>{error}</span>}
+    </>
+  );
 }
 
 /**
@@ -32,13 +102,13 @@ interface SessionMaterialsProps {
  * use Drive links, and adding file storage for materials alone would create two
  * different ways of handling the same thing.
  */
-export function SessionMaterials({ session, onChanged }: SessionMaterialsProps) {
+export function SessionMaterials({ session, category, onChanged }: SessionMaterialsProps) {
   const [label, setLabel] = useState('');
   const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const materials = session.materials ?? [];
+  const materials = (session.materials ?? []).filter((m) => materialCategory(m) === category);
 
   async function handleAdd() {
     setBusy(true);
@@ -47,7 +117,7 @@ export function SessionMaterials({ session, onChanged }: SessionMaterialsProps) 
       const res = await fetch(`/api/sessions/${session.id}/materials`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label, url }),
+        body: JSON.stringify({ label, url, category }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Gagal menambah bahan');
@@ -98,6 +168,7 @@ export function SessionMaterials({ session, onChanged }: SessionMaterialsProps) 
                 >
                   {m.label}
                 </a>
+                <MoveContentSelect sessionId={session.id} itemId={m.id} current={category} label={m.label} onMoved={onChanged} />
                 <button
                   type="button"
                   aria-label={`Hapus bahan ${m.label}`}
@@ -116,15 +187,15 @@ export function SessionMaterials({ session, onChanged }: SessionMaterialsProps) 
         <input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="Instruksi Praktik / Slide Sesi"
-          aria-label={`Nama bahan praktik untuk ${session.title}`}
+          placeholder={PLACEHOLDERS[category]}
+          aria-label={`Nama ${MATERIAL_CATEGORY_LABELS[category].toLowerCase()} untuk ${session.title}`}
           style={{ flex: '0 1 180px', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '11px' }}
         />
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://drive.google.com/..."
-          aria-label={`Tautan bahan praktik untuk ${session.title}`}
+          aria-label={`Tautan ${MATERIAL_CATEGORY_LABELS[category].toLowerCase()} untuk ${session.title}`}
           style={{ flex: '1 1 200px', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '11px' }}
         />
         <Button
@@ -133,7 +204,7 @@ export function SessionMaterials({ session, onChanged }: SessionMaterialsProps) 
           disabled={busy || !url.trim()}
           style={{ fontSize: '11px', padding: '8px 14px' }}
         >
-          {busy ? 'Menyimpan...' : 'Tambah Bahan'}
+          {busy ? 'Menyimpan...' : 'Tambah'}
         </Button>
       </div>
 

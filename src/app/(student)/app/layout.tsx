@@ -2,6 +2,8 @@ import { getSessionActor } from '@/features/auth/session';
 import { getProfile } from '@/features/users/profile-service';
 import { recordDailyLogin } from '@/features/dashboard/login-service';
 import { ProfileGateClient } from '@/components/profile-gate-client';
+import { StudentContextProvider } from '@/components/student-shell';
+import { listStudentReminders } from '@/features/dashboard/reminder-service';
 
 /**
  * Gerbang profil untuk seluruh halaman peserta.
@@ -67,10 +69,18 @@ export default async function StudentAppLayout({ children }: { children: React.R
   // handled inside the function.
   void recordDailyLogin(actor.uid);
 
-  const profile = await getProfile(actor.uid);
+  // Pengingat dihitung bersamaan dengan pemeriksaan profil, bukan sesudahnya,
+  // dan kegagalannya tidak boleh menahan halaman: pengingat hanya pelengkap.
+  //
+  // Reminders are computed alongside the profile check rather than after it,
+  // and their failure must not hold the page: reminders are only a helper.
+  const [profile, reminders] = await Promise.all([
+    getProfile(actor.uid),
+    listStudentReminders(actor).catch(() => ({ surveys: [], exams: [] })),
+  ]);
   if (!profile) {
     return <ProfileGateClient />;
   }
 
-  return <>{children}</>;
+  return <StudentContextProvider value={{ name: actor.name, reminders }}>{children}</StudentContextProvider>;
 }

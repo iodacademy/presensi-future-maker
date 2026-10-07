@@ -299,7 +299,14 @@ describe('rating kepuasan per daerah', () => {
     //
     // Zero on a one-to-five scale reads as the worst possible rating, not as no
     // answer at all.
-    expect(page).toMatch(/v === null \? \(/);
+    // Peta panasnya sudah diganti panel feedback kelas; aturan yang sama
+    // berlaku di sana.
+    //
+    // The heatmap was replaced by the class feedback panel; the same rule
+    // applies there.
+    const feedback = readFileSync(resolve(process.cwd(), 'src/app/(admin)/admin/dashboard/feedback-panel.tsx'), 'utf-8');
+    expect(feedback).toContain('Belum ada jawaban pada saringan ini');
+    expect(feedback).toMatch(/avg: count > 0 \? sum \/ count : null/);
   });
 });
 

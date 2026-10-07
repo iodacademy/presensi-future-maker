@@ -5,39 +5,31 @@ import { resolve } from 'node:path';
 
 const page = readFileSync(resolve(process.cwd(), 'src/app/(student)/app/jadwal/page.tsx'), 'utf-8');
 
-describe('halaman jadwal peserta', () => {
-  it('menampilkan rekaman pada kartu sesi berlangsung maupun selesai', () => {
+describe('halaman jadwal peserta (course player)', () => {
+  it('menampilkan rekaman setiap pertemuan, termasuk yang sedang berlangsung', () => {
     // Sesi panjang dapat sudah memiliki rekaman sebagian sebelum berakhir.
-    // Sebelumnya rekaman hanya muncul pada kartu sesi selesai, sehingga peserta
-    // yang mencarinya di tengah sesi tidak menemukan apa pun.
+    // Daftar rekaman tidak boleh digantungkan pada status sesi.
     //
-    // A long session may already have partial recordings before it ends.
-    // Previously recordings appeared only on the finished-session card, so a
-    // participant looking mid-session found nothing.
-    const uses = page.match(/<RecordingLinks\s+session=\{session\}/g) ?? [];
-    expect(uses.length).toBe(2);
+    // A long session may already have partial recordings before it ends. The
+    // recording list must not depend on the session's status.
+    const builder = page.slice(page.indexOf('function buildGroups'), page.indexOf('function pickInitial'));
+    expect(builder).toMatch(/recordings\.map/);
+    expect(builder).not.toMatch(/isActive/);
   });
 
-  it('menyediakan filter khusus rekaman', () => {
-    // Tanpa filter, rekaman terkubur di dalam kartu masing-masing pertemuan dan
-    // peserta harus menggulir seluruh jadwal.
+  it('memutar rekaman di tempat lewat penyedia yang dikenal saja', () => {
+    // Situs lain umumnya menolak dibingkai; iframe kosong lebih membingungkan
+    // daripada tombol buka di tab baru.
     //
-    // Without the filter, recordings sit buried inside each meeting's card and
-    // participants must scroll the whole schedule.
-    expect(page).toContain("filterMode === 'rekaman'");
-    expect(page).toMatch(/recordedCount/);
+    // Other sites usually refuse framing; a blank iframe confuses more than an
+    // open-in-new-tab button.
+    expect(page).toContain('toEmbedUrl(entry.url)');
+    expect(page).toContain('Rekaman ini tidak dapat diputar langsung di sini.');
   });
 
-  it('menyembunyikan chip rekaman bila belum ada rekaman', () => {
-    // Chip yang selalu tampil lalu menghasilkan daftar kosong hanya
-    // membingungkan.
-    //
-    // A chip that always shows and then yields an empty list only confuses.
-    expect(page).toMatch(/recordedCount > 0 && filterChip\('rekaman'/);
-  });
-
-  it('memberi pesan kosong yang sesuai konteks filternya', () => {
-    expect(page).toContain('Belum ada rekaman yang diunggah');
+  it('memuat seluruh tugas, termasuk yang tidak melekat pada pertemuan', () => {
+    expect(page).toContain("fetch('/api/tasks/student/outline')");
+    expect(page).toContain('Tugas Lainnya');
   });
 
   it('memakai judul halaman yang menyebut rekaman', () => {
@@ -51,15 +43,15 @@ describe('halaman jadwal peserta', () => {
     expect(page).toContain('Jadwal dan Rekaman');
   });
 
-  it('membuka tautan rekaman di tab baru dengan rel aman', () => {
+  it('membuka tautan di tab baru dengan rel aman', () => {
     // target=_blank tanpa rel="noopener" memberi halaman tujuan akses ke
     // window.opener milik aplikasi.
     //
     // target=_blank without rel="noopener" hands the destination page access to
     // the application's window.opener.
-    const block = page.slice(page.indexOf('function RecordingLinks'), page.indexOf('export default'));
-    expect(block).toContain('target="_blank"');
-    expect(block).toContain('rel="noopener noreferrer"');
+    const blank = page.match(/target="_blank"/g) ?? [];
+    expect(blank.length).toBeGreaterThan(0);
+    expect((page.match(/rel="noopener noreferrer"/g) ?? []).length).toBe(blank.length);
   });
 });
 

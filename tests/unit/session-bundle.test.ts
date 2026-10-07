@@ -73,10 +73,13 @@ describe('seluruh isi pertemuan berada di satu tempat', () => {
     expect(adminPage).not.toMatch(/tab === 'working-paper'/);
   });
 
-  it('kartu pertemuan peserta memuat ketiganya', () => {
-    expect(studentPage).toContain('Rekaman - ');
-    expect(studentPage).toContain('Hasil Praktik - ');
-    expect(studentPage).toMatch(/materials\.map/);
+  it('daftar pertemuan peserta memuat ketiganya', () => {
+    expect(studentPage).toMatch(/recordings\.map/);
+    // Bahan disaring per golongan (slide, tambahan, praktik) sebelum dipetakan.
+    // Materials are filtered per group (slides, extra, practice) before mapping.
+    expect(studentPage).toMatch(/materials\s*\.filter\(\(m\) => materialCategory\(m\) === c\)\s*\.map/);
+    expect(studentPage).toMatch(/workingPapers\.map/);
+    expect(studentPage).toContain("TASK_KIND_LABELS['working-paper']");
   });
 
   it('tautan bahan dan rekaman dibuka dengan rel aman', () => {
@@ -85,12 +88,8 @@ describe('seluruh isi pertemuan berada di satu tempat', () => {
     //
     // target=_blank without rel="noopener" hands the destination page access
     // to the application's window.opener.
-    const komponen = studentPage.slice(
-      studentPage.indexOf('function RecordingLinks'),
-      studentPage.indexOf('export default')
-    );
-    const blank = komponen.match(/target="_blank"/g) ?? [];
-    const aman = komponen.match(/rel="noopener noreferrer"/g) ?? [];
+    const blank = studentPage.match(/target="_blank"/g) ?? [];
+    const aman = studentPage.match(/rel="noopener noreferrer"/g) ?? [];
     expect(blank.length).toBeGreaterThan(0);
     expect(aman.length).toBe(blank.length);
   });

@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { MapPin, QrCode, Users, FileText, ClipboardList, ClipboardCheck, ChevronRight } from 'lucide-react';
+import { MapPin, QrCode } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
-import { EXAM_KIND_LABELS } from '@/features/exams/types';
+import { HomePerformance } from './home-performance';
 import type { StudentHomeData } from '@/features/dashboard/types';
 
 export default function StudentHomePage() {
@@ -28,10 +28,6 @@ export default function StudentHomePage() {
 
   const activeSession = data?.activeSession;
   const nextSession = data?.nextSession;
-  const nearestMentoring = data?.nearestMentoring;
-  const nearestTask = data?.nearestTask;
-  const nearestWorkingPaper = data?.nearestWorkingPaper;
-  const pendingExams = data?.pendingExams ?? [];
   const progress = data?.progress;
   const studentName = data?.studentName || 'Peserta';
   const className = data?.className || '-';
@@ -42,7 +38,7 @@ export default function StudentHomePage() {
           nilai Figma 56 memperhitungkan status bar native yang tidak berlaku di web browser
           Blue mobile header (node 11:2724/2799) -- top padding reduced from 56 to 24,
           Figma's 56 accounts for native status bar which doesn't apply in a web browser */}
-      <div className="student-mobile-header" style={{ backgroundColor: 'var(--color-primary)', color: '#ffffff', padding: '24px 20px 22px', paddingRight: '120px' }}>
+      <div className="student-mobile-header" style={{ backgroundColor: 'var(--color-primary)', color: '#ffffff', padding: '24px 20px 22px', paddingRight: '110px' }}>
         <div style={{ fontSize: '11px', fontFamily: 'var(--font-body)' }}>FUTURE INNOVATORS BOOTCAMP</div>
         <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: '#ffffff', margin: '6px 0 0' }}>Halo, {studentName}</h1>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', padding: '4px 10px', borderRadius: '20px', backgroundColor: 'var(--color-header-pill)' }}>
@@ -52,7 +48,7 @@ export default function StudentHomePage() {
       </div>
 
       {/* Topbar desktop (node 15:46) */}
-      <div className="student-topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--color-student-border)', padding: '18px 28px', paddingRight: '150px', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="student-topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--color-student-border)', padding: '18px 28px', paddingRight: '200px', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: 'var(--color-text-main)' }}>Halo, {studentName}</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
@@ -60,17 +56,19 @@ export default function StudentHomePage() {
             <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{className}</span>
           </div>
         </div>
-        <span style={{ width: '38px', height: '38px', borderRadius: '10px', border: '1px solid var(--color-student-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)' }}>
-          {studentName.charAt(0).toUpperCase()}
-        </span>
       </div>
 
-      <div className="student-content-grid student-content-grid--home" style={{ padding: '16px', gap: '16px' }}>
+      {/* Satu kolom: kartu pengingat di samping sudah digantikan lonceng dan
+          toast notifikasi, sehingga dashboard memakai seluruh lebar.
+
+          One column: the reminder cards on the side are replaced by the
+          notification bell and toast, so the dashboard uses the full width. */}
+      <div style={{ padding: '16px', maxWidth: '1100px', width: '100%' }}>
         {loading ? (
           <div style={{ padding: '48px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Memuat ringkasan beranda...</div>
         ) : (
           <>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0 }}>
               {/* Card Sesi Berlangsung (node 11:2735) / Sesi Berikutnya (node 11:2810) */}
               {activeSession ? (
                 <div style={{ backgroundColor: 'var(--color-primary)', color: '#ffffff', borderRadius: '14px', padding: '20px' }}>
@@ -78,7 +76,7 @@ export default function StudentHomePage() {
                     <span style={{ width: '7px', height: '7px', borderRadius: '4px', backgroundColor: 'var(--color-success)' }} />
                     <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px' }}>SESI BERLANGSUNG</span>
                   </div>
-                  <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, marginTop: '10px' }}>{activeSession.title}</h2>
+                  <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, marginTop: '10px', color: '#ffffff' }}>{activeSession.title}</h2>
                   <p style={{ fontSize: '12px', color: '#dcebfa', marginTop: '6px' }}>{activeSession.timeStr} - {activeSession.mode === 'online' ? 'Online (Zoom)' : activeSession.address || 'Offline'}</p>
 
                   {activeSession.isAttended ? (
@@ -106,133 +104,7 @@ export default function StudentHomePage() {
                 </div>
               )}
 
-              {/* Progres Bootcamp Kamu (node 11:2 -- lihat frame D1 desktop 15:75) */}
-              <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', border: '1px solid var(--color-border)', padding: '18px' }}>
-                <h3 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '14px' }}>Progres Bootcamp Kamu</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
-                  <div>
-                    <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-primary)' }}>{progress?.attendanceRatio || '0/0'}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Presensi</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-warning)' }}>{progress?.dailyTasksRatio || '0/0'}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Tugas Praktik Mandiri</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-success)' }}>{progress?.mentoringRatio || '0/2'}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Mentoring</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {/* Card Mentoring Terdekat (node 11:2749) */}
-              <Link href="/app/mentoring" style={{ textDecoration: 'none' }}>
-                <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', border: '1px solid var(--color-border)', padding: '13px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#eaf6fb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Users size={18} color="var(--color-info)" strokeWidth={2} />
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--color-text-faint)' }}>MENTORING TERDEKAT</div>
-                    {nearestMentoring ? (
-                      <>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>{nearestMentoring.date} - {nearestMentoring.timeStr}</div>
-                        <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>dengan Mentor {nearestMentoring.mentorName}</div>
-                      </>
-                    ) : (
-                      <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Belum ada booking. Sisa kuota: {data?.remainingMentoringQuota || 0} slot</div>
-                    )}
-                  </div>
-                  <ChevronRight size={16} color="var(--color-text-faint)" strokeWidth={2} />
-                </div>
-              </Link>
-
-              {/* Ujian wajib ditandai paling atas. Ditandai, bukan mengunci:
-                  kuis yang salah setelah terbit tidak boleh menghentikan
-                  pengumpulan atau pertemuan berikutnya.
-
-                  Required exams are flagged at the top. Flagged, not locking: a
-                  quiz published with wrong settings must not halt submissions
-                  or the next meeting. */}
-              {pendingExams.map((e) => (
-                <Link key={e.id} href={`/app/ujian/${e.id}`} style={{ textDecoration: 'none' }}>
-                  <div style={{ backgroundColor: e.isUrgent ? '#fff8f5' : '#ffffff', borderRadius: '14px', border: e.isUrgent ? '1px solid #fde1d3' : '1px solid var(--color-border)', padding: '13px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <ClipboardCheck size={18} color="var(--color-primary)" strokeWidth={2} />
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '9px', fontWeight: 700, color: e.isUrgent ? 'var(--color-warning)' : 'var(--color-text-faint)' }}>
-                        {e.dueAt ? e.deadlineLabel : 'WAJIB DIKERJAKAN'}
-                      </div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {e.title}
-                      </div>
-                      <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-                        {EXAM_KIND_LABELS[e.kind]} - belum dikerjakan
-                      </div>
-                    </div>
-                    <ChevronRight size={16} color={e.isUrgent ? 'var(--color-warning)' : 'var(--color-text-faint)'} strokeWidth={2} />
-                  </div>
-                </Link>
-              ))}
-
-              {/* Hasil praktik di kelas dikartu tersendiri: batasnya jatuh
-                  beberapa jam setelah pertemuannya, jauh lebih cepat daripada
-                  tugas mandiri, sehingga satu kartu bersama akan menyembunyikan
-                  yang paling mendesak.
-
-                  Class practice results get their own card: the deadline falls
-                  hours after the meeting, far sooner than a self-study task, so
-                  one shared card would hide the most urgent item. */}
-              {nearestWorkingPaper && (
-                <Link href={`/app/tugas/${nearestWorkingPaper.id}`} style={{ textDecoration: 'none' }}>
-                  <div style={{ backgroundColor: nearestWorkingPaper.isUrgent ? '#fff8f5' : '#ffffff', borderRadius: '14px', border: nearestWorkingPaper.isUrgent ? '1px solid #fde1d3' : '1px solid var(--color-border)', padding: '13px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--color-warning-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <ClipboardList size={18} color="#7c2d12" strokeWidth={2} />
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '9px', fontWeight: 700, color: nearestWorkingPaper.isUrgent ? 'var(--color-warning)' : 'var(--color-text-faint)' }}>
-                        {nearestWorkingPaper.deadlineLabel}
-                      </div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {nearestWorkingPaper.title}
-                      </div>
-                      <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-                        Hasil Praktik di Kelas - belum dikumpulkan
-                      </div>
-                    </div>
-                    <ChevronRight size={16} color={nearestWorkingPaper.isUrgent ? 'var(--color-warning)' : 'var(--color-text-faint)'} strokeWidth={2} />
-                  </div>
-                </Link>
-              )}
-
-              {/* Card Tugas Terdekat (node 11:2761) */}
-              {/* Tugas terdekat yang kebetulan hasil praktik sudah tampil di
-                  kartu atas; menampilkannya dua kali hanya mengulang hal sama.
-
-                  A nearest task that happens to be a practice result already
-                  appears on the card above; showing it twice only repeats
-                  itself. */}
-              <Link href={nearestTask && nearestTask.id !== nearestWorkingPaper?.id ? `/app/tugas/${nearestTask.id}` : '/app/tugas'} style={{ textDecoration: 'none' }}>
-                <div style={{ backgroundColor: nearestTask?.isUrgent ? '#fff8f5' : '#ffffff', borderRadius: '14px', border: nearestTask?.isUrgent ? '1px solid #fde1d3' : '1px solid var(--color-border)', padding: '13px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--color-danger-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <FileText size={18} color="var(--color-warning)" strokeWidth={2} />
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: nearestTask?.isUrgent ? 'var(--color-warning)' : 'var(--color-text-faint)' }}>
-                      {nearestTask ? nearestTask.deadlineLabel : 'TUGAS MANDIRI'}
-                    </div>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>
-                      {nearestTask ? nearestTask.title : 'Semua tugas sudah dikumpulkan'}
-                    </div>
-                    <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-                      {nearestTask ? 'Belum dikumpulkan' : 'Kerja bagus!'}
-                    </div>
-                  </div>
-                  <ChevronRight size={16} color={nearestTask?.isUrgent ? 'var(--color-warning)' : 'var(--color-text-faint)'} strokeWidth={2} />
-                </div>
-              </Link>
+              {data?.performance && <HomePerformance performance={data.performance} progress={progress} />}
             </div>
           </>
         )}

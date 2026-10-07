@@ -81,6 +81,7 @@ export function ProfileMenu({ userName, roleLabel, onDark = false }: ProfileMenu
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Menu akun ${userName}`}
+        className="profile-menu-trigger"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -111,6 +112,7 @@ export function ProfileMenu({ userName, roleLabel, onDark = false }: ProfileMenu
           {initial}
         </span>
         <span
+          className="profile-menu-name"
           style={{
             fontSize: '11px',
             fontWeight: 600,
@@ -124,6 +126,7 @@ export function ProfileMenu({ userName, roleLabel, onDark = false }: ProfileMenu
           {userName}
         </span>
         <ChevronDown
+          className="profile-menu-chevron"
           size={13}
           strokeWidth={2}
           color={onDark ? '#ffffff' : 'var(--color-text-muted)'}

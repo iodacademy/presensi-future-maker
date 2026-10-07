@@ -1,3 +1,4 @@
+import type { FeedbackForm } from './feedback';
 // Definisi tipe ringkasan dashboard / Dashboard snapshot type definitions
 
 /**
@@ -321,6 +322,14 @@ export interface DashboardSnapshot {
   surveys: SurveySummaryPoint[];
   /** Rata-rata tiap pertanyaan survei per daerah, untuk peta panasnya / Each survey question's average per region, for the heatmap */
   surveyQuestions: SurveyQuestionPoint[];
+  /**
+   * Laporan feedback lengkap per formulir. Opsional: ringkasan yang dihitung
+   * sebelum field ini ada tidak memuatnya sampai dihitung ulang.
+   *
+   * The full feedback report per form. Optional: a snapshot computed before this
+   * field existed lacks it until recomputed.
+   */
+  feedback?: FeedbackForm[];
   /** Jumlah peserta yang membuka aplikasi per hari / How many participants opened the app each day */
   logins: LoginPoint[];
   ranking: RankedStudent[];

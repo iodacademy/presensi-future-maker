@@ -7,7 +7,7 @@ import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
-import { SessionMaterials } from './session-materials';
+import { SessionMaterials, MoveContentSelect } from './session-materials';
 import { SessionWorkingPaper } from './session-working-paper';
 import { SubmissionRoster } from './submission-roster';
 import { ExamBuilder } from './exam-builder';
@@ -462,6 +462,7 @@ export default function CourseBuilderPage({
                           >
                             {r.label}
                           </a>
+                          <MoveContentSelect sessionId={s.id} itemId={r.id} current="rekaman" label={r.label} onMoved={loadSessions} />
                           <button
                             type="button"
                             aria-label={`Hapus rekaman ${r.label}`}
@@ -511,10 +512,27 @@ export default function CourseBuilderPage({
                       Practice materials hang off the meeting rather than a
                       task: participants look by meeting, so a recording and its
                       materials belong in one place. */}
+                  {/* Tiga golongan bahan dipisah agar peserta menemukan slide,
+                      materi tambahan, dan bahan praktik di bagiannya masing-masing,
+                      bukan tercampur dengan rekaman.
+
+                      The three material groups are kept apart so participants find
+                      slides, additional material, and practice material in their own
+                      sections rather than mixed in with recordings. */}
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)' }}>SLIDE PRESENTASI</div>
+                  <SessionMaterials session={s} category="presentasi" onChanged={loadSessions} />
+
+                  <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
+
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)' }}>MATERI TAMBAHAN</div>
+                  <SessionMaterials session={s} category="tambahan" onChanged={loadSessions} />
+
+                  <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
+
                   <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)' }}>
                     BAHAN PRAKTIK
                   </div>
-                  <SessionMaterials session={s} onChanged={loadSessions} />
+                  <SessionMaterials session={s} category="praktik" onChanged={loadSessions} />
 
                   <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
 

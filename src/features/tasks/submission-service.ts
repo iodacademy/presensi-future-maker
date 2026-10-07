@@ -9,6 +9,7 @@ import type {
   SubmitTaskInput,
   GradeSubmissionInput,
   StudentTaskItem,
+  StudentTaskOutline,
 } from './submission-types';
 import type { TaskDocument, TaskSummary } from './types';
 import type { ClassDocument } from '../classes/types';
@@ -225,6 +226,74 @@ export async function listStudentTasksWithSubmissions(actor: Actor): Promise<Stu
   );
 
   return items;
+}
+
+/**
+ * Ringkasan tugas peserta untuk daftar course player jadwal.
+ *
+ * Sengaja tidak memakai listStudentTasksWithSubmissions: fungsi itu membaca
+ * taskDetails dan submissionFeedback satu per satu, sehingga setiap kunjungan
+ * jadwal menambah satu baca per tugas untuk teks panjang yang tidak
+ * ditampilkan di daftar. Deskripsi tetap dimuat di halaman detail tugas.
+ *
+ * A participant's task outline for the schedule course-player list.
+ *
+ * Deliberately avoids listStudentTasksWithSubmissions: that function reads
+ * taskDetails and submissionFeedback one by one, so every schedule visit would
+ * add one read per task for long text the list never shows. The description is
+ * still loaded on the task detail page.
+ */
+export async function listStudentTaskOutline(actor: Actor): Promise<StudentTaskOutline[]> {
+  if (!actor.classId) return [];
+
+  const db = getAdminDb();
+  const [tasksSnap, subsSnap, classDoc] = await Promise.all([
+    db
+      .collection('tasks')
+      .where('classId', '==', actor.classId)
+      .select('id', 'kind', 'title', 'order', 'dueAt', 'sessionId', 'published')
+      .get(),
+    db
+      .collection('submissions')
+      .where('studentId', '==', actor.uid)
+      .select('taskId', 'taskKind', 'score', 'late')
+      .get(),
+    db.collection('classes').doc(actor.classId).get(),
+  ]);
+
+  const subs = new Map(
+    subsSnap.docs.map((d) => {
+      const s = d.data() as Pick<SubmissionDocument, 'taskId' | 'taskKind' | 'score' | 'late'>;
+      return [s.taskId, s] as const;
+    })
+  );
+  const submittedDailyIds = [...subs.values()].filter((s) => s.taskKind === 'daily').map((s) => s.taskId);
+  const capstoneUnlocked = isCapstoneUnlocked(
+    (classDoc.data() as ClassDocument | undefined)?.requiredDailyTaskIds ?? [],
+    submittedDailyIds
+  );
+
+  return tasksSnap.docs
+    .map((d) => d.data() as Pick<TaskDocument, 'id' | 'kind' | 'title' | 'order' | 'dueAt' | 'sessionId' | 'published'>)
+    // Tugas yang belum terbit belum siap dibuka peserta.
+    // Unpublished tasks are not ready for participants to open.
+    .filter((t) => t.published !== false)
+    .map((t) => {
+      const sub = subs.get(t.id);
+      return {
+        id: t.id,
+        kind: t.kind,
+        title: t.title,
+        order: t.order,
+        dueAt: t.dueAt ?? null,
+        sessionId: t.sessionId ?? null,
+        submitted: Boolean(sub),
+        score: sub?.score ?? null,
+        late: sub?.late ?? false,
+        isUnlocked: t.kind === 'capstone' ? capstoneUnlocked : true,
+      };
+    })
+    .sort((a, b) => a.order - b.order);
 }
 
 /**

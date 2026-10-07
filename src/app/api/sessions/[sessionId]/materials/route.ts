@@ -17,6 +17,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ses
       label: body.label ?? '',
       url: body.url ?? '',
       kind: body.kind,
+      category: body.category,
     });
     return NextResponse.json({ added: true }, { status: 201 });
   } catch (err) {

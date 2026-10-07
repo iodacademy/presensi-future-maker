@@ -163,7 +163,7 @@ describe('tempat ujian pada antarmuka', () => {
   });
 
   it('kuis tampil pada kartu pertemuan peserta', () => {
-    expect(jadwal).toMatch(/exams\.map\(\(e\) =>/);
+    expect(jadwal).toMatch(/exams\.map\(\(e\)/);
     expect(jadwal).toContain('/app/ujian/');
   });
 
@@ -239,9 +239,14 @@ describe('ujian wajib ditandai di beranda', () => {
     expect(attendanceSvc).not.toMatch(/pendingExams/);
   });
 
-  it('tampil sebagai kartu pada beranda peserta', () => {
-    expect(home).toMatch(/pendingExams\.map\(\(e\) =>/);
-    expect(home).toContain('WAJIB DIKERJAKAN');
+  it('ditagih lewat notifikasi peserta, bukan kartu beranda', () => {
+    // Kartu ujian wajib di beranda diganti lonceng dan toast notifikasi, yang
+    // juga muncul di halaman lain selain beranda.
+    //
+    // The required-exam cards on home were replaced by the notification bell
+    // and toast, which also show on pages other than home.
+    expect(home).not.toMatch(/pendingExams\.map/);
+    expect(read('src/components/reminders.tsx')).toContain('/app/ujian/${e.id}');
   });
 });
 
@@ -295,7 +300,6 @@ describe('tiga jenis ujian', () => {
     // Retyped names drift apart as soon as one of them changes.
     expect(builder).toContain('EXAM_KIND_LABELS[kind]');
     expect(builder).not.toMatch(/kind === 'pretest' \? '/);
-    expect(read('src/app/(student)/app/page.tsx')).toContain('EXAM_KIND_LABELS[e.kind]');
   });
 
   it('menandai setiap jenis pada beranda tanpa menyebutkannya', () => {

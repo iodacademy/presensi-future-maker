@@ -10,6 +10,8 @@ import type { ExamKind } from '../exams/types';
 import type { SubmissionDocument } from '../tasks/submission-types';
 import { isSessionAttendanceActive } from '../attendance/policy';
 import { isDeadlineUrgent, formatDeadlineLabel, formatProgressRatio } from './policy';
+import { buildStudentPerformance } from './performance';
+import type { ExamDocument, AttemptDocument } from '../exams/types';
 
 /**
  * Mengambil ringkasan beranda siswa: sesi aktif/berikutnya, mentoring terdekat,
@@ -35,6 +37,7 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
       dailyTasksRatio: '0/0',
       mentoringRatio: '0/2',
     },
+    performance: { attendance: [], quizzes: [], tasks: [] },
   };
 
   if (!actor.classId) {
@@ -250,5 +253,14 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
       dailyTasksRatio,
       mentoringRatio,
     },
+    performance: buildStudentPerformance({
+      sessions,
+      attendance: attendSnap.docs.map((d) => d.data() as AttendanceDocument),
+      exams: examsSnap.docs.map((d) => d.data() as ExamDocument),
+      attempts: attemptsSnap.docs.map((d) => d.data() as AttemptDocument),
+      tasks,
+      submissions: subsSnap.docs.map((d) => d.data() as SubmissionDocument),
+      nowIso,
+    }),
   };
 }

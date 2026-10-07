@@ -6,9 +6,30 @@ import { FileText, Download, Link as LinkIcon, Upload } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import { Button } from '@/components/ui/button';
 import type { StudentTaskItem } from '@/features/tasks/submission-types';
+import { formatLongDateTimeWib } from '@/lib/time';
 
-export default function StudentTaskSubmitPage({ params }: { params: Promise<{ taskId: string }> }) {
+export default function StudentTaskSubmitPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ taskId: string }>;
+  searchParams: Promise<{ from?: string }>;
+}) {
   const { taskId } = use(params);
+  const { from } = use(searchParams);
+  // Tombol kembali mengikuti asal peserta: dari Jadwal kembali ke item tugas
+  // itu di course player, dari Beranda kembali ke Beranda. Tanpa asal (atau
+  // dari menu Tugas) tetap ke daftar tugas.
+  //
+  // The back button follows where the participant came from: from Jadwal back
+  // to that task's item in the course player, from Home back to Home. With no
+  // origin (or from the Tugas menu) it still goes to the task list.
+  const back =
+    from === 'jadwal'
+      ? { href: `/app/jadwal?item=${encodeURIComponent(`tugas.${taskId}`)}`, label: 'Kembali ke Jadwal' }
+      : from === 'home'
+        ? { href: '/app', label: 'Kembali ke Beranda' }
+        : { href: '/app/tugas', label: 'Kembali ke Daftar Tugas' };
 
   const [taskItem, setTaskItem] = useState<StudentTaskItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,11 +99,12 @@ export default function StudentTaskSubmitPage({ params }: { params: Promise<{ ta
   const isGraded = submission?.score !== null && submission?.score !== undefined;
 
   return (
-    <StudentShell userName="Peserta">
+    <StudentShell>
       {/* Header mobile (node 11:3191) */}
       <div className="student-mobile-header" style={{ padding: '24px 16px', borderBottom: '1px solid #eeeeee' }}>
-        <Link href="/app/tugas" style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>Kembali ke Daftar Tugas</Link>
+        <Link href={back.href} style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>{back.label}</Link>
         {task && <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '14px', fontWeight: 700, color: 'var(--color-text-main)', marginTop: '8px' }}>{task.title}</h1>}
+        {task?.dueAt && <p style={{ fontSize: '11px', color: 'var(--color-warning)', fontWeight: 600, marginTop: '2px' }}>Deadline: {formatLongDateTimeWib(task.dueAt)}</p>}
       </div>
 
       {/* Topbar desktop (node 15:477) */}
@@ -90,9 +112,9 @@ export default function StudentTaskSubmitPage({ params }: { params: Promise<{ ta
         {task ? (
           <>
             <div>
-              <Link href="/app/tugas" style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>Kembali ke Daftar Tugas</Link>
+              <Link href={back.href} style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>{back.label}</Link>
               <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: 'var(--color-text-main)', marginTop: '6px' }}>{task.title}</h1>
-              {task.dueAt && <p style={{ fontSize: '11px', color: 'var(--color-warning)', fontWeight: 600, marginTop: '2px' }}>DEADLINE: {task.dueAt}</p>}
+              {task.dueAt && <p style={{ fontSize: '11px', color: 'var(--color-warning)', fontWeight: 600, marginTop: '2px' }}>Deadline: {formatLongDateTimeWib(task.dueAt)}</p>}
             </div>
             {submission && (
               <div style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, backgroundColor: isGraded ? 'var(--color-success-light)' : 'var(--color-primary-light)', color: isGraded ? 'var(--color-success)' : 'var(--color-primary)' }}>
@@ -101,7 +123,7 @@ export default function StudentTaskSubmitPage({ params }: { params: Promise<{ ta
             )}
           </>
         ) : (
-          <Link href="/app/tugas" style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>Kembali ke Daftar Tugas</Link>
+          <Link href={back.href} style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>{back.label}</Link>
         )}
       </div>
 

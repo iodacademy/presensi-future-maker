@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Clock, AlertTriangle, Check, ChevronLeft, ChevronRight, X, Flag, Send, ArrowLeft, Eye, Maximize2,
 } from 'lucide-react';
@@ -60,6 +61,7 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'offline';
  * prefetching all burn attempts without them answering anything.
  */
 export default function ExamRunnerPage({ params }: { params: Promise<{ examId: string }> }) {
+  const router = useRouter();
   const { examId } = React.use(params);
 
   const [state, setState] = useState<AttemptState | null>(null);
@@ -107,6 +109,9 @@ export default function ExamRunnerPage({ params }: { params: Promise<{ examId: s
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Gagal mengumpulkan ujian');
         setResult(data);
+        // Menghitung ulang pengingat di layout agar kuis ini lepas dari banner dan angka menu.
+        // Recomputes the layout's reminders so this quiz drops off the banner and menu count.
+        router.refresh();
         setConfirming(false);
       } catch (e) {
         // Tombol kirim tetap hidup setelah gagal: kegagalan jaringan bukan
@@ -119,7 +124,7 @@ export default function ExamRunnerPage({ params }: { params: Promise<{ examId: s
         setSubmitting(false);
       }
     },
-    [state, answers, submitting]
+    [state, answers, submitting, router]
   );
 
   submitRef.current = submit;

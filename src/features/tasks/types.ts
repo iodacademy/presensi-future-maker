@@ -55,7 +55,30 @@ export interface MaterialLink {
   url: string;
   /** Jenis berkas untuk ikon dan keterangan / File kind for icon and caption */
   kind: 'pdf' | 'slide' | 'sheet' | 'doc' | 'other';
+  /**
+   * Golongan bahan pada pertemuan. Bahan lama tidak memuat field ini dan
+   * seluruhnya ditambahkan lewat form "Bahan Praktik", sehingga ketiadaannya
+   * berarti praktik -- tanpa perlu memindahkan data lama.
+   *
+   * The material's group within a meeting. Older materials lack this field and
+   * were all added through the "Bahan Praktik" form, so its absence means
+   * practice -- with no need to migrate old data.
+   */
+  category?: MaterialCategory;
   addedAt: string;
+}
+
+export type MaterialCategory = 'presentasi' | 'tambahan' | 'praktik';
+
+export const MATERIAL_CATEGORY_LABELS: Record<MaterialCategory, string> = {
+  presentasi: 'Slide Presentasi',
+  tambahan: 'Materi Tambahan',
+  praktik: 'Bahan Praktik',
+};
+
+/** Golongan bahan, dengan bahan lama dianggap praktik / A material's group, treating old materials as practice */
+export function materialCategory(m: Pick<MaterialLink, 'category'>): MaterialCategory {
+  return m.category ?? 'praktik';
 }
 
 export interface TaskDocument {

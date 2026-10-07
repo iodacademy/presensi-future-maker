@@ -197,7 +197,7 @@ describe('tempat survei pada antarmuka', () => {
   });
 
   it('beberapa survei dapat tampil pada satu kartu pertemuan', () => {
-    expect(jadwal).toMatch(/surveys\.map\(\(sv\) =>/);
+    expect(jadwal).toMatch(/surveys\.map\(\(sv\)/);
     expect(jadwal).toContain('/app/survei/${sv.formId}/${session.id}');
   });
 

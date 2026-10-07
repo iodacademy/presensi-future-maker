@@ -68,7 +68,6 @@ describe('penamaan jenis tugas', () => {
  */
 describe('hasil praktik terdekat pada beranda peserta', () => {
   const service = read('src/features/dashboard/service.ts');
-  const page = read('src/app/(student)/app/page.tsx');
 
   it('dihitung terpisah dari tugas terdekat', () => {
     // Satu kartu "tugas terdekat" yang sudah terisi tugas lain menyembunyikan
@@ -91,15 +90,5 @@ describe('hasil praktik terdekat pada beranda peserta', () => {
 
   it('dikembalikan null saat tidak ada kelasnya', () => {
     expect(service).toContain('nearestWorkingPaper: null');
-  });
-
-  it('tampil sebagai kartu tersendiri', () => {
-    expect(page).toContain('Hasil Praktik di Kelas - belum dikumpulkan');
-  });
-
-  it('tidak menampilkan tugas yang sama dua kali', () => {
-    // Tugas terdekat yang kebetulan hasil praktik sudah tampil di kartu atas.
-    // A nearest task that happens to be a practice result already shows above.
-    expect(page).toContain('nearestTask.id !== nearestWorkingPaper?.id');
   });
 });

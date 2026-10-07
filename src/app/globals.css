@@ -70,8 +70,98 @@ h1, h2, h3, h4, h5, h6 {
 .student-content-grid--home { grid-template-columns: minmax(0, 700fr) minmax(0, 288fr); }
 .student-content-grid--mentoring { grid-template-columns: minmax(0, 628fr) minmax(0, 360fr); }
 .student-content-grid--task-detail { grid-template-columns: minmax(0, 644fr) minmax(0, 340fr); }
+/* Grid kartu feedback admin: menyusut ke satu kolom di layar sempit / Admin feedback card grid: collapses to one column on narrow screens */
+.feedback-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); }
+/* Grafik beranda: dua kolom bila muat, satu kolom di layar sempit / Home charts: two columns when they fit, one on narrow screens */
+/* min(..., 100%): di layar 320px kolom minimal 290px lebih lebar dari ruangnya dan mendorong halaman melebar.
+   min(..., 100%): on a 320px screen a 290px minimum column is wider than its room and pushes the page wide. */
+.home-charts { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(290px, 100%), 1fr)); }
+
+/* Course player jadwal peserta. Di mobile daftar materi menjadi bottom sheet
+   yang dibuka dari bilah navigasi bawah, sehingga pemutar memakai seluruh
+   layar; di desktop daftar menempel di kanan dan bergulir sendiri.
+
+   Participant schedule course player. On mobile the material list becomes a
+   bottom sheet opened from the bottom navigation bar, so the player gets the
+   whole screen; on desktop the list sticks to the right and scrolls on its
+   own. */
+.course-player { display: block; }
+.course-player__list {
+  background-color: #ffffff;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+  max-height: 80vh; overflow-y: auto; overscroll-behavior: contain;
+  border-radius: 16px 16px 0 0; box-shadow: 0 -8px 32px rgba(36, 60, 75, 0.25);
+  transform: translateY(100%); visibility: hidden; transition: transform 200ms ease, visibility 200ms;
+  /* Scrollbar disembunyikan; daftar tetap dapat digulir / Scrollbar hidden; the list still scrolls */
+  scrollbar-width: none;
+}
+.course-player__list::-webkit-scrollbar { display: none; }
+.course-player__list[data-sheet-open='true'] { transform: none; visibility: visible; }
+.cp-sheet-backdrop { position: fixed; inset: 0; z-index: 55; background-color: rgba(15, 23, 42, 0.45); border: none; }
+.cp-sheet-handle { display: block; width: 40px; height: 4px; border-radius: 2px; background-color: rgba(255, 255, 255, 0.6); margin: 0 auto 10px; }
+.cp-hide-mobile { display: none; }
+.cp-sheet-trigger { display: inline-flex; }
+.course-player__viewer { padding: 16px 16px 0; min-width: 0; display: flex; flex-direction: column; min-height: calc(100vh - 142px); }
+/* Bilah sebelum/berikutnya menempel di bawah layar, di atas bottom nav mobile (73px).
+   The previous/next bar sticks to the bottom of the screen, above the 73px mobile bottom nav. */
+.cp-navbar {
+  position: sticky; bottom: 73px; z-index: 20; margin: auto -16px 0; padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background-color: rgba(255, 255, 255, 0.96); border-top: 1px solid var(--color-student-border);
+  box-shadow: 0 -6px 20px rgba(36, 60, 75, 0.08);
+}
+/* Di HP tombol sebelum/berikutnya hanya ikon; tiga label penuh butuh ~380px dan melebarkan halaman.
+   On phones previous/next are icon-only; three full labels need ~380px and widen the page. */
+.cp-nav-label { display: none; }
+.cp-row { background-color: transparent; }
+.cp-row:hover { background-color: var(--color-bg-student); }
+.cp-row[data-active='true'] { background-color: var(--color-warning-light); box-shadow: inset 3px 0 0 var(--color-highlight-yellow); }
+.course-player__list--collapsed { background: linear-gradient(135deg, var(--color-primary) 0%, #1aa3e0 100%); }
+.cp-collapsed-toggle {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 14px 16px;
+  background: none; border: none; cursor: pointer; color: #ffffff;
+  font-family: var(--font-heading); font-size: 13px; font-weight: 600;
+}
+/* Di HP tombol profil peserta hanya avatar: nama panjang ditambah lonceng
+   menabrak judul header. Nama lengkap tetap tampil di dalam menunya.
+   On phones the participant profile button is avatar-only: a long name plus
+   the bell collided with the header title. The full name still shows inside
+   the menu. */
+@media (max-width: 899px) {
+  .student-account .profile-menu-name, .student-account .profile-menu-chevron { display: none; }
+  .student-account .profile-menu-trigger { padding: 5px !important; }
+}
+/* Toast pengingat: di atas bottom nav mobile, di pojok kiri bawah desktop / Reminder toast: above the mobile bottom nav, bottom-left corner on desktop */
+.reminder-toast { bottom: 89px; }
+/* Ruang bagi bottom nav mobile; di desktop nav itu tidak ada / Room for the mobile bottom nav; desktop has no such nav */
+.student-content { padding-bottom: 73px; }
 
 @media (min-width: 900px) {
+  /* Halaman jadwal setinggi layar: daftar dan pemutar masing-masing bergulir
+     sendiri, sehingga bilah sebelum/berikutnya selalu di dasar layar. Bila
+     halaman ikut bergulir, tinggi topbar menyisakan celah di bawah bilah itu.
+
+     The schedule page is exactly screen height: list and player each scroll on
+     their own, so the previous/next bar always sits at the bottom of the
+     screen. If the page itself scrolled, the topbar's height would leave a gap
+     under that bar. */
+  .student-content:has(> .course-player) { height: 100vh; }
+  .course-player { display: flex; flex-direction: row-reverse; flex: 1; min-height: 0; }
+  .course-player__list {
+    width: 340px; flex-shrink: 0; position: static; z-index: auto; height: auto; max-height: none;
+    border-radius: 0; box-shadow: none; transform: none; visibility: visible; transition: none;
+    border-left: 1px solid var(--color-student-border);
+  }
+  .course-player__list--collapsed { width: 52px; overflow: hidden; }
+  .cp-sheet-backdrop, .cp-sheet-handle, .cp-sheet-trigger, .cp-hide-desktop { display: none; }
+  .cp-hide-mobile { display: inline-flex; }
+  .cp-collapsed-toggle { flex-direction: column; justify-content: flex-start; height: 100%; padding: 18px 0; gap: 12px; }
+  .cp-collapsed-toggle span { writing-mode: vertical-rl; letter-spacing: 0.04em; }
+  .course-player__viewer { flex: 1; padding: 24px 28px 0; min-height: 0; overflow-y: auto; }
+  .cp-navbar { bottom: 0; margin: auto -28px 0; padding: 12px 28px; }
+  .cp-nav-label { display: inline; }
+  .student-content { padding-bottom: 0; }
+  .reminder-toast { bottom: 16px; }
   .student-sidebar { display: flex; }
   .student-bottom-nav { display: none; }
   .student-mobile-header { display: none; }

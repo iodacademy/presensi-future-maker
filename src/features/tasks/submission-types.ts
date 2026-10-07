@@ -65,3 +65,17 @@ export interface StudentTaskItem {
   feedback?: string | null;
   isUnlocked: boolean; // Khusus capstone / Specially for capstone
 }
+
+/** Ringkasan tugas untuk course player jadwal / Task outline for the schedule course player */
+export interface StudentTaskOutline {
+  id: string;
+  kind: TaskKind;
+  title: string;
+  order: number;
+  dueAt: string | null;
+  sessionId: string | null;
+  submitted: boolean;
+  score: number | null;
+  late: boolean;
+  isUnlocked: boolean;
+}

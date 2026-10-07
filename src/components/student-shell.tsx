@@ -1,10 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { createContext, useContext } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { Home, Calendar, Users, FileText, BookOpen, LogOut } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Home, Calendar, Users, FileText, BookOpen } from 'lucide-react';
 import { ProfileMenu } from '@/components/ui/profile-menu';
+import { NotificationBell, ReminderToast } from '@/components/reminders';
+import type { StudentReminders } from '@/features/dashboard/types';
 
 interface NavItem {
   label: string;
@@ -25,6 +27,50 @@ interface StudentShellProps {
   children: React.ReactNode;
 }
 
+/**
+ * Nama peserta dan pengingatnya, diisi oleh layout server dari sesinya.
+ *
+ * Tanpa ini setiap halaman harus mengambil nama sendiri, dan halaman yang
+ * lupa menampilkan "Peserta" pada menu profilnya. Pengingat ikut di sini agar
+ * angka pada menu dan banner di halaman membaca sumber yang sama.
+ *
+ * The participant's name and reminders, filled by the server layout from the
+ * session.
+ *
+ * Without it every page would fetch the name itself, and a page that forgot
+ * would show "Peserta" in its profile menu. Reminders ride along so the menu
+ * count and the in-page banner read the same source.
+ */
+interface StudentContextValue {
+  name: string;
+  reminders: StudentReminders;
+}
+
+const StudentContext = createContext<StudentContextValue | null>(null);
+
+export function StudentContextProvider({ value, children }: { value: StudentContextValue; children: React.ReactNode }) {
+  return <StudentContext.Provider value={value}>{children}</StudentContext.Provider>;
+}
+
+export function useStudentReminders(): StudentReminders {
+  return useContext(StudentContext)?.reminders ?? { surveys: [], exams: [] };
+}
+
+function ReminderCount({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <span
+      aria-label={`${count} belum dikerjakan`}
+      style={{
+        minWidth: '16px', height: '16px', padding: '0 4px', borderRadius: '8px', backgroundColor: 'var(--color-danger)',
+        color: '#ffffff', fontSize: '9px', fontWeight: 700, lineHeight: '16px', textAlign: 'center',
+      }}
+    >
+      {count}
+    </span>
+  );
+}
+
 // Shell peserta: sidebar putih (desktop, node 15:2/15:3) + bottom nav (mobile, node 11:2773).
 // Kedua nav dirender bersamaan, ditoggle lewat class CSS (.student-sidebar/.student-bottom-nav
 // di globals.css) sesuai keputusan "1 komponen responsif" -- bukan duplikasi children/state,
@@ -36,17 +82,8 @@ interface StudentShellProps {
 // this nav is static (just Links) so dual-rendering is safe.
 export function StudentShell({ userName, children }: StudentShellProps) {
   const pathname = usePathname();
-  const router = useRouter();
-
-  async function handleLogout() {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/login');
-      router.refresh();
-    } catch {
-      window.location.href = '/login';
-    }
-  }
+  const context = useContext(StudentContext);
+  const reminderCount = (context?.reminders.surveys.length ?? 0) + (context?.reminders.exams.length ?? 0);
 
   function isActive(href: string) {
     return href === '/app' ? pathname === '/app' : pathname.startsWith(href);
@@ -95,28 +132,21 @@ export function StudentShell({ userName, children }: StudentShellProps) {
                 }}
               >
                 <Icon size={16} color={active ? 'var(--color-primary)' : 'var(--color-student-inactive)'} strokeWidth={2} />
-                {item.label}
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.href === '/app/jadwal' && <ReminderCount count={reminderCount} />}
               </Link>
             );
           })}
         </nav>
+        {/* Profil dan tombol keluar hanya ada di ProfileMenu kanan atas; salinan
+            kedua di sini menampilkan identitas yang sama dua kali.
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px', borderTop: '1px solid var(--color-student-border)' }}>
-          <span style={{ width: '34px', height: '34px', borderRadius: '50%', backgroundColor: 'var(--color-avatar-cyan)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
-            {(userName || 'P').charAt(0).toUpperCase()}
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName || 'Peserta'}</div>
-            <div style={{ fontSize: '9px', color: 'var(--color-text-faint)' }}>Peserta</div>
-          </div>
-          <button type="button" onClick={handleLogout} aria-label="Keluar" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}>
-            <LogOut size={15} color="var(--color-text-faint)" strokeWidth={2} />
-          </button>
-        </div>
+            Profile and sign-out live only in the top-right ProfileMenu; a second
+            copy here showed the same identity twice. */}
       </aside>
 
       {/* Kolom konten: berisi topbar desktop (diisi tiap halaman) + children */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, paddingBottom: '73px', position: 'relative' }}>
+      <div className="student-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
         {/* Menu akun diletakkan di shell, bukan pada tiap halaman: lima halaman
             peserta menyusun headernya masing-masing, sehingga menaruhnya di sana
             berarti lima salinan yang harus dijaga tetap sama.
@@ -132,7 +162,7 @@ export function StudentShell({ userName, children }: StudentShellProps) {
             It floats at the top-right so it rides over both the blue mobile
             header and the white desktop topbar -- which alternate by screen
             width. */}
-        <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 30 }}>
+        <div className="student-account" style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 30 }}>
           {/* Varian terang dipakai untuk seluruh halaman. Latar di belakangnya
               berbeda-beda -- header biru, topbar putih, dan header putih pada
               halaman mentoring -- sedangkan pil putih bergaris tetap terbaca di
@@ -141,10 +171,15 @@ export function StudentShell({ userName, children }: StudentShellProps) {
               The light variant is used on every page. The backdrop varies --
               blue header, white topbar, and the white header on the mentoring
               page -- while a bordered white pill stays legible over all three. */}
-          <ProfileMenu userName={userName || 'Peserta'} roleLabel="Peserta" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {context && <NotificationBell reminders={context.reminders} />}
+            <ProfileMenu userName={context?.name || userName || 'Peserta'} roleLabel="Peserta" />
+          </div>
         </div>
         {children}
       </div>
+
+      {context && <ReminderToast reminders={context.reminders} />}
 
       {/* Bottom nav mobile (node 11:2773), disembunyikan di desktop lewat CSS / hidden on desktop via CSS */}
       <nav
@@ -162,9 +197,14 @@ export function StudentShell({ userName, children }: StudentShellProps) {
             <Link
               key={item.href}
               href={item.href}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textDecoration: 'none', flex: 1 }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textDecoration: 'none', flex: 1, position: 'relative' }}
             >
               <Icon size={20} color={active ? 'var(--color-primary)' : 'var(--color-text-faint)'} strokeWidth={2} />
+              {item.href === '/app/jadwal' && reminderCount > 0 && (
+                <span style={{ position: 'absolute', top: '-6px', left: 'calc(50% + 6px)' }}>
+                  <ReminderCount count={reminderCount} />
+                </span>
+              )}
               {/* Lima menu pada layar 360px menyisakan sekitar 66px per tombol.
                   Tanpa penjagaan ini "Mentoring" terpotong di tengah kata;
                   menyusut sedikit lebih terbaca daripada terpenggal.

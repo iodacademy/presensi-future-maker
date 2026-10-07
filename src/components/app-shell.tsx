@@ -75,7 +75,15 @@ export function AppShell({ role, userName, classNameTitle, children }: AppShellP
       <aside
         style={{
           width: '200px',
-          minHeight: '100vh',
+          // Menempel setinggi layar agar menu tetap terjangkau saat halaman
+          // panjang digulir; bila layarnya pendek, menunya bergulir sendiri.
+          //
+          // Sticks at screen height so the menu stays reachable while a long
+          // page scrolls; on a short screen the menu scrolls on its own.
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
+          overflowY: 'auto',
           backgroundColor: isAdmin ? 'var(--color-sidebar-admin)' : '#ffffff',
           color: isAdmin ? '#ffffff' : 'var(--color-text-main)',
           borderRight: isAdmin ? 'none' : '1px solid var(--color-border)',

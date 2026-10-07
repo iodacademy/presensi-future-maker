@@ -3,7 +3,8 @@
 import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor, UserDocument } from '../auth/types';
-import type { MaterialLink } from '../tasks/types';
+import type { MaterialLink, MaterialCategory } from '../tasks/types';
+import { MATERIAL_CATEGORY_LABELS } from '../tasks/types';
 import { scopeCovers } from '../survey/policy';
 import type { SurveyFormDocument } from '../survey/types';
 import type {
@@ -1055,6 +1056,21 @@ function guessMaterialKind(url: string): MaterialLink['kind'] {
 }
 
 /**
+ * Memeriksa golongan bahan dari masukan admin. Kosong berarti praktik, sama
+ * seperti bahan lama; nilai lain ditolak agar tidak ada golongan yang tidak
+ * pernah tampil di halaman peserta.
+ *
+ * Checks a material group from admin input. Empty means practice, the same as
+ * old materials; anything else is rejected so no group exists that never shows
+ * on the participant page.
+ */
+export function parseMaterialCategory(raw: unknown): MaterialCategory {
+  if (raw === undefined || raw === null || raw === '') return 'praktik';
+  if (raw === 'presentasi' || raw === 'tambahan' || raw === 'praktik') return raw;
+  throw new Error('Golongan bahan tidak dikenal');
+}
+
+/**
  * Admin menambahkan satu bahan praktik pada sebuah pertemuan.
  *
  * Bahan melekat pada sesi, bukan pada tugas: peserta mencari berdasarkan
@@ -1075,11 +1091,13 @@ function guessMaterialKind(url: string): MaterialLink['kind'] {
  */
 export async function addSessionMaterial(
   actor: Actor,
-  input: { sessionId: string; label: string; url: string; kind?: MaterialLink['kind'] }
+  input: { sessionId: string; label: string; url: string; kind?: MaterialLink['kind']; category?: string }
 ): Promise<void> {
   if (actor.role !== 'admin') {
     throw new Error('Hanya admin yang diizinkan menambah bahan praktik');
   }
+
+  const category = parseMaterialCategory(input.category);
 
   const url = (input.url ?? '').trim();
   if (!url) {
@@ -1098,7 +1116,7 @@ export async function addSessionMaterial(
     throw new Error('Tautan bahan harus berupa URL HTTPS yang valid');
   }
 
-  const label = (input.label ?? '').trim().slice(0, 80) || 'Bahan praktik';
+  const label = (input.label ?? '').trim().slice(0, 80) || MATERIAL_CATEGORY_LABELS[category];
   const db = getAdminDb();
   const sessionRef = db.collection('sessions').doc(input.sessionId);
 
@@ -1121,6 +1139,7 @@ export async function addSessionMaterial(
           label,
           url,
           kind: input.kind ?? guessMaterialKind(url),
+          category,
           addedAt: new Date().toISOString(),
         },
       ],
@@ -1157,5 +1176,68 @@ export async function removeSessionMaterial(
       materials: existing.filter((m) => m.id !== materialId),
       updatedAt: new Date().toISOString(),
     });
+  });
+}
+
+/**
+ * Admin memindahkan satu isi pertemuan ke golongan lain: rekaman, slide
+ * presentasi, materi tambahan, atau bahan praktik.
+ *
+ * Tanpa ini, isi yang terlanjur masuk golongan yang salah -- misalnya slide
+ * yang ditambahkan lewat form rekaman -- harus dihapus lalu diketik ulang.
+ * Dikerjakan dalam satu transaksi agar isi tidak hilang dari kedua tempat
+ * bila salah satu tulisan gagal.
+ *
+ * An admin moves one meeting item to another group: recording, presentation
+ * slides, additional material, or practice material.
+ *
+ * Without this, an item filed under the wrong group -- say, slides added
+ * through the recording form -- must be deleted and retyped. Done in one
+ * transaction so the item never vanishes from both places if one write fails.
+ */
+export async function moveSessionContent(
+  actor: Actor,
+  input: { sessionId: string; itemId: string; to: string }
+): Promise<void> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan memindahkan isi pertemuan');
+  }
+  const to = input.to === 'rekaman' ? 'rekaman' : parseMaterialCategory(input.to);
+
+  const db = getAdminDb();
+  const sessionRef = db.collection('sessions').doc(input.sessionId);
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(sessionRef);
+    if (!snap.exists) {
+      throw new Error('Sesi tidak ditemukan');
+    }
+    const session = snap.data() as SessionDocument;
+    const recordings = session.recordings ?? [];
+    const materials = (session.materials ?? []) as MaterialLink[];
+
+    const recording = recordings.find((r) => r.id === input.itemId);
+    const material = materials.find((m) => m.id === input.itemId);
+    const item = recording ?? material;
+    if (!item) {
+      throw new Error('Isi pertemuan tidak ditemukan');
+    }
+
+    const nextRecordings = recordings.filter((r) => r.id !== input.itemId);
+    const nextMaterials = materials.filter((m) => m.id !== input.itemId);
+    if (to === 'rekaman') {
+      nextRecordings.push({ id: item.id, label: item.label, url: item.url, addedAt: item.addedAt });
+    } else {
+      nextMaterials.push({
+        id: item.id,
+        label: item.label,
+        url: item.url,
+        kind: material?.kind ?? guessMaterialKind(item.url),
+        category: to,
+        addedAt: item.addedAt,
+      });
+    }
+
+    tx.update(sessionRef, { recordings: nextRecordings, materials: nextMaterials, updatedAt: new Date().toISOString() });
   });
 }

@@ -6,7 +6,10 @@ import * as XLSX from 'xlsx';
 import { AppShell } from '@/components/app-shell';
 import { DailyBars, GainChart, GroupedBars, Heatmap, ProfileBars, TrendLines, cityColor } from './charts';
 import { RosterTable } from './roster-table';
+import { FeedbackPanel } from './feedback-panel';
+import { RankingGroups } from './ranking-groups';
 import { formatDateTimeWib } from '@/lib/time';
+import { Pagination, PAGE_SIZE } from '@/components/ui/pagination';
 import type { DashboardSnapshot, RosterRow } from '@/features/dashboard/snapshot-types';
 import s from './dashboard.module.css';
 
@@ -117,6 +120,7 @@ function DashboardBody({
   const satuDaerah = cities.length === 1;
 
   const kelasTerpilih = snapshot.classes.filter((c) => cities.includes(c.city));
+  const jurusanKelas = new Map(snapshot.classes.map((c) => [c.className, c.programName || c.className]));
   const terdaftar = kelasTerpilih.reduce((t, c) => t + c.registered, 0);
   const aktif = kelasTerpilih.reduce((t, c) => t + c.active, 0);
   const keluar = terdaftar - aktif;
@@ -536,39 +540,10 @@ function DashboardBody({
               Rata-rata kehadiran, tugas, dan kuis. Nilai akhir berbobot ada di menu Nilai Akhir
             </p>
           </div>
-          {satuDaerah ? (
-            <RankTable rows={snapshot.ranking.filter((r) => r.city === city)} />
-          ) : (
-            <div className={s.rk4}>
-              {cities.map((kota) => {
-                const baris = snapshot.ranking.filter((r) => r.city === kota);
-                const kelas = snapshot.classes.find((c) => c.city === kota);
-                return (
-                  <div key={kota} className={s.rkbox}>
-                    <h3>
-                      {kota}
-                      {kelas && <small>{kelas.className}</small>}
-                    </h3>
-                    <div>
-                      {baris.slice(0, 5).map((r, i) => (
-                        <div key={r.studentId} className={s.rkrow}>
-                          <span className={`${s.rkn} ${i < 3 ? s.top : ''}`}>{i + 1}</span>
-                          <span>{r.studentName}</span>
-                          <span className={s.rkscore}>{r.score}</span>
-                        </div>
-                      ))}
-                      {baris.length === 0 && <div className={s.empty}>Belum ada data</div>}
-                    </div>
-                    {baris.length > 5 && (
-                      <button type="button" className={s.linkbtn} onClick={() => onCity(kota)}>
-                        Lihat semua {baris.length} peserta
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <RankingGroups
+            rows={snapshot.ranking.filter((r) => cities.includes(r.city))}
+            jurusanKelas={jurusanKelas}
+          />
         </section>
 
         {/* --- siswa berstatus alert ---------------------------------------- */}
@@ -583,6 +558,7 @@ function DashboardBody({
             rows={snapshot.alerts.filter((a) => cities.includes(a.city))}
             thresholds={snapshot.thresholds}
             roster={snapshot.roster}
+            jurusanKelas={jurusanKelas}
           />
           <div className={s.legend}>
             <span><span className={`${s.sw} ${s.bd}`} />di bawah batas</span>
@@ -595,15 +571,15 @@ function DashboardBody({
           </div>
         </section>
 
-        {/* --- rating kepuasan --------------------------------------------- */}
-        <section className={s.panel} aria-labelledby="h-puas">
+        {/* --- feedback kelas ------------------------------------------------ */}
+        <section className={s.panel} aria-labelledby="h-feedback">
           <div className={s.panelHead}>
-            <h2 id="h-puas">Rating kepuasan</h2>
+            <h2 id="h-feedback">Feedback kelas</h2>
             <p className={s.hint}>
-              Rata-rata pertanyaan bernilai angka, beserta persentase peserta aktif yang mengisi
+              Hasil pengisian survei per pertanyaan, per kelas, dan per pertemuan. Saringan daerah di atas ikut berlaku.
             </p>
           </div>
-          <SurveyHeatmap snapshot={snapshot} cities={cities} />
+          <FeedbackPanel forms={snapshot.feedback} cities={cities} />
         </section>
       </div>
     </AppShell>
@@ -768,38 +744,11 @@ function ProfilePanel({ profiles, pending }: { profiles: ProfileLite[]; pending:
   );
 }
 
-function RankTable({ rows }: { rows: { studentId: string; studentName: string; score: number }[] }) {
-  if (rows.length === 0) return <div className={s.empty}>Belum ada data</div>;
-  return (
-    <div className={s.scroll}>
-      <table className={s.table} style={{ minWidth: '420px' }}>
-        <thead>
-          <tr>
-            <th className={s.ctr} style={{ width: '64px' }}>Peringkat</th>
-            <th>Nama siswa</th>
-            <th className={s.ctr}>Skor</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={r.studentId}>
-              <td className={s.ctr}>
-                <span className={`${s.rkn} ${i < 3 ? s.top : ''}`}>{i + 1}</span>
-              </td>
-              <td>{r.studentName}</td>
-              <td className={`${s.ctr} ${s.num}`} style={{ fontWeight: 600 }}>{r.score}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 function AlertTable({
-  rows,
+  rows: semua,
   thresholds,
   roster,
+  jurusanKelas,
 }: {
   rows: {
     studentId: string;
@@ -812,8 +761,19 @@ function AlertTable({
   }[];
   thresholds: { attendance: number; task: number; quiz: number };
   roster: RosterRow[];
+  jurusanKelas: Map<string, string>;
 }) {
-  if (rows.length === 0) {
+  const [pilihan, setPilihan] = useState('Semua');
+  const [halaman, setHalaman] = useState(0);
+  const jurusanPeserta = new Map(roster.map((r) => [r.studentId, r.programName]));
+  const jurusanOf = (a: (typeof semua)[number]) => jurusanPeserta.get(a.studentId) || jurusanKelas.get(a.className) || 'Lainnya';
+  const daftarJurusan = [...new Set(semua.map(jurusanOf))].sort((a, b) => a.localeCompare(b, 'id'));
+  const rows = pilihan === 'Semua' ? semua : semua.filter((a) => jurusanOf(a) === pilihan);
+  // Halaman dibatasi ke yang ada saat saringan menyempit.
+  // The page is clamped to one that exists when the filter narrows.
+  const page = Math.min(halaman, Math.max(0, Math.ceil(rows.length / PAGE_SIZE) - 1));
+
+  if (semua.length === 0) {
     return (
       <div style={{ fontSize: '12px', color: 'var(--color-success)', fontWeight: 600 }}>
         Tidak ada peserta di bawah ambang.
@@ -821,106 +781,62 @@ function AlertTable({
     );
   }
 
-  const jurusan = new Map(roster.map((r) => [r.studentId, r.programName]));
   const kelas = (v: number, batas: number) => (v < batas ? s.bd : v < batas + 10 ? s.wr : s.pillOk);
 
   return (
-    <div className={s.scroll}>
-      <table className={s.table} style={{ minWidth: '640px' }}>
-        <thead>
-          <tr>
-            <th className={s.ctr} style={{ width: '44px' }}>No</th>
-            <th>Nama siswa</th>
-            <th>Jurusan</th>
-            <th>Daerah</th>
-            <th className={s.ctr}>Kehadiran</th>
-            <th className={s.ctr}>Tugas</th>
-            <th className={s.ctr}>Kuis</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((a, i) => (
-            <tr key={a.studentId}>
-              <td className={`${s.ctr} ${s.num}`}>{i + 1}</td>
-              <td>{a.studentName}</td>
-              <td style={{ color: 'var(--color-text-muted)' }}>{jurusan.get(a.studentId) || a.className}</td>
-              <td>{a.city}</td>
-              <td className={s.ctr}><span className={`${s.pill} ${kelas(a.attendanceRate, thresholds.attendance)}`}>{a.attendanceRate}%</span></td>
-              <td className={s.ctr}><span className={`${s.pill} ${kelas(a.taskRate, thresholds.task)}`}>{a.taskRate}%</span></td>
-              <td className={s.ctr}><span className={`${s.pill} ${kelas(a.quizAverage, thresholds.quiz)}`}>{a.quizAverage}</span></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function SurveyHeatmap({ snapshot, cities }: { snapshot: DashboardSnapshot; cities: string[] }) {
-  if (snapshot.surveyQuestions.length === 0) {
-    return <div className={s.empty}>Belum ada jawaban survei bernilai angka</div>;
-  }
-
-  // Lima pertanyaan pertama ditampilkan; dua puluh empat kolom tidak dapat
-  // dibaca berdampingan, dan rinciannya ada di halaman survei.
-  //
-  // The first five questions are shown; twenty-four columns cannot be read side
-  // by side, and the detail lives on the survey page.
-  const pertanyaan = snapshot.surveyQuestions.slice(0, 5);
-  const kelas = (v: number) => (v >= 4.2 ? s.ok : v >= 3.5 ? s.wr : s.bd);
-  const f = (v: number) => v.toFixed(1).replace('.', ',');
-  const baris = cities.length > 1 ? [...cities, 'Semua'] : cities;
-
-  const rataKota = (kota: string, q: (typeof pertanyaan)[number]): number | null => {
-    if (kota !== 'Semua') return q.byCity[kota] ?? null;
-    const ada = cities.map((k) => q.byCity[k]).filter((v): v is number => v !== null && v !== undefined);
-    return ada.length === 0 ? null : ada.reduce((a, b) => a + b, 0) / ada.length;
-  };
-
-  const responsKota = (kota: string): number => {
-    const dipakai = kota === 'Semua' ? cities : [kota];
-    const nilai = dipakai.flatMap((k) => snapshot.surveys.map((x) => x.byCity[k]?.responseRate ?? 0));
-    return nilai.length === 0 ? 0 : Math.round(nilai.reduce((a, b) => a + b, 0) / nilai.length);
-  };
-
-  return (
     <>
-      <div className={s.scroll}>
-        <div
-          className={s.hm}
-          style={{ gridTemplateColumns: `90px repeat(${pertanyaan.length}, minmax(0, 1fr)) 72px`, minWidth: '560px' }}
-        >
-          <div />
-          {pertanyaan.map((q) => (
-            <div key={q.label} className={s.h} title={q.label}>
-              {q.label.length > 14 ? `${q.label.slice(0, 13)}…` : q.label}
-            </div>
-          ))}
-          <div className={s.h}>Respons</div>
-
-          {baris.map((kota) => (
-            <React.Fragment key={kota}>
-              <div className={s.lb} style={kota === 'Semua' ? { fontWeight: 600 } : undefined}>{kota}</div>
-              {pertanyaan.map((q) => {
-                const v = rataKota(kota, q);
-                return v === null ? (
-                  <div key={q.label} className={`${s.c} ${s.na}`} title={`${kota}: ${q.label} belum dijawab`}>·</div>
-                ) : (
-                  <div key={q.label} className={`${s.c} ${kelas(v)}`} title={`${kota}: ${q.label}`}>{f(v)}</div>
-                );
-              })}
-              <div className={`${s.lb} ${s.num}`} style={{ justifyContent: 'center', color: 'var(--color-text-muted)' }}>
-                {responsKota(kota)}%
-              </div>
-            </React.Fragment>
-          ))}
+      {daftarJurusan.length > 1 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          {['Semua', ...daftarJurusan].map((j) => {
+            const aktif = pilihan === j;
+            const jumlah = j === 'Semua' ? semua.length : semua.filter((a) => jurusanOf(a) === j).length;
+            return (
+              <button
+                key={j}
+                type="button"
+                aria-pressed={aktif}
+                onClick={() => { setPilihan(j); setHalaman(0); }}
+                style={{
+                  fontSize: '12px', padding: '5px 12px', borderRadius: '16px', cursor: 'pointer',
+                  border: aktif ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
+                  backgroundColor: aktif ? 'var(--color-primary)' : '#ffffff', color: aktif ? '#ffffff' : 'var(--color-text-main)',
+                }}
+              >
+                {j} ({jumlah})
+              </button>
+            );
+          })}
         </div>
+      )}
+      <div className={s.scroll}>
+        <table className={s.table} style={{ minWidth: '640px' }}>
+          <thead>
+            <tr>
+              <th className={s.ctr} style={{ width: '44px' }}>No</th>
+              <th>Nama siswa</th>
+              <th>Jurusan</th>
+              <th>Daerah</th>
+              <th className={s.ctr}>Kehadiran</th>
+              <th className={s.ctr}>Tugas</th>
+              <th className={s.ctr}>Kuis</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map((a, i) => (
+              <tr key={a.studentId}>
+                <td className={`${s.ctr} ${s.num}`}>{page * PAGE_SIZE + i + 1}</td>
+                <td>{a.studentName}</td>
+                <td style={{ color: 'var(--color-text-muted)' }}>{jurusanOf(a)}</td>
+                <td>{a.city}</td>
+                <td className={s.ctr}><span className={`${s.pill} ${kelas(a.attendanceRate, thresholds.attendance)}`}>{a.attendanceRate}%</span></td>
+                <td className={s.ctr}><span className={`${s.pill} ${kelas(a.taskRate, thresholds.task)}`}>{a.taskRate}%</span></td>
+                <td className={s.ctr}><span className={`${s.pill} ${kelas(a.quizAverage, thresholds.quiz)}`}>{a.quizAverage}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-      <div className={s.legend}>
-        <span><span className={`${s.sw} ${s.ok}`} />4,2 ke atas</span>
-        <span><span className={`${s.sw} ${s.wr}`} />3,5 sampai 4,1</span>
-        <span><span className={`${s.sw} ${s.bd}`} />di bawah 3,5</span>
-      </div>
+      <Pagination page={page} totalItems={rows.length} onChange={setHalaman} label="siswa" />
     </>
   );
 }

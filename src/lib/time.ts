@@ -91,6 +91,49 @@ export function formatDateWib(isoString: string | null | undefined): string {
 }
 
 /**
+ * Mengembalikan hari dan tanggal lengkap dari tanggal WIB "YYYY-MM-DD",
+ * misalnya "Jumat, 9 Oktober 2026".
+ *
+ * Masukannya tanggal kalender, bukan stempel waktu: dibaca sebagai tengah
+ * malam WIB agar tidak bergeser sehari saat diubah ke zona lain.
+ *
+ * Returns the full weekday and date from a WIB "YYYY-MM-DD" date, e.g.
+ * "Jumat, 9 Oktober 2026".
+ *
+ * The input is a calendar date, not a timestamp: it is read as WIB midnight so
+ * it never slips a day when converted to another zone.
+ */
+export function formatLongDateWib(ymd: string | null | undefined): string {
+  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return '-';
+  const date = new Date(`${ymd}T00:00:00+07:00`);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: WIB,
+  }).format(date);
+}
+
+/**
+ * Mengembalikan hari, tanggal, dan jam lengkap dalam WIB, misalnya
+ * "Jumat, 9 Oktober 2026, 23.59 WIB". Dipakai untuk tenggat, yang perlu
+ * terbaca tanpa peserta menghitung hari sendiri.
+ *
+ * Returns the full weekday, date and time in WIB, e.g.
+ * "Jumat, 9 Oktober 2026, 23.59 WIB". Used for deadlines, which must read
+ * without the participant counting days themselves.
+ */
+export function formatLongDateTimeWib(isoString: string | null | undefined): string {
+  if (!isoString) return '-';
+
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return '-';
+
+  const tanggal = new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: WIB,
+  }).format(date);
+  return `${tanggal}, ${formatTimeWib(isoString)} WIB`;
+}
+
+/**
  * Tanggal WIB hari ini dalam bentuk "YYYY-MM-DD".
  *
  * Dipakai sebagai id dokumen harian, sehingga batas harinya mengikuti hari

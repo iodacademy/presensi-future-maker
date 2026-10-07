@@ -54,6 +54,9 @@ export default function SurveyPage({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Gagal mengirim survei');
       setDone(true);
+      // Menghitung ulang pengingat di layout agar survei ini lepas dari banner dan angka menu.
+      // Recomputes the layout's reminders so this survey drops off the banner and menu count.
+      router.refresh();
     } catch (e) {
       setError((e as Error).message);
     } finally {

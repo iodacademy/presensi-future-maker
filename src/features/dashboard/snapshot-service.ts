@@ -8,6 +8,7 @@ import { NUMERIC_KINDS } from '../survey/types';
 import type { SurveyAnswer, SurveyFormDocument, SurveyResponseDocument } from '../survey/types';
 import { ageFrom } from '../users/profile-service';
 import { hitungFase, keteranganFase } from './phases';
+import { buildFeedbackReport } from './feedback';
 import { wibDate } from '@/lib/time';
 import {
   DISABILITY_LABELS,
@@ -62,6 +63,9 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  *    kolom untuk sesi seluruh kelas, sehingga kehadirannya jatuh ke angka yang
  *    tidak pernah terjadi.
  * 3: kolom tugas dan kuis dikelompokkan per kelas, dengan alasan yang sama.
+ * 4: peringkat dan daftar siaga hanya menghitung peserta yang terdaftar di
+ *    kelas; akun tanpa kelas (mis. mentor yang terimpor sebagai peserta)
+ *    bernilai nol.
  *
  * The snapshot's shape version. Raised whenever the way figures are computed
  * changes such that old ones become wrong, not whenever a field is added: a new
@@ -72,8 +76,10 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  *    columns for every class's sessions, dropping their attendance to a figure
  *    that never happened.
  * 3: task and quiz columns grouped per class, for the same reason.
+ * 4: ranking and alerts count only participants enrolled in a class; accounts
+ *    without one (e.g. a mentor imported as a participant) scored zero.
  */
-export const SNAPSHOT_VERSION = 3;
+export const SNAPSHOT_VERSION = 4;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -393,6 +399,28 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     };
   });
 
+  // Laporan feedback lengkap dari jawaban yang sama, tanpa baca tambahan.
+  // Pembagi tingkat respons adalah peserta aktif kelas itu yang hadir di
+  // pertemuannya: survei hanya diminta dari yang hadir.
+  //
+  // The full feedback report from the same responses, with no extra reads.
+  // The response-rate divisor is the class's active participants present at
+  // that meeting: the survey is only asked of those who attended.
+  const kelasPerSiswa = new Map(aktif.map((st) => [st.uid, st.classId ?? '']));
+  const hadirPerSesiKelas = new Map<string, number>();
+  for (const [sessionId, hadir] of hadirPerSesi) {
+    for (const uid of hadir) {
+      const key = `${sessionId}_${kelasPerSiswa.get(uid) ?? ''}`;
+      hadirPerSesiKelas.set(key, (hadirPerSesiKelas.get(key) ?? 0) + 1);
+    }
+  }
+  const feedback = buildFeedbackReport({
+    forms,
+    responses: responsesSnap.docs.map((d) => d.data() as SurveyResponseDocument).filter((r) => aktifIds.has(r.studentId)),
+    attendeesBySessionClass: hadirPerSesiKelas,
+    classCities,
+  });
+
   // --- login LMS per hari ------------------------------------------------
   // Dikelompokkan per tanggal dan kota. Satu dokumen per peserta per hari sudah
   // menjamin tidak ada yang terhitung dua kali pada hari yang sama.
@@ -509,7 +537,17 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     tugasPerKelas.set(d.classId, (tugasPerKelas.get(d.classId) ?? 0) + 1);
   }
 
-  const terukur = aktif.map((s) => {
+  // Hanya peserta yang terdaftar di kelas yang ada. Akun berperan peserta
+  // tanpa kelas -- mis. mentor atau akun uji yang terimpor sebagai peserta --
+  // tidak punya pertemuan, tugas, maupun kuis, sehingga selalu bernilai nol:
+  // jatuh ke daftar siaga dan dasar peringkat tanpa pernah menjadi peserta.
+  //
+  // Only participants enrolled in an existing class. A participant-role
+  // account without a class -- e.g. a mentor or test account imported as a
+  // participant -- has no meetings, tasks or quizzes, so it always scores zero:
+  // it lands in the alert list and the bottom of the ranking without ever
+  // being a participant.
+  const terukur = aktif.filter((s) => s.classId && classNames.has(s.classId)).map((s) => {
     const cid = s.classId ?? '';
     const attendanceRate = persen(hadirPerSiswa.get(s.uid) ?? 0, sesiPerKelas.get(cid) ?? 0);
     const taskRate = persen(kumpulPerSiswa.get(s.uid) ?? 0, tugasPerKelas.get(cid) ?? 0);
@@ -752,6 +790,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     mentoring,
     surveys,
     surveyQuestions,
+    feedback,
     logins,
     ranking,
     alerts,

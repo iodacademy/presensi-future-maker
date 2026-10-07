@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { formatLongDateWib } from '@/lib/time';
 import s from './dashboard.module.css';
 
 /**
@@ -355,19 +356,24 @@ export function DailyBars({ points, total }: { points: { date: string; value: nu
     return <div className={s.empty}>Belum ada aktivitas yang tercatat</div>;
   }
 
-  const Wd = 1000;
-  const Hd = 240;
+  // Tiap hari diberi sekitar 120 satuan agar labelnya ("Jumat" / "2 Oktober
+  // 2026") muat; bila harinya banyak, grafiknya melebar dan dapat digeser.
+  //
+  // Each day gets about 120 units so its label ("Jumat" / "2 Oktober 2026")
+  // fits; with many days the chart widens and scrolls sideways.
+  const Wd = Math.max(1000, 50 + points.length * 120);
+  const Hd = 256;
   const Ld = 40;
   const Rd = 10;
   const Td = 16;
-  const Bd = 34;
+  const Bd = 48;
   const y = (v: number) => Td + (1 - v / total) * (Hd - Td - Bd);
   const gw = (Wd - Ld - Rd) / points.length;
   const bw = gw * 0.62;
 
   return (
     <div className={s.scroll}>
-      <div style={{ minWidth: Math.max(640, points.length * 34) }}>
+      <div style={{ minWidth: Wd > 1000 ? Wd : 640 }}>
         <svg viewBox={`0 0 ${Wd} ${Hd}`} width="100%" role="img" aria-label="Jumlah peserta yang membuka aplikasi per hari">
           {[0, 0.25, 0.5, 0.75, 1].map((p) => {
             const v = Math.round(total * p);
@@ -385,13 +391,16 @@ export function DailyBars({ points, total }: { points: { date: string; value: nu
             return (
               <React.Fragment key={p.date}>
                 <rect x={x} y={y(p.value)} width={bw} height={y(0) - y(p.value)} rx={3} style={{ fill: 'var(--color-primary)' }}>
-                  <title>{`${p.date}: ${p.value} dari ${total} peserta`}</title>
+                  <title>{`${formatLongDateWib(p.date)}: ${p.value} dari ${total} peserta`}</title>
                 </rect>
                 <text x={x + bw / 2} y={y(p.value) - 5} textAnchor="middle" fontSize={10} style={{ fill: 'var(--color-text-muted)' }}>
                   {p.value}
                 </text>
-                <text x={x + bw / 2} y={Hd - 16} textAnchor="middle" fontSize={11} style={{ fill: 'var(--color-text-muted)' }}>
-                  {Number(p.date.slice(8, 10))}
+                <text x={x + bw / 2} y={Hd - 26} textAnchor="middle" fontSize={11} style={{ fill: 'var(--color-text-main)', fontWeight: 600 }}>
+                  {formatLongDateWib(p.date).split(', ')[0]}
+                </text>
+                <text x={x + bw / 2} y={Hd - 10} textAnchor="middle" fontSize={11} style={{ fill: 'var(--color-text-muted)' }}>
+                  {formatLongDateWib(p.date).split(', ')[1]}
                 </text>
               </React.Fragment>
             );

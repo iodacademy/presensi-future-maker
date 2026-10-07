@@ -1,0 +1,88 @@
+// Penyusun laporan performa peserta untuk grafik beranda / Builds the participant performance report for the home charts
+import type { StudentPerformance } from './types';
+import type { SessionDocument, AttendanceDocument } from '../attendance/types';
+import type { TaskDocument } from '../tasks/types';
+import type { SubmissionDocument } from '../tasks/submission-types';
+import type { ExamDocument, AttemptDocument } from '../exams/types';
+
+const ATTENDANCE_STATUS = { present: 'hadir', excused: 'izin', sick: 'sakit', absent: 'alpa' } as const;
+
+/**
+ * Fungsi murni: seluruh data sudah dibaca oleh layanan beranda.
+ *
+ * Pertemuan yang sudah berakhir tanpa catatan dihitung tidak hadir; yang
+ * belum berakhir dihitung mendatang, sebab peserta masih dapat memindai.
+ * Kuis diurutkan menurut waktu pertemuannya agar grafik nilai terbaca sebagai
+ * perjalanan, dan pretest (tanpa pertemuan) berada paling depan.
+ *
+ * Pure function: all data is already read by the home service.
+ *
+ * A meeting that has ended with no record counts as absent; one that has not
+ * ended counts as upcoming, since the participant can still scan. Quizzes are
+ * ordered by their meeting time so the score chart reads as a journey, and the
+ * pretest (no meeting) comes first.
+ */
+export function buildStudentPerformance(input: {
+  sessions: Pick<SessionDocument, 'id' | 'title' | 'startsAt' | 'endsAt'>[];
+  attendance: Pick<AttendanceDocument, 'sessionId' | 'status'>[];
+  exams: Pick<ExamDocument, 'id' | 'title' | 'kind' | 'sessionId' | 'passingScore' | 'questionCount'>[];
+  attempts: Pick<AttemptDocument, 'examId' | 'status' | 'score' | 'passed'>[];
+  tasks: Pick<TaskDocument, 'id' | 'title' | 'kind' | 'dueAt' | 'order'>[];
+  submissions: Pick<SubmissionDocument, 'taskId' | 'score' | 'late'>[];
+  nowIso: string;
+}): StudentPerformance {
+  const { nowIso } = input;
+  const sessions = [...input.sessions].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const statusBySession = new Map(input.attendance.map((a) => [a.sessionId, a.status ?? 'present']));
+
+  const attendance = sessions.map((s) => {
+    const recorded = statusBySession.get(s.id);
+    return {
+      sessionId: s.id,
+      title: s.title,
+      startsAt: s.startsAt,
+      status: recorded ? ATTENDANCE_STATUS[recorded] : s.endsAt <= nowIso ? ('alpa' as const) : ('mendatang' as const),
+    };
+  });
+
+  const sessionStart = new Map(sessions.map((s) => [s.id, s.startsAt]));
+  const attemptsByExam = new Map<string, typeof input.attempts>();
+  for (const a of input.attempts) {
+    if (!attemptsByExam.has(a.examId)) attemptsByExam.set(a.examId, []);
+    attemptsByExam.get(a.examId)!.push(a);
+  }
+
+  const quizzes = input.exams
+    .filter((e) => e.questionCount > 0)
+    .sort((a, b) => (a.sessionId ? sessionStart.get(a.sessionId) ?? '' : '').localeCompare(b.sessionId ? sessionStart.get(b.sessionId) ?? '' : ''))
+    .map((e) => {
+      const attempts = attemptsByExam.get(e.id) ?? [];
+      const finished = attempts.filter((a) => a.status === 'selesai' && a.score !== null);
+      return {
+        id: e.id,
+        title: e.title,
+        kind: e.kind,
+        bestScore: finished.length > 0 ? Math.max(...finished.map((a) => a.score!)) : null,
+        passingScore: e.passingScore,
+        passed: attempts.some((a) => a.passed === true),
+        attempts: attempts.length,
+      };
+    });
+
+  const subs = new Map(input.submissions.map((s) => [s.taskId, s]));
+  const tasks = [...input.tasks]
+    .sort((a, b) => (a.dueAt ?? '9999').localeCompare(b.dueAt ?? '9999') || a.order - b.order)
+    .map((t) => {
+      const sub = subs.get(t.id);
+      const status: StudentPerformance['tasks'][number]['status'] = sub
+        ? sub.score !== null
+          ? 'dinilai'
+          : 'menunggu'
+        : t.dueAt && t.dueAt < nowIso
+          ? 'lewat'
+          : 'belum';
+      return { id: t.id, title: t.title, kind: t.kind, dueAt: t.dueAt, status, score: sub?.score ?? null, late: sub?.late ?? false };
+    });
+
+  return { attendance, quizzes, tasks };
+}
