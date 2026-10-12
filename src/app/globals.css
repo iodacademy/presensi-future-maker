@@ -188,3 +188,38 @@ h1, h2, h3, h4, h5, h6 {
 /* Baris tabel admin yang dapat diklik / Clickable admin table row */
 .admin-row:hover { background-color: var(--color-bg-student); }
 .admin-row:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+
+/* AppShell admin dan mentor di layar sempit: sidebar 200px menyisakan terlalu
+   sedikit ruang untuk isi, jadi menunya pindah ke deretan tautan di header.
+   Admin and mentor AppShell on narrow screens: the 200px sidebar leaves too
+   little room for content, so the menu moves to a row of links in the header. */
+.app-shell-mobile-nav { display: none; }
+
+@media (max-width: 900px) {
+  .app-shell-sidebar { display: none !important; }
+  .app-shell-header { padding: 10px 16px !important; }
+  .app-shell-main { padding: 16px !important; }
+  .app-shell-mobile-nav {
+    display: flex;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .app-shell-mobile-nav::-webkit-scrollbar { display: none; }
+  .app-shell-mobile-nav a {
+    flex-shrink: 0;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    text-decoration: none;
+    color: var(--color-text-muted);
+    background: var(--color-bg-app);
+  }
+  .app-shell-mobile-nav a[aria-current='page'] {
+    color: #ffffff;
+    background: var(--color-primary);
+    font-weight: 700;
+  }
+}

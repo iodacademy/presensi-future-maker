@@ -73,6 +73,7 @@ export function AppShell({ role, userName, classNameTitle, children }: AppShellP
     <div style={{ minHeight: '100vh', display: 'flex', backgroundColor: 'var(--color-bg-app)' }}>
       {/* Sidebar: w=200, padding=18, gap=16 (persis node 10:1229) */}
       <aside
+        className="app-shell-sidebar"
         style={{
           width: '200px',
           // Menempel setinggi layar agar menu tetap terjangkau saat halaman
@@ -233,18 +234,32 @@ export function AppShell({ role, userName, classNameTitle, children }: AppShellP
             lived only in the sidebar, which is hidden on narrow screens --
             leaving phone users with no way out at all. */}
         <header
+          className="app-shell-header"
           style={{
             display: 'flex',
             justifyContent: 'flex-end',
             alignItems: 'center',
+            gap: '12px',
             padding: '12px 24px',
             borderBottom: '1px solid var(--color-border)',
             backgroundColor: '#ffffff',
           }}
         >
+          {/* Menu pengganti sidebar di layar sempit, tampil lewat CSS di bawah 900px.
+              The sidebar's stand-in on narrow screens, shown by CSS below 900px. */}
+          <nav className="app-shell-mobile-nav" aria-label="Menu">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+              return (
+                <Link key={item.href} href={item.href} aria-current={isActive ? 'page' : undefined}>
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
           <ProfileMenu userName={userName || 'Pengguna'} roleLabel={roleLabel} />
         </header>
-        <main style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>{children}</main>
+        <main className="app-shell-main" style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>{children}</main>
       </div>
     </div>
   );

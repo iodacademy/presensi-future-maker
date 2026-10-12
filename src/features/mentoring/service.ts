@@ -21,6 +21,8 @@ import {
   canStudentCancelBooking,
 } from './policy';
 import { getStudentAssignment } from '../assignments/service';
+import { DISABILITY_LABELS, ENTRY_STATUS_LABELS, GENDER_LABELS, type StudentProfileDocument } from '../users/profile-types';
+import { ageFrom } from '../users/profile-service';
 import {
   createCalendarEvent,
   cancelCalendarEvent,
@@ -566,4 +568,76 @@ export async function listMentorSchedule(actor: Actor): Promise<MentoringSlotDoc
 
   const slots = snapshot.docs.map((d) => d.data() as MentoringSlotDocument);
   return slots.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+}
+
+export interface MenteeProfile {
+  uid: string;
+  name: string;
+  email: string;
+  className: string;
+  phone: string | null;
+  age: number | null;
+  gender: string | null;
+  entryStatus: string | null;
+  disability: string | null;
+}
+
+/**
+ * Profil peserta untuk mentornya, agar mentor dapat menghubungi dan
+ * mengingatkan peserta sebelum sesi.
+ *
+ * Hanya dibuka bagi mentor yang memang dibooking peserta itu. Profil memuat
+ * nomor WhatsApp dan status disabilitas; mentor lain tidak punya alasan
+ * melihatnya, dan studentId di URL mudah diganti.
+ *
+ * A participant's profile for their mentor, so the mentor can contact and
+ * remind the participant before the session.
+ *
+ * Opened only to a mentor the participant actually booked. The profile holds a
+ * WhatsApp number and a disability status; other mentors have no reason to see
+ * it, and the studentId in the URL is easy to swap.
+ */
+export async function getMenteeProfile(actor: Actor, studentId: string): Promise<MenteeProfile> {
+  if (actor.role !== 'mentor' && actor.role !== 'admin') {
+    throw new Error('Hanya mentor atau admin yang diizinkan melihat profil peserta');
+  }
+
+  const db = getAdminDb();
+  if (actor.role === 'mentor') {
+    const booked = await db.collection('mentoringSlots')
+      .where('mentorId', '==', actor.uid)
+      .where('studentId', '==', studentId)
+      .limit(1)
+      .select()
+      .get();
+    if (booked.empty) {
+      throw new Error('Peserta ini tidak membooking sesi dengan Anda');
+    }
+  }
+
+  const [userSnap, profileSnap] = await Promise.all([
+    db.collection('users').doc(studentId).get(),
+    db.collection('studentProfiles').doc(studentId).get(),
+  ]);
+  const user = userSnap.data() as UserDocument | undefined;
+  if (!user) throw new Error('Peserta tidak ditemukan');
+
+  const kelas = user.classId ? (await db.collection('classes').doc(user.classId).get()).data() as ClassDocument | undefined : undefined;
+  const profile = profileSnap.exists ? (profileSnap.data() as StudentProfileDocument) : null;
+
+  return {
+    uid: studentId,
+    name: user.name,
+    email: user.email,
+    className: kelas?.canonicalName ?? '',
+    phone: profile?.phone ?? null,
+    age: profile ? ageFrom(profile.birthDate) : null,
+    gender: profile ? GENDER_LABELS[profile.gender] ?? profile.gender : null,
+    entryStatus: profile ? ENTRY_STATUS_LABELS[profile.entryStatus] ?? profile.entryStatus : null,
+    disability: profile
+      ? profile.disability === 'lainnya' && profile.disabilityNote
+        ? `Lainnya: ${profile.disabilityNote}`
+        : DISABILITY_LABELS[profile.disability] ?? profile.disability
+      : null,
+  };
 }
