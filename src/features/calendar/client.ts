@@ -46,16 +46,20 @@ async function callBridge(action: string, payload: Record<string, unknown>): Pro
   }
 
   // Apps Script membalas lambat saat conference masih dibuat; batas waktu
-  // mencegah permintaan booking menggantung tanpa akhir.
+  // mencegah permintaan booking menggantung tanpa akhir. Batasnya longgar karena
+  // permintaan yang diputus tidak menghentikan Apps Script: event tetap dibuat
+  // dan undangannya terkirim, tetapi tautannya tidak pernah tercatat di sini.
   //
   // Apps Script responds slowly while the conference is still being created; a
-  // timeout keeps a booking request from hanging indefinitely.
+  // timeout keeps a booking request from hanging indefinitely. The limit is
+  // generous because aborting does not stop Apps Script: the event is still
+  // created and its invitation sent, but the link is never recorded here.
   const response = await fetch(config.url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action, secret: config.secret, ...payload }),
     redirect: 'follow',
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(45_000),
   });
 
   if (!response.ok) {

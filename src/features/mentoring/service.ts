@@ -315,7 +315,7 @@ export async function bookMentoringSlot(
 async function attachCalendarEvent(
   bookingId: string,
   slot: MentoringSlotDocument,
-  actor: Actor
+  student: { name: string; email: string }
 ): Promise<string | null> {
   if (!isCalendarConfigured()) return null;
 
@@ -330,22 +330,22 @@ async function attachCalendarEvent(
 
     const result = await createCalendarEvent({
       bookingId,
-      summary: `Mentoring ${slot.phase} - ${actor.name}`,
-      description: `Sesi mentoring 1-on-1\nKelas: ${slot.className ?? '-'}\nMentor: ${slot.mentorName}\nPeserta: ${actor.name}`,
+      summary: `Mentoring ${slot.phase} - ${student.name}`,
+      description: `Sesi mentoring 1-on-1\nKelas: ${slot.className ?? '-'}\nMentor: ${slot.mentorName}\nPeserta: ${student.name}`,
       startsAt: slot.startsAt,
       endsAt: slot.endsAt,
-      studentEmail: actor.email,
+      studentEmail: student.email,
       mentorEmail,
     });
 
     // Ditulis hanya bila booking masih aktif dan slot masih miliknya. Membuat
-    // event dapat memakan hingga 20 detik; bila dalam jeda itu booking dibatalkan
+    // event dapat memakan hingga 45 detik; bila dalam jeda itu booking dibatalkan
     // dan slotnya diambil peserta lain, menulis tanpa memeriksa akan memasang
     // tautan Meet peserta pertama pada slot peserta kedua, dan undangan pertama
     // tertinggal tanpa pernah dibatalkan.
     //
     // Written only while the booking is still active and the slot still belongs
-    // to it. Creating the event can take up to 20 seconds; if the booking is
+    // to it. Creating the event can take up to 45 seconds; if the booking is
     // cancelled and the slot taken by someone else in that gap, writing without
     // checking would put the first participant's Meet link on the second
     // participant's slot, and the first invitation would linger, never cancelled.
@@ -355,7 +355,11 @@ async function attachCalendarEvent(
       const [bookingSnap, slotSnap] = await Promise.all([tx.get(bookingRef), tx.get(slotRef)]);
       const booking = bookingSnap.data() as MentoringBookingDocument | undefined;
       const current = slotSnap.data() as MentoringSlotDocument | undefined;
-      if (booking?.status !== 'confirmed' || current?.bookingId !== bookingId) return false;
+      // Event yang sudah tercatat berarti percobaan lain mendahului; event kedua
+      // hanya akan menjadi undangan ganda.
+      // An already-recorded event means another attempt got there first; a
+      // second event would only be a duplicate invitation.
+      if (booking?.status !== 'confirmed' || booking.calendarEventId || current?.bookingId !== bookingId) return false;
 
       tx.update(bookingRef, { meetUrl: result.meetUrl, calendarEventId: result.eventId });
       tx.update(slotRef, { meetUrl: result.meetUrl, calendarEventId: result.eventId, updatedAt: new Date().toISOString() });
@@ -371,6 +375,48 @@ async function attachCalendarEvent(
     console.error('[mentoring] gagal membuat event kalender', { bookingId, error });
     return null;
   }
+}
+
+/**
+ * Admin membuat ulang event kalender untuk booking yang belum punya tautan
+ * Meet, misalnya karena dibooking sebelum kalender tersambung atau karena
+ * jembatan Apps Script kehabisan waktu.
+ *
+ * An admin recreates the calendar event for a booking without a Meet link,
+ * e.g. booked before the calendar was connected or after the Apps Script
+ * bridge timed out.
+ */
+export async function retryBookingCalendarEvent(actor: Actor, bookingId: string): Promise<string> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang dapat membuat ulang link Meet');
+  }
+  if (!isCalendarConfigured()) {
+    throw new Error('Google Calendar belum dikonfigurasi');
+  }
+
+  const db = getAdminDb();
+  const bookingDoc = await db.collection('bookings').doc(bookingId).get();
+  const booking = bookingDoc.data() as MentoringBookingDocument | undefined;
+  if (!booking || booking.status !== 'confirmed') {
+    throw new Error('Booking tidak ditemukan atau sudah dibatalkan');
+  }
+  if (booking.meetUrl) return booking.meetUrl;
+
+  const [slotDoc, studentDoc] = await Promise.all([
+    db.collection('mentoringSlots').doc(booking.slotId).get(),
+    db.collection('users').doc(booking.studentId).get(),
+  ]);
+  const slot = slotDoc.data() as MentoringSlotDocument | undefined;
+  const studentEmail = (studentDoc.data() as UserDocument | undefined)?.email;
+  if (!slot || !studentEmail) {
+    throw new Error('Data slot atau email peserta tidak ditemukan');
+  }
+
+  const meetUrl = await attachCalendarEvent(bookingId, slot, { name: booking.studentName, email: studentEmail });
+  if (!meetUrl) {
+    throw new Error('Google Calendar belum berhasil membuat link Meet. Coba lagi beberapa saat lagi.');
+  }
+  return meetUrl;
 }
 
 /**

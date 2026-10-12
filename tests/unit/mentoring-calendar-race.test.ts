@@ -35,7 +35,7 @@ vi.mock('../../src/features/calendar/client', () => ({
   cancelCalendarEvent: async (id: string) => void cancelled.push(id),
 }));
 
-import { bookMentoringSlot } from '../../src/features/mentoring/service';
+import { bookMentoringSlot, retryBookingCalendarEvent } from '../../src/features/mentoring/service';
 
 const student = { uid: 'sA', email: 'a@x.id', name: 'Peserta A', role: 'student' as const, classId: 'k1' };
 
@@ -74,5 +74,35 @@ describe('event kalender mentoring dan pembatalan yang bersamaan', () => {
     expect(meetUrl).toBeNull();
     expect(store.get('mentoringSlots/slot1')?.meetUrl).toBeNull();
     expect(cancelled).toEqual(['evt-A']);
+  });
+});
+
+describe('admin membuat ulang link Meet', () => {
+  const admin = { uid: 'ad', email: 'admin@x.id', name: 'Admin', role: 'admin' as const, classId: null };
+  const seedBooking = (extra: Record<string, unknown> = {}) => {
+    store.set('bookings/b1', { id: 'b1', slotId: 'slot1', studentId: 'sA', studentName: 'Peserta A', status: 'confirmed', meetUrl: null, calendarEventId: null, ...extra });
+    store.set('mentoringSlots/slot1', { ...store.get('mentoringSlots/slot1'), status: 'booked', bookingId: 'b1' });
+    store.set('users/sA', { email: 'a@x.id' });
+  };
+
+  it('membuat event untuk booking tanpa tautan', async () => {
+    seedBooking();
+    await expect(retryBookingCalendarEvent(admin, 'b1')).resolves.toBe('https://meet.google.com/aaa-aaaa-aaa');
+    expect(store.get('bookings/b1')?.calendarEventId).toBe('evt-A');
+  });
+
+  it('tidak membuat undangan ganda bila percobaan lain sudah mencatat event', async () => {
+    // Dua klik bersamaan: yang kedua selesai setelah yang pertama tercatat.
+    // Two concurrent clicks: the second finishes after the first was recorded.
+    seedBooking();
+    duringCreate = () => store.set('bookings/b1', { ...store.get('bookings/b1'), calendarEventId: 'evt-first' });
+    await expect(retryBookingCalendarEvent(admin, 'b1')).rejects.toThrow(/belum berhasil/);
+    expect(cancelled).toEqual(['evt-A']);
+    expect(store.get('bookings/b1')?.calendarEventId).toBe('evt-first');
+  });
+
+  it('hanya untuk admin', async () => {
+    seedBooking();
+    await expect(retryBookingCalendarEvent(student, 'b1')).rejects.toThrow(/admin/);
   });
 });

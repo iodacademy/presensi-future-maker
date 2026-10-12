@@ -19,6 +19,23 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'mendatang' | 'arsip'>('mendatang');
+  const [creating, setCreating] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const createMeet = async (slot: MentoringSlotDocument) => {
+    setCreating(slot.id);
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/mentoring/bookings/${slot.bookingId}/meet`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal membuat link Meet');
+      setSlots((cur) => cur.map((s) => (s.id === slot.id ? { ...s, meetUrl: data.meetUrl } : s)));
+    } catch (e) {
+      setActionError((e as Error).message);
+    } finally {
+      setCreating(null);
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -79,6 +96,12 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
         </div>
       </div>
 
+      {actionError && (
+        <div role="alert" style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: 'var(--color-danger-light)', color: 'var(--color-danger)', fontSize: '12px' }}>
+          {actionError}
+        </div>
+      )}
+
       {loading ? (
         <div style={{ padding: '20px', textAlign: 'center', fontSize: '12px', color: 'var(--color-text-muted)' }}>Memuat jadwal...</div>
       ) : error ? (
@@ -118,6 +141,16 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
                     <a href={s.meetUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 12px', borderRadius: '8px', backgroundColor: '#0e9f6e', color: '#ffffff', fontSize: '11px', fontWeight: 700, textDecoration: 'none' }}>
                       <Video size={13} /> Buka Meet
                     </a>
+                  ) : s.bookingId ? (
+                    <button
+                      type="button"
+                      onClick={() => createMeet(s)}
+                      disabled={creating === s.id}
+                      title="Booking ini belum punya link Meet. Undangan kalender akan dikirim ke mentor dan peserta."
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--color-primary)', backgroundColor: '#ffffff', color: 'var(--color-primary)', fontSize: '11px', fontWeight: 700, cursor: creating === s.id ? 'wait' : 'pointer' }}
+                    >
+                      <Video size={13} /> {creating === s.id ? 'Membuat link...' : 'Buat link Meet'}
+                    </button>
                   ) : (
                     <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Link Meet menyusul</span>
                   )
