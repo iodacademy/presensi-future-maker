@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionActor } from '@/features/auth/session';
-import { listUsers, setUserActive, updateUserAccount } from '@/features/users/list-service';
+import { listUsers, setUserActive, setUserTest, updateUserAccount } from '@/features/users/list-service';
 
 // Daftar seluruh akun untuk panel admin / Full account listing for the admin panel
 export async function GET() {
@@ -38,6 +38,10 @@ export async function PATCH(request: Request) {
     // name and email happened to be on screen.
     if (typeof body.active === 'boolean') {
       await setUserActive(actor, body.uid, body.active);
+      return NextResponse.json({ updated: true });
+    }
+    if (typeof body.isTest === 'boolean') {
+      await setUserTest(actor, body.uid, body.isTest);
       return NextResponse.json({ updated: true });
     }
 

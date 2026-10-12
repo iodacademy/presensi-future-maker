@@ -8,7 +8,16 @@ import { normalizeEmail } from '../auth/policy';
  * Admin dilarang diimpor lewat file roster demi keamanan.
  *
  * Parses role synonyms from spreadsheet input.
- * Admin is forbidden to be imported via roster for security.
+ *
+ * Admin dikenali karena dialog Tambah Akun mengirim peran pilihan admin, bukan
+ * isi berkas. Sebelumnya 'admin' tidak dikenali dan jatuh menjadi peserta,
+ * sehingga akun admin baru ditolak karena tidak berkelas dan tidak pernah
+ * tersimpan.
+ *
+ * Admin is recognised because the Add Account dialog sends the role the admin
+ * picked, not the file's contents. 'admin' used to be unrecognised and fell
+ * back to participant, so a new admin account was rejected for having no class
+ * and never saved.
  */
 export function parseImportRole(roleStr?: string): Role | null {
   if (!roleStr) return null;
@@ -18,6 +27,9 @@ export function parseImportRole(roleStr?: string): Role | null {
   }
   if (['mentor'].includes(cleaned)) {
     return 'mentor';
+  }
+  if (cleaned === 'admin') {
+    return 'admin';
   }
   return null;
 }

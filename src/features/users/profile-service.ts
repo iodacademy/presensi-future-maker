@@ -129,10 +129,32 @@ export async function saveProfile(actor: Actor, input: Partial<ProfileInput>): P
     throw new Error('Hanya peserta yang mengisi profil');
   }
 
-  const validated = validateProfile(input);
+  await writeProfile(actor.uid, input);
+}
 
-  await getAdminDb().collection('studentProfiles').doc(actor.uid).set({
-    id: actor.uid,
+/**
+ * Admin membetulkan profil yang sudah diisi peserta, mis. tanggal lahir yang
+ * salah ketik. Hanya profil yang sudah ada: mengisikan profil yang belum diisi
+ * akan meloloskan peserta dari formulir yang seharusnya ia jawab sendiri.
+ *
+ * An admin corrects a profile the participant already filled in, e.g. a
+ * mistyped birth date. Only an existing profile: filling in a missing one
+ * would let the participant skip a form they should answer themselves.
+ */
+export async function updateProfileByAdmin(actor: Actor, uid: string, input: Partial<ProfileInput>): Promise<void> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang dapat mengubah profil peserta');
+  }
+  if (!(await getProfile(uid))) {
+    throw new Error('Peserta belum mengisi profil');
+  }
+  await writeProfile(uid, input);
+}
+
+async function writeProfile(uid: string, input: Partial<ProfileInput>): Promise<void> {
+  const validated = validateProfile(input);
+  await getAdminDb().collection('studentProfiles').doc(uid).set({
+    id: uid,
     ...validated,
     updatedAt: new Date().toISOString(),
   } satisfies StudentProfileDocument);

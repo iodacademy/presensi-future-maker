@@ -9,6 +9,8 @@ export interface UserDocument {
   role: Role;
   active: boolean;
   classId: string | null;
+  /** Akun uji coba: tidak dihitung di dashboard / A test account: excluded from the dashboard */
+  isTest?: boolean;
   createdAt: string;
   updatedAt: string;
 }

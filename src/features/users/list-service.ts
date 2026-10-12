@@ -2,6 +2,7 @@
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor, Role, UserDocument } from '../auth/types';
 import { normalizeEmail, getEmailHash } from '../auth/policy';
+import { wibDate } from '@/lib/time';
 import type { ClassDocument } from '../classes/types';
 
 export interface UserListItem {
@@ -12,6 +13,7 @@ export interface UserListItem {
   active: boolean;
   classId: string | null;
   className: string | null;
+  isTest: boolean;
 }
 
 export interface UserListResult {
@@ -49,7 +51,7 @@ export async function listUsers(actor: Actor): Promise<UserListResult> {
   const db = getAdminDb();
 
   const [usersSnap, classesSnap] = await Promise.all([
-    db.collection('users').select('uid', 'name', 'email', 'role', 'active', 'classId').get(),
+    db.collection('users').select('uid', 'name', 'email', 'role', 'active', 'classId', 'isTest').get(),
     db.collection('classes').select('canonicalName').get(),
   ]);
 
@@ -80,6 +82,7 @@ export async function listUsers(actor: Actor): Promise<UserListResult> {
       // such so an admin sees something needs fixing, rather than being masked
       // as having no class at all.
       className: data.classId ? (classNames.get(data.classId) ?? '(kelas terhapus)') : null,
+      isTest: data.isTest === true,
     };
   });
 
@@ -119,6 +122,34 @@ export async function setUserActive(actor: Actor, uid: string, active: boolean):
   }
 
   await ref.update({ active, updatedAt: new Date().toISOString() });
+}
+
+/**
+ * Menandai sebuah akun sebagai akun test, atau melepas tandanya.
+ *
+ * Ringkasan dashboard hari ini dihapus agar dihitung ulang saat dibuka
+ * berikutnya. Tanpa itu, akun yang baru ditandai tetap terhitung sampai satu
+ * jam, dan admin mengira tandanya tidak berlaku.
+ *
+ * Marks an account as a test account, or clears the mark.
+ *
+ * Today's dashboard snapshot is deleted so it recomputes on the next open.
+ * Without that, a freshly marked account keeps counting for up to an hour, and
+ * the admin assumes the mark did nothing.
+ */
+export async function setUserTest(actor: Actor, uid: string, isTest: boolean): Promise<void> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan menandai akun test');
+  }
+
+  const db = getAdminDb();
+  const ref = db.collection('users').doc(uid);
+  if (!(await ref.get()).exists) {
+    throw new Error('Akun tidak ditemukan');
+  }
+
+  await ref.update({ isTest, updatedAt: new Date().toISOString() });
+  await db.collection('dashboardSnapshots').doc(wibDate()).delete();
 }
 
 /**

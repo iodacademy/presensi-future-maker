@@ -12,7 +12,8 @@ describe('User Import Policy', () => {
     expect(parseImportRole('siswa')).toBe('student');
     expect(parseImportRole('peserta')).toBe('student');
     expect(parseImportRole('mentor')).toBe('mentor');
-    expect(parseImportRole('admin')).toBeNull(); // admin tidak boleh diimpor via file / admin cannot be imported via roster
+    // Peran berasal dari pilihan dialog, bukan isi berkas / The role comes from the dialog choice, not the file
+    expect(parseImportRole('admin')).toBe('admin');
     expect(parseImportRole('unknown')).toBeNull();
   });
 

@@ -25,7 +25,7 @@ describe('listUsers', () => {
     //
     // A user document carries timestamps and a normalised address this table
     // never shows.
-    expect(service).toMatch(/\.select\('uid', 'name', 'email', 'role', 'active', 'classId'\)/);
+    expect(service).toMatch(/\.select\('uid', 'name', 'email', 'role', 'active', 'classId', 'isTest'\)/);
   });
 
   it('menandai kelas yang sudah terhapus alih-alih menyembunyikannya', () => {

@@ -243,6 +243,12 @@ export default function AdminAkunPage() {
                 </span>
               )}
 
+              {user.isTest && (
+                <span title="Tidak dihitung di dashboard" style={{ fontSize: '9px', fontWeight: 700, color: '#7c2d12', backgroundColor: 'var(--color-warning-light)', padding: '3px 8px', borderRadius: '10px' }}>
+                  TEST
+                </span>
+              )}
+
               {/* Penonaktifan dipakai alih-alih penghapusan: akun memuat
                   pengumpulan tugas dan catatan kehadiran yang tidak punya
                   salinan lain, sedangkan field active sudah diperiksa saat masuk
