@@ -570,6 +570,24 @@ export async function listMentorSchedule(actor: Actor): Promise<MentoringSlotDoc
   return slots.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 }
 
+/**
+ * Peserta termasuk bimbingan seorang mentor bila ditugaskan kepadanya atau
+ * sedang membooking slotnya. Booking ikut dihitung karena penugasan dapat
+ * dipindah admin setelah peserta membooking, sementara sesinya tetap berjalan.
+ *
+ * A participant is a mentor's mentee when assigned to them or holding one of
+ * their slots. Bookings count too because an admin may move the assignment
+ * after the participant booked, while the session still goes ahead.
+ */
+export async function isMenteeOf(mentorId: string, studentId: string): Promise<boolean> {
+  const db = getAdminDb();
+  const [assigned, booked] = await Promise.all([
+    db.collection('assignments').where('mentorId', '==', mentorId).where('studentId', '==', studentId).limit(1).select().get(),
+    db.collection('mentoringSlots').where('mentorId', '==', mentorId).where('studentId', '==', studentId).limit(1).select().get(),
+  ]);
+  return !assigned.empty || !booked.empty;
+}
+
 export interface MenteeProfile {
   uid: string;
   name: string;
@@ -603,16 +621,8 @@ export async function getMenteeProfile(actor: Actor, studentId: string): Promise
   }
 
   const db = getAdminDb();
-  if (actor.role === 'mentor') {
-    const booked = await db.collection('mentoringSlots')
-      .where('mentorId', '==', actor.uid)
-      .where('studentId', '==', studentId)
-      .limit(1)
-      .select()
-      .get();
-    if (booked.empty) {
-      throw new Error('Peserta ini tidak membooking sesi dengan Anda');
-    }
+  if (actor.role === 'mentor' && !(await isMenteeOf(actor.uid, studentId))) {
+    throw new Error('Peserta ini bukan peserta bimbingan Anda');
   }
 
   const [userSnap, profileSnap] = await Promise.all([

@@ -26,18 +26,22 @@ const data: Record<string, Record<string, Record<string, unknown>>> = {
     r3: { studentId: 'lain', formTitle: 'Feedback', sessionTitle: 'X', sessionDate: '', submittedAt: '', answers: [] },
   },
   studentProfiles: { s1: { id: 's1', birthDate: '2000-01-01', gender: 'perempuan', disability: 'tidak-ada', disabilityNote: '', entryStatus: 'mahasiswa', phone: '0812345678' } },
-  studentNotes: {},
+  studentNotes: { s1: { note: 'Sering terlambat', followUp: '' } },
+  assignments: { s1_bootcamp: { studentId: 's1', mentorId: 'mt1', phase: 'bootcamp' } },
+  mentoringSlots: {},
 };
 
 function query(name: string, filters: [string, string, unknown][] = []) {
   return {
     where: (f: string, op: string, v: unknown) => query(name, [...filters, [f, op, v]]),
     select: () => query(name, filters),
-    get: async () => ({
-      docs: Object.entries(data[name] ?? {})
+    limit: () => query(name, filters),
+    get: async () => {
+      const docs = Object.entries(data[name] ?? {})
         .filter(([, d]) => filters.every(([f, op, v]) => (op === 'array-contains' ? ((d[f] as unknown[]) ?? []).includes(v) : d[f] === v)))
-        .map(([id, d]) => ({ id, data: () => d })),
-    }),
+        .map(([id, d]) => ({ id, data: () => d }));
+      return { docs, empty: docs.length === 0 };
+    },
   };
 }
 vi.mock('../../src/lib/firebase/admin', () => ({
@@ -49,13 +53,13 @@ vi.mock('../../src/lib/firebase/admin', () => ({
   }),
 }));
 
-import { getStudentDetailForAdmin } from '../../src/features/dashboard/student-detail-service';
+import { getStudentDetail } from '../../src/features/dashboard/student-detail-service';
 
 const admin = { uid: 'ad', email: 'a@x.id', name: 'Admin', role: 'admin' as const, classId: null };
 
-describe('detail progres peserta untuk admin', () => {
+describe('detail progres peserta', () => {
   it('menggabungkan pertemuan kelasnya sendiri dan pertemuan gabungan, beserta statusnya', async () => {
-    const d = await getStudentDetailForAdmin(admin, 's1');
+    const d = await getStudentDetail(admin, 's1');
     expect(d.student).toMatchObject({ name: 'Ani', className: 'Semarang - Data', city: 'Semarang' });
     expect(d.performance.attendance.map((a) => [a.sessionId, a.status])).toEqual([['p1', 'hadir'], ['p2', 'izin']]);
     expect(d.performance.tasks[0]).toMatchObject({ status: 'dinilai', score: 88 });
@@ -63,17 +67,27 @@ describe('detail progres peserta untuk admin', () => {
   });
 
   it('memuat mentoring, profil, dan feedback milik peserta itu saja, terbaru lebih dulu', async () => {
-    const d = await getStudentDetailForAdmin(admin, 's1');
+    const d = await getStudentDetail(admin, 's1');
     expect(d.mentoring.used).toBe(1);
     expect(d.mentoring.bookings.map((b) => b.status)).toEqual(['cancelled', 'confirmed']);
     expect(d.profile).toMatchObject({ gender: 'Perempuan', entryStatus: 'Mahasiswa' });
-    expect(d.feedback.map((f) => f.sessionTitle)).toEqual(['Pertemuan 2', 'Pertemuan 1']);
-    expect(d.feedback[1].answers[0]).toEqual({ questionText: 'Kesan?', kind: 'teks', value: 'Seru' });
+    expect(d.feedback!.map((f) => f.sessionTitle)).toEqual(['Pertemuan 2', 'Pertemuan 1']);
+    expect(d.feedback![1].answers[0]).toEqual({ questionText: 'Kesan?', kind: 'teks', value: 'Seru' });
+    expect(d.note).toEqual({ note: 'Sering terlambat', followUp: '' });
+  });
+
+  it('terbuka bagi mentornya tanpa feedback dan catatan admin', async () => {
+    // Feedback ditujukan kepada penyelenggara; peserta tidak mengira mentornya ikut membaca.
+    // Feedback is addressed to the organisers; participants do not expect their mentor to read it.
+    const d = await getStudentDetail({ ...admin, uid: 'mt1', role: 'mentor' }, 's1');
+    expect(d.performance.attendance).toHaveLength(2);
+    expect(d.feedback).toBeNull();
     expect(d.note).toBeNull();
   });
 
-  it('hanya untuk admin dan hanya untuk akun peserta', async () => {
-    await expect(getStudentDetailForAdmin({ ...admin, role: 'mentor' }, 's1')).rejects.toThrow(/admin/);
-    await expect(getStudentDetailForAdmin(admin, 'm1')).rejects.toThrow(/tidak ditemukan/);
+  it('tertutup bagi mentor lain, peserta, dan akun bukan peserta', async () => {
+    await expect(getStudentDetail({ ...admin, uid: 'mt2', role: 'mentor' }, 's1')).rejects.toThrow(/bukan peserta bimbingan/);
+    await expect(getStudentDetail({ ...admin, role: 'student' }, 's1')).rejects.toThrow(/admin atau mentor/);
+    await expect(getStudentDetail(admin, 'm1')).rejects.toThrow(/tidak ditemukan/);
   });
 });

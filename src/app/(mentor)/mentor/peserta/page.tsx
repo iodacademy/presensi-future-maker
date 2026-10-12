@@ -1,13 +1,16 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { ChevronRight } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
+import { StudentDetailModal } from '@/components/student-detail-modal';
 import type { AssignmentDocument, Phase } from '@/features/assignments/types';
 
 export default function MentorPesertaPage() {
   const [phase, setPhase] = useState<Phase>('bootcamp');
   const [students, setStudents] = useState<AssignmentDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const [picked, setPicked] = useState<AssignmentDocument | null>(null);
 
   useEffect(() => {
     async function loadAssignedStudents() {
@@ -119,7 +122,14 @@ export default function MentorPesertaPage() {
               {students.map((item) => (
                 <tr key={item.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                   <td style={{ padding: '12px 16px', fontWeight: 600 }}>
-                    {item.studentName || item.studentId}
+                    <button
+                      type="button"
+                      onClick={() => setPicked(item)}
+                      title="Lihat performa belajar"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 0, padding: 0, font: 'inherit', fontWeight: 600, color: 'var(--color-primary)', cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      {item.studentName || item.studentId} <ChevronRight size={14} />
+                    </button>
                   </td>
                   <td style={{ padding: '12px 16px', textTransform: 'capitalize' }}>
                     {item.phase}
@@ -143,6 +153,10 @@ export default function MentorPesertaPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {picked && (
+        <StudentDetailModal studentId={picked.studentId} name={picked.studentName || 'Peserta'} onClose={() => setPicked(null)} />
       )}
     </AppShell>
   );

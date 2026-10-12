@@ -114,6 +114,7 @@ export interface StudentDetail {
   profile: { age: number | null; gender: string; disability: string; entryStatus: string; phone: string } | null;
   performance: StudentPerformance;
   mentoring: { used: number; bookings: { id: string; mentorName: string; date: string; startTime: string; endTime: string; status: 'confirmed' | 'cancelled' }[] };
-  feedback: { id: string; formTitle: string; sessionTitle: string; sessionDate: string; submittedAt: string; answers: { questionText: string; kind: string; value: string }[] }[];
+  /** null bagi mentor: feedback ditujukan kepada penyelenggara / null for mentors: feedback is addressed to the organisers */
+  feedback: { id: string; formTitle: string; sessionTitle: string; sessionDate: string; submittedAt: string; answers: { questionText: string; kind: string; value: string }[] }[] | null;
   note: { note: string; followUp: string } | null;
 }

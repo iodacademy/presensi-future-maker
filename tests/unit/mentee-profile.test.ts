@@ -51,7 +51,7 @@ describe('profil peserta untuk mentor', () => {
   });
 
   it('tertutup bagi mentor lain, karena memuat nomor WhatsApp dan disabilitas', async () => {
-    await expect(getMenteeProfile(mentor('m2'), 's1')).rejects.toThrow(/tidak membooking/);
+    await expect(getMenteeProfile(mentor('m2'), 's1')).rejects.toThrow(/bukan peserta bimbingan/);
   });
 
   it('tertutup bagi peserta', async () => {

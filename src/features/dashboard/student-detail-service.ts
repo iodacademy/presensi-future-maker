@@ -11,6 +11,7 @@ import type { SurveyResponseDocument } from '../survey/types';
 import { DISABILITY_LABELS, ENTRY_STATUS_LABELS, GENDER_LABELS, type StudentProfileDocument } from '../users/profile-types';
 import { ageFrom } from '../users/profile-service';
 import { buildStudentPerformance } from './performance';
+import { isMenteeOf } from '../mentoring/service';
 import type { StudentDetail } from './types';
 
 /**
@@ -33,10 +34,16 @@ import type { StudentDetail } from './types';
  * and a snapshot carrying the whole cohort's feedback answers would approach
  * the document size limit.
  */
-export async function getStudentDetailForAdmin(actor: Actor, uid: string): Promise<StudentDetail> {
-  if (actor.role !== 'admin') {
-    throw new Error('Hanya admin yang diizinkan melihat detail peserta');
+export async function getStudentDetail(actor: Actor, uid: string): Promise<StudentDetail> {
+  if (actor.role !== 'admin' && actor.role !== 'mentor') {
+    throw new Error('Hanya admin atau mentor yang diizinkan melihat detail peserta');
   }
+  // Mentor hanya melihat peserta bimbingannya; uid di URL mudah diganti.
+  // A mentor only sees their own mentees; the uid in the URL is easy to swap.
+  if (actor.role === 'mentor' && !(await isMenteeOf(actor.uid, uid))) {
+    throw new Error('Peserta ini bukan peserta bimbingan Anda');
+  }
+  const isAdmin = actor.role === 'admin';
 
   const db = getAdminDb();
   const userSnap = await db.collection('users').doc(uid).get();
@@ -62,9 +69,15 @@ export async function getStudentDetailForAdmin(actor: Actor, uid: string): Promi
     db.collection('submissions').where('studentId', '==', uid).select('taskId', 'score', 'late').get(),
     db.collection('examAttempts').where('studentId', '==', uid).select('examId', 'status', 'score', 'passed').get(),
     db.collection('bookings').where('studentId', '==', uid).select('mentorName', 'date', 'startTime', 'endTime', 'status', 'phase').get(),
-    db.collection('surveyResponses').where('studentId', '==', uid).select('formTitle', 'sessionTitle', 'sessionDate', 'submittedAt', 'answers').get(),
+    // Feedback dan catatan admin tidak dibaca untuk mentor: feedback ditujukan
+    // kepada penyelenggara, dan peserta menulisnya tanpa mengira mentornya ikut
+    // membaca.
+    // Feedback and admin notes are not read for mentors: feedback is addressed
+    // to the organisers, and participants write it without expecting their
+    // mentor to read along.
+    isAdmin ? db.collection('surveyResponses').where('studentId', '==', uid).select('formTitle', 'sessionTitle', 'sessionDate', 'submittedAt', 'answers').get() : empty,
     db.collection('studentProfiles').doc(uid).get(),
-    db.collection('studentNotes').doc(uid).get(),
+    isAdmin ? db.collection('studentNotes').doc(uid).get() : Promise.resolve(null),
   ]);
 
   const kelas = classSnap?.exists ? (classSnap.data() as ClassDocument) : null;
@@ -89,7 +102,7 @@ export async function getStudentDetailForAdmin(actor: Actor, uid: string): Promi
     .sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`));
 
   const profile = profileSnap.exists ? (profileSnap.data() as StudentProfileDocument) : null;
-  const note = noteSnap.exists ? (noteSnap.data() as { note?: string; followUp?: string }) : null;
+  const note = noteSnap?.exists ? (noteSnap.data() as { note?: string; followUp?: string }) : null;
 
   return {
     student: {
@@ -117,7 +130,7 @@ export async function getStudentDetailForAdmin(actor: Actor, uid: string): Promi
       used: bookings.filter((b) => b.status === 'confirmed' && b.phase === 'bootcamp').length,
       bookings: bookings.map((b) => ({ id: b.id, mentorName: b.mentorName, date: b.date, startTime: b.startTime, endTime: b.endTime, status: b.status })),
     },
-    feedback: responsesSnap.docs
+    feedback: !isAdmin ? null : responsesSnap.docs
       .map((d) => {
         const r = d.data() as SurveyResponseDocument;
         return {

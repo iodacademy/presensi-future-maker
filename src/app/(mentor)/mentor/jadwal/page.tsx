@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { CalendarDays, Clock, Video, BellRing, MessageCircle, Mail, X, ChevronRight } from 'lucide-react';
+import { CalendarDays, Clock, Video, BellRing, MessageCircle, Mail, X, ChevronRight, TrendingUp } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
+import { StudentDetailModal } from '@/components/student-detail-modal';
 import type { MentoringSlotDocument } from '@/features/mentoring/types';
 import type { MenteeProfile } from '@/features/mentoring/service';
 import { formatLongDateWib } from '@/lib/time';
@@ -12,6 +13,7 @@ export default function MentorJadwalPage() {
   const [slots, setSlots] = useState<MentoringSlotDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<MentoringSlotDocument | null>(null);
+  const [performanceOf, setPerformanceOf] = useState<MentoringSlotDocument | null>(null);
 
   useEffect(() => {
     async function loadSchedule() {
@@ -51,7 +53,7 @@ export default function MentorJadwalPage() {
         <BellRing size={20} color="#7c2d12" style={{ flexShrink: 0, marginTop: '1px' }} />
         <div style={{ fontSize: '13px', color: '#7c2d12', lineHeight: 1.55 }}>
           <b>Jangan lupa ingatkan peserta sebelum sesi mentoring.</b> Kirim pengingat sehari sebelumnya dan satu jam sebelum sesi dimulai.
-          Klik kartu peserta untuk melihat profil dan nomor WhatsApp-nya, lalu tekan <b>Kirim pengingat</b>.
+          Klik kartu peserta untuk melihat profil, nomor WhatsApp, dan performa belajarnya, lalu tekan <b>Kirim pengingat</b>.
         </div>
       </div>
 
@@ -88,7 +90,16 @@ export default function MentorJadwalPage() {
         </div>
       )}
 
-      {selected && <MenteeModal slot={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <MenteeModal
+          slot={selected}
+          onClose={() => setSelected(null)}
+          onShowPerformance={() => { setPerformanceOf(selected); setSelected(null); }}
+        />
+      )}
+      {performanceOf?.studentId && (
+        <StudentDetailModal studentId={performanceOf.studentId} name={performanceOf.studentName || 'Peserta'} onClose={() => setPerformanceOf(null)} />
+      )}
     </AppShell>
   );
 }
@@ -139,7 +150,7 @@ function SlotCard({ slot, past = false, onOpen }: { slot: MentoringSlotDocument;
   );
 }
 
-function MenteeModal({ slot, onClose }: { slot: MentoringSlotDocument; onClose: () => void }) {
+function MenteeModal({ slot, onClose, onShowPerformance }: { slot: MentoringSlotDocument; onClose: () => void; onShowPerformance: () => void }) {
   const [profile, setProfile] = useState<MenteeProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -242,6 +253,14 @@ function MenteeModal({ slot, onClose }: { slot: MentoringSlotDocument; onClose: 
                 {field('Status saat mendaftar', profile.entryStatus ?? '-')}
                 {field('Disabilitas', profile.disability ?? '-')}
               </div>
+
+              <button
+                type="button"
+                onClick={onShowPerformance}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '11px 14px', borderRadius: '10px', border: 0, backgroundColor: 'var(--color-primary)', color: '#ffffff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                <TrendingUp size={16} /> Lihat performa belajar
+              </button>
 
               {!profile.phone && (
                 <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', margin: 0 }}>
