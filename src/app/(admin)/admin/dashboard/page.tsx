@@ -9,6 +9,7 @@ import { RosterTable } from './roster-table';
 import { FeedbackPanel } from './feedback-panel';
 import { RankingGroups } from './ranking-groups';
 import { AttendanceCellModal, AttendanceTableModal } from './attendance-detail';
+import { StudentSearch } from './student-search';
 import { ATTENDANCE_STATUS_LABELS } from '@/features/attendance/types';
 import { formatDateTimeWib } from '@/lib/time';
 import { Pagination, PAGE_SIZE } from '@/components/ui/pagination';
@@ -211,6 +212,13 @@ function DashboardBody({
             <h1 className={s.title}>
               {satuDaerah ? `Dashboard ${city}` : `Dashboard umum ${allCities.length} daerah`}
             </h1>
+            {/* Mencari di seluruh daerah, bukan hanya yang sedang dipilih: admin yang
+                mencari satu nama tidak selalu tahu kelasnya.
+                Searches every region, not only the selected one: an admin looking
+                up a name does not always know the class. */}
+            <div style={{ marginTop: '12px' }}>
+              <StudentSearch roster={snapshot.roster} />
+            </div>
           </div>
 
           <div className={s.hdrActions}>

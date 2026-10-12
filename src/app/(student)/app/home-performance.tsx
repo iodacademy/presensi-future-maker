@@ -88,7 +88,7 @@ function Empty({ text }: { text: string }) {
  *
  * Performance report on the home page: ring summary, attendance, tasks and quizzes.
  */
-export function HomePerformance({ performance, progress }: { performance: StudentPerformance; progress?: StudentHomeProgress }) {
+export function HomePerformance({ performance, progress, links = true }: { performance: StudentPerformance; progress?: StudentHomeProgress; /** false saat dipakai admin: tautannya menuju halaman peserta / false when used by an admin: the links lead to participant pages */ links?: boolean }) {
   const { attendance, quizzes, tasks } = performance;
 
   // Presensi dihitung terhadap pertemuan yang sudah berlalu: pertemuan
@@ -163,7 +163,7 @@ export function HomePerformance({ performance, progress }: { performance: Studen
       </section>
 
       <div className="home-charts">
-        <Card icon={CalendarCheck} accent={INFO} title="Laporan Presensi" subtitle={`${attendance.length} pertemuan`} href="/app/jadwal">
+        <Card icon={CalendarCheck} accent={INFO} title="Laporan Presensi" subtitle={`${attendance.length} pertemuan`} href={links ? "/app/jadwal" : undefined}>
           {attendance.length === 0 ? (
             <Empty text="Belum ada pertemuan terjadwal." />
           ) : (
@@ -188,7 +188,7 @@ export function HomePerformance({ performance, progress }: { performance: Studen
           )}
         </Card>
 
-        <Card icon={ClipboardList} accent="#c2410c" title="Laporan Tugas" subtitle={`${tasks.length} tugas`} href="/app/tugas">
+        <Card icon={ClipboardList} accent="#c2410c" title="Laporan Tugas" subtitle={`${tasks.length} tugas`} href={links ? "/app/tugas" : undefined}>
           {tasks.length === 0 ? (
             <Empty text="Belum ada tugas yang terbit." />
           ) : (

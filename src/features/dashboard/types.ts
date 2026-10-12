@@ -102,3 +102,18 @@ export interface StudentReminders {
   surveys: { formId: string; formTitle: string; sessionId: string; sessionTitle: string }[];
   exams: { id: string; title: string; dueAt: string | null; sessionTitle: string | null }[];
 }
+
+/**
+ * Seluruh progres belajar satu peserta untuk pencarian di dashboard admin.
+ *
+ * Everything about one participant's learning progress, for the admin
+ * dashboard search.
+ */
+export interface StudentDetail {
+  student: { uid: string; name: string; email: string; className: string; city: string; programName: string; active: boolean };
+  profile: { age: number | null; gender: string; disability: string; entryStatus: string; phone: string } | null;
+  performance: StudentPerformance;
+  mentoring: { used: number; bookings: { id: string; mentorName: string; date: string; startTime: string; endTime: string; status: 'confirmed' | 'cancelled' }[] };
+  feedback: { id: string; formTitle: string; sessionTitle: string; sessionDate: string; submittedAt: string; answers: { questionText: string; kind: string; value: string }[] }[];
+  note: { note: string; followUp: string } | null;
+}
