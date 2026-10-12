@@ -184,3 +184,7 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #b45309; color: #ffffff; box-shadow: 0 10px 24px rgba(180, 83, 9, 0.35);
 }
 @media (min-width: 900px) { .pending-chip { bottom: 84px; right: 360px; } }
+
+/* Baris tabel admin yang dapat diklik / Clickable admin table row */
+.admin-row:hover { background-color: var(--color-bg-student); }
+.admin-row:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }

@@ -10,6 +10,7 @@ import type {
   GradeSubmissionInput,
   StudentTaskItem,
   StudentTaskOutline,
+  RosterSubmission,
 } from './submission-types';
 import type { TaskDocument, TaskSummary } from './types';
 import type { ClassDocument } from '../classes/types';
@@ -413,7 +414,8 @@ export async function getTaskSubmissionRoster(
   actor: Actor,
   taskId: string
 ): Promise<{
-  submitted: { studentId: string; studentName: string; submittedAt: string; late: boolean; score: number | null; url: string | null }[];
+  task: { id: string; title: string; kind: TaskKind; dueAt: string | null; classId: string };
+  submitted: RosterSubmission[];
   pending: { studentId: string; studentName: string; email: string }[];
 }> {
   if (actor.role !== 'admin') {
@@ -426,7 +428,8 @@ export async function getTaskSubmissionRoster(
     throw new Error('Tugas tidak ditemukan');
   }
 
-  const { classId } = taskDoc.data() as TaskDocument;
+  const task = taskDoc.data() as TaskDocument;
+  const { classId } = task;
 
   const [studentsSnap, submissionsSnap] = await Promise.all([
     db
@@ -449,7 +452,7 @@ export async function getTaskSubmissionRoster(
     submissions.set(sub.studentId, sub);
   }
 
-  const submitted: { studentId: string; studentName: string; submittedAt: string; late: boolean; score: number | null; url: string | null }[] = [];
+  const submitted: RosterSubmission[] = [];
   const pending: { studentId: string; studentName: string; email: string }[] = [];
 
   for (const doc of studentsSnap.docs) {
@@ -463,6 +466,9 @@ export async function getTaskSubmissionRoster(
         late: sub.late,
         score: sub.score ?? null,
         url: sub.url,
+        submissionId: sub.id,
+        fileName: sub.fileName,
+        feedbackPreview: sub.feedbackPreview,
       });
     } else {
       pending.push({ studentId: u.uid, studentName: u.name, email: u.email });
@@ -472,5 +478,69 @@ export async function getTaskSubmissionRoster(
   submitted.sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
   pending.sort((a, b) => a.studentName.localeCompare(b.studentName, 'id'));
 
-  return { submitted, pending };
+  return {
+    task: { id: task.id, title: task.title, kind: task.kind, dueAt: task.dueAt, classId },
+    submitted,
+    pending,
+  };
+}
+
+
+/**
+ * Ringkasan pengumpulan seluruh tugas satu kelas: per tugas, berapa yang
+ * sudah mengumpulkan, sudah dinilai, dan menunggu nilai.
+ *
+ * Tiga kueri untuk seluruh kelas, bukan satu rekap per tugas: membuka rekap
+ * tiap tugas membaca seluruh peserta kelas berulang kali. Hanya kolom yang
+ * dipakai tabel yang dibaca.
+ *
+ * A submission summary of every task in a class: per task, how many have
+ * submitted, been graded, and are waiting for a score.
+ *
+ * Three queries for the whole class rather than one roster per task: opening
+ * each task's roster would read the whole class roster over and over. Only the
+ * columns the table uses are read.
+ */
+export async function listClassTaskSummary(
+  actor: Actor,
+  classId: string
+): Promise<{
+  studentCount: number;
+  tasks: { id: string; title: string; kind: TaskKind; order: number; dueAt: string | null; published: boolean; submitted: number; graded: number; late: number }[];
+}> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang diizinkan melihat rekap pengumpulan');
+  }
+
+  const db = getAdminDb();
+  const [tasksSnap, subsSnap, studentsCount] = await Promise.all([
+    db.collection('tasks').where('classId', '==', classId).select('id', 'title', 'kind', 'order', 'dueAt', 'published').get(),
+    db.collection('submissions').where('classId', '==', classId).select('taskId', 'studentId', 'score', 'late').get(),
+    db.collection('users').where('classId', '==', classId).where('role', '==', 'student').where('active', '==', true).count().get(),
+  ]);
+
+  const perTask = new Map<string, { submitted: number; graded: number; late: number }>();
+  for (const d of subsSnap.docs) {
+    const sub = d.data() as Pick<SubmissionDocument, 'taskId' | 'score' | 'late'>;
+    const t = perTask.get(sub.taskId) ?? { submitted: 0, graded: 0, late: 0 };
+    t.submitted += 1;
+    if (sub.score !== null && sub.score !== undefined) t.graded += 1;
+    if (sub.late) t.late += 1;
+    perTask.set(sub.taskId, t);
+  }
+
+  const tasks = tasksSnap.docs
+    .map((d) => d.data() as Pick<TaskDocument, 'id' | 'title' | 'kind' | 'order' | 'dueAt' | 'published'>)
+    .map((t) => ({
+      id: t.id,
+      title: t.title,
+      kind: t.kind,
+      order: t.order,
+      dueAt: t.dueAt ?? null,
+      published: t.published !== false,
+      ...(perTask.get(t.id) ?? { submitted: 0, graded: 0, late: 0 }),
+    }))
+    .sort((a, b) => a.order - b.order || (a.dueAt ?? '').localeCompare(b.dueAt ?? ''));
+
+  return { studentCount: studentsCount.data().count, tasks };
 }

@@ -1,112 +1,89 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Search, ChevronRight, ExternalLink, FileText, Download, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Search, ChevronRight, Download, Users } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Pagination, PAGE_SIZE } from '@/components/ui/pagination';
-import type { SubmissionDocument } from '@/features/tasks/submission-types';
 import type { ClassSummary } from '@/features/classes/types';
-import { formatDateTimeWib } from '@/lib/time';
+import { formatLongDateTimeWib } from '@/lib/time';
 import { TASK_KIND_LABELS, type TaskKind } from '@/features/tasks/types';
 
-type GradeTab = 'menunggu' | 'dinilai';
-
-const GRADE_TABS: [GradeTab, string][] = [
-  ['menunggu', 'Menunggu Dinilai'],
-  ['dinilai', 'Sudah Dinilai'],
-];
+interface TaskRow {
+  id: string;
+  title: string;
+  kind: TaskKind;
+  order: number;
+  dueAt: string | null;
+  published: boolean;
+  submitted: number;
+  graded: number;
+  late: number;
+}
 
 /**
- * Rekap pengumpulan tugas.
+ * Rekap pengumpulan tugas, dikelompokkan per tugas.
  *
- * Kelas dipilih lebih dulu lewat kartu, bukan lewat penyaring di atas satu
- * daftar gabungan: admin menilai satu kelas dalam satu duduk, dan daftar
- * gabungan empat kelas menuntutnya menyaring setiap kali membuka halaman.
+ * Kelas dipilih lebih dulu lewat kartu: admin menilai satu kelas dalam satu
+ * duduk. Kelas yang dipilih disimpan di URL agar tombol kembali dari halaman
+ * satu tugas membawanya ke tabel kelas yang sama, bukan ke awal lagi.
  *
- * The task submission report.
+ * The task submission report, grouped per task.
  *
- * A class is picked first through cards rather than a filter above one merged
- * list: an admin grades one class in one sitting, and a merged list of four
- * classes makes them filter every time they open the page.
+ * A class is picked first through cards: an admin grades one class in one
+ * sitting. The chosen class lives in the URL so the back button from a task's
+ * page returns to the same class table, not to the start again.
  */
 export default function AdminTugasPage() {
+  const router = useRouter();
   const [classes, setClasses] = useState<ClassSummary[]>([]);
-  const [selectedClass, setSelectedClass] = useState<ClassSummary | null>(null);
+  const [classId, setClassId] = useState<string | null>(null);
 
-  const [submissions, setSubmissions] = useState<SubmissionDocument[]>([]);
-  const [totalKind, setTotalKind] = useState(0);
+  const [tasks, setTasks] = useState<TaskRow[]>([]);
+  const [studentCount, setStudentCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [kind, setKind] = useState<TaskKind>('daily');
-  const [gradeTab, setGradeTab] = useState<GradeTab>('menunggu');
+  const [kind, setKind] = useState<TaskKind>('working-paper');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
 
-  const [grading, setGrading] = useState<SubmissionDocument | null>(null);
-  const [scoreInput, setScoreInput] = useState('');
-  const [feedbackInput, setFeedbackInput] = useState('');
-  const [submittingGrade, setSubmittingGrade] = useState(false);
-  const [gradeError, setGradeError] = useState<string | null>(null);
-
   useEffect(() => {
+    setClassId(new URLSearchParams(window.location.search).get('kelas'));
     fetch('/api/classes')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setClasses(d?.classes || []))
       .catch((e) => console.error(e));
   }, []);
 
-  async function loadSubmissions() {
-    if (!selectedClass) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const dasar = `/api/submissions?kind=${kind}&classId=${encodeURIComponent(selectedClass.id)}`;
-      // Keduanya diambil sekaligus: yang tersaring untuk daftarnya, dan
-      // seluruhnya untuk membedakan "semua sudah dinilai" dari "belum ada yang
-      // mengumpulkan". Keduanya berurutan akan menggandakan waktu tunggunya.
-      //
-      // Both are fetched at once: the filtered set for the list, and the whole
-      // set to tell "everything is graded" from "nobody has submitted yet".
-      // Doing them in sequence would double the wait.
-      const [tersaring, semua] = await Promise.all([
-        fetch(`${dasar}&graded=${gradeTab === 'dinilai'}`),
-        fetch(dasar),
-      ]);
+  const selectedClass = classes.find((c) => c.id === classId) ?? null;
 
-      // Kegagalan kueri ditampilkan, bukan ditelan. Daftar kosong karena
-      // kueri gagal terlihat persis sama dengan daftar yang memang kosong,
-      // dan sebab yang sebenarnya hanya muncul di log server.
-      //
-      // A failed query is shown rather than swallowed. A list empty because
-      // the query failed looks exactly like one that is genuinely empty, and
-      // the real cause only appears in the server log.
-      // Badan respons dibaca sekali saja: json() hanya dapat dipanggil satu
-      // kali per respons, dan panggilan kedua melempar galat yang menutupi
-      // galat aslinya.
-      //
-      // The response body is read once: json() can only be called once per
-      // response, and a second call throws an error that masks the real one.
-      const data = await tersaring.json();
-      if (!tersaring.ok) {
-        throw new Error(data.error || 'Gagal memuat pengumpulan');
-      }
-
-      setSubmissions(data.submissions || []);
-      if (semua.ok) setTotalKind(((await semua.json()).submissions || []).length);
-    } catch (e) {
-      setLoadError((e as Error).message);
-      setSubmissions([]);
-    } finally {
-      setLoading(false);
-    }
+  function chooseClass(id: string | null) {
+    setClassId(id);
+    router.replace(id ? `/admin/tugas?kelas=${encodeURIComponent(id)}` : '/admin/tugas');
   }
 
   useEffect(() => {
-    loadSubmissions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClass, kind, gradeTab]);
+    if (!classId) return;
+    setLoading(true);
+    setLoadError(null);
+    fetch(`/api/tasks/summary?classId=${encodeURIComponent(classId)}`)
+      .then(async (res) => {
+        // Kegagalan kueri ditampilkan, bukan ditelan: tabel kosong karena kueri
+        // gagal terlihat persis sama dengan kelas yang memang belum bertugas.
+        //
+        // A failed query is shown rather than swallowed: a table empty because
+        // the query failed looks exactly like a class with no tasks yet.
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Gagal memuat tugas');
+        setTasks(data.tasks || []);
+        setStudentCount(data.studentCount || 0);
+      })
+      .catch((e) => {
+        setLoadError((e as Error).message);
+        setTasks([]);
+      })
+      .finally(() => setLoading(false));
+  }, [classId]);
 
   // Halaman kembali ke awal setiap kali penyaringnya berubah. Dibiarkan,
   // pencarian yang menyisakan tiga baris pada halaman tiga menampilkan daftar
@@ -114,51 +91,14 @@ export default function AdminTugasPage() {
   //
   // The page resets whenever a filter changes. Left alone, a search leaving
   // three rows while on page three shows an empty list.
-  useEffect(() => { setPage(0); }, [selectedClass, kind, gradeTab, query]);
+  useEffect(() => { setPage(0); }, [classId, kind, query]);
 
-  function openGrade(sub: SubmissionDocument) {
-    setGrading(sub);
-    setScoreInput(sub.score !== null && sub.score !== undefined ? String(sub.score) : '');
-    setFeedbackInput(sub.feedbackPreview || '');
-    setGradeError(null);
-  }
-
-  async function handleSaveGrade(e: React.FormEvent) {
-    e.preventDefault();
-    if (!grading) return;
-    setSubmittingGrade(true);
-    setGradeError(null);
-    try {
-      const scoreNum = parseInt(scoreInput, 10);
-      if (isNaN(scoreNum) || scoreNum < 0 || scoreNum > 100) {
-        throw new Error('Nilai harus berupa angka bulat antara 0 dan 100');
-      }
-      const res = await fetch(`/api/submissions/${grading.id}/grade`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ score: scoreNum, feedback: feedbackInput }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Gagal menyimpan nilai');
-      setGrading(null);
-      loadSubmissions();
-    } catch (err) {
-      setGradeError((err as Error).message);
-    } finally {
-      setSubmittingGrade(false);
-    }
-  }
-
+  const ofKind = tasks.filter((t) => t.kind === kind);
   const needle = query.trim().toLowerCase();
-  const visible = submissions.filter(
-    (s) =>
-      needle === '' ||
-      s.studentName.toLowerCase().includes(needle) ||
-      (s.taskTitle ?? '').toLowerCase().includes(needle)
-  );
+  const visible = ofKind.filter((t) => needle === '' || t.title.toLowerCase().includes(needle));
   const halaman = visible.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  if (!selectedClass) {
+  if (!classId || !selectedClass) {
     return (
       <AppShell role="admin" userName="Administrator">
         <div>
@@ -166,13 +106,13 @@ export default function AdminTugasPage() {
             Tugas Siswa
           </h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '10px', marginTop: '2px' }}>
-            Pilih kelas untuk melihat dan menilai pengumpulan pesertanya.
+            Pilih kelas untuk melihat tugasnya dan menilai pengumpulan peserta.
           </p>
         </div>
 
         {classes.length === 0 ? (
           <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px dashed var(--color-border)', padding: '36px', textAlign: 'center', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-muted)' }}>
-            Belum ada kelas
+            {classId ? 'Memuat kelas...' : 'Belum ada kelas'}
           </div>
         ) : (
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -180,7 +120,7 @@ export default function AdminTugasPage() {
               <button
                 key={c.id}
                 type="button"
-                onClick={() => setSelectedClass(c)}
+                onClick={() => chooseClass(c.id)}
                 style={{
                   flex: '1 1 260px', minWidth: '240px', textAlign: 'left', cursor: 'pointer',
                   padding: '16px', borderRadius: '12px',
@@ -189,9 +129,7 @@ export default function AdminTugasPage() {
                 }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)' }}>
-                    {c.canonicalName}
-                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)' }}>{c.canonicalName}</div>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '3px' }}>
                     <Users size={11} strokeWidth={2} />
                     {c.studentCount} peserta
@@ -206,12 +144,15 @@ export default function AdminTugasPage() {
     );
   }
 
+  const th: React.CSSProperties = { textAlign: 'left', fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', padding: '10px 12px', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap' };
+  const td: React.CSSProperties = { fontSize: '12px', color: 'var(--color-text-main)', padding: '12px', borderBottom: '1px solid var(--color-border)', verticalAlign: 'middle' };
+
   return (
     <AppShell role="admin" userName="Administrator">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <button
           type="button"
-          onClick={() => setSelectedClass(null)}
+          onClick={() => chooseClass(null)}
           style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: 'var(--color-primary)', fontSize: '11px', fontWeight: 600, alignSelf: 'flex-start' }}
         >
           <ArrowLeft size={12} strokeWidth={2} /> Kembali ke Daftar Kelas
@@ -222,7 +163,7 @@ export default function AdminTugasPage() {
               {selectedClass.canonicalName}
             </h1>
             <p style={{ color: 'var(--color-text-muted)', fontSize: '10px', marginTop: '2px' }}>
-              Tugas Siswa - {selectedClass.studentCount} peserta
+              Tugas Siswa - {studentCount} peserta aktif. Klik sebuah tugas untuk melihat dan menilai pengumpulannya.
             </p>
           </div>
           <a
@@ -234,42 +175,27 @@ export default function AdminTugasPage() {
         </div>
       </div>
 
+      {/* Jenisnya diturunkan dari TASK_KIND_LABELS: daftar tertutup pernah
+          menyembunyikan hasil praktik dari setiap admin.
+          The kinds come from TASK_KIND_LABELS: a closed list once hid practice
+          results from every admin. */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-        {(Object.keys(TASK_KIND_LABELS) as TaskKind[]).map((k) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => setKind(k)}
-            aria-pressed={kind === k}
-            style={{
-              padding: '7px 14px', borderRadius: '20px', border: 'none', cursor: 'pointer',
-              fontSize: '11px', fontWeight: kind === k ? 700 : 400,
-              backgroundColor: kind === k ? 'var(--color-primary)' : 'var(--color-border)',
-              color: kind === k ? '#ffffff' : 'var(--color-text-main)',
-            }}
-          >
-            {TASK_KIND_LABELS[k]}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--color-border)' }}>
-        {GRADE_TABS.map(([value, label]) => {
-          const active = gradeTab === value;
+        {(Object.keys(TASK_KIND_LABELS) as TaskKind[]).map((k) => {
+          const jumlah = tasks.filter((t) => t.kind === k).length;
           return (
             <button
-              key={value}
+              key={k}
               type="button"
-              onClick={() => setGradeTab(value)}
-              aria-current={active ? 'page' : undefined}
+              onClick={() => setKind(k)}
+              aria-pressed={kind === k}
               style={{
-                padding: '9px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '12px',
-                borderBottom: active ? '2px solid var(--color-primary)' : '2px solid transparent',
-                fontWeight: active ? 700 : 400,
-                color: active ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                padding: '7px 14px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+                fontSize: '11px', fontWeight: kind === k ? 700 : 400,
+                backgroundColor: kind === k ? 'var(--color-primary)' : 'var(--color-border)',
+                color: kind === k ? '#ffffff' : 'var(--color-text-main)',
               }}
             >
-              {label}
+              {TASK_KIND_LABELS[k]} ({jumlah})
             </button>
           );
         })}
@@ -280,188 +206,94 @@ export default function AdminTugasPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Cari nama peserta atau judul tugas"
-          aria-label="Cari pengumpulan"
+          placeholder="Cari judul tugas"
+          aria-label="Cari tugas"
           style={{ border: 'none', outline: 'none', fontSize: '11px', flex: 1, color: 'var(--color-text-main)' }}
         />
       </div>
 
       {loading ? (
-        <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
-          Memuat pengumpulan...
-        </div>
+        <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>Memuat tugas...</div>
       ) : loadError ? (
         <div role="alert" style={{ backgroundColor: 'var(--color-danger-light)', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-danger)' }}>
-            Daftar pengumpulan gagal dimuat
-          </div>
-          <p style={{ fontSize: '11px', color: 'var(--color-danger)', marginTop: '6px', lineHeight: 1.55 }}>
-            {loadError}
-          </p>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-danger)' }}>Daftar tugas gagal dimuat</div>
+          <p style={{ fontSize: '11px', color: 'var(--color-danger)', marginTop: '6px', lineHeight: 1.55 }}>{loadError}</p>
         </div>
       ) : visible.length === 0 ? (
         <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px dashed var(--color-border)', padding: '36px', textAlign: 'center' }}>
-          {/* Daftar kosong punya dua sebab yang sangat berbeda: tidak ada
-              yang mengumpulkan, atau semuanya sudah dinilai. Menyebut keduanya
-              sebagai "sudah dinilai" memberi tahu admin bahwa pekerjaannya
-              selesai padahal belum satu pun peserta mengumpulkan.
-
-              An empty list has two very different causes: nobody submitted, or
-              everything is graded. Calling both "everything is graded" tells an
-              admin their work is done when not one participant has submitted. */}
           <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)' }}>
-            {needle
-              ? 'Tidak ada yang cocok dengan pencarian'
-              : totalKind === 0
-                ? `Belum ada ${TASK_KIND_LABELS[kind].toLowerCase()} yang dikumpulkan`
-                : gradeTab === 'menunggu'
-                  ? 'Tidak ada tugas yang menunggu dinilai'
-                  : 'Belum ada tugas yang dinilai'}
+            {needle ? 'Tidak ada tugas yang cocok dengan pencarian' : `Belum ada ${TASK_KIND_LABELS[kind].toLowerCase()} di kelas ini`}
           </div>
           {!needle && (
             <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '6px', lineHeight: 1.55 }}>
-              {totalKind === 0
-                ? `Kelas ini belum memiliki ${TASK_KIND_LABELS[kind].toLowerCase()}, atau pesertanya belum mengumpulkan. Periksa di menu Kelas apakah tugasnya sudah dibuat dan terbit.`
-                : gradeTab === 'menunggu'
-                  ? `Seluruh ${totalKind} pengumpulan ${TASK_KIND_LABELS[kind].toLowerCase()} di kelas ini sudah dinilai.`
-                  : `Ada ${totalKind} pengumpulan yang menunggu dinilai.`}
+              Periksa di menu Kelas apakah tugasnya sudah dibuat dan terbit.
             </p>
           )}
         </div>
       ) : (
         <>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {halaman.map((sub) => {
-              const dinilai = sub.score !== null && sub.score !== undefined;
-              return (
-                <div
-                  key={sub.id}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderRadius: '10px',
-                    border: '1px solid var(--color-border)', backgroundColor: '#ffffff',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {sub.studentName}
-                    </div>
-                    <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {sub.taskTitle || sub.taskId}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '9px', color: 'var(--color-text-faint)' }}>
-                        {formatDateTimeWib(sub.submittedAt)} WIB
-                      </span>
-                      {sub.late && (
-                        <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--color-warning)' }}>Terlambat</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {dinilai && (
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-success)', flexShrink: 0 }}>
-                      {sub.score}
-                    </span>
-                  )}
-
-                  <Button
-                    variant={dinilai ? 'secondary' : 'primary'}
-                    onClick={() => openGrade(sub)}
-                    style={{ fontSize: '10px', padding: '7px 12px', flexShrink: 0 }}
-                  >
-                    {dinilai ? 'Lihat' : 'Nilai'}
-                  </Button>
-                </div>
-              );
-            })}
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--color-border)', borderRadius: '12px', overflowX: 'auto' }}>
+            <table style={{ width: '100%', minWidth: '720px', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ ...th, width: '44px', textAlign: 'center' }}>No</th>
+                  <th style={th}>Tugas</th>
+                  <th style={th}>Tenggat</th>
+                  <th style={{ ...th, width: '170px' }}>Terkumpul</th>
+                  <th style={{ ...th, textAlign: 'center' }}>Dinilai</th>
+                  <th style={{ ...th, textAlign: 'center' }}>Menunggu nilai</th>
+                  <th style={{ ...th, width: '36px' }} />
+                </tr>
+              </thead>
+              <tbody>
+                {halaman.map((t, i) => {
+                  const pct = studentCount > 0 ? Math.min(100, Math.round((t.submitted / studentCount) * 100)) : 0;
+                  const menunggu = t.submitted - t.graded;
+                  return (
+                    <tr
+                      key={t.id}
+                      onClick={() => router.push(`/admin/tugas/${t.id}`)}
+                      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && router.push(`/admin/tugas/${t.id}`)}
+                      tabIndex={0}
+                      role="link"
+                      aria-label={`Buka pengumpulan ${t.title}`}
+                      style={{ cursor: 'pointer' }}
+                      className="admin-row"
+                    >
+                      <td style={{ ...td, textAlign: 'center', color: 'var(--color-text-muted)' }}>{page * PAGE_SIZE + i + 1}</td>
+                      <td style={td}>
+                        <div style={{ fontWeight: 600 }}>{t.title}</div>
+                        {!t.published && (
+                          <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--color-text-muted)', backgroundColor: 'var(--color-border)', padding: '2px 6px', borderRadius: '8px' }}>BELUM TERBIT</span>
+                        )}
+                      </td>
+                      <td style={{ ...td, fontSize: '11px', color: 'var(--color-text-muted)' }}>{t.dueAt ? formatLongDateTimeWib(t.dueAt) : '-'}</td>
+                      <td style={td}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ flex: 1, height: '8px', borderRadius: '4px', backgroundColor: '#eef0f2', overflow: 'hidden' }}>
+                            <span style={{ display: 'block', width: `${pct}%`, height: '100%', backgroundColor: 'var(--color-primary)' }} />
+                          </span>
+                          <span style={{ fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{t.submitted}/{studentCount}</span>
+                        </div>
+                        {t.late > 0 && <div style={{ fontSize: '10px', color: 'var(--color-warning)', marginTop: '2px' }}>{t.late} terlambat</div>}
+                      </td>
+                      <td style={{ ...td, textAlign: 'center', fontWeight: 700, color: 'var(--color-success)' }}>{t.graded}</td>
+                      <td style={{ ...td, textAlign: 'center' }}>
+                        {menunggu > 0 ? (
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#ffffff', backgroundColor: 'var(--color-warning)', padding: '3px 10px', borderRadius: '10px' }}>{menunggu}</span>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: 'var(--color-text-faint)' }}>-</span>
+                        )}
+                      </td>
+                      <td style={td}><ChevronRight size={15} color="var(--color-primary)" /></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-
-          {/* Diurutkan paling awal mengumpulkan lebih dulu, mengikuti urutan
-              kueri layanannya: yang menunggu paling lama dinilai lebih dulu.
-
-              Ordered earliest submission first, following the service query:
-              whoever has waited longest is graded first. */}
-          <Pagination page={page} totalItems={visible.length} onChange={setPage} label="pengumpulan" />
+          <Pagination page={page} totalItems={visible.length} onChange={setPage} label="tugas" />
         </>
-      )}
-
-      {grading && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
-          <div role="dialog" aria-modal="true" aria-label="Penilaian tugas" style={{ backgroundColor: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div>
-              <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '15px', fontWeight: 700, color: 'var(--color-text-main)' }}>
-                Penilaian Tugas
-              </h2>
-              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                <strong>{grading.studentName}</strong> - {grading.taskTitle}
-              </div>
-            </div>
-
-            {/* Isi pengumpulan dibuka langsung dari sini. Tautan yang hanya
-                tercetak sebagai teks menuntut admin menyalinnya ke bilah
-                alamat untuk setiap peserta.
-
-                The submission opens straight from here. A link printed as
-                plain text makes an admin copy it into the address bar for
-                every participant. */}
-            <div style={{ backgroundColor: 'var(--color-bg-app)', border: '1px solid var(--color-border)', borderRadius: '10px', padding: '12px' }}>
-              <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '6px' }}>
-                HASIL PENGUMPULAN
-              </div>
-              {grading.url ? (
-                <a
-                  href={grading.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 12px', borderRadius: '8px', backgroundColor: 'var(--color-primary)', color: '#ffffff', textDecoration: 'none', fontSize: '11px', fontWeight: 700 }}
-                >
-                  <ExternalLink size={12} strokeWidth={2} />
-                  Buka {grading.fileName || 'berkas pengumpulan'}
-                </a>
-              ) : (
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                  <FileText size={12} strokeWidth={2} />
-                  {grading.fileName || 'Peserta tidak melampirkan tautan'}
-                </div>
-              )}
-              {grading.url && (
-                <div style={{ fontSize: '9px', color: 'var(--color-text-muted)', marginTop: '6px', wordBreak: 'break-all' }}>
-                  {grading.url}
-                </div>
-              )}
-            </div>
-
-            <form onSubmit={handleSaveGrade} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <Input label="SKOR NILAI (0 - 100)" type="number" min="0" max="100" step="1" placeholder="85" value={scoreInput} onChange={(e) => setScoreInput(e.target.value)} required />
-              <div>
-                <label style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-faint)', display: 'block', marginBottom: '6px' }}>
-                  CATATAN UNTUK PESERTA
-                </label>
-                <textarea
-                  placeholder="Apresiasi dan catatan perbaikan."
-                  value={feedbackInput}
-                  onChange={(e) => setFeedbackInput(e.target.value)}
-                  rows={4}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '11px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
-                  required
-                />
-              </div>
-              {gradeError && (
-                <div role="alert" style={{ backgroundColor: 'var(--color-danger-light)', color: 'var(--color-danger)', padding: '10px', borderRadius: '6px', fontSize: '11px' }}>
-                  {gradeError}
-                </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <Button variant="secondary" type="button" onClick={() => setGrading(null)} disabled={submittingGrade}>
-                  Tutup
-                </Button>
-                <Button variant="primary" type="submit" disabled={submittingGrade}>
-                  {submittingGrade ? 'Menyimpan...' : 'Simpan Nilai'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
     </AppShell>
   );

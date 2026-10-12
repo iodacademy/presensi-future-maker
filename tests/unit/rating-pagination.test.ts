@@ -125,7 +125,8 @@ describe('paginasi daftar', () => {
     //
     // A search leaving three rows while on page three shows an empty list.
     expect(akun).toMatch(/useEffect\(\(\) => \{ setPage\(0\); \}, \[tab, query, classFilter\]\)/);
-    expect(tugas).toMatch(/useEffect\(\(\) => \{ setPage\(0\); \}, \[selectedClass, kind, gradeTab, query\]\)/);
+    expect(tugas).toMatch(/useEffect\(\(\) => \{ setPage\(0\); \}, \[classId, kind, query\]\)/);
+    expect(read('src/app/(admin)/admin/tugas/[taskId]/page.tsx')).toMatch(/useEffect\(\(\) => \{ setPage\(0\); \}, \[filter, query\]\)/);
   });
 
   it('menyembunyikan navigasinya bila hanya satu halaman', () => {

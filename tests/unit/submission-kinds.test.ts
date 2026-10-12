@@ -21,6 +21,7 @@ const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf-8');
  */
 describe('rekap pengumpulan mengenal seluruh jenis tugas', () => {
   const page = read('src/app/(admin)/admin/tugas/page.tsx');
+  const detail = read('src/app/(admin)/admin/tugas/[taskId]/page.tsx');
   const service = read('src/features/tasks/submission-service.ts');
 
   it('menyediakan pilihan untuk tiap jenis tugas', () => {
@@ -67,13 +68,16 @@ describe('rekap pengumpulan mengenal seluruh jenis tugas', () => {
 
   it('memisahkan yang menunggu dinilai dari yang sudah', () => {
     // Daftar gabungan menuntut admin memindai nilainya satu per satu untuk
-    // menemukan mana yang masih perlu dikerjakan.
+    // menemukan mana yang masih perlu dikerjakan. Tabel tugas menyebut berapa
+    // yang menunggu, dan halaman tugasnya dapat disaring per status.
     //
     // A merged list makes an admin scan the scores one by one to find what
-    // still needs doing.
-    expect(page).toMatch(/\['menunggu', 'Menunggu Dinilai'\]/);
-    expect(page).toMatch(/\['dinilai', 'Sudah Dinilai'\]/);
-    expect(page).toContain("graded=${gradeTab === 'dinilai'}");
+    // still needs doing. The task table says how many are waiting, and the
+    // task page can be filtered by status.
+    expect(page).toContain('Menunggu nilai');
+    expect(detail).toMatch(/\['menunggu', 'Menunggu nilai'\]/);
+    expect(detail).toMatch(/\['dinilai', 'Sudah dinilai'\]/);
+    expect(detail).toMatch(/\['belum', 'Belum mengumpulkan'\]/);
   });
 
   it('memilih kelas lebih dulu lewat kartu', () => {
@@ -82,8 +86,14 @@ describe('rekap pengumpulan mengenal seluruh jenis tugas', () => {
     //
     // An admin grades one class in one sitting; a merged list of four classes
     // makes them filter every time they open the page.
-    expect(page).toMatch(/if \(!selectedClass\)/);
+    expect(page).toMatch(/if \(!classId \|\| !selectedClass\)/);
     expect(page).toContain('Kembali ke Daftar Kelas');
+    // Kelas yang dipilih tersimpan di URL agar kembali dari halaman tugas tidak
+    // mengulang dari awal.
+    // The chosen class lives in the URL so returning from a task page does not
+    // start over.
+    expect(page).toContain('/admin/tugas?kelas=');
+    expect(detail).toContain('/admin/tugas?kelas=');
   });
 
   it('membuka isi pengumpulan dari layar penilaian', () => {
@@ -92,8 +102,9 @@ describe('rekap pengumpulan mengenal seluruh jenis tugas', () => {
     //
     // A link printed as plain text makes an admin copy it into the address bar
     // for every participant.
-    expect(page).toMatch(/href=\{grading\.url\}/);
-    expect(page).toContain('rel="noopener noreferrer"');
+    expect(detail).toMatch(/href=\{grading\.url\}/);
+    expect(detail).toMatch(/href=\{r\.sub\.url\}/);
+    expect(detail).toContain('rel="noopener noreferrer"');
   });
 });
 
@@ -126,39 +137,28 @@ describe('pengumpulan working paper tetap terpisah dari syarat kelas', () => {
  */
 describe('pesan daftar kosong', () => {
   const page = read('src/app/(admin)/admin/tugas/page.tsx');
+  const detail = read('src/app/(admin)/admin/tugas/[taskId]/page.tsx');
 
-  it('membedakan belum ada pengumpulan dari sudah dinilai semua', () => {
-    expect(page).toMatch(/totalKind === 0/);
-    expect(page).toContain('yang dikumpulkan');
-  });
-
-  it('menghitung seluruh pengumpulan, bukan yang tersaring saja', () => {
-    // Jumlah yang tersaring selalu nol saat daftarnya kosong, sehingga tidak
-    // dapat dipakai membedakan sebabnya.
-    //
-    // The filtered count is always zero when the list is empty, so it cannot
-    // tell the causes apart.
-    expect(page).toMatch(/setTotalKind/);
-    expect(page).toMatch(/Promise\.all\(\[/);
+  it('menyebut jenis tugas yang sedang dilihat bila belum ada tugasnya', () => {
+    expect(page).toContain('TASK_KIND_LABELS[kind].toLowerCase()');
   });
 
   it('menunjuk tempat memeriksanya bila belum ada tugas', () => {
-    // "Belum ada yang dikumpulkan" tidak memberi tahu admin apa yang dapat ia
-    // lakukan; tugas yang belum terbit terlihat persis sama.
+    // "Belum ada tugas" tidak memberi tahu admin apa yang dapat ia lakukan;
+    // tugas yang belum terbit terlihat persis sama.
     //
-    // "Nothing submitted" does not tell an admin what they can do; an
-    // unpublished task looks exactly the same.
+    // "No tasks yet" does not tell an admin what they can do; an unpublished
+    // task looks exactly the same.
     expect(page).toContain('menu Kelas');
     expect(page).toContain('sudah dibuat dan terbit');
   });
 
-  it('menyebut jumlahnya pada pesan sudah dinilai', () => {
-    // "Semua sudah dinilai" tanpa angka tidak dapat dibedakan dari daftar yang
-    // memang kosong sejak awal.
-    //
-    // "All graded" with no number is indistinguishable from a list that was
-    // empty from the start.
-    expect(page).toMatch(/Seluruh \$\{totalKind\} pengumpulan/);
+  it('membedakan tidak ada yang menunggu dari saringan yang kosong', () => {
+    // "Tidak ada peserta" saat menyaring yang menunggu nilai terbaca sebagai
+    // kelas kosong, padahal semuanya sudah dinilai.
+    // "No participants" while filtering for those awaiting a score reads as an
+    // empty class, when in fact everything is graded.
+    expect(detail).toContain('Tidak ada pengumpulan yang menunggu nilai');
   });
 });
 
@@ -198,9 +198,12 @@ describe('indeks kueri rekap', () => {
     //
     // A list empty because the query failed looks exactly like one that is
     // genuinely empty, and the real cause only appears in the server log.
-    expect(page).toMatch(/if \(!tersaring\.ok\)/);
-    expect(page).toContain('Daftar pengumpulan gagal dimuat');
+    expect(page).toMatch(/if \(!res\.ok\)/);
+    expect(page).toContain('Daftar tugas gagal dimuat');
     expect(page).toMatch(/setLoadError/);
+    const detail = read('src/app/(admin)/admin/tugas/[taskId]/page.tsx');
+    expect(detail).toContain('Pengumpulan gagal dimuat');
+    expect(detail).toMatch(/setLoadError/);
   });
 
   it('membaca badan respons sekali saja', () => {
@@ -209,6 +212,6 @@ describe('indeks kueri rekap', () => {
     //
     // json() can only be called once per response; a second call throws an
     // error that masks the real one.
-    expect(page.match(/await tersaring\.json\(\)/g)?.length).toBe(1);
+    expect(page.match(/await res\.json\(\)/g)?.length).toBe(1);
   });
 });

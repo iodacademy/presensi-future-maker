@@ -79,3 +79,17 @@ export interface StudentTaskOutline {
   late: boolean;
   isUnlocked: boolean;
 }
+
+/** Satu pengumpulan dalam rekap tugas admin / One submission in an admin task roster */
+export interface RosterSubmission {
+  studentId: string;
+  studentName: string;
+  submittedAt: string;
+  late: boolean;
+  score: number | null;
+  url: string | null;
+  /** Untuk menilai langsung dari rekap / For grading straight from the roster */
+  submissionId: string;
+  fileName: string | null;
+  feedbackPreview: string | null;
+}
