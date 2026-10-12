@@ -11,8 +11,7 @@ import type { SubmissionDocument } from '../tasks/submission-types';
 import { isSessionAttendanceActive } from '../attendance/policy';
 import { isDeadlineUrgent, formatDeadlineLabel, formatProgressRatio } from './policy';
 import { buildStudentPerformance } from './performance';
-import { countsAfterJoin, joinMoment } from '../users/join-policy';
-import type { UserDocument } from '../auth/types';
+import { countsAfterJoin, effectiveDueAt } from '../users/join-policy';
 import type { ExamDocument, AttemptDocument } from '../exams/types';
 
 /**
@@ -57,7 +56,7 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
   // interdependency) -- run in parallel, not sequentially, so total latency =
   // slowest query, not the sum of all queries. This was the main cause of slow
   // Home page loads.
-  const [classDoc, sessionsSnap, attendSnap, bookingsSnap, quotaSnap, tasksSnap, subsSnap, examsSnap, attemptsSnap, userDoc] = await Promise.all([
+  const [classDoc, sessionsSnap, attendSnap, bookingsSnap, quotaSnap, tasksSnap, subsSnap, examsSnap, attemptsSnap] = await Promise.all([
     db.collection('classes').doc(actor.classId).get(),
     db.collection('sessions').where('classId', '==', actor.classId).get(),
     db.collection('attendance').where('classId', '==', actor.classId).where('studentId', '==', actor.uid).get(),
@@ -67,10 +66,8 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
     db.collection('submissions').where('studentId', '==', actor.uid).get(),
     db.collection('exams').where('classId', '==', actor.classId).where('published', '==', true).get(),
     db.collection('examAttempts').where('studentId', '==', actor.uid).get(),
-    // Hanya untuk tanggal bergabungnya / Only for the join date
-    db.collection('users').doc(actor.uid).get(),
   ]);
-  const joinIso = joinMoment((userDoc.data() as UserDocument | undefined) ?? {});
+  const joinIso = actor.joinIso ?? '';
 
   if (!classDoc.exists) return defaultData;
   const classData = classDoc.data() as ClassDocument;
@@ -155,7 +152,12 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
   const remainingMentoringQuota = Math.max(0, 2 - quotaCount);
 
   // Tugas Terdekat (belum dikumpulkan) / Nearest Unsubmitted Task
-  const tasks = tasksSnap.docs.map((d) => d.data() as TaskDocument);
+  // Tenggat yang lewat sebelum peserta bergabung tidak berlaku baginya.
+  // A deadline that passed before the participant joined does not apply to them.
+  const tasks = tasksSnap.docs.map((d) => {
+    const t = d.data() as TaskDocument;
+    return { ...t, dueAt: effectiveDueAt(t.dueAt, joinIso) };
+  });
   const submittedTaskIds = new Set(subsSnap.docs.map((d) => (d.data() as SubmissionDocument).taskId));
 
   const unsubmittedTasks = tasks
@@ -214,6 +216,7 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
 
   const pendingExams = examsSnap.docs
     .map((d) => d.data() as { id: string; title: string; kind: string; dueAt: string | null; questionCount: number })
+    .map((e) => ({ ...e, dueAt: effectiveDueAt(e.dueAt, joinIso) }))
     .filter((e) => e.questionCount > 0 && !lulusUjian.has(e.id))
     .sort((a, b) => {
       if (a.dueAt && b.dueAt) return a.dueAt.localeCompare(b.dueAt);
@@ -239,10 +242,8 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
   const attendanceRatio = formatProgressRatio(attendedSessionIds.size, pastSessions.length || sessions.length);
 
   // Tugas Harian: jumlah tugas harian yang terkumpul / total tugas harian wajib
-  const dailyTasks = tasks.filter((t) => t.kind === 'daily');
-  const dailyBeforeJoin = dailyTasks.filter((t) => !countsAfterJoin(t.dueAt, joinIso, submittedTaskIds.has(t.id))).length;
-  const totalRequiredDaily = Math.max(0, (classData.requiredDailyTaskIds?.length || dailyTasks.length || 0) - dailyBeforeJoin);
-  const submittedDailyCount = dailyTasks.filter((t) => submittedTaskIds.has(t.id)).length;
+  const totalRequiredDaily = classData.requiredDailyTaskIds?.length || tasks.filter((t) => t.kind === 'daily').length || 0;
+  const submittedDailyCount = tasks.filter((t) => t.kind === 'daily' && submittedTaskIds.has(t.id)).length;
   const dailyTasksRatio = formatProgressRatio(submittedDailyCount, totalRequiredDaily);
 
   // Mentoring: jumlah booking / 2
@@ -268,7 +269,7 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
       attendance: attendSnap.docs.map((d) => d.data() as AttendanceDocument),
       exams: examsSnap.docs.map((d) => d.data() as ExamDocument),
       attempts: attemptsSnap.docs.map((d) => d.data() as AttemptDocument),
-      tasks,
+      tasks: tasksSnap.docs.map((d) => d.data() as TaskDocument),
       submissions: subsSnap.docs.map((d) => d.data() as SubmissionDocument),
       nowIso,
       joinIso,

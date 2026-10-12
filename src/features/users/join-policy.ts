@@ -12,6 +12,12 @@
  * count: they could not have attended or submitted them, and counting them as
  * missed drops their figures to a value that reflects nothing. Anything they
  * still do as catch-up work counts.
+ *
+ * Tugas dan kuis berbeda dari pertemuan: keduanya tetap wajib, hanya tanpa
+ * tenggat (lihat effectiveDueAt). Pertemuan tidak dapat disusul.
+ *
+ * Tasks and quizzes differ from meetings: they stay required, only without a
+ * deadline (see effectiveDueAt). A meeting cannot be caught up on.
  */
 
 /**
@@ -43,6 +49,20 @@ export function isValidJoinDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const d = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+}
+
+/**
+ * Tenggat yang berlaku bagi peserta: tenggat yang sudah lewat sebelum ia
+ * bergabung hilang, sehingga tugas dan kuisnya tetap wajib tetapi boleh
+ * dikumpulkan kapan saja dan dianggap tepat waktu.
+ *
+ * The deadline that applies to the participant: one that passed before they
+ * joined disappears, so the task or quiz stays required but may be handed in
+ * any time and counts as on time.
+ */
+export function effectiveDueAt(dueAt: string | null | undefined, joinIso: string | undefined): string | null {
+  if (!dueAt) return null;
+  return joinIso && dueAt <= joinIso ? null : dueAt;
 }
 
 /**

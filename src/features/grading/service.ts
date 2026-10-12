@@ -226,9 +226,9 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
   return studentsSnap.docs
     .map((doc) => {
       const u = doc.data() as UserDocument;
-      // Yang berakhir sebelum peserta bergabung tidak dihitung kecuali ia
-      // mengerjakannya. / What ended before the participant joined does not
-      // count unless they did it.
+      // Pertemuan yang berakhir sebelum peserta bergabung tidak dihitung kecuali
+      // ia tercatat di sana. / Meetings that ended before the participant joined
+      // do not count unless they are recorded there.
       const join = joinMoment(u);
       const tercatat = tercatatPerSiswa.get(u.uid);
       const sesiSiswa = [...sessionEnd].filter(([id, end]) => countsAfterJoin(end, join, tercatat?.has(id) ?? false));
@@ -237,14 +237,16 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
       const hadir = sesiSiswa.filter(([id]) => hadirPerSiswa.get(u.uid)?.has(id)).length;
       const attendance = totalSessions > 0 ? Math.round((hadir / totalSessions) * 100) : null;
 
+      // Tugas dan kuis tetap wajib bagi peserta yang bergabung belakangan.
+      // Tasks and quizzes stay required for late joiners.
       const tugasSiswa = nilaiTugas.get(u.uid);
-      const tasksSiswa = tasks.filter((t) => countsAfterJoin(t.dueAt, join, tugasSiswa?.has(t.id) ?? false));
+      const tasksSiswa = tasks;
       const tasksScore = tasksSiswa.length > 0
         ? averageWithZeros(tasksSiswa.map((t) => tugasSiswa?.get(t.id) ?? null), tasksSiswa.length)
         : null;
 
       const kuisSiswa = nilaiKuis.get(u.uid);
-      const examsSiswa = exams.filter((e) => !e.sessionId || countsAfterJoin(sessionEnd.get(e.sessionId), join, kuisSiswa?.has(e.id) ?? false));
+      const examsSiswa = exams;
       const quiz = examsSiswa.length > 0
         ? averageWithZeros(examsSiswa.map((e) => kuisSiswa?.get(e.id) ?? null), examsSiswa.length)
         : null;

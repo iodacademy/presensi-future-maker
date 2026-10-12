@@ -1,5 +1,6 @@
 // Pengingat survei dan kuis yang belum dikerjakan peserta / Reminders for participant surveys and quizzes not yet done
 import { getAdminDb } from '../../lib/firebase/admin';
+import { effectiveDueAt } from '../users/join-policy';
 import type { Actor } from '../auth/types';
 import type { SurveyFormDocument } from '../survey/types';
 import { scopeCovers } from '../survey/policy';
@@ -107,9 +108,11 @@ export async function listStudentReminders(actor: Actor): Promise<StudentReminde
       if (e.sessionId && !sessions.has(e.sessionId)) return false;
       const attempts = attemptsByExam.get(e.id) ?? [];
       if (attempts.some((a) => a.status === 'selesai')) return false;
-      return canStartAttempt({ attempts, dueAt: e.dueAt, nowIso }).allowed;
+      // Tenggat yang lewat sebelum peserta bergabung tidak berlaku baginya.
+      // A deadline that passed before the participant joined does not apply.
+      return canStartAttempt({ attempts, dueAt: effectiveDueAt(e.dueAt, actor.joinIso), nowIso }).allowed;
     })
-    .map((e) => ({ id: e.id, title: e.title, dueAt: e.dueAt, sessionTitle: e.sessionId ? sessions.get(e.sessionId)!.title : null }));
+    .map((e) => ({ id: e.id, title: e.title, dueAt: effectiveDueAt(e.dueAt, actor.joinIso), sessionTitle: e.sessionId ? sessions.get(e.sessionId)!.title : null }));
 
   return { surveys, exams };
 }

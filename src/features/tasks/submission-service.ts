@@ -1,6 +1,7 @@
 // Layanan pengumpulan tugas siswa dan penilaian admin di Firestore
 // Student task submission and admin grading service in Firestore
 import { getAdminDb } from '../../lib/firebase/admin';
+import { effectiveDueAt } from '../users/join-policy';
 import type { Actor } from '../auth/types';
 import type { TaskKind } from './types';
 import type {
@@ -126,7 +127,7 @@ export async function submitTask(actor: Actor, input: SubmitTaskInput): Promise<
       url,
       firstSubmittedAt,
       submittedAt: now,
-      late: isSubmissionLate(now, taskData.dueAt),
+      late: isSubmissionLate(now, effectiveDueAt(taskData.dueAt, actor.joinIso)),
       version,
       score: null,
       gradedAt: null,
@@ -205,7 +206,7 @@ export async function listStudentTasksWithSubmissions(actor: Actor): Promise<Stu
           kind: t.kind,
           title: t.title,
           order: t.order,
-          dueAt: t.dueAt,
+          dueAt: effectiveDueAt(t.dueAt, actor.joinIso),
           briefUrl: t.briefUrl,
           briefFileName: t.briefFileName,
           description: t.description || '',
@@ -286,7 +287,7 @@ export async function listStudentTaskOutline(actor: Actor): Promise<StudentTaskO
         kind: t.kind,
         title: t.title,
         order: t.order,
-        dueAt: t.dueAt ?? null,
+        dueAt: effectiveDueAt(t.dueAt, actor.joinIso),
         sessionId: t.sessionId ?? null,
         submitted: Boolean(sub),
         score: sub?.score ?? null,

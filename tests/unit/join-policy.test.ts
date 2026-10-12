@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countsAfterJoin, isValidJoinDate, joinMoment } from '../../src/features/users/join-policy';
+import { countsAfterJoin, effectiveDueAt, isValidJoinDate, joinMoment } from '../../src/features/users/join-policy';
 import { buildStudentPerformance } from '../../src/features/dashboard/performance';
 
 describe('peserta yang bergabung di tengah program', () => {
@@ -28,7 +28,15 @@ describe('peserta yang bergabung di tengah program', () => {
     expect(countsAfterJoin('2026-10-01T04:00:00.000Z', '', false)).toBe(true);
   });
 
-  it('melewatkan pertemuan, tugas, dan kuis sebelum bergabung di laporan performa', () => {
+  it('menghapus tenggat yang lewat sebelum bergabung, sehingga pengumpulan dianggap tepat waktu', () => {
+    const join = '2026-10-05T00:00:00.000Z';
+    expect(effectiveDueAt('2026-10-01T16:59:00.000Z', join)).toBeNull();
+    expect(effectiveDueAt('2026-10-09T16:59:00.000Z', join)).toBe('2026-10-09T16:59:00.000Z');
+    expect(effectiveDueAt(null, join)).toBeNull();
+    expect(effectiveDueAt('2026-10-01T16:59:00.000Z', '')).toBe('2026-10-01T16:59:00.000Z');
+  });
+
+  it('melewatkan pertemuan sebelum bergabung, tetapi tugas dan kuisnya tetap wajib tanpa tenggat', () => {
     const p = buildStudentPerformance({
       sessions: [
         { id: 'p1', title: 'P1', startsAt: '2026-10-01T02:00:00.000Z', endsAt: '2026-10-01T04:00:00.000Z' },
@@ -52,7 +60,9 @@ describe('peserta yang bergabung di tengah program', () => {
       joinIso: '2026-10-05T00:00:00.000Z',
     });
     expect(p.attendance.map((a) => a.sessionId)).toEqual(['p2', 'p3']);
-    expect(p.quizzes.map((q) => q.id)).toEqual(['q3']);
-    expect(p.tasks.map((t) => t.id)).toEqual(['t3']);
+    // Kuis dan tugas lama tetap ada; tugas lama tanpa tenggat sehingga belum "lewat".
+    // Old quizzes and tasks stay; the old task has no deadline so it is not "lewat".
+    expect(p.quizzes.map((q) => q.id)).toEqual(['q1', 'q3']);
+    expect(p.tasks.map((t) => [t.id, t.dueAt, t.status])).toEqual([['t3', '2026-10-09T16:59:00.000Z', 'lewat'], ['t1', null, 'belum']]);
   });
 });

@@ -7,7 +7,7 @@ import { summariseAnswers } from '../survey/policy';
 import { NUMERIC_KINDS } from '../survey/types';
 import type { SurveyAnswer, SurveyFormDocument, SurveyResponseDocument } from '../survey/types';
 import { ageFrom } from '../users/profile-service';
-import { countsAfterJoin, joinMoment } from '../users/join-policy';
+import { countsAfterJoin, effectiveDueAt, joinMoment } from '../users/join-policy';
 import { hitungFase, keteranganFase } from './phases';
 import { buildFeedbackReport } from './feedback';
 import { wibDate } from '@/lib/time';
@@ -83,8 +83,10 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  *    attendance record used to.
  * 6: meetings and tasks that ended before a participant joined no longer count
  *    against them.
+ * 7: tasks stay required for late joiners, only without a deadline; meetings
+ *    before joining still do not count.
  */
-export const SNAPSHOT_VERSION = 6;
+export const SNAPSHOT_VERSION = 7;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -557,15 +559,14 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     }
   }
 
-  // Tugas kelasnya yang dihitung bagi peserta itu, beserta yang ia kumpulkan.
-  // The class's tasks that count for that participant, and those submitted.
+  // Tugas tetap wajib bagi peserta yang bergabung belakangan; hanya tenggatnya
+  // yang tidak berlaku (lihat taskSubmitted).
+  // Tasks stay required for late joiners; only their deadline does not apply
+  // (see taskSubmitted).
   const tugasTerhitung = (uid: string, cid: string): { kumpul: number; dari: number } => {
-    const join = joinPerSiswa.get(uid) ?? '';
     const terkumpul = terkumpulPerSiswa.get(uid);
-    const terhitung = (tugasPerKelasId.get(cid) ?? []).filter((t) =>
-      countsAfterJoin(tenggatTugas.get(t.id), join, terkumpul?.has(t.id) ?? false)
-    );
-    return { kumpul: terhitung.filter((t) => terkumpul?.has(t.id)).length, dari: terhitung.length };
+    const semua = tugasPerKelasId.get(cid) ?? [];
+    return { kumpul: semua.filter((t) => terkumpul?.has(t.id)).length, dari: semua.length };
   };
 
   // Hanya peserta yang terdaftar di kelas yang ada. Akun berperan peserta
@@ -800,9 +801,10 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
           // someone who is not late.
           const tenggat = tenggatTugas.get(t.id);
           if (!tenggat || tenggat > nowIso) return null;
-          // Tenggat yang lewat sebelum ia bergabung bukan kelalaiannya.
-          // A deadline that passed before they joined is not their lapse.
-          if (!countsAfterJoin(tenggat, joinPerSiswa.get(s.uid) ?? '', false)) return null;
+          // Tenggat yang lewat sebelum ia bergabung tidak berlaku baginya: tugasnya
+          // masih terbuka, belum terlewat. / A deadline that passed before they
+          // joined does not apply: the task is still open, not missed.
+          if (!effectiveDueAt(tenggat, joinPerSiswa.get(s.uid))) return null;
           return false;
         }),
         status: (!s.active ? 'nonaktif' : issueCount > 0 ? 'siaga' : 'aktif') as 'aktif' | 'siaga' | 'nonaktif',

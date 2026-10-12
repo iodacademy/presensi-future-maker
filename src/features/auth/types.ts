@@ -29,4 +29,6 @@ export interface Actor {
   name: string;
   role: Role;
   classId: string | null;
+  /** Saat peserta mulai dihitung (joinMoment); hanya untuk peserta / When the participant starts counting (joinMoment); participants only */
+  joinIso?: string;
 }

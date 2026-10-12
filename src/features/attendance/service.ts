@@ -1,6 +1,7 @@
 // Layanan sesi kelas, rotasi token QR dan pencatatan presensi siswa
 // Session management, QR token rotation, and student attendance recording service
 import { computeExamLocks, type ExamLock } from '../exams/sequence';
+import { effectiveDueAt } from '../users/join-policy';
 import type { ExamKind } from '../exams/types';
 import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
@@ -843,7 +844,7 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
     // not ready to open.
     if (!t.sessionId || t.published === false) continue;
     if (!papersBySession.has(t.sessionId)) papersBySession.set(t.sessionId, []);
-    papersBySession.get(t.sessionId)!.push({ id: t.id, title: t.title, dueAt: t.dueAt ?? null });
+    papersBySession.get(t.sessionId)!.push({ id: t.id, title: t.title, dueAt: effectiveDueAt(t.dueAt, actor.joinIso) });
   }
 
   const attendMap = new Map<string, AttendanceDocument>();

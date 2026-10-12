@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { joinMoment } from '../users/join-policy';
 import { getAdminAuth, getAdminDb } from '../../lib/firebase/admin';
 import type { Actor, UserDocument } from './types';
 import { SESSION_COOKIE_NAME, SESSION_EXPIRES_MS } from './constants';
@@ -128,6 +129,9 @@ export async function getSessionActor(): Promise<Actor | null> {
       name: userData.name,
       role: userData.role,
       classId: userData.classId || null,
+      // Dibawa bersama sesi agar tenggat per peserta tidak perlu baca tambahan.
+      // Carried with the session so per-participant deadlines need no extra read.
+      ...(userData.role === 'student' ? { joinIso: joinMoment(userData) } : {}),
     };
 
     actorCache.set(sessionCookie, { actor, expiresAt: Date.now() + ACTOR_CACHE_TTL_MS });

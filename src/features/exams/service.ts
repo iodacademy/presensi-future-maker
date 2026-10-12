@@ -1,6 +1,7 @@
 // Layanan ujian: penyusunan soal, pengerjaan, dan penilaian
 // Exam service: authoring, running, and grading
 import { computeExamLocks, lockMessage, type ExamLock, type SequenceExam } from './sequence';
+import { effectiveDueAt } from '../users/join-policy';
 import { formatLongDateTimeWib } from '../../lib/time';
 import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
@@ -962,7 +963,7 @@ export async function listExamsForStudent(actor: Actor): Promise<StudentExamSumm
           description: exam.description,
           durationMinutes: exam.durationMinutes,
           passingScore: exam.passingScore,
-          dueAt: exam.dueAt,
+          dueAt: effectiveDueAt(exam.dueAt, actor.joinIso),
           questionCount: exam.questionCount,
           sessionId: exam.sessionId,
         },
@@ -1021,6 +1022,12 @@ async function examLockFor(actor: Actor, exam: ExamDocument): Promise<ExamLock> 
     attemptsSnap.docs.map((d) => d.data() as { examId: string; status: string }).filter((a) => a.status === 'selesai').map((a) => a.examId)
   );
   const locks = computeExamLocks({
+    // Urutan memakai tenggat asli: kuis lama yang sudah lewat tidak menghalangi
+    // kuis sesi berjalan, juga bagi peserta yang bergabung belakangan. Ia tetap
+    // boleh mengerjakannya karena startAttempt memakai effectiveDueAt.
+    // The order uses the original deadline: an old past-due quiz does not block
+    // the current session's quiz, late joiners included. They may still take it
+    // because startAttempt uses effectiveDueAt.
     exams: examsSnap.docs.map((d) => d.data() as SequenceExam),
     sessions: [...sessions.values()],
     finishedExamIds: finished,
@@ -1069,7 +1076,7 @@ export async function startAttempt(
   const attempts = attemptSnap.docs.map((d) => d.data() as AttemptDocument);
   const { allowed, reason } = canStartAttempt({
     attempts,
-    dueAt: exam.dueAt,
+    dueAt: effectiveDueAt(exam.dueAt, actor.joinIso),
     nowIso: new Date().toISOString(),
   });
   if (!allowed) throw new Error(reason);
