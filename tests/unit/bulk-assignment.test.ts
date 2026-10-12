@@ -117,13 +117,17 @@ describe('halaman penugasan mentor', () => {
     expect(mentorPage).toMatch(/toAdd = \[\.\.\.selected\]\.filter\(\(uid\) => !alreadyMine\.has\(uid\)\)/);
   });
 
-  it('tetap menampilkan peserta yang dibimbing mentor lain', () => {
-    // Penugasan baru menggantikan yang lama; menyembunyikan mereka akan
-    // membuat pemindahan peserta antar-mentor mustahil.
+  it('menyembunyikan peserta mentor lain, tetapi tetap dapat ditampilkan untuk dipindahkan', () => {
+    // Daftar pilihan hanya berisi yang perlu ditugaskan. Penugasan baru
+    // menggantikan yang lama, jadi tanpa pilihan tampilkan, memindahkan
+    // peserta antar-mentor menjadi mustahil.
     //
-    // A new assignment replaces the old one; hiding them would make moving a
-    // participant between mentors impossible.
-    expect(mentorPage).toMatch(/assignment\.mentorId !== mentorId/);
+    // The list holds only those needing assignment. A new assignment replaces
+    // the old one, so without a show option moving a participant between
+    // mentors would be impossible.
+    expect(mentorPage).toMatch(/useState\(false\)/);
+    expect(mentorPage).toMatch(/showOthers \|\| !r\.assignment \|\| r\.assignment\.mentorId === mentorId/);
+    expect(mentorPage).toContain('dibimbing mentor lain (untuk memindahkan)');
     expect(mentorPage).toContain('kini:');
   });
 

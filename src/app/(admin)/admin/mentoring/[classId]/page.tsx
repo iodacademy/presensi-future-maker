@@ -3,6 +3,7 @@
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { BookedSessions } from './booked-sessions';
 import { ArrowLeft, Users, ChevronRight, UserCheck } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import type { ClassDocument } from '@/features/classes/types';
@@ -202,6 +203,8 @@ export default function MentoringClassPage({ params }: { params: Promise<{ class
               in the list above. The schedule now lives on the mentor's page. */}
         </div>
       )}
+
+      {!loading && mentors.length > 0 && <BookedSessions classId={classId} phase={phase} />}
     </AppShell>
   );
 }

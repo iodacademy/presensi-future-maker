@@ -42,6 +42,7 @@ export default function MentorAssignmentPage({
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState('');
+  const [showOthers, setShowOthers] = useState(false);
   const [tab, setTab] = useState<'peserta' | 'jadwal'>('peserta');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -83,15 +84,26 @@ export default function MentorAssignmentPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classId, mentorId, phase]);
 
+  // Peserta yang sudah dibimbing mentor lain disembunyikan agar daftar pilihan
+  // hanya berisi yang perlu ditugaskan. Mereka tetap dapat ditampilkan untuk
+  // dipindahkan: penugasan baru menggantikan yang lama, dan tanpa pilihan ini
+  // memindahkan peserta antar-mentor menjadi mustahil.
+  //
+  // Participants already guided by another mentor are hidden so the list holds
+  // only those needing assignment. They can still be shown for moving: a new
+  // assignment replaces the old one, and without this option moving a
+  // participant between mentors would be impossible.
+  const otherCount = students.filter((r) => r.assignment && r.assignment.mentorId !== mentorId).length;
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return students;
     return students.filter(
       (r) =>
-        r.student.name.toLowerCase().includes(needle) ||
-        (r.student.email ?? '').toLowerCase().includes(needle)
+        (showOthers || !r.assignment || r.assignment.mentorId === mentorId) &&
+        (!needle ||
+          r.student.name.toLowerCase().includes(needle) ||
+          (r.student.email ?? '').toLowerCase().includes(needle))
     );
-  }, [students, query]);
+  }, [students, query, showOthers, mentorId]);
 
   const alreadyMine = new Set(
     students.filter((r) => r.assignment?.mentorId === mentorId).map((r) => r.student.uid)
@@ -211,13 +223,20 @@ export default function MentorAssignmentPage({
       </div>
       )}
 
+      {tab === 'peserta' && otherCount > 0 && (
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--color-text-muted)', cursor: 'pointer', alignSelf: 'flex-start' }}>
+          <input type="checkbox" checked={showOthers} onChange={(e) => setShowOthers(e.target.checked)} style={{ margin: 0 }} />
+          Tampilkan juga {otherCount} peserta yang dibimbing mentor lain (untuk memindahkan)
+        </label>
+      )}
+
       {tab === 'peserta' && (loading ? (
         <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
           Memuat daftar peserta...
         </div>
       ) : visible.length === 0 ? (
         <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px dashed var(--color-border)', padding: '36px', textAlign: 'center', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-muted)' }}>
-          {query ? 'Tidak ada peserta yang cocok' : 'Kelas ini belum punya peserta'}
+          {query ? 'Tidak ada peserta yang cocok' : students.length > 0 ? 'Semua peserta kelas ini sudah punya mentor' : 'Kelas ini belum punya peserta'}
         </div>
       ) : (
         <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
@@ -244,14 +263,8 @@ export default function MentorAssignmentPage({
                   </div>
                 </div>
 
-                {/* Peserta yang sudah dibimbing mentor lain tetap dapat dipilih;
-                    penugasan baru menggantikan yang lama, dan menyembunyikannya
-                    akan membuat pemindahan peserta antar-mentor mustahil.
-
-                    A participant already guided by another mentor stays
-                    selectable; a new assignment replaces the old one, and hiding
-                    them would make moving a participant between mentors
-                    impossible. */}
+                {/* Hanya muncul saat peserta mentor lain ditampilkan untuk dipindahkan.
+                    Only shown while other mentors' participants are shown for moving. */}
                 {other && (
                   <span style={{ fontSize: '9px', fontWeight: 600, color: 'var(--color-warning-text, #7c2d12)', backgroundColor: 'var(--color-warning-light)', padding: '3px 8px', borderRadius: '10px', whiteSpace: 'nowrap' }}>
                     kini: {other.mentorName}

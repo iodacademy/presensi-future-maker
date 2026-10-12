@@ -209,6 +209,42 @@ export function MentorSlots({ classId, mentorId, mentorName, phase }: MentorSlot
     border: '1px solid var(--color-border)', fontSize: '11px',
   };
 
+  // Diarsipkan begitu sesinya berakhir / Archived once the session ends
+  const nowIso = new Date().toISOString();
+  const upcoming = slots.filter((x) => x.endsAt > nowIso);
+  const past = slots.filter((x) => x.endsAt <= nowIso).sort((a, b) => b.startsAt.localeCompare(a.startsAt));
+  const renderSlot = (s: MentoringSlotDocument) => (
+            <div
+              key={s.id}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 11px',
+                borderRadius: '8px',
+                backgroundColor: s.status === 'available' ? 'var(--color-bg-app)' : 'var(--color-success-light)',
+              }}
+            >
+              <Calendar size={12} color={s.status === 'available' ? 'var(--color-text-muted)' : 'var(--color-success)'} strokeWidth={2} style={{ flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-main)' }}>
+                  {formatDateWib(s.startsAt)} - {s.startTime} s.d. {s.endTime} WIB
+                </div>
+                <div style={{ fontSize: '9px', color: 'var(--color-text-muted)', marginTop: '1px' }}>
+                  {s.status === 'available' ? 'Belum dipesan' : `Dipesan ${s.studentName ?? 'peserta'}`}
+                </div>
+              </div>
+              {s.status === 'available' && (
+                <button
+                  type="button"
+                  aria-label={`Hapus slot ${s.date} ${s.startTime}`}
+                  onClick={() => handleDelete(s)}
+                  disabled={busy}
+                  style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '3px', flexShrink: 0 }}
+                >
+                  <Trash2 size={12} color="var(--color-danger)" strokeWidth={2} />
+                </button>
+              )}
+            </div>
+  );
+
   return (
     <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid var(--color-border)', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
       {/* Judulnya sudah ada pada tab; mengulanginya di sini hanya menambah
@@ -240,39 +276,25 @@ export function MentorSlots({ classId, mentorId, mentorName, phase }: MentorSlot
           Belum ada slot. Peserta bimbingannya belum dapat memesan sesi.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          {slots.map((s) => (
-            <div
-              key={s.id}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 11px',
-                borderRadius: '8px',
-                backgroundColor: s.status === 'available' ? 'var(--color-bg-app)' : 'var(--color-success-light)',
-              }}
-            >
-              <Calendar size={12} color={s.status === 'available' ? 'var(--color-text-muted)' : 'var(--color-success)'} strokeWidth={2} style={{ flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-main)' }}>
-                  {formatDateWib(s.startsAt)} - {s.startTime} s.d. {s.endTime} WIB
-                </div>
-                <div style={{ fontSize: '9px', color: 'var(--color-text-muted)', marginTop: '1px' }}>
-                  {s.status === 'available' ? 'Belum dipesan' : `Dipesan ${s.studentName ?? 'peserta'}`}
-                </div>
-              </div>
-              {s.status === 'available' && (
-                <button
-                  type="button"
-                  aria-label={`Hapus slot ${s.date} ${s.startTime}`}
-                  onClick={() => handleDelete(s)}
-                  disabled={busy}
-                  style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '3px', flexShrink: 0 }}
-                >
-                  <Trash2 size={12} color="var(--color-danger)" strokeWidth={2} />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+        <>
+          {upcoming.length === 0 ? (
+            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', padding: '6px 0' }}>Tidak ada slot yang akan datang.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>{upcoming.map(renderSlot)}</div>
+          )}
+          {past.length > 0 && (
+            // Slot yang sudah berakhir diarsipkan agar daftar utama hanya berisi
+            // yang masih perlu disiapkan atau masih dapat dipesan.
+            // Ended slots are archived so the main list holds only what still
+            // needs preparing or can still be booked.
+            <details style={{ borderRadius: '8px', border: '1px solid var(--color-border)', padding: '8px 10px' }}>
+              <summary style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', cursor: 'pointer' }}>
+                Arsip ({past.length} slot sudah lewat, {past.filter((x) => x.status !== 'available').length} terbooking)
+              </summary>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '8px', opacity: 0.8 }}>{past.map(renderSlot)}</div>
+            </details>
+          )}
+        </>
       )}
 
       {mode === 'single' && (
