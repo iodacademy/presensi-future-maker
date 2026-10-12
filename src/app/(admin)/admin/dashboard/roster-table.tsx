@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import { Pagination, PAGE_SIZE } from '@/components/ui/pagination';
 import type { DashboardSnapshot, RosterRow } from '@/features/dashboard/snapshot-types';
+import { ATTENDANCE_STATUS_LABELS } from '@/features/attendance/types';
 import s from './dashboard.module.css';
 
 const STATUS_LABEL: Record<RosterRow['status'], { text: string; bg: string; fg: string }> = {
@@ -207,7 +208,7 @@ export function RosterTable({
             {halaman.map((r, i) => {
               const d = nilaiDraft(r);
               const sudah = r.attendance.filter((a) => a !== null).length;
-              const hadir = r.attendance.filter((a) => a === true).length;
+              const hadir = r.attendance.filter((a) => a === 'present').length;
 
               return (
                 <tr key={r.studentId}>
@@ -229,8 +230,8 @@ export function RosterTable({
                       {r.attendance.map((a, j) => (
                         <span
                           key={j}
-                          className={`${s.dot} ${a === true ? s.dotH : a === false ? s.dotX : s.dotN}`}
-                          title={`${snapshot.sessionLabels[j] ?? `Pertemuan ${j + 1}`}: ${a === null ? 'belum berjalan' : a ? 'hadir' : 'tidak hadir'}`}
+                          className={`${s.dot} ${a === 'present' ? s.dotH : a === null ? s.dotN : a === 'absent' ? s.dotX : s.dotI}`}
+                          title={`${snapshot.sessionLabels[j] ?? `Pertemuan ${j + 1}`}: ${a === null ? 'belum berjalan' : ATTENDANCE_STATUS_LABELS[a].toLowerCase()}`}
                         />
                       ))}
                     </span>
@@ -320,6 +321,7 @@ export function RosterTable({
       <div className={s.legend}>
         <span><span className={`${s.dot} ${s.dotH}`} /> hadir</span>
         <span><span className={`${s.dot} ${s.dotX}`} /> tidak hadir</span>
+        <span><span className={`${s.dot} ${s.dotI}`} /> izin atau sakit</span>
         <span><span className={`${s.dot} ${s.dotN}`} /> belum berjalan</span>
         <span>Nilai merah: di bawah 70</span>
         <span>· belum berjalan</span>

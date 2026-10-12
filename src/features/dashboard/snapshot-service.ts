@@ -2,7 +2,7 @@
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor, UserDocument } from '../auth/types';
 import type { ClassDocument } from '../classes/types';
-import type { SessionDocument } from '../attendance/types';
+import type { AttendanceStatus, SessionDocument } from '../attendance/types';
 import { summariseAnswers } from '../survey/policy';
 import { NUMERIC_KINDS } from '../survey/types';
 import type { SurveyAnswer, SurveyFormDocument, SurveyResponseDocument } from '../survey/types';
@@ -78,8 +78,10 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  * 3: task and quiz columns grouped per class, for the same reason.
  * 4: ranking and alerts count only participants enrolled in a class; accounts
  *    without one (e.g. a mentor imported as a participant) scored zero.
+ * 5: excused, sick and absent records no longer count as present; every
+ *    attendance record used to.
  */
-export const SNAPSHOT_VERSION = 4;
+export const SNAPSHOT_VERSION = 5;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -125,7 +127,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     db.collection('classes').get(),
     db.collection('users').where('role', '==', 'student').get(),
     db.collection('sessions').get(),
-    db.collection('attendance').get(),
+    db.collection('attendance').select('sessionId', 'studentId', 'status').get(),
     db.collection('tasks').where('published', '==', true).get(),
     db.collection('submissions').get(),
     db.collection('exams').where('published', '==', true).get(),
@@ -152,7 +154,14 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   const classNames = new Map(classes.map((c) => [c.id, c.canonicalName]));
   const classCities = new Map(classes.map((c) => [c.id, c.city]));
 
-  const students = usersSnap.docs.map((d) => d.data() as UserDocument);
+  // Akun test dibuang di sini, sebelum apa pun dihitung: setiap angka di bawah
+  // -- presensi, tugas, ujian, feedback, mentoring, login -- disaring lewat
+  // daftar ini, sehingga satu saringan menjangkau seluruhnya.
+  //
+  // Test accounts are dropped here, before anything is computed: every figure
+  // below -- attendance, tasks, exams, feedback, mentoring, logins -- filters
+  // through this list, so one filter reaches them all.
+  const students = usersSnap.docs.map((d) => d.data() as UserDocument).filter((s) => !s.isTest);
   const aktif = students.filter((s) => s.active);
   const aktifIds = new Set(aktif.map((s) => s.uid));
 
@@ -215,8 +224,9 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const hadirPerSesi = new Map<string, Set<string>>();
+  const statusPerSesi = new Map<string, Map<string, AttendanceStatus>>();
   for (const d of attendanceSnap.docs) {
-    const a = d.data() as { sessionId: string; studentId: string };
+    const a = d.data() as { sessionId: string; studentId: string; status?: AttendanceStatus };
     // Peserta nonaktif tidak dihitung: persentasenya dibagi jumlah peserta
     // aktif, dan menyertakan yang sudah keluar membuat angkanya melampaui
     // seratus.
@@ -224,6 +234,16 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     // Inactive participants are excluded: the percentage divides by the active
     // count, and including those who left would push it past a hundred.
     if (!aktifIds.has(a.studentId)) continue;
+    // Dokumen lama tanpa status berasal dari pemindaian, jadi hadir. Izin,
+    // sakit, dan tidak hadir juga tercatat sebagai dokumen, sehingga keberadaan
+    // dokumen saja tidak berarti hadir.
+    //
+    // Older documents without a status came from a scan, so present. Excused,
+    // sick and absent are records too, so a record alone does not mean present.
+    const status = a.status ?? 'present';
+    if (!statusPerSesi.has(a.sessionId)) statusPerSesi.set(a.sessionId, new Map());
+    statusPerSesi.get(a.sessionId)!.set(a.studentId, status);
+    if (status !== 'present') continue;
     if (!hadirPerSesi.has(a.sessionId)) hadirPerSesi.set(a.sessionId, new Set());
     hadirPerSesi.get(a.sessionId)!.add(a.studentId);
   }
@@ -696,11 +716,11 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         // A meeting not yet held is also null: absent and not-yet-held call for
         // different action.
         if (sesi.startsAt > nowIso) return null;
-        return hadirPerSesi.get(sesi.id)?.has(s.uid) ?? false;
+        return statusPerSesi.get(sesi.id)?.get(s.uid) ?? 'absent';
       });
 
       const sudah = attendance.filter((a) => a !== null).length;
-      const hadir = attendance.filter((a) => a === true).length;
+      const hadir = attendance.filter((a) => a === 'present').length;
       const tugasSiswa = nilaiTugasPerSiswa.get(s.uid);
 
       const pre = exams.find((e) => e.classId === cid && e.kind === 'pretest');

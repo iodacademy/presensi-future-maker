@@ -214,7 +214,26 @@ describe('penjagaan akses', () => {
 describe('tabel peserta', () => {
   it('menyimpan kehadiran per pertemuan, bukan hanya jumlahnya', () => {
     expect(compute).toMatch(/attendance = sesiTampil\.map/);
-    expect(types).toContain('attendance: (boolean | null)[]');
+    expect(types).toContain('attendance: (AttendanceStatus | null)[]');
+  });
+
+  it('tidak menghitung izin, sakit, dan tidak hadir sebagai hadir', () => {
+    // Izin, sakit, dan tidak hadir juga tersimpan sebagai dokumen presensi;
+    // menghitung keberadaan dokumennya saja membuat kehadiran tampak penuh.
+    // Excused, sick and absent are stored as attendance documents too; counting
+    // a document's mere existence makes attendance look full.
+    expect(compute).toContain("const status = a.status ?? 'present';");
+    expect(compute).toMatch(/if \(status !== 'present'\) continue;/);
+    expect(compute).toContain("statusPerSesi.get(sesi.id)?.get(s.uid) ?? 'absent'");
+  });
+
+  it('membuka daftar peserta dari sel heatmap dan rekap lengkap per kelas', () => {
+    const page = read('src/app/(admin)/admin/dashboard/page.tsx');
+    expect(page).toMatch(/onCell=\{\(kota, index\) => setSelCell/);
+    expect(page).toContain('Lihat selengkapnya');
+    const detail = read('src/app/(admin)/admin/dashboard/attendance-detail.tsx');
+    expect(detail).toContain("label: 'Izin / Sakit'");
+    expect(detail).toContain("label: 'Tidak hadir'");
   });
 
   it('membedakan belum berjalan dari tidak hadir', () => {

@@ -701,6 +701,28 @@
   background: var(--color-border);
 }
 
+.dotI {
+  background: var(--color-warning);
+}
+
+/* Sel yang dapat diklik membuka daftar peserta pertemuan itu.
+   A clickable cell opens that meeting's participant list. */
+.hm button.c {
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hm button.c:hover {
+  filter: brightness(0.95);
+}
+
+.hm button.c:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
 .stpill {
   display: inline-block;
   border-radius: 6px;

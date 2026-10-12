@@ -1,4 +1,5 @@
 import type { FeedbackForm } from './feedback';
+import type { AttendanceStatus } from '../attendance/types';
 // Definisi tipe ringkasan dashboard / Dashboard snapshot type definitions
 
 /**
@@ -93,8 +94,8 @@ export interface RosterRow {
   /** Nama program kelasnya, dipakai sebagai jurusan / The class's programme name, used as the stream */
   programName: string;
   city: string;
-  /** Satu nilai per pertemuan: true hadir, false tidak, null belum berjalan / One value per meeting: true present, false absent, null not yet held */
-  attendance: (boolean | null)[];
+  /** Satu status per pertemuan, null bila belum berjalan / One status per meeting, null when not yet held */
+  attendance: (AttendanceStatus | null)[];
   attendanceRate: number;
   mentoringUsed: number;
   pretest: number | null;

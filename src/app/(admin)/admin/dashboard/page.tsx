@@ -8,6 +8,8 @@ import { DailyBars, GainChart, GroupedBars, Heatmap, ProfileBars, TrendLines, ci
 import { RosterTable } from './roster-table';
 import { FeedbackPanel } from './feedback-panel';
 import { RankingGroups } from './ranking-groups';
+import { AttendanceCellModal, AttendanceTableModal } from './attendance-detail';
+import { ATTENDANCE_STATUS_LABELS } from '@/features/attendance/types';
 import { formatDateTimeWib } from '@/lib/time';
 import { Pagination, PAGE_SIZE } from '@/components/ui/pagination';
 import type { DashboardSnapshot, RosterRow } from '@/features/dashboard/snapshot-types';
@@ -147,6 +149,9 @@ function DashboardBody({
     return peta;
   }, [snapshot.roster]);
 
+  const [selCell, setSelCell] = useState<{ city: string; index: number } | null>(null);
+  const [fullAttendance, setFullAttendance] = useState(false);
+
   const profilKota = snapshot.profiles.filter((p) => cities.includes(p.city));
   const belumLengkap = cities.reduce((t, k) => t + (snapshot.profilePendingByCity[k] ?? 0), 0);
 
@@ -169,7 +174,7 @@ function DashboardBody({
         ...Object.fromEntries(
           snapshot.sessionLabels.map((label, j) => [
             `Pertemuan ${j + 1}`,
-            r.attendance[j] === null ? '' : r.attendance[j] ? 'Hadir' : 'Tidak hadir',
+            r.attendance[j] == null ? '' : ATTENDANCE_STATUS_LABELS[r.attendance[j]!],
           ])
         ),
         'Kehadiran (%)': r.attendanceRate,
@@ -353,16 +358,37 @@ function DashboardBody({
               // first has not happened, the second is a failure.
               const terhitung = baris.filter((r) => r.attendance[i] !== null);
               if (terhitung.length === 0) return null;
-              return { hit: terhitung.filter((r) => r.attendance[i] === true).length, total: terhitung.length };
+              return { hit: terhitung.filter((r) => r.attendance[i] === 'present').length, total: terhitung.length };
             }}
+            onCell={(kota, index) => setSelCell({ city: kota, index })}
           />
           <div className={s.legend}>
             <span><span className={`${s.sw} ${s.ok}`} />85% ke atas</span>
             <span><span className={`${s.sw} ${s.wr}`} />70 sampai 84%</span>
             <span><span className={`${s.sw} ${s.bd}`} />di bawah 70%</span>
             <span><span className={`${s.sw} ${s.na}`} />belum berjalan</span>
+            <span>Klik sel untuk melihat siapa yang hadir</span>
+            <button type="button" className={s.linkbtn} onClick={() => setFullAttendance(true)} style={{ marginLeft: 'auto', fontWeight: 600 }}>
+              Lihat selengkapnya
+            </button>
           </div>
         </section>
+        {selCell && (
+          <AttendanceCellModal
+            title={`Day ${selCell.index + 1} · ${selCell.city === 'Semua' ? 'Semua daerah' : selCell.city}`}
+            subtitle={snapshot.sessionLabels[selCell.index] ?? ''}
+            rows={selCell.city === 'Semua' ? cities.flatMap((k) => perKota.get(k) ?? []) : (perKota.get(selCell.city) ?? [])}
+            index={selCell.index}
+            onClose={() => setSelCell(null)}
+          />
+        )}
+        {fullAttendance && (
+          <AttendanceTableModal
+            rows={cities.flatMap((k) => perKota.get(k) ?? [])}
+            sessionLabels={snapshot.sessionLabels}
+            onClose={() => setFullAttendance(false)}
+          />
+        )}
 
         {/* --- learning analytics ------------------------------------------- */}
         <section className={s.panel} aria-labelledby="h-la">

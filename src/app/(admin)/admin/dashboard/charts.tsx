@@ -77,6 +77,7 @@ export function Heatmap({
   columns,
   valueFor,
   minWidth,
+  onCell,
 }: {
   cities: string[];
   columnLabel: string;
@@ -85,6 +86,8 @@ export function Heatmap({
   valueFor: (city: string, index: number) => { hit: number; total: number } | null;
   /** Lebar terkecilnya; bila kosong, dihitung dari jumlah kolomnya / Its minimum width; when absent, derived from the column count */
   minWidth?: number;
+  /** Bila ada, sel yang sudah berjalan menjadi tombol / When given, held cells become buttons */
+  onCell?: (city: string, index: number) => void;
 }) {
   if (columns.length === 0) {
     return <div className={s.empty}>Belum ada data</div>;
@@ -139,12 +142,22 @@ export function Heatmap({
                 );
               }
               const p = Math.round((v.hit / v.total) * 100);
-              return (
-                <div key={i} className={`${s.c} ${kelas(p)}`} title={`${kota}, ${columns[i]}: ${v.hit} dari ${v.total}`}>
+              const isi = (
+                <>
                   {p}%
                   <small>
                     {v.hit}/{v.total}
                   </small>
+                </>
+              );
+              const judul = `${kota}, ${columns[i]}: ${v.hit} dari ${v.total}`;
+              return onCell ? (
+                <button key={i} type="button" className={`${s.c} ${kelas(p)}`} title={`${judul}. Klik untuk melihat daftar peserta`} onClick={() => onCell(kota, i)}>
+                  {isi}
+                </button>
+              ) : (
+                <div key={i} className={`${s.c} ${kelas(p)}`} title={judul}>
+                  {isi}
                 </div>
               );
             })}
