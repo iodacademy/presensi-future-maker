@@ -24,10 +24,25 @@
  * used. An empty string means everything counts.
  */
 export function joinMoment(user: { joinedAt?: string | null; createdAt?: string | null }): string {
-  if (user.joinedAt && /^\d{4}-\d{2}-\d{2}$/.test(user.joinedAt)) {
+  if (user.joinedAt && isValidJoinDate(user.joinedAt)) {
     return new Date(`${user.joinedAt}T00:00:00+07:00`).toISOString();
   }
   return user.createdAt ?? '';
+}
+
+/**
+ * Tanggal "YYYY-MM-DD" yang benar-benar ada. Pola saja meloloskan 2026-13-45,
+ * dan toISOString() atas tanggal tak sah melempar galat yang menggagalkan
+ * seluruh penghitungan dashboard.
+ *
+ * A "YYYY-MM-DD" date that actually exists. The pattern alone lets 2026-13-45
+ * through, and toISOString() on an invalid date throws, failing the whole
+ * dashboard computation.
+ */
+export function isValidJoinDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const d = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
 }
 
 /**

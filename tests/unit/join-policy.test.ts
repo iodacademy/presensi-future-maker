@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countsAfterJoin, joinMoment } from '../../src/features/users/join-policy';
+import { countsAfterJoin, isValidJoinDate, joinMoment } from '../../src/features/users/join-policy';
 import { buildStudentPerformance } from '../../src/features/dashboard/performance';
 
 describe('peserta yang bergabung di tengah program', () => {
@@ -7,6 +7,15 @@ describe('peserta yang bergabung di tengah program', () => {
     expect(joinMoment({ joinedAt: '2026-10-05', createdAt: '2026-09-01T00:00:00.000Z' })).toBe('2026-10-04T17:00:00.000Z');
     expect(joinMoment({ createdAt: '2026-10-09T03:00:00.000Z' })).toBe('2026-10-09T03:00:00.000Z');
     expect(joinMoment({})).toBe('');
+  });
+
+  it('mengabaikan tanggal yang tidak ada alih-alih menggagalkan dashboard', () => {
+    // 2026-13-45 cocok dengan pola, tetapi toISOString() atasnya melempar galat.
+    // 2026-13-45 matches the pattern, but toISOString() on it throws.
+    expect(isValidJoinDate('2026-13-45')).toBe(false);
+    expect(isValidJoinDate('2026-02-30')).toBe(false);
+    expect(isValidJoinDate('2026-02-28')).toBe(true);
+    expect(joinMoment({ joinedAt: '2026-13-45', createdAt: '2026-10-01T00:00:00.000Z' })).toBe('2026-10-01T00:00:00.000Z');
   });
 
   it('tidak menghitung yang berakhir sebelum bergabung, kecuali dikerjakan', () => {

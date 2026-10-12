@@ -3,6 +3,7 @@ import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor, Role, UserDocument } from '../auth/types';
 import { normalizeEmail, getEmailHash } from '../auth/policy';
 import { wibDate } from '@/lib/time';
+import { isValidJoinDate } from './join-policy';
 import type { ClassDocument } from '../classes/types';
 
 export interface UserListItem {
@@ -239,7 +240,7 @@ export async function updateUserAccount(
   // Tanggal bergabung hanya berlaku bagi peserta / The join date only applies to participants
   const joinChanged = input.joinedAt !== undefined && user.role === 'student' && (input.joinedAt || null) !== (user.joinedAt ?? null);
   if (joinChanged) {
-    if (input.joinedAt && !/^\d{4}-\d{2}-\d{2}$/.test(input.joinedAt)) {
+    if (input.joinedAt && !isValidJoinDate(input.joinedAt)) {
       throw new Error('Tanggal bergabung tidak valid');
     }
     patch.joinedAt = input.joinedAt || null;
