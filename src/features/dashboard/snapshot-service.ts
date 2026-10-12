@@ -7,6 +7,7 @@ import { summariseAnswers } from '../survey/policy';
 import { NUMERIC_KINDS } from '../survey/types';
 import type { SurveyAnswer, SurveyFormDocument, SurveyResponseDocument } from '../survey/types';
 import { ageFrom } from '../users/profile-service';
+import { countsAfterJoin, joinMoment } from '../users/join-policy';
 import { hitungFase, keteranganFase } from './phases';
 import { buildFeedbackReport } from './feedback';
 import { wibDate } from '@/lib/time';
@@ -80,8 +81,10 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  *    without one (e.g. a mentor imported as a participant) scored zero.
  * 5: excused, sick and absent records no longer count as present; every
  *    attendance record used to.
+ * 6: meetings and tasks that ended before a participant joined no longer count
+ *    against them.
  */
-export const SNAPSHOT_VERSION = 5;
+export const SNAPSHOT_VERSION = 6;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -164,6 +167,10 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   const students = usersSnap.docs.map((d) => d.data() as UserDocument).filter((s) => !s.isTest);
   const aktif = students.filter((s) => s.active);
   const aktifIds = new Set(aktif.map((s) => s.uid));
+  // Peserta yang bergabung di tengah program tidak dihitung absen pada yang
+  // sudah lewat sebelum ia bergabung / Mid-programme joiners are not counted
+  // absent for what had passed before they joined
+  const joinPerSiswa = new Map(students.map((s) => [s.uid, joinMoment(s)]));
 
   // --- status peserta per daerah --------------------------------------
   const perKelas = classes.map((c) => {
@@ -473,18 +480,24 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     .slice(-60);
 
   // --- peringkat dan daftar siaga ---------------------------------------
-  const sesiPerKelas = new Map<string, number>();
+  const sesiDimulaiPerKelas = new Map<string, SessionDocument[]>();
   for (const s of sessions) {
     if (s.startsAt > nowIso) continue;
     for (const cid of s.classIds ?? [s.classId]) {
-      sesiPerKelas.set(cid, (sesiPerKelas.get(cid) ?? 0) + 1);
+      if (!sesiDimulaiPerKelas.has(cid)) sesiDimulaiPerKelas.set(cid, []);
+      sesiDimulaiPerKelas.get(cid)!.push(s);
     }
   }
 
-  const hadirPerSiswa = new Map<string, number>();
-  for (const [, pesertanya] of hadirPerSesi) {
-    for (const uid of pesertanya) hadirPerSiswa.set(uid, (hadirPerSiswa.get(uid) ?? 0) + 1);
-  }
+  // Pertemuan yang sudah dimulai dan dihitung bagi peserta itu, beserta yang ia hadiri.
+  // Meetings already started that count for that participant, and those attended.
+  const hadirTerhitung = (uid: string, cid: string): { hadir: number; dari: number } => {
+    const join = joinPerSiswa.get(uid) ?? '';
+    const terhitung = (sesiDimulaiPerKelas.get(cid) ?? []).filter((x) =>
+      countsAfterJoin(x.endsAt, join, statusPerSesi.get(x.id)?.has(uid) ?? false)
+    );
+    return { hadir: terhitung.filter((x) => hadirPerSesi.get(x.id)?.has(uid)).length, dari: terhitung.length };
+  };
 
   // Nilai tugas per peserta per tugas, untuk kolom tabelnya. Angka ringkas
   // tidak dapat memberi tahu tugas mana yang kosong, dan itulah yang dicari
@@ -535,13 +548,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     catatan.set(d.id, { note: c.note ?? '', followUp: c.followUp ?? '' });
   }
 
-  const kumpulPerSiswa = new Map<string, number>();
   const nilaiKuisPerSiswa = new Map<string, number[]>();
-  for (const d of submissionsSnap.docs) {
-    const s = d.data() as { studentId: string };
-    if (!aktifIds.has(s.studentId)) continue;
-    kumpulPerSiswa.set(s.studentId, (kumpulPerSiswa.get(s.studentId) ?? 0) + 1);
-  }
   for (const [examId, peta] of nilaiTertinggi) {
     if (examById.get(examId)?.kind === 'pretest') continue;
     for (const [uid, nilai] of peta) {
@@ -550,12 +557,16 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     }
   }
 
-  const tugasPerKelas = new Map<string, number>();
-  for (const t of tasksSnap.docs) {
-    const d = t.data() as { classId: string; kind: string };
-    if (d.kind === 'capstone') continue;
-    tugasPerKelas.set(d.classId, (tugasPerKelas.get(d.classId) ?? 0) + 1);
-  }
+  // Tugas kelasnya yang dihitung bagi peserta itu, beserta yang ia kumpulkan.
+  // The class's tasks that count for that participant, and those submitted.
+  const tugasTerhitung = (uid: string, cid: string): { kumpul: number; dari: number } => {
+    const join = joinPerSiswa.get(uid) ?? '';
+    const terkumpul = terkumpulPerSiswa.get(uid);
+    const terhitung = (tugasPerKelasId.get(cid) ?? []).filter((t) =>
+      countsAfterJoin(tenggatTugas.get(t.id), join, terkumpul?.has(t.id) ?? false)
+    );
+    return { kumpul: terhitung.filter((t) => terkumpul?.has(t.id)).length, dari: terhitung.length };
+  };
 
   // Hanya peserta yang terdaftar di kelas yang ada. Akun berperan peserta
   // tanpa kelas -- mis. mentor atau akun uji yang terimpor sebagai peserta --
@@ -569,8 +580,10 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   // being a participant.
   const terukur = aktif.filter((s) => s.classId && classNames.has(s.classId)).map((s) => {
     const cid = s.classId ?? '';
-    const attendanceRate = persen(hadirPerSiswa.get(s.uid) ?? 0, sesiPerKelas.get(cid) ?? 0);
-    const taskRate = persen(kumpulPerSiswa.get(s.uid) ?? 0, tugasPerKelas.get(cid) ?? 0);
+    const kehadiran = hadirTerhitung(s.uid, cid);
+    const tugas = tugasTerhitung(s.uid, cid);
+    const attendanceRate = persen(kehadiran.hadir, kehadiran.dari);
+    const taskRate = persen(tugas.kumpul, tugas.dari);
     const nilaiKuis = nilaiKuisPerSiswa.get(s.uid) ?? [];
     const quizAverage = nilaiKuis.length === 0
       ? 0
@@ -716,7 +729,12 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         // A meeting not yet held is also null: absent and not-yet-held call for
         // different action.
         if (sesi.startsAt > nowIso) return null;
-        return statusPerSesi.get(sesi.id)?.get(s.uid) ?? 'absent';
+        const status = statusPerSesi.get(sesi.id)?.get(s.uid);
+        // Pertemuan yang berakhir sebelum ia bergabung juga null: ia tidak
+        // mungkin hadir. / A meeting that ended before they joined is null too:
+        // they could not have attended.
+        if (!status && !countsAfterJoin(sesi.endsAt, joinPerSiswa.get(s.uid) ?? '', false)) return null;
+        return status ?? 'absent';
       });
 
       const sudah = attendance.filter((a) => a !== null).length;
@@ -726,7 +744,8 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
       const pre = exams.find((e) => e.classId === cid && e.kind === 'pretest');
       const post = exams.find((e) => e.classId === cid && e.kind === 'posttest');
 
-      const taskRate = persen(kumpulPerSiswa.get(s.uid) ?? 0, tugasPerKelas.get(cid) ?? 0);
+      const tugas = tugasTerhitung(s.uid, cid);
+      const taskRate = persen(tugas.kumpul, tugas.dari);
       const nilaiKuis = nilaiKuisPerSiswa.get(s.uid) ?? [];
       const rataKuis = nilaiKuis.length === 0
         ? 0
@@ -781,6 +800,9 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
           // someone who is not late.
           const tenggat = tenggatTugas.get(t.id);
           if (!tenggat || tenggat > nowIso) return null;
+          // Tenggat yang lewat sebelum ia bergabung bukan kelalaiannya.
+          // A deadline that passed before they joined is not their lapse.
+          if (!countsAfterJoin(tenggat, joinPerSiswa.get(s.uid) ?? '', false)) return null;
           return false;
         }),
         status: (!s.active ? 'nonaktif' : issueCount > 0 ? 'siaga' : 'aktif') as 'aktif' | 'siaga' | 'nonaktif',

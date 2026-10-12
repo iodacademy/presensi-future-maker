@@ -14,6 +14,8 @@ export interface UserListItem {
   classId: string | null;
   className: string | null;
   isTest: boolean;
+  /** Tanggal bergabung "YYYY-MM-DD"; diturunkan dari createdAt bila belum diisi / Join date "YYYY-MM-DD"; derived from createdAt when unset */
+  joinedAt: string | null;
 }
 
 export interface UserListResult {
@@ -51,7 +53,7 @@ export async function listUsers(actor: Actor): Promise<UserListResult> {
   const db = getAdminDb();
 
   const [usersSnap, classesSnap] = await Promise.all([
-    db.collection('users').select('uid', 'name', 'email', 'role', 'active', 'classId', 'isTest').get(),
+    db.collection('users').select('uid', 'name', 'email', 'role', 'active', 'classId', 'isTest', 'joinedAt', 'createdAt').get(),
     db.collection('classes').select('canonicalName').get(),
   ]);
 
@@ -83,6 +85,7 @@ export async function listUsers(actor: Actor): Promise<UserListResult> {
       // as having no class at all.
       className: data.classId ? (classNames.get(data.classId) ?? '(kelas terhapus)') : null,
       isTest: data.isTest === true,
+      joinedAt: data.joinedAt ?? (data.createdAt ? wibDate(new Date(data.createdAt)) : null),
     };
   });
 
@@ -172,7 +175,7 @@ export async function setUserTest(actor: Actor, uid: string, isTest: boolean): P
 export async function updateUserAccount(
   actor: Actor,
   uid: string,
-  input: { name?: string; email?: string; classId?: string | null }
+  input: { name?: string; email?: string; classId?: string | null; joinedAt?: string | null }
 ): Promise<void> {
   if (actor.role !== 'admin') {
     throw new Error('Hanya admin yang diizinkan mengubah akun');
@@ -231,6 +234,15 @@ export async function updateUserAccount(
 
   if (classChanged) {
     patch.classId = input.classId || null;
+  }
+
+  // Tanggal bergabung hanya berlaku bagi peserta / The join date only applies to participants
+  const joinChanged = input.joinedAt !== undefined && user.role === 'student' && (input.joinedAt || null) !== (user.joinedAt ?? null);
+  if (joinChanged) {
+    if (input.joinedAt && !/^\d{4}-\d{2}-\d{2}$/.test(input.joinedAt)) {
+      throw new Error('Tanggal bergabung tidak valid');
+    }
+    patch.joinedAt = input.joinedAt || null;
   }
 
   // Seluruh pembacaan diselesaikan sebelum batch disusun. Batch memang tidak
@@ -299,4 +311,10 @@ export async function updateUserAccount(
   }
 
   await batch.commit();
+
+  // Angka presensi dan tugasnya berubah, jadi ringkasan hari ini dihitung ulang.
+  // Their attendance and task figures change, so today's snapshot recomputes.
+  if (joinChanged) {
+    await db.collection('dashboardSnapshots').doc(wibDate()).delete();
+  }
 }

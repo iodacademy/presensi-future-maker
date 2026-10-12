@@ -224,7 +224,8 @@ describe('tabel peserta', () => {
     // a document's mere existence makes attendance look full.
     expect(compute).toContain("const status = a.status ?? 'present';");
     expect(compute).toMatch(/if \(status !== 'present'\) continue;/);
-    expect(compute).toContain("statusPerSesi.get(sesi.id)?.get(s.uid) ?? 'absent'");
+    expect(compute).toContain('const status = statusPerSesi.get(sesi.id)?.get(s.uid);');
+    expect(compute).toContain("return status ?? 'absent';");
   });
 
   it('membuka daftar peserta dari sel heatmap dan rekap lengkap per kelas', () => {

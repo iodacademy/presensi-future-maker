@@ -4,6 +4,7 @@ import type { SessionDocument, AttendanceDocument } from '../attendance/types';
 import type { TaskDocument } from '../tasks/types';
 import type { SubmissionDocument } from '../tasks/submission-types';
 import type { ExamDocument, AttemptDocument } from '../exams/types';
+import { countsAfterJoin } from '../users/join-policy';
 
 const ATTENDANCE_STATUS = { present: 'hadir', excused: 'izin', sick: 'sakit', absent: 'alpa' } as const;
 
@@ -30,10 +31,21 @@ export function buildStudentPerformance(input: {
   tasks: Pick<TaskDocument, 'id' | 'title' | 'kind' | 'dueAt' | 'order'>[];
   submissions: Pick<SubmissionDocument, 'taskId' | 'score' | 'late'>[];
   nowIso: string;
+  /** Saat peserta mulai dihitung (joinMoment); kosong berarti semuanya / When the participant starts counting (joinMoment); empty means everything */
+  joinIso?: string;
 }): StudentPerformance {
   const { nowIso } = input;
-  const sessions = [...input.sessions].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const joinIso = input.joinIso ?? '';
   const statusBySession = new Map(input.attendance.map((a) => [a.sessionId, a.status ?? 'present']));
+  const attempted = new Set(input.attempts.map((a) => a.examId));
+  const submittedIds = new Set(input.submissions.map((s) => s.taskId));
+  // Yang berakhir sebelum peserta bergabung tidak ditampilkan, kecuali ia tetap
+  // mengerjakannya. / What ended before the participant joined is left out,
+  // unless they did it anyway.
+  const sessions = [...input.sessions]
+    .filter((s) => countsAfterJoin(s.endsAt, joinIso, statusBySession.has(s.id)))
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const sessionEnd = new Map(input.sessions.map((s) => [s.id, s.endsAt]));
 
   const attendance = sessions.map((s) => {
     const recorded = statusBySession.get(s.id);
@@ -45,7 +57,7 @@ export function buildStudentPerformance(input: {
     };
   });
 
-  const sessionStart = new Map(sessions.map((s) => [s.id, s.startsAt]));
+  const sessionStart = new Map(input.sessions.map((s) => [s.id, s.startsAt]));
   const attemptsByExam = new Map<string, typeof input.attempts>();
   for (const a of input.attempts) {
     if (!attemptsByExam.has(a.examId)) attemptsByExam.set(a.examId, []);
@@ -54,6 +66,7 @@ export function buildStudentPerformance(input: {
 
   const quizzes = input.exams
     .filter((e) => e.questionCount > 0)
+    .filter((e) => !e.sessionId || countsAfterJoin(sessionEnd.get(e.sessionId), joinIso, attempted.has(e.id)))
     .sort((a, b) => (a.sessionId ? sessionStart.get(a.sessionId) ?? '' : '').localeCompare(b.sessionId ? sessionStart.get(b.sessionId) ?? '' : ''))
     .map((e) => {
       const attempts = attemptsByExam.get(e.id) ?? [];
@@ -71,6 +84,7 @@ export function buildStudentPerformance(input: {
 
   const subs = new Map(input.submissions.map((s) => [s.taskId, s]));
   const tasks = [...input.tasks]
+    .filter((t) => countsAfterJoin(t.dueAt, joinIso, submittedIds.has(t.id)))
     .sort((a, b) => (a.dueAt ?? '9999').localeCompare(b.dueAt ?? '9999') || a.order - b.order)
     .map((t) => {
       const sub = subs.get(t.id);

@@ -49,6 +49,7 @@ export async function PATCH(request: Request) {
       name: body.name,
       email: body.email,
       classId: body.classId,
+      joinedAt: body.joinedAt,
     });
     return NextResponse.json({ updated: true });
   } catch (err) {

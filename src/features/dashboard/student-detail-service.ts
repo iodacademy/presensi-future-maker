@@ -11,6 +11,7 @@ import type { SurveyResponseDocument } from '../survey/types';
 import { DISABILITY_LABELS, ENTRY_STATUS_LABELS, GENDER_LABELS, type StudentProfileDocument } from '../users/profile-types';
 import { ageFrom } from '../users/profile-service';
 import { buildStudentPerformance } from './performance';
+import { joinMoment } from '../users/join-policy';
 import { isMenteeOf } from '../mentoring/service';
 import type { StudentDetail } from './types';
 
@@ -95,6 +96,7 @@ export async function getStudentDetail(actor: Actor, uid: string): Promise<Stude
     tasks: tasksSnap.docs.map((d) => ({ ...(d.data() as TaskDocument), id: d.id })),
     submissions: subsSnap.docs.map((d) => d.data() as SubmissionDocument),
     nowIso: new Date().toISOString(),
+    joinIso: joinMoment(user),
   });
 
   const bookings = bookingsSnap.docs

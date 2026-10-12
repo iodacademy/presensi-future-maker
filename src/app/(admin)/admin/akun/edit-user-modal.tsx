@@ -41,6 +41,7 @@ export function EditUserModal({ user, classes, onClose, onSaved }: EditUserModal
   const [email, setEmail] = useState(user.email);
   const [classId, setClassId] = useState(user.classId ?? '');
   const [isTest, setIsTest] = useState(user.isTest);
+  const [joinedAt, setJoinedAt] = useState(user.joinedAt ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,6 +90,11 @@ export function EditUserModal({ user, classes, onClose, onSaved }: EditUserModal
           // The class is sent for participants only. Mentors are linked through
           // their class's mentorIds, and an admin belongs to no class.
           ...(user.role === 'student' ? { classId: classId || null } : {}),
+          // Dikirim hanya bila diubah: tanggal bawaannya diturunkan dari createdAt,
+          // dan menyimpannya tanpa diubah mengunci tanggal yang belum dipilih admin.
+          // Sent only when changed: the default is derived from createdAt, and
+          // saving it untouched would pin a date the admin never chose.
+          ...(user.role === 'student' && joinedAt !== (user.joinedAt ?? '') ? { joinedAt: joinedAt || null } : {}),
         }),
       });
       const data = await res.json();
@@ -178,6 +184,16 @@ export function EditUserModal({ user, classes, onClose, onSaved }: EditUserModal
                 Kehadiran dan pengumpulan yang sudah tercatat tetap pada kelas lamanya.
               </div>
             )}
+          </div>
+        )}
+
+        {user.role === 'student' && (
+          <div>
+            <label style={label} htmlFor="edit-joined">TANGGAL BERGABUNG</label>
+            <input id="edit-joined" type="date" value={joinedAt} onChange={(e) => setJoinedAt(e.target.value)} style={field} />
+            <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', margin: '5px 0 0', lineHeight: 1.45 }}>
+              Untuk peserta yang masuk di tengah program. Pertemuan, tugas, dan kuis yang sudah berakhir sebelum tanggal ini tidak dihitung tidak hadir atau tidak mengumpulkan. Yang tetap ia kerjakan sebagai susulan tetap dihitung.
+            </p>
           </div>
         )}
 

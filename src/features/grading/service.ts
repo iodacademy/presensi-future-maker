@@ -4,6 +4,7 @@ import type { Actor } from '../auth/types';
 import type { UserDocument } from '../auth/types';
 import { getEmailHash } from '../auth/policy';
 import { calculateFinalGrade, averageWithZeros } from './policy';
+import { countsAfterJoin, joinMoment } from '../users/join-policy';
 import type { AssessmentKind, AssessmentScoreDocument, FinalGrade } from './types';
 import type { ParsedScoreRow } from './import-policy';
 
@@ -147,23 +148,26 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
   requireAdmin(actor);
 
   const db = getAdminDb();
-  const [studentsSnap, classSnap, sessionsSnap, tasksSnap, submissionsSnap, examsSnap, attemptsSnap, scoresSnap, attendanceSnap] =
+  const [studentsSnap, classSnap, sessionsSnap, sharedSessionsSnap, tasksSnap, submissionsSnap, examsSnap, attemptsSnap, scoresSnap, attendanceSnap] =
     await Promise.all([
       db.collection('users').where('classId', '==', classId).where('role', '==', 'student').where('active', '==', true).get(),
       db.collection('classes').doc(classId).get(),
-      db.collection('sessions').where('classId', '==', classId).get(),
+      db.collection('sessions').where('classId', '==', classId).select('endsAt').get(),
+      // Pertemuan gabungan menyimpan kelas tambahannya di classIds / A joint meeting stores its extra classes in classIds
+      db.collection('sessions').where('classIds', 'array-contains', classId).select('endsAt').get(),
       db.collection('tasks').where('classId', '==', classId).where('published', '==', true).get(),
       db.collection('submissions').where('classId', '==', classId).get(),
       db.collection('exams').where('classId', '==', classId).where('published', '==', true).get(),
       db.collection('examAttempts').where('classId', '==', classId).get(),
       db.collection('assessmentScores').where('classId', '==', classId).get(),
-      db.collection('attendance').where('classId', '==', classId).get(),
+      db.collection('attendance').where('classId', '==', classId).select('studentId', 'sessionId', 'status').get(),
     ]);
 
   const className = (classSnap.data()?.canonicalName as string) ?? '';
-  const totalSessions = sessionsSnap.size;
+  const sessionEnd = new Map<string, string>();
+  for (const d of [...sessionsSnap.docs, ...sharedSessionsSnap.docs]) sessionEnd.set(d.id, d.data().endsAt as string);
 
-  const tasks = tasksSnap.docs.map((d) => d.data() as { id: string });
+  const tasks = tasksSnap.docs.map((d) => d.data() as { id: string; dueAt?: string | null });
   // Pretest dikecualikan: ia mengukur titik awal sebelum diajar, dan
   // memasukkannya ke nilai akhir menghukum peserta karena belum tahu materi
   // yang memang belum diajarkan.
@@ -172,12 +176,20 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
   // folding them into the final score punishes participants for not knowing
   // material not yet taught.
   const exams = examsSnap.docs
-    .map((d) => d.data() as { id: string; kind: string })
+    .map((d) => d.data() as { id: string; kind: string; sessionId?: string | null })
     .filter((e) => e.kind !== 'pretest');
 
+  // Hanya status hadir yang dihitung hadir; izin dan sakit tersimpan di koleksi
+  // yang sama. Catatan apa pun tetap menandai pertemuan itu berlaku baginya.
+  // Only a present status counts as present; excused and sick live in the same
+  // collection. Any record still marks that meeting as applying to them.
   const hadirPerSiswa = new Map<string, Set<string>>();
+  const tercatatPerSiswa = new Map<string, Set<string>>();
   for (const d of attendanceSnap.docs) {
-    const a = d.data() as { studentId: string; sessionId: string };
+    const a = d.data() as { studentId: string; sessionId: string; status?: string };
+    if (!tercatatPerSiswa.has(a.studentId)) tercatatPerSiswa.set(a.studentId, new Set());
+    tercatatPerSiswa.get(a.studentId)!.add(a.sessionId);
+    if ((a.status ?? 'present') !== 'present') continue;
     if (!hadirPerSiswa.has(a.studentId)) hadirPerSiswa.set(a.studentId, new Set());
     hadirPerSiswa.get(a.studentId)!.add(a.sessionId);
   }
@@ -214,18 +226,27 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
   return studentsSnap.docs
     .map((doc) => {
       const u = doc.data() as UserDocument;
+      // Yang berakhir sebelum peserta bergabung tidak dihitung kecuali ia
+      // mengerjakannya. / What ended before the participant joined does not
+      // count unless they did it.
+      const join = joinMoment(u);
+      const tercatat = tercatatPerSiswa.get(u.uid);
+      const sesiSiswa = [...sessionEnd].filter(([id, end]) => countsAfterJoin(end, join, tercatat?.has(id) ?? false));
+      const totalSessions = sesiSiswa.length;
 
-      const hadir = hadirPerSiswa.get(u.uid)?.size ?? 0;
+      const hadir = sesiSiswa.filter(([id]) => hadirPerSiswa.get(u.uid)?.has(id)).length;
       const attendance = totalSessions > 0 ? Math.round((hadir / totalSessions) * 100) : null;
 
       const tugasSiswa = nilaiTugas.get(u.uid);
-      const tasksScore = tasks.length > 0
-        ? averageWithZeros(tasks.map((t) => tugasSiswa?.get(t.id) ?? null), tasks.length)
+      const tasksSiswa = tasks.filter((t) => countsAfterJoin(t.dueAt, join, tugasSiswa?.has(t.id) ?? false));
+      const tasksScore = tasksSiswa.length > 0
+        ? averageWithZeros(tasksSiswa.map((t) => tugasSiswa?.get(t.id) ?? null), tasksSiswa.length)
         : null;
 
       const kuisSiswa = nilaiKuis.get(u.uid);
-      const quiz = exams.length > 0
-        ? averageWithZeros(exams.map((e) => kuisSiswa?.get(e.id) ?? null), exams.length)
+      const examsSiswa = exams.filter((e) => !e.sessionId || countsAfterJoin(sessionEnd.get(e.sessionId), join, kuisSiswa?.has(e.id) ?? false));
+      const quiz = examsSiswa.length > 0
+        ? averageWithZeros(examsSiswa.map((e) => kuisSiswa?.get(e.id) ?? null), examsSiswa.length)
         : null;
 
       const nilai = penilaian.get(u.uid);
@@ -237,8 +258,8 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
         quiz,
         details: {
           attendance: totalSessions > 0 ? `${hadir} dari ${totalSessions} pertemuan` : 'Belum ada pertemuan',
-          tasks: tasks.length > 0 ? `${tugasSiswa?.size ?? 0} dari ${tasks.length} tugas dinilai` : 'Belum ada tugas',
-          quiz: exams.length > 0 ? `${kuisSiswa?.size ?? 0} dari ${exams.length} ujian dikerjakan` : 'Belum ada ujian',
+          tasks: tasksSiswa.length > 0 ? `${tasksSiswa.filter((t) => tugasSiswa?.has(t.id)).length} dari ${tasksSiswa.length} tugas dinilai` : 'Belum ada tugas',
+          quiz: examsSiswa.length > 0 ? `${examsSiswa.filter((e) => kuisSiswa?.has(e.id)).length} dari ${examsSiswa.length} ujian dikerjakan` : 'Belum ada ujian',
         },
       });
 

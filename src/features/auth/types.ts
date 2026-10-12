@@ -11,6 +11,14 @@ export interface UserDocument {
   classId: string | null;
   /** Akun uji coba: tidak dihitung di dashboard / A test account: excluded from the dashboard */
   isTest?: boolean;
+  /**
+   * Tanggal bergabung "YYYY-MM-DD" bagi peserta yang masuk di tengah program.
+   * Kosong berarti dihitung dari createdAt.
+   *
+   * Join date "YYYY-MM-DD" for a participant who entered mid-programme. Empty
+   * means it counts from createdAt.
+   */
+  joinedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
