@@ -26,6 +26,12 @@ export interface MentoringSlotDocument {
   updatedAt: string;
 }
 
+/** Slot terbooking beserta nomor sesinya bagi peserta / A booked slot with its session number for the participant */
+export type NumberedSlot = MentoringSlotDocument & { sessionNumber: number | null };
+
+/** Slot di jadwal mentor, dengan nomor WhatsApp pesertanya / A slot on the mentor's schedule, with the participant's WhatsApp number */
+export type MentorScheduleSlot = NumberedSlot & { studentPhone: string | null };
+
 export interface MentoringBookingDocument {
   id: string;
   slotId: string;

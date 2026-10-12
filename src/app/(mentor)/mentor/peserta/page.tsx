@@ -4,13 +4,17 @@ import React, { useEffect, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { StudentDetailModal } from '@/components/student-detail-modal';
+import { MentoringCountBadge } from '@/components/mentoring-count-badge';
 import type { AssignmentDocument, Phase } from '@/features/assignments/types';
+
+type Mentee = AssignmentDocument & { mentoringCount: number };
 
 export default function MentorPesertaPage() {
   const [phase, setPhase] = useState<Phase>('bootcamp');
-  const [students, setStudents] = useState<AssignmentDocument[]>([]);
+  const [students, setStudents] = useState<Mentee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [picked, setPicked] = useState<AssignmentDocument | null>(null);
+  const [picked, setPicked] = useState<Mentee | null>(null);
+  const neverBooked = students.filter((s) => s.mentoringCount === 0);
 
   useEffect(() => {
     async function loadAssignedStudents() {
@@ -102,6 +106,12 @@ export default function MentorPesertaPage() {
           </p>
         </div>
       ) : (
+        <>
+        {neverBooked.length > 0 && (
+          <div role="note" style={{ padding: '12px 14px', borderRadius: '12px', backgroundColor: 'var(--color-warning-light)', border: '1px solid var(--color-warning)', fontSize: '13px', color: '#7c2d12', lineHeight: 1.5 }}>
+            <b>{neverBooked.length} peserta belum pernah mentoring:</b> {neverBooked.map((s) => s.studentName || s.studentId).join(', ')}. Ingatkan mereka untuk memilih jadwal.
+          </div>
+        )}
         <div
           style={{
             backgroundColor: '#ffffff',
@@ -115,7 +125,7 @@ export default function MentorPesertaPage() {
               <tr style={{ backgroundColor: '#f8fafb', borderBottom: '1px solid var(--color-border)' }}>
                 <th style={{ padding: '12px 16px', fontWeight: 600 }}>Nama Siswa</th>
                 <th style={{ padding: '12px 16px', fontWeight: 600 }}>Fase</th>
-                <th style={{ padding: '12px 16px', fontWeight: 600 }}>Status Bimbingan</th>
+                <th style={{ padding: '12px 16px', fontWeight: 600 }}>Mentoring</th>
               </tr>
             </thead>
             <tbody>
@@ -135,24 +145,14 @@ export default function MentorPesertaPage() {
                     {item.phase}
                   </td>
                   <td style={{ padding: '12px 16px' }}>
-                    <span
-                      style={{
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        backgroundColor: 'var(--color-primary-light)',
-                        color: 'var(--color-primary)',
-                      }}
-                    >
-                      Bimbingan Aktif
-                    </span>
+                    <MentoringCountBadge count={item.mentoringCount} />
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {picked && (

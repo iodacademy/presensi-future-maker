@@ -4,16 +4,26 @@ import React, { useEffect, useRef, useState } from 'react';
 import { CalendarDays, Clock, Video, BellRing, MessageCircle, Mail, X, ChevronRight, TrendingUp } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { StudentDetailModal } from '@/components/student-detail-modal';
-import type { MentoringSlotDocument } from '@/features/mentoring/types';
+import type { MentorScheduleSlot } from '@/features/mentoring/types';
 import type { MenteeProfile } from '@/features/mentoring/service';
 import { formatLongDateWib } from '@/lib/time';
 import { whatsAppLink } from '@/lib/whatsapp';
 
+/** Pesan pengingat sesi yang terisi saat WhatsApp dibuka / The session reminder prefilled when WhatsApp opens */
+function reminderMessage(slot: MentorScheduleSlot, name?: string): string {
+  return (
+    `Halo ${name ?? slot.studentName ?? ''}, saya ${slot.mentorName}, mentor Future Innovators Bootcamp. ` +
+    `Mengingatkan sesi mentoring${slot.sessionNumber ? ` ke-${slot.sessionNumber}` : ''} kita pada ${formatLongDateWib(slot.date)} pukul ${slot.startTime} - ${slot.endTime} WIB.` +
+    (slot.meetUrl ? ` Link Google Meet: ${slot.meetUrl}` : '') +
+    ' Sampai jumpa!'
+  );
+}
+
 export default function MentorJadwalPage() {
-  const [slots, setSlots] = useState<MentoringSlotDocument[]>([]);
+  const [slots, setSlots] = useState<MentorScheduleSlot[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<MentoringSlotDocument | null>(null);
-  const [performanceOf, setPerformanceOf] = useState<MentoringSlotDocument | null>(null);
+  const [selected, setSelected] = useState<MentorScheduleSlot | null>(null);
+  const [performanceOf, setPerformanceOf] = useState<MentorScheduleSlot | null>(null);
 
   useEffect(() => {
     async function loadSchedule() {
@@ -53,7 +63,7 @@ export default function MentorJadwalPage() {
         <BellRing size={20} color="#7c2d12" style={{ flexShrink: 0, marginTop: '1px' }} />
         <div style={{ fontSize: '13px', color: '#7c2d12', lineHeight: 1.55 }}>
           <b>Jangan lupa ingatkan peserta sebelum sesi mentoring.</b> Kirim pengingat sehari sebelumnya dan satu jam sebelum sesi dimulai.
-          Klik kartu peserta untuk melihat profil, nomor WhatsApp, dan performa belajarnya, lalu tekan <b>Kirim pengingat</b>.
+          Tekan <b>Hubungi Peserta</b> untuk membuka WhatsApp dengan pesan pengingat yang sudah terisi, atau klik kartu peserta untuk melihat profil dan performa belajarnya.
         </div>
       </div>
 
@@ -104,7 +114,9 @@ export default function MentorJadwalPage() {
   );
 }
 
-function SlotCard({ slot, past = false, onOpen }: { slot: MentoringSlotDocument; past?: boolean; onOpen: () => void }) {
+function SlotCard({ slot, past = false, onOpen }: { slot: MentorScheduleSlot; past?: boolean; onOpen: () => void }) {
+  const waUrl = whatsAppLink(slot.studentPhone, reminderMessage(slot));
+
   return (
     <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px', padding: '16px 18px' }}>
       {/* Seluruh bagian kiri adalah tombol agar mudah diklik di layar sentuh.
@@ -124,6 +136,11 @@ function SlotCard({ slot, past = false, onOpen }: { slot: MentoringSlotDocument;
             <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary)', textTransform: 'uppercase' }}>
               Fase {slot.phase}
             </span>
+            {slot.sessionNumber && (
+              <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', backgroundColor: '#ede9fe', color: '#6d28d9' }}>
+                Sesi ke-{slot.sessionNumber}
+              </span>
+            )}
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 600, color: 'var(--color-text-main)' }}>
@@ -139,18 +156,33 @@ function SlotCard({ slot, past = false, onOpen }: { slot: MentoringSlotDocument;
 
       {past ? (
         <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', backgroundColor: '#eef0f2', padding: '4px 10px', borderRadius: '10px' }}>SELESAI</span>
-      ) : slot.meetUrl ? (
-        <a href={slot.meetUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', backgroundColor: 'var(--color-primary)', color: '#ffffff', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
-          <Video size={16} /> Masuk Google Meet
-        </a>
       ) : (
-        <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Link Meet belum tersedia</span>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {slot.meetUrl ? (
+            <a href={slot.meetUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', backgroundColor: 'var(--color-primary)', color: '#ffffff', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+              <Video size={16} /> Masuk Google Meet
+            </a>
+          ) : (
+            <span style={{ alignSelf: 'center', fontSize: '12px', color: 'var(--color-text-muted)' }}>Link Meet belum tersedia</span>
+          )}
+          {/* Tanpa nomor, tombolnya membuka profil: di sana ada pilihan email.
+              Without a number, the button opens the profile, which offers email. */}
+          {waUrl ? (
+            <a href={waUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', backgroundColor: '#128c4a', color: '#ffffff', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+              <MessageCircle size={16} /> Hubungi Peserta
+            </a>
+          ) : (
+            <button type="button" onClick={onOpen} title="Nomor WhatsApp belum diisi peserta" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', border: '1px solid #128c4a', backgroundColor: '#ffffff', color: '#128c4a', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+              <MessageCircle size={16} /> Hubungi Peserta
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
-function MenteeModal({ slot, onClose, onShowPerformance }: { slot: MentoringSlotDocument; onClose: () => void; onShowPerformance: () => void }) {
+function MenteeModal({ slot, onClose, onShowPerformance }: { slot: MentorScheduleSlot; onClose: () => void; onShowPerformance: () => void }) {
   const [profile, setProfile] = useState<MenteeProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -177,12 +209,7 @@ function MenteeModal({ slot, onClose, onShowPerformance }: { slot: MentoringSlot
   }, [slot.studentId]);
 
   const tanggal = formatLongDateWib(slot.date);
-  const pengingat =
-    `Halo ${profile?.name ?? slot.studentName ?? ''}, saya ${slot.mentorName}, mentor Future Innovators Bootcamp. ` +
-    `Mengingatkan sesi mentoring kita pada ${tanggal} pukul ${slot.startTime} - ${slot.endTime} WIB.` +
-    (slot.meetUrl ? ` Link Google Meet: ${slot.meetUrl}` : '') +
-    ' Sampai jumpa!';
-  const reminderUrl = whatsAppLink(profile?.phone, pengingat);
+  const reminderUrl = whatsAppLink(profile?.phone, reminderMessage(slot, profile?.name));
   const chatUrl = whatsAppLink(profile?.phone, '');
 
   const field = (label: string, value: React.ReactNode) => (

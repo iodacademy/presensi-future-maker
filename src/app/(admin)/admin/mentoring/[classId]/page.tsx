@@ -16,8 +16,9 @@ interface Mentor {
 }
 
 interface StudentRow {
-  student: { uid: string; name: string };
+  student: { uid: string; name: string; isTest?: boolean };
   assignment: { mentorId: string; mentorName: string } | null;
+  mentoringCount: number;
 }
 
 const PHASES: [Phase, string][] = [
@@ -204,7 +205,52 @@ export default function MentoringClassPage({ params }: { params: Promise<{ class
         </div>
       )}
 
+      {/* Akun test tidak perlu diingatkan / Test accounts need no reminding */}
+      {!loading && students.some((s) => s.mentoringCount === 0 && !s.student.isTest) && (
+        <NeverBookedPanel rows={students.filter((s) => s.mentoringCount === 0 && !s.student.isTest)} />
+      )}
+
       {!loading && mentors.length > 0 && <BookedSessions classId={classId} phase={phase} />}
     </AppShell>
+  );
+}
+
+/**
+ * Peserta yang belum pernah mentoring pada fase ini, dikelompokkan per mentor
+ * agar admin tahu siapa yang perlu mengingatkan mereka.
+ *
+ * Participants who have not had mentoring in this phase, grouped per mentor so
+ * the admin knows who should remind them.
+ */
+function NeverBookedPanel({ rows }: { rows: StudentRow[] }) {
+  const byMentor = new Map<string, string[]>();
+  for (const r of rows) {
+    const key = r.assignment?.mentorName ?? 'Belum punya mentor';
+    if (!byMentor.has(key)) byMentor.set(key, []);
+    byMentor.get(key)!.push(r.student.name);
+  }
+  const groups = [...byMentor.entries()].sort(([a], [b]) => a.localeCompare(b, 'id'));
+
+  return (
+    <section style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div>
+        <h2 style={{ fontSize: '14px', margin: 0 }}>Belum pernah mentoring ({rows.length})</h2>
+        <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', margin: '2px 0 0' }}>Peserta aktif yang belum membooking satu sesi pun pada fase ini</p>
+      </div>
+      <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--color-border)', borderRadius: '12px', overflow: 'hidden' }}>
+        {groups.map(([mentor, names], i) => (
+          <div key={mentor} style={{ display: 'flex', gap: '12px', padding: '10px 14px', borderTop: i === 0 ? 'none' : '1px solid var(--color-border)', flexWrap: 'wrap' }}>
+            <div style={{ flex: '0 0 180px', fontSize: '12px', fontWeight: 700, color: mentor === 'Belum punya mentor' ? 'var(--color-danger)' : 'var(--color-text-main)' }}>
+              {mentor} <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>({names.length})</span>
+            </div>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {names.sort((a, b) => a.localeCompare(b, 'id')).map((n) => (
+                <span key={n} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '10px', backgroundColor: 'var(--color-warning-light)', color: '#7c2d12' }}>{n}</span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

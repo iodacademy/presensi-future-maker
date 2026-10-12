@@ -9,6 +9,8 @@ import type {
   CreateSlotInput,
   BookSlotInput,
   MentoringStudentView,
+  MentorScheduleSlot,
+  NumberedSlot,
 } from './types';
 import type { Phase } from '../assignments/types';
 import type { ClassDocument } from '../classes/types';
@@ -21,6 +23,7 @@ import {
   canStudentCancelBooking,
 } from './policy';
 import { getStudentAssignment } from '../assignments/service';
+import { sessionNumbers } from './progress';
 import { DISABILITY_LABELS, ENTRY_STATUS_LABELS, GENDER_LABELS, type StudentProfileDocument } from '../users/profile-types';
 import { ageFrom } from '../users/profile-service';
 import {
@@ -555,7 +558,7 @@ async function releaseBooking(
  *
  * Mentor views their booked mentoring sessions schedule.
  */
-export async function listMentorSchedule(actor: Actor): Promise<MentoringSlotDocument[]> {
+export async function listMentorSchedule(actor: Actor): Promise<MentorScheduleSlot[]> {
   if (actor.role !== 'mentor' && actor.role !== 'admin') {
     throw new Error('Hanya mentor atau admin yang diizinkan melihat jadwal mentoring');
   }
@@ -567,7 +570,54 @@ export async function listMentorSchedule(actor: Actor): Promise<MentoringSlotDoc
     .get();
 
   const slots = snapshot.docs.map((d) => d.data() as MentoringSlotDocument);
-  return slots.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const studentIds = slots.map((s) => s.studentId ?? '').filter(Boolean);
+
+  // Nomor WhatsApp ikut dikirim agar tombol Hubungi Peserta langsung bekerja di
+  // kartunya. Hanya peserta yang membooking mentor ini, yaitu peserta yang
+  // memang boleh ia hubungi.
+  //
+  // The WhatsApp number is sent along so the Contact button works straight from
+  // the card. Only participants who booked this mentor, i.e. those they may
+  // contact anyway.
+  const [numbers, profileSnaps] = await Promise.all([
+    numberedPhaseSessions(slots, studentIds),
+    studentIds.length > 0
+      ? db.getAll(...studentIds.map((id) => db.collection('studentProfiles').doc(id)), { fieldMask: ['phone'] })
+      : Promise.resolve([]),
+  ]);
+  const phones = new Map(profileSnaps.map((p) => [p.id, (p.data()?.phone as string | undefined) ?? null]));
+
+  return slots
+    .map((s) => ({
+      ...s,
+      sessionNumber: s.bookingId ? numbers.get(s.bookingId) ?? null : null,
+      studentPhone: s.studentId ? phones.get(s.studentId) ?? null : null,
+    }))
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+}
+
+/**
+ * Nomor sesi tiap slot terbooking. Slot dapat berasal dari dua fase, jadi
+ * penomorannya dihitung per fase.
+ *
+ * The session number of each booked slot. Slots can span two phases, so the
+ * numbering is computed per phase.
+ */
+async function numberedPhaseSessions(slots: MentoringSlotDocument[], studentIds: string[]): Promise<Map<string, number>> {
+  const phases = [...new Set(slots.map((s) => s.phase))];
+  const maps = await Promise.all(phases.map((p) => sessionNumbers(studentIds, p)));
+  return new Map(maps.flatMap((m) => [...m]));
+}
+
+/**
+ * Slot sebuah kelas dengan nomor sesi pada slot yang terbooking.
+ *
+ * A class's slots with the session number on the booked ones.
+ */
+export async function listNumberedSlotsForClass(classId: string, phase: Phase): Promise<NumberedSlot[]> {
+  const slots = await listSlotsForClass(classId, phase);
+  const numbers = await sessionNumbers(slots.map((s) => s.studentId ?? '').filter(Boolean), phase);
+  return slots.map((s) => ({ ...s, sessionNumber: s.bookingId ? numbers.get(s.bookingId) ?? null : null }));
 }
 
 /**

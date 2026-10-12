@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { CalendarDays, Clock, Video, Archive, CalendarCheck } from 'lucide-react';
-import type { MentoringSlotDocument } from '@/features/mentoring/types';
+import type { NumberedSlot as MentoringSlotDocument } from '@/features/mentoring/types';
 import type { Phase } from '@/features/assignments/types';
 import { formatLongDateWib } from '@/lib/time';
 
@@ -134,7 +134,12 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
                 </div>
                 <div style={{ flex: '1 1 160px', minWidth: 0, fontSize: '12px' }}>
                   <div style={{ fontSize: '10px', color: 'var(--color-text-faint)' }}>Peserta</div>
-                  <div style={{ fontWeight: 600, color: 'var(--color-text-main)' }}>{s.studentName ?? '-'}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', fontWeight: 600, color: 'var(--color-text-main)' }}>
+                    {s.studentName ?? '-'}
+                    {s.sessionNumber && (
+                      <span style={{ fontSize: '10px', fontWeight: 700, padding: '1px 7px', borderRadius: '4px', backgroundColor: '#ede9fe', color: '#6d28d9' }}>Sesi ke-{s.sessionNumber}</span>
+                    )}
+                  </div>
                 </div>
                 {tab === 'mendatang' ? (
                   s.meetUrl ? (

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionActor } from '@/features/auth/session';
-import { createMentoringSlot, listSlotsForClass } from '@/features/mentoring/service';
+import { createMentoringSlot, listNumberedSlotsForClass } from '@/features/mentoring/service';
 import { isValidPhase } from '@/features/assignments/policy';
 
 export async function GET(request: Request) {
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const slots = await listSlotsForClass(classId, phase);
+    const slots = await listNumberedSlotsForClass(classId, phase);
     return NextResponse.json({ slots });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

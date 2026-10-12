@@ -6,6 +6,7 @@ import {
   listClassStudentsWithAssignment,
 } from '@/features/assignments/service';
 import { isValidPhase } from '@/features/assignments/policy';
+import { mentoringCounts } from '@/features/mentoring/progress';
 
 export async function GET(request: Request) {
   const actor = await getSessionActor();
@@ -23,7 +24,8 @@ export async function GET(request: Request) {
 
   try {
     const list = await listClassStudentsWithAssignment(classId, phase);
-    return NextResponse.json({ students: list });
+    const counts = await mentoringCounts(list.map((r) => r.student.uid), phase);
+    return NextResponse.json({ students: list.map((r) => ({ ...r, mentoringCount: counts.get(r.student.uid) ?? 0 })) });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

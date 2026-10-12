@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionActor } from '@/features/auth/session';
 import { listStudentsForMentor } from '@/features/assignments/service';
 import { isValidPhase } from '@/features/assignments/policy';
+import { mentoringCounts } from '@/features/mentoring/progress';
 
 export async function GET(request: Request) {
   const actor = await getSessionActor();
@@ -17,7 +18,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const students = await listStudentsForMentor(actor.uid, phase);
+    const list = await listStudentsForMentor(actor.uid, phase);
+    const counts = await mentoringCounts(list.map((a) => a.studentId), phase);
+    const students = list.map((a) => ({ ...a, mentoringCount: counts.get(a.studentId) ?? 0 }));
     return NextResponse.json({ students });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
