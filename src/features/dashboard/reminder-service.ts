@@ -4,6 +4,8 @@ import type { Actor } from '../auth/types';
 import type { SurveyFormDocument } from '../survey/types';
 import { scopeCovers } from '../survey/policy';
 import { canStartAttempt } from '../exams/policy';
+import { computeExamLocks } from '../exams/sequence';
+import type { ExamKind } from '../exams/types';
 import type { StudentReminders } from './types';
 
 /**
@@ -47,7 +49,7 @@ export async function listStudentReminders(actor: Actor): Promise<StudentReminde
       .collection('exams')
       .where('classId', '==', classId)
       .where('published', '==', true)
-      .select('id', 'title', 'sessionId', 'dueAt', 'questionCount')
+      .select('id', 'title', 'kind', 'sessionId', 'dueAt', 'questionCount')
       .get(),
     db.collection('examAttempts').where('studentId', '==', actor.uid).select('examId', 'status', 'passed').get(),
   ]);
@@ -83,14 +85,26 @@ export async function listStudentReminders(actor: Actor): Promise<StudentReminde
   }
 
   const nowIso = new Date().toISOString();
-  const exams: StudentReminders['exams'] = examSnap.docs
-    .map((d) => d.data() as { id: string; title: string; sessionId: string | null; dueAt: string | null; questionCount: number })
+  const examDocs = examSnap.docs.map(
+    (d) => d.data() as { id: string; title: string; kind: ExamKind; sessionId: string | null; dueAt: string | null; questionCount: number }
+  );
+  // Hanya kuis yang sudah terbuka menurut urutan dan jadwalnya yang ditagih;
+  // menagih kuis yang masih terkunci meminta peserta mengerjakan yang mustahil.
+  // Only quizzes already open by order and schedule are chased; chasing a
+  // locked one asks the participant for the impossible.
+  const locks = computeExamLocks({
+    exams: examDocs,
+    sessions: [...sessions.entries()].map(([id, x]) => ({ id, startsAt: x.startsAt })),
+    finishedExamIds: new Set(
+      [...attemptsByExam.entries()].filter(([, list]) => list.some((a) => a.status === 'selesai')).map(([id]) => id)
+    ),
+    nowIso,
+  });
+  const exams: StudentReminders['exams'] = examDocs
     .filter((e) => {
       if (e.questionCount <= 0) return false;
-      if (e.sessionId) {
-        const s = sessions.get(e.sessionId);
-        if (!s || s.startsAt > nowIso) return false;
-      }
+      if (locks.get(e.id)?.locked) return false;
+      if (e.sessionId && !sessions.has(e.sessionId)) return false;
       const attempts = attemptsByExam.get(e.id) ?? [];
       if (attempts.some((a) => a.status === 'selesai')) return false;
       return canStartAttempt({ attempts, dueAt: e.dueAt, nowIso }).allowed;

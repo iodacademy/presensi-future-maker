@@ -5,21 +5,27 @@ import Link from 'next/link';
 import {
   QrCode, Info, Video, FileText, Download, ClipboardList, ClipboardCheck, MessageSquare,
   ChevronDown, ChevronLeft, ChevronRight, Play, ExternalLink, Calendar, MapPin, Lock, FolderOpen,
-  PanelRightClose, PanelRightOpen, X, List as ListIcon,
+  PanelRightClose, PanelRightOpen, X, List as ListIcon, BellRing, Minimize2,
 } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
-import { formatTimeWib, formatDateTimeWib, formatDateWib } from '@/lib/time';
+import { formatTimeWib, formatDateTimeWib, formatDateWib, formatLongDateTimeWib } from '@/lib/time';
 import { toEmbedUrl } from '@/lib/embed-url';
 import { pickFocusSessionId } from '@/features/attendance/focus-session';
 import type { SessionDocument, AttendanceDocument } from '@/features/attendance/types';
 import type { MaterialLink, TaskKind } from '@/features/tasks/types';
 import { TASK_KIND_LABELS, MATERIAL_CATEGORY_LABELS, materialCategory, type MaterialCategory } from '@/features/tasks/types';
 import type { StudentTaskOutline } from '@/features/tasks/submission-types';
+import { lockMessage, type ExamLock } from '@/features/exams/sequence';
+import { useStudentReminders } from '@/components/student-shell';
+import { reminderRows, ReminderItem } from '@/components/reminders';
 
 const MATERIAL_ORDER: MaterialCategory[] = ['presentasi', 'tambahan', 'praktik'];
 
 type Paper = { id: string; title: string; dueAt: string | null };
-type Exam = { id: string; title: string; questionCount: number; durationMinutes: number | null; score: number | null; passed: boolean; attemptsLeft: number };
+type Exam = {
+  id: string; title: string; kind: 'pretest' | 'posttest' | 'kuis'; questionCount: number; durationMinutes: number | null;
+  score: number | null; passed: boolean; finished: boolean; attemptsLeft: number; lock: ExamLock;
+};
 type Survey = { formId: string; formTitle: string; questionCount: number; submitted: boolean };
 
 interface SessionItem {
@@ -53,6 +59,10 @@ interface Group {
   id: string;
   title: string;
   item: SessionItem | null;
+  /** Nomor pertemuan; kosong untuk grup pretest, postest, dan tugas / Meeting number; empty for pretest, posttest and task groups */
+  number?: number;
+  /** Keterangan di atas judul grup selain pertemuan / The line above a non-meeting group's title */
+  meta?: string;
   sections: { label: string; kind: Entry['kind']; entries: Entry[] }[];
 }
 
@@ -91,6 +101,17 @@ function taskEntry(id: string, title: string, kind: TaskKind, dueAt: string | nu
   return { key: `tugas.${id}`, kind: 'task', title, item, href: `/app/tugas/${id}?from=jadwal`, taskKind: kind, dueAt, outline, badge: taskBadge(outline) };
 }
 
+function examEntry(e: Exam, item: SessionItem | null): Entry {
+  const habis = e.attemptsLeft === 0 && !e.passed;
+  return {
+    key: `kuis.${e.id}`, kind: 'exam', title: e.title, item, href: `/app/ujian/${e.id}`, exam: e,
+    badge: e.score !== null
+      ? { text: `Nilai ${e.score}`, tone: e.passed ? 'success' : 'primary' }
+      : e.lock.locked ? { text: 'Terkunci', tone: 'muted' }
+      : habis ? { text: 'Kesempatan habis', tone: 'danger' } : { text: `${e.questionCount} soal`, tone: 'primary' },
+  };
+}
+
 /**
  * Menyusun daftar course player: satu kelompok per pertemuan, urut waktu,
  * ditambah satu kelompok untuk tugas yang tidak melekat pada pertemuan mana
@@ -102,12 +123,12 @@ function taskEntry(id: string, title: string, kind: TaskKind, dueAt: string | nu
  * that last group participants would have to switch to the Tasks menu to see
  * the rest of their work.
  */
-function buildGroups(items: SessionItem[], tasks: StudentTaskOutline[]): Group[] {
+function buildGroups(items: SessionItem[], tasks: StudentTaskOutline[], standalone: Exam[]): Group[] {
   const taskById = new Map(tasks.map((t) => [t.id, t]));
   const sorted = [...items].sort((a, b) => (a.session.startsAt ?? '').localeCompare(b.session.startsAt ?? ''));
   const shownTaskIds = new Set<string>();
 
-  const groups: Group[] = sorted.map((item) => {
+  const groups: Group[] = sorted.map((item, index) => {
     const { session, workingPapers = [], exams = [], surveys = [] } = item;
     const recordings = session.recordings ?? [];
     const materials = session.materials ?? [];
@@ -117,6 +138,7 @@ function buildGroups(items: SessionItem[], tasks: StudentTaskOutline[]): Group[]
       id: session.id,
       title: session.title,
       item,
+      number: index + 1,
       sections: [
         { label: 'Info Pertemuan', kind: 'info', entries: [{ key: `presensi.${session.id}`, kind: 'info', title: 'Jadwal & presensi', item } as Entry] },
         {
@@ -146,15 +168,7 @@ function buildGroups(items: SessionItem[], tasks: StudentTaskOutline[]): Group[]
         {
           label: 'Kuis',
           kind: 'exam',
-          entries: exams.map((e): Entry => {
-            const habis = e.attemptsLeft === 0 && !e.passed;
-            return {
-              key: `kuis.${e.id}`, kind: 'exam', title: e.title, item, href: `/app/ujian/${e.id}`, exam: e,
-              badge: e.score !== null
-                ? { text: `Nilai ${e.score}`, tone: e.passed ? 'success' : 'primary' }
-                : habis ? { text: 'Kesempatan habis', tone: 'danger' } : { text: `${e.questionCount} soal`, tone: 'primary' },
-            };
-          }),
+          entries: exams.map((e) => examEntry(e, item)),
         },
         {
           // Survei hanya dikirim server bila kehadirannya sudah tercatat.
@@ -186,6 +200,18 @@ function buildGroups(items: SessionItem[], tasks: StudentTaskOutline[]): Group[]
         }))
         .filter((s) => s.entries.length > 0),
     });
+  }
+  // Pretest membuka jalur kuis sehingga berada paling atas; postest menutupnya
+  // sehingga berada paling bawah.
+  // The pretest opens the quiz path so it sits at the top; the posttest closes it
+  // so it sits at the bottom.
+  const pre = standalone.filter((e) => e.kind === 'pretest');
+  const post = standalone.filter((e) => e.kind === 'posttest');
+  if (pre.length > 0) {
+    groups.unshift({ id: 'pretest', title: 'Pretest', item: null, meta: 'Kerjakan sebelum kuis sesi', sections: [{ label: 'Pretest', kind: 'exam', entries: pre.map((e) => examEntry(e, null)) }] });
+  }
+  if (post.length > 0) {
+    groups.push({ id: 'postest', title: 'Postest', item: null, meta: 'Dibuka di pertemuan terakhir', sections: [{ label: 'Postest', kind: 'exam', entries: post.map((e) => examEntry(e, null)) }] });
   }
   return groups;
 }
@@ -219,7 +245,7 @@ function BadgeText({ badge }: { badge: NonNullable<Entry['badge']> }) {
 }
 
 function EntryRow({ entry, active, onSelect }: { entry: Entry; active: boolean; onSelect: () => void }) {
-  const Icon = entry.kind === 'recording' ? Play : ICONS[entry.kind];
+  const Icon = entry.kind === 'recording' ? Play : entry.kind === 'exam' && entry.exam.lock.locked ? Lock : ICONS[entry.kind];
   const color = KIND_COLORS[entry.kind];
   return (
     <div className="cp-row" data-active={active} style={{ display: 'flex', alignItems: 'center', paddingRight: '10px' }}>
@@ -432,6 +458,23 @@ function Stage({ entry }: { entry: Entry }) {
   if (entry.kind === 'exam') {
     const e = entry.exam;
     const habis = e.attemptsLeft === 0 && !e.passed;
+    const terkunci = lockMessage(e.lock, formatLongDateTimeWib);
+    if (terkunci) {
+      return (
+        <Card kind="exam" title={entry.title}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '14px', borderRadius: '10px', backgroundColor: '#f4f4f5', marginTop: '4px' }}>
+            <Lock size={20} color="var(--color-text-muted)" style={{ flexShrink: 0, marginTop: '1px' }} />
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)' }}>Kuis ini masih terkunci</div>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px', lineHeight: 1.5 }}>{terkunci}</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-faint)', marginTop: '6px' }}>
+                Kuis dikerjakan berurutan: pretest, lalu kuis sesi 1, sesi 2, dan seterusnya.
+              </div>
+            </div>
+          </div>
+        </Card>
+      );
+    }
     return (
       <Card kind="exam" title={entry.title}>
         <Row label="Jumlah soal">{e.questionCount} soal</Row>
@@ -470,6 +513,13 @@ function Stage({ entry }: { entry: Entry }) {
 export default function StudentJadwalPage() {
   const [items, setItems] = useState<SessionItem[]>([]);
   const [tasks, setTasks] = useState<StudentTaskOutline[]>([]);
+  const [standalone, setStandalone] = useState<Exam[]>([]);
+  // Pop-up tagihan wajib dibuka lagi setiap kali halaman jadwal dibuka; dapat
+  // diperkecil, tetapi tidak dapat dihilangkan selama masih ada tagihan.
+  // The mandatory-task pop-up reopens every time the schedule page opens; it can
+  // be minimised but not dismissed while anything is still due.
+  const [pendingOpen, setPendingOpen] = useState(true);
+  const pendingRows = reminderRows(useStudentReminders());
   const [loading, setLoading] = useState(true);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -496,7 +546,11 @@ export default function StudentJadwalPage() {
           fetch('/api/attendance/student'),
           fetch('/api/tasks/student/outline').catch(() => null),
         ]);
-        if (sessionsRes.ok) setItems((await sessionsRes.json()).sessions || []);
+        if (sessionsRes.ok) {
+          const body = await sessionsRes.json();
+          setItems(body.sessions || []);
+          setStandalone(body.standaloneExams || []);
+        }
         if (tasksRes?.ok) setTasks((await tasksRes.json()).tasks || []);
       } catch (e) {
         console.error(e);
@@ -507,7 +561,7 @@ export default function StudentJadwalPage() {
     load();
   }, []);
 
-  const groups = useMemo(() => buildGroups(items, tasks), [items, tasks]);
+  const groups = useMemo(() => buildGroups(items, tasks, standalone), [items, tasks, standalone]);
   const entries = useMemo(() => groups.flatMap((g) => g.sections.flatMap((s) => s.entries)), [groups]);
   const groupOf = useMemo(() => {
     const map = new Map<string, Group>();
@@ -705,12 +759,12 @@ export default function StudentJadwalPage() {
                       }}
                     >
                       <span style={{ width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: badge.bg, color: badge.fg, fontFamily: 'var(--font-heading)', fontSize: '12px', fontWeight: 700 }}>
-                        {g.item ? gi + 1 : <ClipboardList size={14} strokeWidth={2.2} />}
+                        {g.number ?? (g.id === 'pretest' || g.id === 'postest' ? <ClipboardCheck size={14} strokeWidth={2.2} /> : <ClipboardList size={14} strokeWidth={2.2} />)}
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '3px' }}>
                           <span style={{ fontSize: '10px', color: 'var(--color-text-faint)' }}>
-                            {g.item ? sessionMeta(g.item) : `${g.sections.reduce((n, s) => n + s.entries.length, 0)} tugas`}
+                            {g.item ? sessionMeta(g.item) : g.meta ?? `${g.sections.reduce((n, s) => n + s.entries.length, 0)} tugas`}
                           </span>
                           {g.item?.isActive && (
                             <span style={{ fontSize: '8px', fontWeight: 700, color: '#ffffff', backgroundColor: 'var(--color-success)', padding: '2px 6px', borderRadius: '10px' }}>BERLANGSUNG</span>
@@ -795,6 +849,37 @@ export default function StudentJadwalPage() {
           </div>
         </div>
       )}
+      {pendingRows.length > 0 && (pendingOpen ? (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 90, backgroundColor: 'rgba(15, 23, 42, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="pending-title" style={{ backgroundColor: '#ffffff', borderRadius: '16px', width: 'min(460px, 100%)', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
+            <div style={{ padding: '18px 20px 12px', background: 'linear-gradient(135deg, #fff3c4 0%, #fff8e5 100%)', borderBottom: '1px solid #fde7a8' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <BellRing size={22} color="#b45309" />
+                <h2 id="pending-title" style={{ fontSize: '16px', margin: 0, color: '#7c2d12' }}>Selesaikan dulu kuis dan feedback</h2>
+              </div>
+              <p style={{ fontSize: '12px', color: '#7c2d12', margin: '6px 0 0', lineHeight: 1.5 }}>
+                Ada {pendingRows.length} hal wajib yang belum kamu kerjakan. Pengingat ini akan muncul setiap kali kamu membuka Jadwal sampai semuanya selesai.
+              </p>
+            </div>
+            <div style={{ padding: '8px', overflowY: 'auto' }}>
+              {pendingRows.map((r) => <ReminderItem key={r.key} row={r} />)}
+            </div>
+            <div style={{ padding: '12px 16px', borderTop: '1px solid var(--color-student-border)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setPendingOpen(false)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 14px', borderRadius: '10px', border: '1px solid var(--color-border)', backgroundColor: '#ffffff', fontSize: '12px', fontWeight: 600, color: 'var(--color-text-main)', cursor: 'pointer' }}
+              >
+                <Minimize2 size={14} /> Perkecil, kerjakan nanti
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <button type="button" className="pending-chip" onClick={() => setPendingOpen(true)} aria-label={`${pendingRows.length} hal wajib belum dikerjakan, buka daftar`}>
+          <BellRing size={16} /> {pendingRows.length} wajib belum selesai
+        </button>
+      ))}
     </StudentShell>
   );
 }

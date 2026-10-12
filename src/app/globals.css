@@ -175,3 +175,12 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 1s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+
+/* Tombol pop-up tagihan yang diperkecil: di atas bilah sebelum/berikutnya.
+   The minimised mandatory-task button: above the previous/next bar. */
+.pending-chip {
+  position: fixed; right: 16px; bottom: 140px; z-index: 85; display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 999px; border: none; cursor: pointer; font-size: 12px; font-weight: 700;
+  background-color: #b45309; color: #ffffff; box-shadow: 0 10px 24px rgba(180, 83, 9, 0.35);
+}
+@media (min-width: 900px) { .pending-chip { bottom: 84px; right: 360px; } }

@@ -9,8 +9,8 @@ export async function GET() {
   }
 
   try {
-    const sessions = await listStudentSessionsWithAttendance(actor);
-    return NextResponse.json({ sessions });
+    const { items, standaloneExams } = await listStudentSessionsWithAttendance(actor);
+    return NextResponse.json({ sessions: items, standaloneExams });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

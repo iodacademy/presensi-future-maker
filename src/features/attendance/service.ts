@@ -1,5 +1,7 @@
 // Layanan sesi kelas, rotasi token QR dan pencatatan presensi siswa
 // Session management, QR token rotation, and student attendance recording service
+import { computeExamLocks, type ExamLock } from '../exams/sequence';
+import type { ExamKind } from '../exams/types';
 import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor, UserDocument } from '../auth/types';
@@ -695,11 +697,14 @@ export async function recordStudentAttendance(
  * Student retrieves class meetings list along with their attendance status.
  */
 export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
-  session: SessionDocument;
-  attendance: AttendanceDocument | null;
-  isActive: boolean;
-}[]> {
-  if (!actor.classId) return [];
+  items: {
+    session: SessionDocument;
+    attendance: AttendanceDocument | null;
+    isActive: boolean;
+  }[];
+  standaloneExams: StudentExamItem[];
+}> {
+  if (!actor.classId) return { items: [], standaloneExams: [] };
 
   const db = getAdminDb();
 
@@ -781,21 +786,51 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
     }
   }
 
-  const examsBySession = new Map<string, { id: string; title: string; questionCount: number; durationMinutes: number | null; score: number | null; passed: boolean; attemptsLeft: number }[]>();
-  for (const doc of examSnap.docs) {
-    const e = doc.data() as { id: string; title: string; sessionId: string | null; questionCount: number; durationMinutes: number | null };
-    if (!e.sessionId) continue;
+  // Status kunci dihitung di sini, dengan aturan yang sama yang dipakai saat
+  // memulai kuis, agar course player tidak pernah menawarkan kuis yang lalu
+  // ditolak server.
+  //
+  // The lock state is computed here, with the same rule used when starting a
+  // quiz, so the course player never offers a quiz the server then refuses.
+  const examDocs = examSnap.docs.map(
+    (d) => d.data() as { id: string; title: string; kind: ExamKind; sessionId: string | null; questionCount: number; durationMinutes: number | null }
+  );
+  const finishedExams = new Set(
+    attemptsSnap.docs.map((d) => d.data() as { examId: string; status: string }).filter((a) => a.status === 'selesai').map((a) => a.examId)
+  );
+  const locks = computeExamLocks({
+    exams: examDocs,
+    sessions: sessions.map((x) => ({ id: x.id, startsAt: x.startsAt })),
+    finishedExamIds: finishedExams,
+    nowIso: new Date().toISOString(),
+  });
+
+  const examsBySession = new Map<string, StudentExamItem[]>();
+  const standaloneExams: StudentExamItem[] = [];
+  for (const e of examDocs) {
     const terbaik = bestByExam.get(e.id);
-    if (!examsBySession.has(e.sessionId)) examsBySession.set(e.sessionId, []);
-    examsBySession.get(e.sessionId)!.push({
+    const item: StudentExamItem = {
       id: e.id,
       title: e.title,
+      kind: e.kind,
       questionCount: e.questionCount,
       durationMinutes: e.durationMinutes,
       score: terbaik?.score ?? null,
       passed: terbaik?.passed ?? false,
+      finished: finishedExams.has(e.id),
       attemptsLeft: Math.max(0, 3 - (attemptCount.get(e.id) ?? 0)),
-    });
+      lock: locks.get(e.id) ?? { locked: false },
+    };
+    // Pretest dan postest tidak terikat satu pertemuan; dikirim terpisah agar
+    // course player dapat menaruhnya di awal dan akhir daftar.
+    // The pretest and posttest belong to no single meeting; sent separately so
+    // the course player can place them at the start and end of the list.
+    if (!e.sessionId) {
+      standaloneExams.push(item);
+      continue;
+    }
+    if (!examsBySession.has(e.sessionId)) examsBySession.set(e.sessionId, []);
+    examsBySession.get(e.sessionId)!.push(item);
   }
 
   const papersBySession = new Map<string, { id: string; title: string; dueAt: string | null }[]>();
@@ -819,7 +854,7 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
 
   const nowIso = new Date().toISOString();
 
-  return sessions.map((s) => ({
+  const items = sessions.map((s) => ({
     session: s,
     attendance: attendMap.get(s.id) || null,
     isActive: isSessionAttendanceActive(s, nowIso),
@@ -843,6 +878,22 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
           }))
       : [],
   }));
+  return { items, standaloneExams };
+}
+
+/** Kuis dalam daftar jadwal peserta / A quiz in the participant schedule */
+export interface StudentExamItem {
+  id: string;
+  title: string;
+  kind: ExamKind;
+  questionCount: number;
+  durationMinutes: number | null;
+  score: number | null;
+  passed: boolean;
+  /** Punya percobaan yang selesai / Has a finished attempt */
+  finished: boolean;
+  attemptsLeft: number;
+  lock: ExamLock;
 }
 
 /**

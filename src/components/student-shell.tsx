@@ -179,7 +179,9 @@ export function StudentShell({ userName, children }: StudentShellProps) {
         {children}
       </div>
 
-      {context && <ReminderToast reminders={context.reminders} />}
+      {/* Halaman jadwal punya pop-up tagihan wajib sendiri; toast di sana hanya mengulangnya.
+          The schedule page has its own mandatory-task pop-up; a toast there only repeats it. */}
+      {context && !pathname.startsWith('/app/jadwal') && <ReminderToast reminders={context.reminders} />}
 
       {/* Bottom nav mobile (node 11:2773), disembunyikan di desktop lewat CSS / hidden on desktop via CSS */}
       <nav

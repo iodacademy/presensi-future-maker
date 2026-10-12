@@ -50,31 +50,49 @@ describe('pengingat peserta', () => {
     expect(surveys).toEqual([{ formId: 'f1', formTitle: 'Evaluasi', sessionId: 's1', sessionTitle: 'Pertemuan 1' }]);
   });
 
-  it('menagih kuis yang belum pernah selesai dan masih boleh dimulai', async () => {
+  // Kuis ditagih mengikuti urutan pretest -> kuis sesi -> postest: hanya kuis
+  // yang sudah terbuka, belum pernah selesai, dan masih boleh dimulai.
+  // Quizzes are chased in pretest -> session quiz -> posttest order: only those
+  // already open, never finished, and still startable.
+  const baseExams: { id: string; title: string; kind: string; sessionId: string | null; dueAt: string | null; questionCount: number }[] = [
+    { id: 'pre', title: 'Pretest', kind: 'pretest', sessionId: null, dueAt: null, questionCount: 5 },
+    { id: 'k1', title: 'Kuis Sesi 1', kind: 'kuis', sessionId: 's1', dueAt: null, questionCount: 5 },
+    { id: 'k2', title: 'Kuis Sesi 2', kind: 'kuis', sessionId: 's2', dueAt: null, questionCount: 5 },
+    { id: 'k9', title: 'Kuis Sesi 9', kind: 'kuis', sessionId: 's9', dueAt: null, questionCount: 5 },
+    { id: 'kosong', title: 'Tanpa soal', kind: 'kuis', sessionId: 's1', dueAt: null, questionCount: 0 },
+    { id: 'post', title: 'Postest', kind: 'posttest', sessionId: null, dueAt: null, questionCount: 5 },
+  ];
+  const setup = (examAttempts: object[], exams = baseExams) =>
     Object.assign(data, {
       sessions: [
         { id: 's1', title: 'Pertemuan 1', startsAt: past },
+        { id: 's2', title: 'Pertemuan 2', startsAt: past },
         { id: 's9', title: 'Pertemuan 9', startsAt: future },
       ],
       attendance: [],
       surveyForms: [],
       surveyResponses: [],
-      exams: [
-        { id: 'e-baru', title: 'Belum dikerjakan', sessionId: 's1', dueAt: null, questionCount: 5 },
-        { id: 'e-jalan', title: 'Sedang berjalan', sessionId: 's1', dueAt: null, questionCount: 5 },
-        { id: 'e-selesai', title: 'Sudah selesai', sessionId: 's1', dueAt: null, questionCount: 5 },
-        { id: 'e-lewat', title: 'Batas lewat', sessionId: 's1', dueAt: past, questionCount: 5 },
-        { id: 'e-depan', title: 'Pertemuan mendatang', sessionId: 's9', dueAt: null, questionCount: 5 },
-        { id: 'e-kosong', title: 'Tanpa soal', sessionId: 's1', dueAt: null, questionCount: 0 },
-        { id: 'e-pretest', title: 'Pretest', sessionId: null, dueAt: null, questionCount: 5 },
-      ],
-      examAttempts: [
-        { examId: 'e-jalan', status: 'berlangsung', passed: null },
-        { examId: 'e-selesai', status: 'selesai', passed: false },
-      ],
+      exams,
+      examAttempts,
     });
-    const { exams } = await listStudentReminders(actor);
-    expect(exams.map((e) => e.id).sort()).toEqual(['e-baru', 'e-jalan', 'e-pretest']);
+
+  it('menagih pretest lebih dulu selama belum dikerjakan', async () => {
+    setup([]);
+    expect((await listStudentReminders(actor)).exams.map((e) => e.id)).toEqual(['pre']);
+  });
+
+  it('menagih kuis sesi berikutnya setelah pretest, termasuk yang sedang berjalan', async () => {
+    setup([{ examId: 'pre', status: 'selesai', passed: true }]);
+    expect((await listStudentReminders(actor)).exams.map((e) => e.id)).toEqual(['k1']);
+    setup([{ examId: 'pre', status: 'selesai', passed: true }, { examId: 'k1', status: 'berlangsung', passed: null }]);
+    expect((await listStudentReminders(actor)).exams.map((e) => e.id)).toEqual(['k1']);
+  });
+
+  it('melewati kuis yang lewat batas waktu tanpa mengunci yang sesudahnya', async () => {
+    setup([{ examId: 'pre', status: 'selesai', passed: true }], baseExams.map((e) => (e.id === 'k1' ? { ...e, dueAt: past } : e)));
+    // Pertemuan 9 belum dimulai dan postest menunggu pertemuan terakhir.
+    // Meeting 9 has not started and the posttest waits for the last meeting.
+    expect((await listStudentReminders(actor)).exams.map((e) => e.id)).toEqual(['k2']);
   });
 
   it('tidak menagih apa pun bila peserta belum punya kelas', async () => {

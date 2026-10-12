@@ -1,5 +1,7 @@
 // Layanan ujian: penyusunan soal, pengerjaan, dan penilaian
 // Exam service: authoring, running, and grading
+import { computeExamLocks, lockMessage, type ExamLock, type SequenceExam } from './sequence';
+import { formatLongDateTimeWib } from '../../lib/time';
 import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
 import { deleteExamImage } from '../uploads/service';
@@ -992,6 +994,41 @@ export async function listExamsForStudent(actor: Actor): Promise<StudentExamSumm
  * hours off, and a start time sent by the browser shifts the deadline with it
  * -- including in the sender's favour.
  */
+/**
+ * Status kunci satu kuis bagi seorang peserta, menurut urutan pretest, kuis
+ * sesi, postest dan jadwal pertemuannya.
+ *
+ * The lock state of one quiz for a participant, by the pretest, session quiz,
+ * posttest order and its meeting schedule.
+ */
+async function examLockFor(actor: Actor, exam: ExamDocument): Promise<ExamLock> {
+  const db = getAdminDb();
+  const classId = actor.classId!;
+  const [examsSnap, ownedSnap, sharedSnap, attemptsSnap] = await Promise.all([
+    db.collection('exams').where('classId', '==', classId).where('published', '==', true).select('id', 'title', 'kind', 'sessionId', 'questionCount', 'dueAt').get(),
+    // Dua kueri sesi seperti listSessionsForClass: sesi bersama mencantumkan kelasnya di classIds.
+    // Two session queries like listSessionsForClass: a shared session lists the class in classIds.
+    db.collection('sessions').where('classId', '==', classId).select('id', 'startsAt').get(),
+    db.collection('sessions').where('classIds', 'array-contains', classId).select('id', 'startsAt').get(),
+    db.collection('examAttempts').where('studentId', '==', actor.uid).select('examId', 'status').get(),
+  ]);
+  const sessions = new Map<string, { id: string; startsAt: string }>();
+  for (const d of [...ownedSnap.docs, ...sharedSnap.docs]) {
+    const x = d.data() as { id: string; startsAt: string };
+    sessions.set(x.id, x);
+  }
+  const finished = new Set(
+    attemptsSnap.docs.map((d) => d.data() as { examId: string; status: string }).filter((a) => a.status === 'selesai').map((a) => a.examId)
+  );
+  const locks = computeExamLocks({
+    exams: examsSnap.docs.map((d) => d.data() as SequenceExam),
+    sessions: [...sessions.values()],
+    finishedExamIds: finished,
+    nowIso: new Date().toISOString(),
+  });
+  return locks.get(exam.id) ?? { locked: false };
+}
+
 export async function startAttempt(
   actor: Actor,
   examId: string
@@ -1036,6 +1073,19 @@ export async function startAttempt(
     nowIso: new Date().toISOString(),
   });
   if (!allowed) throw new Error(reason);
+
+  // Urutan dan jadwal diperiksa hanya saat memulai percobaan baru. Percobaan
+  // yang sedang berjalan tetap boleh dilanjutkan: memutusnya di tengah berarti
+  // membuang jawaban yang sudah diisi.
+  //
+  // Order and schedule are checked only when starting a new attempt. An attempt
+  // already running may continue: cutting it off would discard answers already
+  // filled in.
+  if (!attempts.some((a) => a.status === 'berlangsung')) {
+    const lock = await examLockFor(actor, exam);
+    const message = lockMessage(lock, formatLongDateTimeWib);
+    if (message) throw new Error(message);
+  }
 
   const questionSnap = await db.collection('examQuestions').where('examId', '==', examId).get();
   const questions = questionSnap.docs.map((d) => d.data() as QuestionDocument);
