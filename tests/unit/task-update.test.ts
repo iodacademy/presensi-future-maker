@@ -123,8 +123,10 @@ describe('tampilan working paper admin', () => {
     //
     // Slicing the ISO string shows UTC, so saving it back shifts the deadline
     // seven hours on every edit.
-    expect(ui).toContain("timeZone: 'Asia/Jakarta'");
+    // Konversinya kini di lib/time dan diuji langsung di task-edit.test.ts.
+    // The conversion now lives in lib/time and is tested directly in task-edit.test.ts.
     expect(ui).toContain('toWibParts');
+    expect(readFileSync(resolve(process.cwd(), 'src/lib/time.ts'), 'utf-8')).toMatch(/export function toWibParts[\s\S]*timeZone: 'Asia\/Jakarta'/);
   });
 
   it('mempertahankan baris baru pada instruksi', () => {

@@ -89,17 +89,20 @@ export function validateTaskUpdate(input: {
   dueDate?: string | null;
   dueTime?: string | null;
   briefUrl?: string | null;
+  briefFileName?: string | null;
 }): {
   title?: string;
   description?: string;
   dueAt?: string | null;
   briefUrl?: string | null;
+  briefFileName?: string | null;
 } {
   const patch: {
     title?: string;
     description?: string;
     dueAt?: string | null;
     briefUrl?: string | null;
+    briefFileName?: string | null;
   } = {};
 
   if (input.title !== undefined) {
@@ -142,6 +145,10 @@ export function validateTaskUpdate(input: {
       }
       patch.briefUrl = url;
     }
+  }
+
+  if (input.briefFileName !== undefined) {
+    patch.briefFileName = input.briefFileName?.trim().slice(0, 120) || null;
   }
 
   return patch;

@@ -12,7 +12,7 @@ import { SessionWorkingPaper } from './session-working-paper';
 import { SubmissionRoster } from './submission-roster';
 import { ExamBuilder } from './exam-builder';
 import { TASK_KIND_LABELS } from '@/features/tasks/types';
-import { formatDateTimeWib } from '@/lib/time';
+import { formatDateTimeWib, toWibParts } from '@/lib/time';
 import type { TaskSummary, TaskKind } from '@/features/tasks/types';
 import type { ClassDocument } from '@/features/classes/types';
 import type { SessionDocument } from '@/features/attendance/types';
@@ -83,6 +83,9 @@ export default function CourseBuilderPage({
   const [briefUrl, setBriefUrl] = useState('');
   const [briefFileName, setBriefFileName] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // Tugas yang sedang disunting; null berarti modalnya menambah tugas baru.
+  // The task being edited; null means the modal adds a new one.
+  const [editingTask, setEditingTask] = useState<TaskSummary | null>(null);
 
   // Fungsi refetch dipecah per endpoint (bukan satu loadData() gabungan) supaya
   // tiap aksi cukup refresh data yang benar-benar berubah -- nambah tugas tidak
@@ -196,10 +199,64 @@ export default function CourseBuilderPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classId]);
 
+  function resetTaskForm() {
+    setIsModalOpen(false);
+    setEditingTask(null);
+    setTitle(''); setDescription(''); setDueDate(''); setDueTime('23:59'); setSessionId('');
+    setBriefUrl(''); setBriefFileName('');
+  }
+
+  // Modal yang sama dipakai untuk menyunting: fieldnya identik, dan dua
+  // formulir berarti dua tempat yang harus diubah tiap kali fieldnya bertambah.
+  // The same modal edits too: the fields are identical, and two forms would be
+  // two places to change whenever a field is added.
+  function openEditTask(t: TaskSummary) {
+    const { date, time } = toWibParts(t.dueAt);
+    setEditingTask(t);
+    setKind(t.kind);
+    setTitle(t.title);
+    setDescription(t.description ?? '');
+    setDueDate(date);
+    setDueTime(time || '23:59');
+    setBriefUrl(t.briefUrl ?? '');
+    setBriefFileName(t.briefFileName ?? '');
+    setActionError(null);
+    setIsModalOpen(true);
+  }
+
   async function handleAddTask(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setActionError(null);
+
+    if (editingTask) {
+      try {
+        const res = await fetch(`/api/tasks/${editingTask.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title, description,
+            // Tanggal kosong mencabut tenggatnya / An empty date lifts the deadline
+            dueDate: dueDate || null,
+            dueTime: dueTime || null,
+            briefUrl: briefUrl || null,
+            briefFileName: briefFileName || null,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'Gagal menyimpan perubahan tugas');
+        }
+        resetTaskForm();
+        setActionSuccess('Perubahan tugas tersimpan');
+        loadTasks();
+      } catch (err: any) {
+        setActionError(err.message);
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
 
     try {
       const order = kind === 'daily' ? tasks.filter((t) => t.kind === 'daily').length + 1 : 1;
@@ -222,9 +279,7 @@ export default function CourseBuilderPage({
         throw new Error(data.error || 'Gagal menambahkan tugas');
       }
 
-      setIsModalOpen(false);
-      setTitle(''); setDescription(''); setDueDate(''); setDueTime('23:59'); setSessionId('');
-      setBriefUrl(''); setBriefFileName('');
+      resetTaskForm();
       setActionSuccess('Tugas berhasil ditambahkan ke kurikulum');
       loadTasks(); // hanya tasks yang berubah / only tasks changed
     } catch (err: any) {
@@ -619,7 +674,18 @@ export default function CourseBuilderPage({
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                      <h3 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>{t.title}</h3>
+                      <h3 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)', flex: 1 }}>{t.title}</h3>
+                      {canEditTasks && (
+                        <button
+                          type="button"
+                          aria-label={`Ubah ${t.title}`}
+                          title="Ubah tugas"
+                          onClick={() => openEditTask(t)}
+                          style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}
+                        >
+                          <Pencil size={13} color="var(--color-primary)" strokeWidth={2} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         aria-label={`Hapus ${t.title}`}
@@ -629,9 +695,13 @@ export default function CourseBuilderPage({
                         <Trash2 size={13} color="var(--color-danger)" strokeWidth={2} />
                       </button>
                     </div>
-                    <p style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
+                    <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', whiteSpace: 'pre-wrap' }}>
                       {t.description || 'Tidak ada deskripsi khusus.'}
                     </p>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '9px', color: 'var(--color-text-muted)' }}>
+                      <Calendar size={10} strokeWidth={2} />
+                      {t.dueAt ? `Deadline: ${formatDateTimeWib(t.dueAt)} WIB` : 'Tanpa batas waktu'}
+                    </span>
                     {t.briefUrl && (
                       <a href={t.briefUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '5px', textDecoration: 'none', marginTop: '2px' }}>
                         <Paperclip size={11} color="var(--color-primary)" strokeWidth={2} />
@@ -660,10 +730,10 @@ export default function CourseBuilderPage({
           <div style={{ flex: '1 1 340px', minWidth: '320px', display: tab === 'capstone' ? 'flex' : 'none', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>Instruksi Capstone</h2>
-              {canEditTasks && !capstoneTask && (
+              {canEditTasks && capstoneTask && (
                 <button
                   type="button"
-                  onClick={() => { setKind('capstone'); setIsModalOpen(true); }}
+                  onClick={() => openEditTask(capstoneTask)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 12px',
                     borderRadius: '8px', border: '1px solid var(--color-primary)', backgroundColor: 'transparent',
@@ -831,7 +901,7 @@ export default function CourseBuilderPage({
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', width: '100%', maxWidth: '520px', padding: '28px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
             <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>
-              Tambah {TASK_KIND_LABELS[kind]}
+              {editingTask ? 'Ubah' : 'Tambah'} {TASK_KIND_LABELS[kind]}
             </h2>
             <form onSubmit={handleAddTask} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <Input label="JUDUL TUGAS" placeholder={kind === 'daily' ? 'Contoh: Tugas 1 - Intro React' : 'Contoh: Capstone Project - Final'} value={title} onChange={(e) => setTitle(e.target.value)} required />
@@ -873,8 +943,8 @@ export default function CourseBuilderPage({
                 <Input label="NAMA FILE TAMPILAN BRIEF" placeholder="Contoh: Brief_Tugas1.pdf" value={briefFileName} onChange={(e) => setBriefFileName(e.target.value)} />
               )}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-                <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)} disabled={submitting}>Batal</Button>
-                <Button type="submit" variant="primary" disabled={submitting}>{submitting ? 'Menyimpan...' : 'Simpan Instruksi'}</Button>
+                <Button type="button" variant="secondary" onClick={resetTaskForm} disabled={submitting}>Batal</Button>
+                <Button type="submit" variant="primary" disabled={submitting}>{submitting ? 'Menyimpan...' : editingTask ? 'Simpan Perubahan' : 'Simpan Instruksi'}</Button>
               </div>
             </form>
           </div>

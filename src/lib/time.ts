@@ -151,3 +151,32 @@ export function wibDate(now = new Date()): string {
     year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Jakarta',
   }).format(now);
 }
+
+/**
+ * Memecah ISO UTC menjadi tanggal dan jam WIB untuk formulir.
+ *
+ * Memotong string ISO dengan slice menampilkan waktu UTC: batas pukul 23.59
+ * WIB tersimpan sebagai 16.59 UTC di hari yang sama, sehingga formulir akan
+ * menampilkan jam yang salah dan menyimpannya kembali akan menggeser batasnya
+ * tujuh jam setiap kali disunting.
+ *
+ * Splits an ISO UTC instant into a WIB date and time for the form.
+ *
+ * Slicing an ISO string shows UTC: a 23:59 WIB deadline is stored as 16:59 UTC
+ * the same day, so the form would show the wrong time and saving it back would
+ * shift the deadline seven hours on every edit.
+ */
+export function toWibParts(iso: string | null): { date: string; time: string } {
+  if (!iso) return { date: '', time: '' };
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return { date: '', time: '' };
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    timeZone: 'Asia/Jakarta',
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+
+  return { date: `${get('year')}-${get('month')}-${get('day')}`, time: `${get('hour')}:${get('minute')}` };
+}

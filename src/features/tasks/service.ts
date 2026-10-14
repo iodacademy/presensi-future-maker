@@ -138,6 +138,7 @@ export async function updateTask(
     dueDate?: string | null;
     dueTime?: string | null;
     briefUrl?: string | null;
+    briefFileName?: string | null;
   }
 ): Promise<void> {
   if (actor.role !== 'admin') {
