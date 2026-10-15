@@ -132,7 +132,11 @@ export async function getStudentDetail(actor: Actor, uid: string): Promise<Stude
       const s = d.data() as SubmissionDocument;
       return {
         taskId: s.taskId,
-        url: s.url ?? null,
+        // Tautannya diisi peserta dan dibuka admin atau mentor. Penyimpanan sudah
+        // menolak selain https, tetapi dokumen lama mungkin mendahului aturan itu.
+        // The link is entered by the participant and opened by an admin or mentor.
+        // Saving already rejects anything but https, but older documents may predate that.
+        url: s.url && /^https:\/\//i.test(s.url) ? s.url : null,
         fileName: s.fileName ?? null,
         submittedAt: s.submittedAt,
         late: s.late === true,

@@ -13,7 +13,7 @@ const data: Record<string, Record<string, Record<string, unknown>>> = {
   },
   attendance: { a1: { studentId: 's1', sessionId: 'p1' }, a2: { studentId: 's1', sessionId: 'p2', status: 'excused' } },
   tasks: { t1: { id: 't1', classId: 'k1', published: true, title: 'Tugas 1', kind: 'daily', dueAt: null, order: 1 } },
-  submissions: { x1: { studentId: 's1', taskId: 't1', score: 88, late: false, url: 'https://drive.google.com/x', fileName: null, submittedAt: '2026-01-01T06:00:00.000Z', feedbackPreview: 'Rapi' } },
+  submissions: { x9: { studentId: 's1', taskId: 't9', score: null, late: false, url: 'javascript:alert(1)', fileName: null, submittedAt: '2025-12-01T00:00:00.000Z', feedbackPreview: null }, x1: { studentId: 's1', taskId: 't1', score: 88, late: false, url: 'https://drive.google.com/x', fileName: null, submittedAt: '2026-01-01T06:00:00.000Z', feedbackPreview: 'Rapi' } },
   exams: { e1: { id: 'e1', classId: 'k1', published: true, title: 'Pretest', kind: 'pretest', sessionId: null, passingScore: 70, questionCount: 10 } },
   examAttempts: { at1: { studentId: 's1', examId: 'e1', status: 'selesai', score: 60, passed: false } },
   bookings: {
@@ -85,7 +85,9 @@ describe('detail progres peserta', () => {
     expect(d.note).toBeNull();
     // Hasil tugasnya tetap terlihat agar mentor punya konteks saat mentoring.
     // The task work stays visible so the mentor has context in the session.
-    expect(d.submissions).toEqual([{ taskId: 't1', url: 'https://drive.google.com/x', fileName: null, submittedAt: '2026-01-01T06:00:00.000Z', late: false, score: 88, feedbackPreview: 'Rapi' }]);
+    // Tautan selain https dari dokumen lama dibuang / Non-https links from old documents are dropped
+    expect(d.submissions.find((x) => x.taskId === 't9')?.url).toBeNull();
+    expect(d.submissions.filter((x) => x.taskId === 't1')).toEqual([{ taskId: 't1', url: 'https://drive.google.com/x', fileName: null, submittedAt: '2026-01-01T06:00:00.000Z', late: false, score: 88, feedbackPreview: 'Rapi' }]);
   });
 
   it('tertutup bagi mentor lain, peserta, dan akun bukan peserta', async () => {
