@@ -14,7 +14,11 @@ const CAPSTONE = { fg: '#a16207', bg: '#fef3c7', grad: 'linear-gradient(135deg, 
 type State = 'perlu-tautan' | 'lewat' | 'mendesak' | 'belum' | 'menunggu' | 'dinilai';
 
 const STATE_STYLE: Record<State, { label: string; fg: string; bg: string; ring: string; icon: typeof Clock }> = {
-  'perlu-tautan': { label: 'Tautan belum ada — kirim ulang', fg: '#b91c1c', bg: '#fef2f2', ring: '#f87171', icon: Link2Off },
+  // Kuning, bukan merah: tugasnya sudah tercatat terkumpul, hanya berkasnya
+  // yang tidak tersimpan. Merah membuat peserta mengira belum mengumpulkan.
+  // Yellow, not red: the task is already recorded as handed in, only its file
+  // was not stored. Red made participants think they had not submitted.
+  'perlu-tautan': { label: 'Terkumpul · tambahkan tautan', fg: '#a16207', bg: '#fefce8', ring: '#facc15', icon: Link2Off },
   lewat: { label: 'Lewat tenggat', fg: '#b91c1c', bg: '#fef2f2', ring: '#f87171', icon: AlertTriangle },
   mendesak: { label: 'Segera', fg: '#c2410c', bg: '#fff7ed', ring: '#fb923c', icon: Clock },
   belum: { label: 'Belum dikerjakan', fg: '#0057a3', bg: '#eff6ff', ring: '#60a5fa', icon: ClipboardList },
@@ -54,7 +58,7 @@ function TaskCard({ item, state, nowMs }: { item: StudentTaskItem; state: State;
   const { task, submission, feedback } = item;
   const st = STATE_STYLE[state];
   const Icon = st.icon;
-  const done = state === 'menunggu' || state === 'dinilai';
+  const done = state === 'menunggu' || state === 'dinilai' || state === 'perlu-tautan';
   // Hitung mundur hanya untuk yang belum dikumpulkan / Countdown only for work not yet handed in
   const sisa = !submission ? countdown(task.dueAt, nowMs) : null;
 
@@ -88,11 +92,15 @@ function TaskCard({ item, state, nowMs }: { item: StudentTaskItem; state: State;
               {submission?.score}
               <span style={{ fontSize: '8px', fontWeight: 600, opacity: 0.9 }}>NILAI</span>
             </span>
+          ) : state === 'perlu-tautan' ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0, padding: '7px 11px', borderRadius: '10px', border: `1px solid ${st.ring}`, color: st.fg, fontSize: '11px', fontWeight: 700 }}>
+              Tambah tautan <ArrowRight size={13} />
+            </span>
           ) : !done ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
               {sisa && <span style={{ fontSize: '11px', fontWeight: 700, color: st.fg }}>{sisa}</span>}
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '8px 12px', borderRadius: '10px', backgroundColor: st.fg, color: '#ffffff', fontSize: '11px', fontWeight: 700 }}>
-                {state === 'perlu-tautan' ? 'Kirim ulang' : 'Kerjakan'} <ArrowRight size={13} />
+                Kerjakan <ArrowRight size={13} />
               </span>
             </span>
           ) : null}
@@ -134,22 +142,22 @@ export default function StudentTasksPage() {
   const withState = dailyItems.map((item) => ({ item, state: stateOf(item, nowMs) }));
   const graded = withState.filter((x) => x.state === 'dinilai');
   const avgScore = graded.length > 0 ? Math.round(graded.reduce((n, x) => n + (x.item.submission?.score ?? 0), 0) / graded.length) : null;
-  const urgentCount = withState.filter((x) => x.state === 'mendesak' || x.state === 'lewat' || x.state === 'perlu-tautan').length;
+  const urgentCount = withState.filter((x) => x.state === 'mendesak' || x.state === 'lewat').length;
 
   // Yang belum dikerjakan di atas, urut paling mendesak lalu tenggat terdekat;
   // yang sudah dikumpulkan di bawah, terbaru lebih dulu.
   // Unfinished work on top, most pressing then nearest deadline first; handed-in
   // work below, newest first.
   const visible = withState.filter(({ item, state }) => {
-    if (filterStatus === 'unsubmitted') return item.submission === null || state === 'perlu-tautan';
+    if (filterStatus === 'unsubmitted') return item.submission === null;
     if (filterStatus === 'graded') return state === 'dinilai';
     return true;
   });
   const todo = visible
-    .filter((x) => x.state !== 'menunggu' && x.state !== 'dinilai')
+    .filter((x) => x.state !== 'menunggu' && x.state !== 'dinilai' && x.state !== 'perlu-tautan')
     .sort((a, b) => TODO_ORDER[a.state] - TODO_ORDER[b.state] || (a.item.task.dueAt ?? '9999').localeCompare(b.item.task.dueAt ?? '9999'));
   const done = visible
-    .filter((x) => x.state === 'menunggu' || x.state === 'dinilai')
+    .filter((x) => x.state === 'menunggu' || x.state === 'dinilai' || x.state === 'perlu-tautan')
     .sort((a, b) => (b.item.submission?.submittedAt ?? '').localeCompare(a.item.submission?.submittedAt ?? ''));
 
   const tabButton = (tab: 'daily' | 'capstone', label: string, mobile: boolean) => {

@@ -126,7 +126,7 @@ export default function StudentTaskSubmitPage({
     ? 'linear-gradient(135deg, #854d0e 0%, #a16207 45%, #eab308 100%)'
     : isGraded
       ? 'linear-gradient(135deg, #15803d 0%, #22c55e 100%)'
-      : missingLink || sisa?.overdue
+      : sisa?.overdue
         ? 'linear-gradient(135deg, #b91c1c 0%, #f97316 100%)'
         : submission
           ? 'linear-gradient(135deg, #5b21b6 0%, #6366f1 100%)'
@@ -137,7 +137,7 @@ export default function StudentTaskSubmitPage({
   const statusText = isGraded
     ? `Dinilai · ${submission?.score} / 100`
     : missingLink
-      ? 'Tautan belum ada — kirim ulang'
+      ? 'Terkumpul · tambahkan tautan'
       : submission
         ? `Terkumpul${submission.late ? ' · terlambat' : ''} · menunggu nilai`
         : sisa?.overdue ? 'Lewat tenggat' : 'Belum dikumpulkan';
@@ -222,9 +222,12 @@ export default function StudentTaskSubmitPage({
                   {successMsg && <div role="status" style={{ padding: '10px 14px', backgroundColor: '#f0fdf4', color: '#15803d', borderRadius: '10px', marginBottom: '12px', fontSize: '12px', fontWeight: 600 }}>{successMsg}</div>}
                   {error && <div role="alert" style={{ padding: '10px 14px', backgroundColor: '#fef2f2', color: '#b91c1c', borderRadius: '10px', marginBottom: '12px', fontSize: '12px', fontWeight: 600 }}>{error}</div>}
                   {missingLink && (
-                    <div role="alert" style={{ display: 'flex', gap: '8px', padding: '10px 14px', backgroundColor: '#fef2f2', color: '#b91c1c', borderRadius: '10px', marginBottom: '12px', fontSize: '12px', lineHeight: 1.5 }}>
+                    <div role="note" style={{ display: 'flex', gap: '8px', padding: '10px 14px', backgroundColor: '#fefce8', color: '#854d0e', border: '1px solid #fde68a', borderRadius: '10px', marginBottom: '12px', fontSize: '12px', lineHeight: 1.55 }}>
                       <Info size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
-                      <span>Pengumpulan Anda sebelumnya hanya berisi nama file{submission?.fileName ? ` (${submission.fileName})` : ''}, tanpa berkas yang dapat dibuka penilai. Unggah file ke Google Drive, atur aksesnya agar dapat dilihat siapa saja yang memiliki link, lalu tempel tautannya di bawah.</span>
+                      <span>
+                        <b>Tugas Anda sudah tercatat terkumpul.</b> Hanya saja, file{submission?.fileName ? ` (${submission.fileName})` : ''} yang diunggah lewat formulir lama tidak tersimpan di sistem, jadi penilai belum dapat membukanya.
+                        Agar dapat dinilai, unggah file itu ke Google Drive, atur aksesnya menjadi &ldquo;siapa saja yang memiliki link&rdquo;, lalu tempel tautannya di bawah.
+                      </span>
                     </div>
                   )}
 
