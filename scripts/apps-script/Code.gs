@@ -19,6 +19,16 @@
  *      identifier `Calendar`).
  *   2. Project Settings -> Script properties -> tambah `SHARED_SECRET`
  *      (buat dengan: openssl rand -base64 32).
+ *   2a. Project Settings -> centang "Show appsscript.json manifest file in
+ *      editor", lalu salin isi scripts/apps-script/appsscript.json ke berkas
+ *      itu. Manifest ini menambahkan izin Google Meet API agar mentor dapat
+ *      dijadikan co-host. Jalankan fungsi apa pun sekali untuk menyetujui izin
+ *      barunya, lalu deploy ulang (Manage deployments -> Edit -> New version).
+ *      Project Settings -> tick "Show appsscript.json manifest file in editor",
+ *      then copy scripts/apps-script/appsscript.json into that file. The
+ *      manifest adds the Google Meet API permission so mentors can be made
+ *      co-hosts. Run any function once to grant the new permission, then
+ *      redeploy (Manage deployments -> Edit -> New version).
  *   2b. Pilih fungsi `installReminderTrigger` lalu Run sekali, dan setujui
  *      izinnya. Ini memasang pengirim email pengingat tiap 5 menit.
  *      Select `installReminderTrigger`, Run it once, and grant the permissions.
@@ -84,6 +94,23 @@ function createEvent(body) {
   if (body.studentEmail) attendees.push({ email: body.studentEmail });
   if (body.mentorEmail) attendees.push({ email: body.mentorEmail });
 
+  // Ruang Meet dibuat lewat Meet API, bukan createRequest Calendar: hanya ruang
+  // yang dibuat aplikasi sendiri yang anggotanya boleh diatur, dan mentor perlu
+  // menjadi co-host agar dapat merekam (ia berasal dari luar organisasi).
+  // Bila Meet API gagal, jatuh ke cara lama agar booking tetap mendapat tautan.
+  //
+  // The Meet space is made through the Meet API rather than a Calendar
+  // createRequest: only spaces the app created itself may have their members
+  // managed, and the mentor needs to be a co-host to record (they come from
+  // outside the organisation). If the Meet API fails, fall back to the old way
+  // so the booking still gets a link.
+  var space = null;
+  try {
+    space = createMeetSpace(body.mentorEmail, body.studentEmail);
+  } catch (err) {
+    console.warn('Meet API gagal, memakai createRequest Calendar: ' + err);
+  }
+
   var resource = {
     summary: body.summary,
     description: body.description || '',
@@ -105,19 +132,42 @@ function createEvent(body) {
       ],
     },
     extendedProperties: {
-      private: { app: APP_TAG, bookingId: String(body.bookingId) },
+      // meetUrl disimpan agar email pengingat tetap memuat tautan bila
+      // Calendar tidak menampilkannya sebagai hangoutLink.
+      // meetUrl is stored so reminder emails still carry the link if Calendar
+      // does not surface it as hangoutLink.
+      private: { app: APP_TAG, bookingId: String(body.bookingId), meetUrl: space ? space.meetingUri : '' },
     },
-    conferenceData: {
-      createRequest: {
-        // Tiap booking memakai conference sendiri. Memakai ulang tautan Meet
-        // antar event membocorkan detail rapat ke peserta lain.
-        // Each booking gets its own conference. Reusing a Meet link across
-        // events leaks meeting details to unintended attendees.
-        requestId: body.bookingId,
-        conferenceSolutionKey: { type: 'hangoutsMeet' },
-      },
-    },
+    conferenceData: space
+      ? {
+          // Ruang yang sudah ada dipasang ke event agar undangan menampilkan
+          // tombol "Gabung dengan Google Meet".
+          // The existing space is attached to the event so the invitation shows
+          // the "Join with Google Meet" button.
+          conferenceId: space.meetingCode,
+          conferenceSolution: { key: { type: 'hangoutsMeet' } },
+          entryPoints: [{ entryPointType: 'video', uri: space.meetingUri, label: space.meetingUri.replace('https://', '') }],
+        }
+      : {
+          createRequest: {
+            // Tiap booking memakai conference sendiri. Memakai ulang tautan Meet
+            // antar event membocorkan detail rapat ke peserta lain.
+            // Each booking gets its own conference. Reusing a Meet link across
+            // events leaks meeting details to unintended attendees.
+            requestId: body.bookingId,
+            conferenceSolutionKey: { type: 'hangoutsMeet' },
+          },
+        },
   };
+
+  if (space) {
+    // Tautan juga ditulis di deskripsi: bila Calendar menolak memasang ruang
+    // itu sebagai conference, undangan tetap memuat tautannya.
+    // The link is also written into the description: if Calendar refuses to
+    // attach the space as a conference, the invitation still carries the link.
+    resource.description = (resource.description ? resource.description + '\n\n' : '') + 'Google Meet: ' + space.meetingUri;
+    resource.location = space.meetingUri;
+  }
 
   var created = Calendar.Events.insert(resource, CALENDAR_ID, {
     conferenceDataVersion: 1,
@@ -127,8 +177,8 @@ function createEvent(body) {
   // Conference dibuat asinkron; balasan pertama bisa belum memuat tautannya.
   // Conference creation is asynchronous; the first response may not carry the
   // link yet.
-  var meetUrl = created.hangoutLink || null;
-  var status = pickStatus(created);
+  var meetUrl = created.hangoutLink || (space ? space.meetingUri : null);
+  var status = space ? 'success' : pickStatus(created);
 
   if (!meetUrl && status === 'pending') {
     Utilities.sleep(2000);
@@ -144,6 +194,55 @@ function createEvent(body) {
     meetUrl: meetUrl,
     conferenceStatus: status,
   };
+}
+
+/**
+ * Membuat ruang Meet lewat Meet REST API dan menjadikan mentor co-host.
+ *
+ * Co-host dapat merekam, mengizinkan peserta masuk, dan mengelola rapat walau
+ * berasal dari luar organisasi akun bootcamp. Gagal menambah co-host tidak
+ * menggagalkan ruangnya: rapat tetap berjalan, hanya tanpa hak itu.
+ *
+ * Creates a Meet space through the Meet REST API and makes the mentor co-host.
+ *
+ * A co-host can record, admit participants and manage the meeting even from
+ * outside the bootcamp account's organisation. Failing to add the co-host does
+ * not fail the space: the meeting still works, just without those rights.
+ */
+function createMeetSpace(mentorEmail, studentEmail) {
+  var space = meetApi('post', 'https://meet.googleapis.com/v2/spaces', {});
+  if (!space || !space.meetingUri || !space.name) throw new Error('Balasan Meet API tanpa meetingUri');
+
+  if (mentorEmail) {
+    try {
+      meetApi('post', 'https://meet.googleapis.com/v2/' + space.name + '/members', { email: mentorEmail, role: 'COHOST' });
+    } catch (err) {
+      console.warn('Gagal menjadikan mentor co-host: ' + err);
+    }
+  }
+  // Peserta didaftarkan sebagai anggota agar tidak perlu mengetuk.
+  // The participant is registered as a member so they need not knock.
+  if (studentEmail) {
+    try {
+      meetApi('post', 'https://meet.googleapis.com/v2/' + space.name + '/members', { email: studentEmail });
+    } catch (err) {
+      console.warn('Gagal mendaftarkan peserta: ' + err);
+    }
+  }
+  return space;
+}
+
+function meetApi(method, url, payload) {
+  var res = UrlFetchApp.fetch(url, {
+    method: method,
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+    muteHttpExceptions: true,
+  });
+  var code = res.getResponseCode();
+  if (code < 200 || code >= 300) throw new Error('Meet API ' + code + ': ' + res.getContentText().slice(0, 300));
+  return JSON.parse(res.getContentText() || '{}');
 }
 
 function pickStatus(event) {
@@ -233,7 +332,8 @@ function mailReminder(event, start, minutesLeft) {
 
   var when = Utilities.formatDate(start, TZ, 'HH:mm');
   var lead = minutesLeft >= 45 ? '1 jam lagi' : minutesLeft > 1 ? minutesLeft + ' menit lagi' : 'sebentar lagi';
-  var link = event.hangoutLink || '(tautan Meet ada di undangan Google Calendar)';
+  var priv = (event.extendedProperties && event.extendedProperties.private) || {};
+  var link = event.hangoutLink || priv.meetUrl || '(tautan Meet ada di undangan Google Calendar)';
 
   MailApp.sendEmail({
     to: guests.join(','),
