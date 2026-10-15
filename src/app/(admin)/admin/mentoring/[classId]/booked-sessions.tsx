@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { CalendarDays, Clock, Video, Archive, CalendarCheck, RefreshCw } from 'lucide-react';
+import { CalendarDays, Clock, Video, Archive, CalendarCheck, RefreshCw, Loader2 } from 'lucide-react';
 import type { NumberedSlot as MentoringSlotDocument } from '@/features/mentoring/types';
 import type { Phase } from '@/features/assignments/types';
 import { formatLongDateWib } from '@/lib/time';
@@ -41,8 +41,13 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
     return true;
   };
 
+  // Nama peserta yang sedang diperbarui satu per satu, untuk pop-up loading.
+  // The participant whose link is being refreshed singly, for the loading pop-up.
+  const [refreshingName, setRefreshingName] = useState<string | null>(null);
+
   const refreshSingle = async (slot: MentoringSlotDocument) => {
     setCreating(slot.id);
+    setRefreshingName(slot.studentName ?? 'peserta');
     setActionError(null);
     setNotice(null);
     try {
@@ -52,6 +57,7 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
       setActionError((e as Error).message);
     } finally {
       setCreating(null);
+      setRefreshingName(null);
     }
   };
 
@@ -136,8 +142,35 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
     </button>
   );
 
+  const loadingOpen = bulk !== null || refreshingName !== null;
+
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {/* Pop-up selama pembaruan berjalan: tiap booking memanggil Apps Script
+          beberapa detik, dan tanpa tanda proses admin mengira tombolnya tidak
+          bekerja lalu mengekliknya lagi.
+          A pop-up while the refresh runs: each booking calls Apps Script for a
+          few seconds, and without a sign of progress an admin assumes the button
+          did nothing and clicks it again. */}
+      {loadingOpen && (
+        <div role="dialog" aria-modal="true" aria-live="polite" aria-label="Memperbarui link Meet" style={{ position: 'fixed', inset: 0, zIndex: 100, backgroundColor: 'rgba(15, 23, 42, 0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', width: 'min(380px, 100%)', padding: '26px 24px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
+            <Loader2 size={40} color="var(--color-primary)" className="spin" style={{ margin: '0 auto 14px', display: 'block' }} />
+            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-main)' }}>Memperbarui link Meet</div>
+            <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', margin: '6px 0 0', lineHeight: 1.5 }}>
+              {bulk
+                ? `${bulk.done} dari ${bulk.total} booking selesai. Jangan tutup halaman ini.`
+                : `Membuat ruang Meet baru untuk ${refreshingName} dan menjadikan mentornya co-host.`}
+            </p>
+            {bulk && (
+              <div style={{ height: '8px', borderRadius: '10px', backgroundColor: 'var(--color-border)', marginTop: '14px', overflow: 'hidden' }}>
+                <div style={{ width: `${bulk.total > 0 ? (bulk.done / bulk.total) * 100 : 0}%`, height: '100%', backgroundColor: 'var(--color-primary)', transition: 'width 200ms ease' }} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
         <div>
           <h2 style={{ fontSize: '14px', margin: 0 }}>Jadwal terbooking</h2>
