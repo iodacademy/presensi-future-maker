@@ -11,6 +11,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
   }
 
   const { taskId } = await params;
+
+  // Panjang permintaan diperiksa sebelum formData() membaca seluruh badannya ke
+  // memori; pemeriksaan ukuran berkas di bawah baru berjalan setelah semuanya
+  // terbaca. Kelonggaran 1 MB untuk pembungkus multipart.
+  // The request length is checked before formData() reads the whole body into
+  // memory; the file size check below only runs once everything is read. A 1 MB
+  // allowance covers the multipart wrapping.
+  const declared = Number(request.headers.get('content-length') ?? 0);
+  if (declared > MAX_FILE_SIZE_BYTES + 1024 * 1024) {
+    return NextResponse.json({ error: `Ukuran berkas maksimal ${MAX_FILE_SIZE_BYTES / 1024 / 1024} MB` }, { status: 413 });
+  }
+
   try {
     const form = await request.formData();
     const file = form.get('file');
