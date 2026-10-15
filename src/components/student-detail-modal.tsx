@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, MessageSquareText, CalendarClock, UserRound, StickyNote } from 'lucide-react';
+import { X, MessageSquareText, CalendarClock, UserRound, StickyNote, ClipboardList, ExternalLink } from 'lucide-react';
+import { TASK_KIND_LABELS } from '@/features/tasks/types';
 import type { StudentDetail } from '@/features/dashboard/types';
 import { HomePerformance } from '@/app/(student)/app/home-performance';
 import { formatDateTimeWib, formatLongDateWib } from '@/lib/time';
@@ -108,6 +109,8 @@ export function StudentDetailModal({ studentId, name, subtitle, summary, onClose
             <>
               <HomePerformance performance={detail.performance} progress={{ attendanceRatio: '', dailyTasksRatio: '', mentoringRatio: `${Math.min(2, detail.mentoring.used)}/2` }} links={false} />
 
+              <SubmittedTasks detail={detail} />
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: '14px' }}>
                 <Section icon={CalendarClock} title={`Mentoring (${detail.mentoring.bookings.filter((b) => b.status === 'confirmed').length} terjadwal)`}>
                   {detail.mentoring.bookings.length === 0 ? (
@@ -183,5 +186,73 @@ export function StudentDetailModal({ studentId, name, subtitle, summary, onClose
       </div>
     </div>,
     document.body
+  );
+}
+
+const TASK_STATUS: Record<StudentDetail['performance']['tasks'][number]['status'], { label: string; fg: string; bg: string }> = {
+  dinilai: { label: 'Sudah dinilai', fg: '#3f6212', bg: 'var(--color-success-light)' },
+  menunggu: { label: 'Menunggu nilai', fg: 'var(--color-primary)', bg: 'var(--color-primary-light)' },
+  belum: { label: 'Belum dikumpulkan', fg: '#7c2d12', bg: 'var(--color-warning-light)' },
+  lewat: { label: 'Lewat tenggat', fg: 'var(--color-danger)', bg: 'var(--color-danger-light)' },
+};
+
+/**
+ * Tugas peserta beserta hasil yang ia kumpulkan, agar mentor punya konteks
+ * saat sesi mentoring dan admin tidak perlu membuka halaman tiap tugas.
+ *
+ * The participant's tasks with what they handed in, so a mentor has context in
+ * the mentoring session and an admin need not open each task's page.
+ */
+function SubmittedTasks({ detail }: { detail: StudentDetail }) {
+  const subs = new Map(detail.submissions.map((s) => [s.taskId, s]));
+  const tasks = detail.performance.tasks;
+  const submitted = tasks.filter((t) => subs.has(t.id)).length;
+
+  return (
+    <Section icon={ClipboardList} title={`Tugas yang dikumpulkan (${submitted} dari ${tasks.length})`}>
+      {tasks.length === 0 ? (
+        <p style={{ fontSize: '12px', color: 'var(--color-text-faint)', margin: 0 }}>Belum ada tugas di kelas ini</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {tasks.map((t, i) => {
+            const s = subs.get(t.id);
+            const st = TASK_STATUS[t.status];
+            return (
+              <div key={t.id} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexWrap: 'wrap', padding: '10px 0', borderTop: i === 0 ? 'none' : '1px solid var(--color-border)' }}>
+                <div style={{ flex: '1 1 240px', minWidth: 0 }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>{t.title}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                    {TASK_KIND_LABELS[t.kind]} · {t.dueAt ? `Tenggat ${formatDateTimeWib(t.dueAt)} WIB` : 'Tanpa tenggat'}
+                  </div>
+                  {s && (
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                      Dikumpulkan {formatDateTimeWib(s.submittedAt)} WIB
+                      {s.late && <b style={{ color: 'var(--color-danger)', marginLeft: '6px' }}>Terlambat</b>}
+                    </div>
+                  )}
+                  {s?.feedbackPreview && (
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-main)', backgroundColor: 'var(--color-bg-app)', borderRadius: '8px', padding: '6px 9px', marginTop: '6px', whiteSpace: 'pre-wrap' }}>
+                      <b>Umpan balik:</b> {s.feedbackPreview}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: st.fg, backgroundColor: st.bg, padding: '3px 8px', borderRadius: '10px', whiteSpace: 'nowrap' }}>
+                    {st.label}{s?.score !== null && s?.score !== undefined ? ` · ${s.score}` : ''}
+                  </span>
+                  {s?.url ? (
+                    <a href={s.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                      <ExternalLink size={12} /> Buka hasil
+                    </a>
+                  ) : s?.fileName ? (
+                    <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{s.fileName}</span>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Section>
   );
 }

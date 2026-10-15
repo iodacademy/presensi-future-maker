@@ -67,7 +67,7 @@ export async function getStudentDetail(actor: Actor, uid: string): Promise<Stude
     classId ? db.collection('tasks').where('classId', '==', classId).where('published', '==', true).select('id', 'title', 'kind', 'dueAt', 'order').get() : empty,
     classId ? db.collection('exams').where('classId', '==', classId).where('published', '==', true).select('id', 'title', 'kind', 'sessionId', 'passingScore', 'questionCount').get() : empty,
     db.collection('attendance').where('studentId', '==', uid).select('sessionId', 'status').get(),
-    db.collection('submissions').where('studentId', '==', uid).select('taskId', 'score', 'late').get(),
+    db.collection('submissions').where('studentId', '==', uid).select('taskId', 'score', 'late', 'url', 'fileName', 'submittedAt', 'feedbackPreview').get(),
     db.collection('examAttempts').where('studentId', '==', uid).select('examId', 'status', 'score', 'passed').get(),
     db.collection('bookings').where('studentId', '==', uid).select('mentorName', 'date', 'startTime', 'endTime', 'status', 'phase').get(),
     // Feedback dan catatan admin tidak dibaca untuk mentor: feedback ditujukan
@@ -128,6 +128,18 @@ export async function getStudentDetail(actor: Actor, uid: string): Promise<Stude
         }
       : null,
     performance,
+    submissions: subsSnap.docs.map((d) => {
+      const s = d.data() as SubmissionDocument;
+      return {
+        taskId: s.taskId,
+        url: s.url ?? null,
+        fileName: s.fileName ?? null,
+        submittedAt: s.submittedAt,
+        late: s.late === true,
+        score: s.score ?? null,
+        feedbackPreview: s.feedbackPreview ?? null,
+      };
+    }),
     mentoring: {
       used: bookings.filter((b) => b.status === 'confirmed' && b.phase === 'bootcamp').length,
       bookings: bookings.map((b) => ({ id: b.id, mentorName: b.mentorName, date: b.date, startTime: b.startTime, endTime: b.endTime, status: b.status })),

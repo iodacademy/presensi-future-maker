@@ -113,6 +113,11 @@ export interface StudentDetail {
   student: { uid: string; name: string; email: string; className: string; city: string; programName: string; active: boolean };
   profile: { age: number | null; gender: string; disability: string; entryStatus: string; phone: string } | null;
   performance: StudentPerformance;
+  /**
+   * Isi tiap pengumpulan tugas, agar admin dan mentor dapat membuka hasilnya.
+   * Each task submission's contents, so admins and mentors can open the work.
+   */
+  submissions: { taskId: string; url: string | null; fileName: string | null; submittedAt: string; late: boolean; score: number | null; feedbackPreview: string | null }[];
   mentoring: { used: number; bookings: { id: string; mentorName: string; date: string; startTime: string; endTime: string; status: 'confirmed' | 'cancelled' }[] };
   /** null bagi mentor: feedback ditujukan kepada penyelenggara / null for mentors: feedback is addressed to the organisers */
   feedback: { id: string; formTitle: string; sessionTitle: string; sessionDate: string; submittedAt: string; answers: { questionText: string; kind: string; value: string }[] }[] | null;
