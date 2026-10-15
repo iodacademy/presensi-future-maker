@@ -244,6 +244,12 @@ function SubmittedTasks({ detail }: { detail: StudentDetail }) {
                     <a href={s.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                       <ExternalLink size={12} /> Buka hasil
                     </a>
+                  ) : s?.fileUrl ? (
+                    <a href={s.fileUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                      <ExternalLink size={12} /> Buka berkas
+                    </a>
+                  ) : s?.fileLost ? (
+                    <span title="Diunggah lewat formulir lama yang tidak menyimpan berkasnya" style={{ fontSize: '11px', color: '#a16207' }}>Berkas tidak tersimpan, perlu unggah ulang</span>
                   ) : s?.fileName ? (
                     <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{s.fileName}</span>
                   ) : null}

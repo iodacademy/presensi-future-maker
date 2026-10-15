@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { FileText, Download, Link as LinkIcon, ArrowLeft, BookOpen, Send, Award, CalendarClock, CheckCircle2, Trophy, ExternalLink, Info } from 'lucide-react';
+import { FileText, Download, Link as LinkIcon, ArrowLeft, BookOpen, Send, Award, CalendarClock, CheckCircle2, Trophy, ExternalLink, Info, UploadCloud } from 'lucide-react';
+import { MAX_FILE_SIZE_BYTES, isLostSubmissionFile, isStoredSubmissionFile } from '@/features/tasks/submission-policy';
 import { StudentShell } from '@/components/student-shell';
 import type { StudentTaskItem } from '@/features/tasks/submission-types';
 import { TASK_KIND_LABELS } from '@/features/tasks/types';
@@ -57,6 +58,8 @@ export default function StudentTaskSubmitPage({
   const [taskItem, setTaskItem] = useState<StudentTaskItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [driveUrl, setDriveUrl] = useState('');
+  const [mode, setMode] = useState<'file' | 'url'>('file');
+  const [pickedFile, setPickedFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -92,16 +95,30 @@ export default function StudentTaskSubmitPage({
     setSubmitting(true);
 
     try {
-      const res = await fetch(`/api/tasks/${taskId}/submission`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: driveUrl.trim(), fileId: null, fileName: null }),
-      });
+      let res: Response;
+      if (mode === 'file') {
+        if (!pickedFile) throw new Error('Pilih berkas terlebih dahulu');
+        // Ukuran diperiksa di peramban agar peserta tidak menunggu unggahan
+        // besar yang pasti ditolak server.
+        // The size is checked in the browser so a participant does not wait for
+        // a large upload the server will certainly refuse.
+        if (pickedFile.size > MAX_FILE_SIZE_BYTES) throw new Error(`Ukuran berkas maksimal ${MAX_FILE_SIZE_BYTES / 1024 / 1024} MB`);
+        const form = new FormData();
+        form.append('file', pickedFile);
+        res = await fetch(`/api/tasks/${taskId}/upload`, { method: 'POST', body: form });
+      } else {
+        res = await fetch(`/api/tasks/${taskId}/submission`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: driveUrl.trim() }),
+        });
+      }
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Gagal mengumpulkan tugas');
 
-      setSuccessMsg(taskItem?.submission ? 'Tautan tugas berhasil diperbarui!' : 'Tugas berhasil dikumpulkan!');
+      setSuccessMsg(taskItem?.submission ? 'Pengumpulan tugas berhasil diperbarui!' : 'Tugas berhasil dikumpulkan!');
+      setPickedFile(null);
       loadTaskDetail();
     } catch (err: any) {
       setError(err.message);
@@ -115,7 +132,9 @@ export default function StudentTaskSubmitPage({
   const isGraded = submission?.score !== null && submission?.score !== undefined;
   // Pengumpulan lama yang hanya berisi nama file tidak dapat dibuka penilai.
   // An old submission holding only a file name cannot be opened by the grader.
-  const missingLink = Boolean(submission && !submission.url && !isGraded);
+  const missingLink = Boolean(submission && !isGraded && isLostSubmissionFile(submission.fileId));
+  const storedFileUrl = submission && isStoredSubmissionFile(submission.fileId) ? `/api/submissions/${encodeURIComponent(submission.id)}/file` : null;
+  const handedIn = Boolean(submission?.url || storedFileUrl);
   const isCapstone = task?.kind === 'capstone';
   const nowMs = Date.now();
   const sisa = task?.dueAt && !submission ? countdown(task.dueAt, nowMs) : null;
@@ -137,7 +156,7 @@ export default function StudentTaskSubmitPage({
   const statusText = isGraded
     ? `Dinilai · ${submission?.score} / 100`
     : missingLink
-      ? 'Terkumpul · tambahkan tautan'
+      ? 'Terkumpul · unggah ulang berkas'
       : submission
         ? `Terkumpul${submission.late ? ' · terlambat' : ''} · menunggu nilai`
         : sisa?.overdue ? 'Lewat tenggat' : 'Belum dikumpulkan';
@@ -146,7 +165,7 @@ export default function StudentTaskSubmitPage({
   // The work's steps: read, send the link, then get graded.
   const steps = [
     { label: 'Baca instruksi', done: true },
-    { label: 'Kumpulkan tautan', done: Boolean(submission?.url) || isGraded },
+    { label: 'Kumpulkan tugas', done: handedIn || isGraded },
     { label: 'Dinilai', done: isGraded },
   ];
 
@@ -226,7 +245,7 @@ export default function StudentTaskSubmitPage({
                       <Info size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
                       <span>
                         <b>Tugas Anda sudah tercatat terkumpul.</b> Hanya saja, file{submission?.fileName ? ` (${submission.fileName})` : ''} yang diunggah lewat formulir lama tidak tersimpan di sistem, jadi penilai belum dapat membukanya.
-                        Agar dapat dinilai, unggah file itu ke Google Drive, atur aksesnya menjadi &ldquo;siapa saja yang memiliki link&rdquo;, lalu tempel tautannya di bawah.
+                        Agar dapat dinilai, <b>unggah ulang file yang sama</b> di bawah. Status tepat waktu Anda tetap dipertahankan.
                       </span>
                     </div>
                   )}
@@ -234,14 +253,61 @@ export default function StudentTaskSubmitPage({
                   {isGraded ? (
                     <div style={{ padding: '14px', backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px solid var(--color-student-border)', fontSize: '12px' }}>
                       Tugas sudah dinilai, jadi pengumpulannya tidak dapat diubah lagi.
-                      {submission?.url && (
-                        <a href={submission.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '6px', color: 'var(--color-primary)', fontWeight: 600 }}>
+                      {(submission?.url || storedFileUrl) && (
+                        <a href={submission?.url || storedFileUrl!} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '6px', color: 'var(--color-primary)', fontWeight: 600 }}>
                           <ExternalLink size={12} /> Lihat yang dikumpulkan
                         </a>
                       )}
                     </div>
                   ) : (
                     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {handedIn && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderRadius: '10px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: '12px', color: '#166534' }}>
+                          <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
+                          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            Terkumpul: {submission?.url ? submission.url : submission?.fileName}
+                          </span>
+                          <a href={submission?.url || storedFileUrl!} target="_blank" rel="noopener noreferrer" style={{ color: '#166534', fontWeight: 700, whiteSpace: 'nowrap' }}>Lihat</a>
+                        </div>
+                      )}
+
+                      <div role="tablist" aria-label="Cara mengumpulkan" style={{ display: 'flex', gap: '6px', padding: '4px', borderRadius: '12px', backgroundColor: '#f1f5f9' }}>
+                        {([['file', 'Unggah berkas', UploadCloud], ['url', 'Tempel tautan', LinkIcon]] as const).map(([m, label, Icon]) => (
+                          <button
+                            key={m}
+                            type="button"
+                            role="tab"
+                            aria-selected={mode === m}
+                            onClick={() => setMode(m)}
+                            style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '9px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 700, backgroundColor: mode === m ? '#ffffff' : 'transparent', color: mode === m ? 'var(--color-text-main)' : 'var(--color-text-muted)', boxShadow: mode === m ? '0 1px 3px rgba(0,0,0,0.12)' : 'none' }}
+                          >
+                            <Icon size={14} /> {label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {mode === 'file' ? (
+                        <label
+                          htmlFor="task-file"
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) setPickedFile(f); }}
+                          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '22px 14px', borderRadius: '14px', border: '2px dashed #93c5fd', backgroundColor: '#f8fbff', cursor: 'pointer', textAlign: 'center' }}
+                        >
+                          <UploadCloud size={28} color="#0072ce" />
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#0057a3' }}>{pickedFile ? pickedFile.name : 'Tarik berkas ke sini atau klik untuk memilih'}</span>
+                          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                            {pickedFile ? `${(pickedFile.size / 1024 / 1024).toFixed(1)} MB` : 'PDF, Word, Excel, PowerPoint, CSV, ZIP, JPG, PNG · maks 10 MB'}
+                          </span>
+                          <input
+                            id="task-file"
+                            type="file"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.zip,.jpg,.jpeg,.png"
+                            onChange={(e) => setPickedFile(e.target.files?.[0] ?? null)}
+                            style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0 }}
+                          />
+                        </label>
+                      ) : (
+                      <>
                       <label htmlFor="task-url" style={{ fontSize: '12px', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
                         Tempel tautan hasil kerja Anda: Google Drive, GitHub, Netlify, Figma, atau lainnya. Pastikan aksesnya terbuka agar mentor dan admin dapat membukanya.
                       </label>
@@ -251,19 +317,20 @@ export default function StudentTaskSubmitPage({
                           id="task-url"
                           type="url"
                           inputMode="url"
-                          required
                           placeholder="https://drive.google.com/..."
                           value={driveUrl}
                           onChange={(e) => setDriveUrl(e.target.value)}
                           style={{ border: 'none', outline: 'none', flex: 1, minWidth: 0, fontSize: '13px', background: 'transparent' }}
                         />
                       </div>
+                      </>
+                      )}
                       <button
                         type="submit"
-                        disabled={submitting || !driveUrl.trim()}
-                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '12px', border: 'none', cursor: submitting ? 'wait' : 'pointer', background: isCapstone ? 'linear-gradient(90deg, #a16207 0%, #eab308 100%)' : 'linear-gradient(90deg, #0072ce 0%, #22a6d6 100%)', color: '#ffffff', fontSize: '13px', fontWeight: 700, opacity: submitting || !driveUrl.trim() ? 0.6 : 1 }}
+                        disabled={submitting || (mode === 'file' ? !pickedFile : !driveUrl.trim())}
+                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '12px', border: 'none', cursor: submitting ? 'wait' : 'pointer', background: isCapstone ? 'linear-gradient(90deg, #a16207 0%, #eab308 100%)' : 'linear-gradient(90deg, #0072ce 0%, #22a6d6 100%)', color: '#ffffff', fontSize: '13px', fontWeight: 700, opacity: submitting || (mode === 'file' ? !pickedFile : !driveUrl.trim()) ? 0.6 : 1 }}
                       >
-                        <Send size={15} /> {submitting ? 'Mengirimkan...' : submission?.url ? 'Perbarui tautan' : 'Kirim tugas'}
+                        <Send size={15} /> {submitting ? (mode === 'file' ? 'Mengunggah...' : 'Mengirimkan...') : handedIn ? 'Perbarui pengumpulan' : 'Kirim tugas'}
                       </button>
                     </form>
                   )}
@@ -292,8 +359,8 @@ export default function StudentTaskSubmitPage({
                   <h3 style={{ fontSize: '13px', fontWeight: 700, margin: '0 0 10px', color: '#92400e' }}>Tips agar nilai maksimal</h3>
                   <ul style={{ fontSize: '12px', color: '#92400e', paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px', lineHeight: 1.5, margin: 0 }}>
                     <li>Pastikan seluruh poin instruksi terpenuhi.</li>
-                    <li>Atur tautan Google Drive agar dapat dilihat siapa saja yang memiliki link.</li>
-                    <li>Kumpulkan sebelum tenggat; tautan masih dapat diperbarui selama belum dinilai.</li>
+                    <li>Bila mengirim tautan Google Drive, atur aksesnya agar dapat dilihat siapa saja yang memiliki link.</li>
+                    <li>Kumpulkan sebelum tenggat; pengumpulan masih dapat diperbarui selama belum dinilai.</li>
                   </ul>
                 </div>
               </div>

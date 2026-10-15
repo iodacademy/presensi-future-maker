@@ -17,6 +17,9 @@ import type { TaskDocument, TaskSummary } from './types';
 import type { ClassDocument } from '../classes/types';
 import {
   validateSubmissionInput,
+  SUBMISSION_FILE_PREFIX,
+  isLostSubmissionFile,
+  isStoredSubmissionFile,
   isSubmissionLate,
   canReplaceSubmission,
   validateGradeInput,
@@ -39,6 +42,13 @@ export async function submitTask(actor: Actor, input: SubmitTaskInput): Promise<
   }
 
   const { fileId, fileName, url } = validateSubmissionInput(input);
+  // Berkas harus berada di folder milik peserta ini untuk tugas ini; tanpa
+  // pemeriksaan ini peserta dapat menunjuk berkas peserta lain sebagai miliknya.
+  // The file must sit in this participant's folder for this task; without this
+  // check a participant could point at someone else's file as their own.
+  if (fileId && !fileId.startsWith(`${SUBMISSION_FILE_PREFIX}${actor.classId}/${input.taskId}/${actor.uid}/`)) {
+    throw new Error('Berkas tidak sah untuk tugas ini');
+  }
   const db = getAdminDb();
 
   // 1. Ambil detail tugas / Fetch task details
@@ -103,6 +113,7 @@ export async function submitTask(actor: Actor, input: SubmitTaskInput): Promise<
     const now = new Date().toISOString();
     let version = 1;
     let firstSubmittedAt = now;
+    let keepLate: boolean | undefined;
 
     if (existingSubDoc.exists) {
       const existing = existingSubDoc.data() as SubmissionDocument;
@@ -111,6 +122,11 @@ export async function submitTask(actor: Actor, input: SubmitTaskInput): Promise<
       }
       version = (existing.version || 1) + 1;
       firstSubmittedAt = existing.firstSubmittedAt || existing.submittedAt;
+      // Berkas dari formulir lama tidak pernah tersimpan; mengunggahnya ulang
+      // bukan keterlambatan peserta, jadi status tepat waktunya dipertahankan.
+      // A file from the old form was never stored; uploading it again is not
+      // the participant's lateness, so their on-time status is kept.
+      if (isLostSubmissionFile(existing.fileId)) keepLate = existing.late;
     }
 
     const submissionDoc: SubmissionDocument = {
@@ -127,7 +143,7 @@ export async function submitTask(actor: Actor, input: SubmitTaskInput): Promise<
       url,
       firstSubmittedAt,
       submittedAt: now,
-      late: isSubmissionLate(now, effectiveDueAt(taskData.dueAt, actor.joinIso)),
+      late: keepLate ?? isSubmissionLate(now, effectiveDueAt(taskData.dueAt, actor.joinIso)),
       version,
       score: null,
       gradedAt: null,
@@ -470,6 +486,8 @@ export async function getTaskSubmissionRoster(
         submissionId: sub.id,
         fileName: sub.fileName,
         feedbackPreview: sub.feedbackPreview,
+        fileUrl: isStoredSubmissionFile(sub.fileId) ? `/api/submissions/${encodeURIComponent(sub.id)}/file` : null,
+        fileLost: isLostSubmissionFile(sub.fileId),
       });
     } else {
       pending.push({ studentId: u.uid, studentName: u.name, email: u.email });

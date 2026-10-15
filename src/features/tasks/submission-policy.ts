@@ -4,6 +4,22 @@ import type { GradeSubmissionInput } from './submission-types';
 
 export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MiB (10.485.760 bytes)
 
+/** Awalan jalur berkas tugas di Storage / The Storage path prefix for task files */
+export const SUBMISSION_FILE_PREFIX = 'submissions/';
+
+/** Berkas yang benar-benar tersimpan di Storage / A file actually stored in Storage */
+export function isStoredSubmissionFile(fileId: string | null | undefined): boolean {
+  return Boolean(fileId && fileId.startsWith(SUBMISSION_FILE_PREFIX));
+}
+
+/**
+ * Pengumpulan dari formulir lama yang hanya menyimpan nama berkas, tanpa isinya.
+ * A submission from the old form that stored only the file's name, not its contents.
+ */
+export function isLostSubmissionFile(fileId: string | null | undefined): boolean {
+  return Boolean(fileId && fileId.startsWith('local-file-'));
+}
+
 export interface ValidatedSubmissionInput {
   sourceType: 'file' | 'url';
   fileId: string | null;
@@ -34,15 +50,16 @@ export function validateSubmissionInput(input: {
     throw new Error('Pilih salah satu: unggah file atau cantumkan tautan proyek / Choose either file or URL');
   }
 
-  // Pengumpulan berupa file ditolak sampai unggahan sungguhan tersedia. Formulir
-  // lama hanya mengirim nama file dengan fileId buatan, sehingga tidak ada berkas
-  // yang dapat dibuka penilai, padahal peserta mengira tugasnya sudah terkirim.
+  // Hanya berkas yang benar-benar tersimpan di Storage yang diterima. Formulir
+  // lama mengirim nama file dengan fileId buatan ("local-file-..."), sehingga
+  // tidak ada berkas yang dapat dibuka penilai, padahal peserta mengira tugasnya
+  // sudah terkirim.
   //
-  // File submissions are refused until a real upload exists. The old form only
-  // sent a file name with a made-up fileId, so there was nothing for a grader to
-  // open, while the participant believed the task had been handed in.
-  if (hasFile && !hasUrl) {
-    throw new Error('Kumpulkan tugas berupa tautan (Google Drive, GitHub, atau lainnya) yang dapat dibuka penilai. Unggah file belum tersedia.');
+  // Only files actually stored in Storage are accepted. The old form sent a
+  // file name with a made-up fileId ("local-file-..."), so there was nothing for
+  // a grader to open, while the participant believed the task was handed in.
+  if (hasFile && !hasUrl && !isStoredSubmissionFile(fileId)) {
+    throw new Error('Unggah file lewat tombol unggah, atau tempel tautan hasil kerja Anda.');
   }
 
   if (hasFile && hasUrl) {

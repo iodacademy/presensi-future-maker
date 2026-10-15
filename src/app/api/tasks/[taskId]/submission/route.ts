@@ -17,8 +17,10 @@ export async function POST(
     const body = await request.json();
     const result = await submitTask(actor, {
       taskId,
-      fileId: body.fileId,
-      fileName: body.fileName,
+      // Berkas hanya dapat dipasang lewat rute unggah, yang menyimpannya lebih dulu.
+      // A file can only be attached through the upload route, which stores it first.
+      fileId: null,
+      fileName: null,
       url: body.url,
     });
     return NextResponse.json(result, { status: 201 });

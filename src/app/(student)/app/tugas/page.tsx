@@ -6,6 +6,7 @@ import { Lock, Unlock, Trophy, ClipboardList, CheckCircle2, Clock, AlertTriangle
 import { StudentShell } from '@/components/student-shell';
 import type { StudentTaskItem } from '@/features/tasks/submission-types';
 import { TASK_KIND_LABELS } from '@/features/tasks/types';
+import { isLostSubmissionFile } from '@/features/tasks/submission-policy';
 import { formatDateWib, formatLongDateTimeWib } from '@/lib/time';
 
 // Emas, sama dengan Daftar Materi / Gold, matching Daftar Materi
@@ -18,7 +19,7 @@ const STATE_STYLE: Record<State, { label: string; fg: string; bg: string; ring: 
   // yang tidak tersimpan. Merah membuat peserta mengira belum mengumpulkan.
   // Yellow, not red: the task is already recorded as handed in, only its file
   // was not stored. Red made participants think they had not submitted.
-  'perlu-tautan': { label: 'Terkumpul · tambahkan tautan', fg: '#a16207', bg: '#fefce8', ring: '#facc15', icon: Link2Off },
+  'perlu-tautan': { label: 'Terkumpul · unggah ulang berkas', fg: '#a16207', bg: '#fefce8', ring: '#facc15', icon: Link2Off },
   lewat: { label: 'Lewat tenggat', fg: '#b91c1c', bg: '#fef2f2', ring: '#f87171', icon: AlertTriangle },
   mendesak: { label: 'Segera', fg: '#c2410c', bg: '#fff7ed', ring: '#fb923c', icon: Clock },
   belum: { label: 'Belum dikerjakan', fg: '#0057a3', bg: '#eff6ff', ring: '#60a5fa', icon: ClipboardList },
@@ -34,7 +35,7 @@ function stateOf(item: StudentTaskItem, nowMs: number): State {
     if (submission.score !== null && submission.score !== undefined) return 'dinilai';
     // Pengumpulan lama tanpa tautan tidak berisi apa pun yang dapat dinilai.
     // An old submission without a link holds nothing that can be graded.
-    if (!submission.url) return 'perlu-tautan';
+    if (isLostSubmissionFile(submission.fileId)) return 'perlu-tautan';
     return 'menunggu';
   }
   if (!task.dueAt) return 'belum';
@@ -94,7 +95,7 @@ function TaskCard({ item, state, nowMs }: { item: StudentTaskItem; state: State;
             </span>
           ) : state === 'perlu-tautan' ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0, padding: '7px 11px', borderRadius: '10px', border: `1px solid ${st.ring}`, color: st.fg, fontSize: '11px', fontWeight: 700 }}>
-              Tambah tautan <ArrowRight size={13} />
+              Unggah ulang <ArrowRight size={13} />
             </span>
           ) : !done ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>

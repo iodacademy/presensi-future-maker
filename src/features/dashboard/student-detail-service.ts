@@ -11,6 +11,7 @@ import type { SurveyResponseDocument } from '../survey/types';
 import { DISABILITY_LABELS, ENTRY_STATUS_LABELS, GENDER_LABELS, type StudentProfileDocument } from '../users/profile-types';
 import { ageFrom } from '../users/profile-service';
 import { buildStudentPerformance } from './performance';
+import { isLostSubmissionFile, isStoredSubmissionFile } from '../tasks/submission-policy';
 import { joinMoment } from '../users/join-policy';
 import { isMenteeOf } from '../mentoring/service';
 import type { StudentDetail } from './types';
@@ -67,7 +68,7 @@ export async function getStudentDetail(actor: Actor, uid: string): Promise<Stude
     classId ? db.collection('tasks').where('classId', '==', classId).where('published', '==', true).select('id', 'title', 'kind', 'dueAt', 'order').get() : empty,
     classId ? db.collection('exams').where('classId', '==', classId).where('published', '==', true).select('id', 'title', 'kind', 'sessionId', 'passingScore', 'questionCount').get() : empty,
     db.collection('attendance').where('studentId', '==', uid).select('sessionId', 'status').get(),
-    db.collection('submissions').where('studentId', '==', uid).select('taskId', 'score', 'late', 'url', 'fileName', 'submittedAt', 'feedbackPreview').get(),
+    db.collection('submissions').where('studentId', '==', uid).select('taskId', 'score', 'late', 'url', 'fileId', 'fileName', 'submittedAt', 'feedbackPreview').get(),
     db.collection('examAttempts').where('studentId', '==', uid).select('examId', 'status', 'score', 'passed').get(),
     db.collection('bookings').where('studentId', '==', uid).select('mentorName', 'date', 'startTime', 'endTime', 'status', 'phase').get(),
     // Feedback dan catatan admin tidak dibaca untuk mentor: feedback ditujukan
@@ -138,6 +139,8 @@ export async function getStudentDetail(actor: Actor, uid: string): Promise<Stude
         // Saving already rejects anything but https, but older documents may predate that.
         url: s.url && /^https:\/\//i.test(s.url) ? s.url : null,
         fileName: s.fileName ?? null,
+        fileUrl: isStoredSubmissionFile(s.fileId) ? `/api/submissions/${encodeURIComponent(d.id)}/file` : null,
+        fileLost: isLostSubmissionFile(s.fileId),
         submittedAt: s.submittedAt,
         late: s.late === true,
         score: s.score ?? null,

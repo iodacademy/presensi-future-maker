@@ -30,9 +30,11 @@ describe('Submission Policy', () => {
       })
     ).toThrowError(/Tautan harus berupa URL HTTPS/);
 
-    // File saja ditolak: formulir lama hanya mengirim nama file tanpa berkas.
-    // A file alone is refused: the old form sent only a file name, no file.
-    expect(() => validateSubmissionInput({ fileId: 'file-123', url: '' })).toThrowError(/berupa tautan/);
+    // Hanya berkas yang tersimpan di Storage yang diterima; fileId buatan
+    // formulir lama ditolak.
+    // Only files stored in Storage are accepted; the old form's made-up fileId is refused.
+    expect(() => validateSubmissionInput({ fileId: 'local-file-123', url: '' })).toThrowError(/tombol unggah/);
+    expect(validateSubmissionInput({ fileId: 'submissions/k1/t1/s1/a.pdf', fileName: 'a.pdf', url: '' }).sourceType).toBe('file');
 
     // Valid URL
     const withUrl = validateSubmissionInput({

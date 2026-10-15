@@ -234,6 +234,14 @@ export default function AdminTaskSubmissionsPage({ params }: { params: Promise<{
                               <a href={r.sub.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)' }}>
                                 <ExternalLink size={12} /> Buka hasil
                               </a>
+                            ) : r.sub.fileUrl ? (
+                              <a href={r.sub.fileUrl} target="_blank" rel="noopener noreferrer" title={r.sub.fileName ?? undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)' }}>
+                                <FileText size={12} /> Buka berkas
+                              </a>
+                            ) : r.sub.fileLost ? (
+                              <span title={`${r.sub.fileName ?? ''} — diunggah lewat formulir lama yang tidak menyimpan berkasnya`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#a16207', fontWeight: 600 }}>
+                                <FileText size={12} /> Berkas tidak tersimpan
+                              </span>
                             ) : (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-text-muted)' }}>
                                 <FileText size={12} /> {r.sub.fileName || 'Tanpa tautan'}
@@ -284,6 +292,16 @@ export default function AdminTaskSubmissionsPage({ params }: { params: Promise<{
                   </a>
                   <div style={{ fontSize: '9px', color: 'var(--color-text-muted)', marginTop: '6px', wordBreak: 'break-all' }}>{grading.url}</div>
                 </>
+              ) : grading.fileUrl ? (
+                <a href={grading.fileUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 12px', borderRadius: '8px', backgroundColor: 'var(--color-primary)', color: '#ffffff', textDecoration: 'none', fontSize: '11px', fontWeight: 700 }}>
+                  <FileText size={12} strokeWidth={2} /> Buka {grading.fileName || 'berkas tugas'}
+                </a>
+              ) : grading.fileLost ? (
+                // Berkas dari formulir lama tidak pernah tersimpan; peserta perlu mengunggah ulang.
+                // A file from the old form was never stored; the participant needs to upload it again.
+                <div style={{ fontSize: '11px', color: '#a16207', lineHeight: 1.5 }}>
+                  <b>{grading.fileName || 'Berkas'}</b> tidak tersimpan karena diunggah lewat formulir lama. Minta peserta mengunggah ulang dari halaman tugasnya.
+                </div>
               ) : (
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--color-text-muted)' }}>
                   <FileText size={12} strokeWidth={2} /> {grading.fileName || 'Peserta tidak melampirkan tautan'}

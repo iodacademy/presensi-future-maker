@@ -87,7 +87,7 @@ describe('detail progres peserta', () => {
     // The task work stays visible so the mentor has context in the session.
     // Tautan selain https dari dokumen lama dibuang / Non-https links from old documents are dropped
     expect(d.submissions.find((x) => x.taskId === 't9')?.url).toBeNull();
-    expect(d.submissions.filter((x) => x.taskId === 't1')).toEqual([{ taskId: 't1', url: 'https://drive.google.com/x', fileName: null, submittedAt: '2026-01-01T06:00:00.000Z', late: false, score: 88, feedbackPreview: 'Rapi' }]);
+    expect(d.submissions.filter((x) => x.taskId === 't1')).toEqual([{ taskId: 't1', url: 'https://drive.google.com/x', fileName: null, fileUrl: null, fileLost: false, submittedAt: '2026-01-01T06:00:00.000Z', late: false, score: 88, feedbackPreview: 'Rapi' }]);
   });
 
   it('tertutup bagi mentor lain, peserta, dan akun bukan peserta', async () => {

@@ -92,4 +92,8 @@ export interface RosterSubmission {
   submissionId: string;
   fileName: string | null;
   feedbackPreview: string | null;
+  /** Tautan aplikasi ke berkas yang tersimpan / The app link to the stored file */
+  fileUrl: string | null;
+  /** Berkas dari formulir lama yang tidak pernah tersimpan / A file from the old form that was never stored */
+  fileLost: boolean;
 }
