@@ -29,6 +29,19 @@
  *      manifest adds the Google Meet API permission so mentors can be made
  *      co-hosts. Run any function once to grant the new permission, then
  *      redeploy (Manage deployments -> Edit -> New version).
+ *   2c. Google Meet API tidak tersedia sebagai layanan Apps Script, dan proyek
+ *      Cloud bawaan Apps Script tersembunyi. Karena itu skrip dipindah ke proyek
+ *      Google Cloud standar: buat proyek dengan akun Workspace bootcamp, aktifkan
+ *      Google Calendar API dan Google Meet API, isi OAuth consent screen
+ *      (Internal), lalu Project Settings -> Change project -> nomor proyeknya.
+ *      Tanpa ini, mentor tidak dijadikan co-host dan skrip memakai cara lama.
+ *      The Google Meet API is not available as an Apps Script service, and
+ *      Apps Script's default Cloud project is hidden. So the script moves to a
+ *      standard Google Cloud project: create one with the bootcamp Workspace
+ *      account, enable the Google Calendar API and Google Meet API, fill in the
+ *      OAuth consent screen (Internal), then Project Settings -> Change project
+ *      -> its project number. Without this, mentors are not made co-host and the
+ *      script falls back to the old way.
  *   2b. Pilih fungsi `installReminderTrigger` lalu Run sekali, dan setujui
  *      izinnya. Ini memasang pengirim email pengingat tiap 5 menit.
  *      Select `installReminderTrigger`, Run it once, and grant the permissions.
