@@ -4,8 +4,7 @@
   "exceptionLogging": "STACKDRIVER",
   "dependencies": {
     "enabledAdvancedServices": [
-      { "userSymbol": "Calendar", "serviceId": "calendar", "version": "v3" },
-      { "userSymbol": "Meet", "serviceId": "meet", "version": "v2" }
+      { "userSymbol": "Calendar", "serviceId": "calendar", "version": "v3" }
     ]
   },
   "oauthScopes": [
