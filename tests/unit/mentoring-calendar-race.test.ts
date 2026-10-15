@@ -33,9 +33,14 @@ vi.mock('../../src/features/calendar/client', () => ({
     return { eventId: 'evt-A', meetUrl: 'https://meet.google.com/aaa-aaaa-aaa', conferenceStatus: 'success' };
   },
   cancelCalendarEvent: async (id: string) => void cancelled.push(id),
+  refreshMeetSpace: async (input: { eventId: string }) => {
+    refreshed.push(input.eventId);
+    return { meetUrl: 'https://meet.google.com/new-cohost' };
+  },
 }));
+const refreshed: string[] = [];
 
-import { bookMentoringSlot, retryBookingCalendarEvent } from '../../src/features/mentoring/service';
+import { bookMentoringSlot, refreshBookingMeet, retryBookingCalendarEvent } from '../../src/features/mentoring/service';
 
 const student = { uid: 'sA', email: 'a@x.id', name: 'Peserta A', role: 'student' as const, classId: 'k1' };
 
@@ -104,5 +109,32 @@ describe('admin membuat ulang link Meet', () => {
   it('hanya untuk admin', async () => {
     seedBooking();
     await expect(retryBookingCalendarEvent(student, 'b1')).rejects.toThrow(/admin/);
+  });
+});
+
+describe('admin memperbarui link Meet booking lama tanpa email', () => {
+  const admin = { uid: 'ad', email: 'admin@x.id', name: 'Admin', role: 'admin' as const, classId: null };
+  const seed = (extra: Record<string, unknown> = {}) => {
+    store.set('bookings/b2', { id: 'b2', slotId: 'slot1', studentId: 'sA', mentorId: 'm1', studentName: 'Peserta A', status: 'confirmed', endsAt: '2999-01-01T03:45:00.000Z', meetUrl: 'https://meet.google.com/old', calendarEventId: 'evt-old', ...extra });
+    store.set('mentoringSlots/slot1', { ...store.get('mentoringSlots/slot1'), status: 'booked', bookingId: 'b2', meetUrl: 'https://meet.google.com/old' });
+    store.set('users/sA', { email: 'a@x.id' });
+  };
+
+  it('memperbarui event yang sama dan menyimpan tautan barunya, tanpa membatalkan apa pun', async () => {
+    refreshed.length = 0;
+    seed();
+    await expect(refreshBookingMeet(admin, 'b2')).resolves.toBe('https://meet.google.com/new-cohost');
+    expect(refreshed).toEqual(['evt-old']);
+    expect(cancelled).toEqual([]);
+    expect(store.get('bookings/b2')?.meetUrl).toBe('https://meet.google.com/new-cohost');
+    expect(store.get('bookings/b2')?.calendarEventId).toBe('evt-old');
+    expect(store.get('mentoringSlots/slot1')?.meetUrl).toBe('https://meet.google.com/new-cohost');
+  });
+
+  it('menolak sesi yang sudah selesai dan booking tanpa undangan', async () => {
+    seed({ endsAt: '2000-01-01T00:00:00.000Z' });
+    await expect(refreshBookingMeet(admin, 'b2')).rejects.toThrow(/sudah selesai/);
+    seed({ calendarEventId: null });
+    await expect(refreshBookingMeet(admin, 'b2')).rejects.toThrow(/belum punya undangan/);
   });
 });

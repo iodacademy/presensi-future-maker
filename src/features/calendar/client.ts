@@ -82,3 +82,14 @@ export async function createCalendarEvent(input: CreateEventInput): Promise<Crea
 export async function cancelCalendarEvent(eventId: string): Promise<void> {
   await callBridge('cancel', { eventId });
 }
+
+/**
+ * Mengganti ruang Meet event yang sudah ada dengan ruang yang mentornya
+ * co-host, tanpa mengirim email kepada tamu.
+ *
+ * Replaces an existing event's Meet space with one where the mentor is
+ * co-host, without emailing the guests.
+ */
+export async function refreshMeetSpace(input: { eventId: string; mentorEmail: string; studentEmail: string }): Promise<{ meetUrl: string }> {
+  return callBridge('refreshMeet', { ...input }) as Promise<{ meetUrl: string }>;
+}

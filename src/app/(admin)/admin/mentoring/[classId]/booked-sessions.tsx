@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { CalendarDays, Clock, Video, Archive, CalendarCheck } from 'lucide-react';
+import { CalendarDays, Clock, Video, Archive, CalendarCheck, RefreshCw } from 'lucide-react';
 import type { NumberedSlot as MentoringSlotDocument } from '@/features/mentoring/types';
 import type { Phase } from '@/features/assignments/types';
 import { formatLongDateWib } from '@/lib/time';
@@ -21,6 +21,59 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
   const [tab, setTab] = useState<'mendatang' | 'arsip'>('mendatang');
   const [creating, setCreating] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  // Pembaruan massal berjalan satu per satu: tiap booking memanggil Apps Script
+  // beberapa detik, dan menembak semuanya sekaligus melampaui batas kuotanya.
+  // The bulk refresh runs one at a time: each booking calls Apps Script for a few
+  // seconds, and firing all at once overruns its quota.
+  const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null);
+  const [confirmBulk, setConfirmBulk] = useState(false);
+
+  const refreshOne = async (slot: MentoringSlotDocument): Promise<boolean> => {
+    const res = await fetch(`/api/mentoring/bookings/${slot.bookingId}/meet`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memperbarui link Meet');
+    setSlots((cur) => cur.map((s) => (s.id === slot.id ? { ...s, meetUrl: data.meetUrl } : s)));
+    return true;
+  };
+
+  const refreshSingle = async (slot: MentoringSlotDocument) => {
+    setCreating(slot.id);
+    setActionError(null);
+    setNotice(null);
+    try {
+      await refreshOne(slot);
+      setNotice(`Link Meet ${slot.studentName ?? 'peserta'} diperbarui. Mentornya kini co-host.`);
+    } catch (e) {
+      setActionError((e as Error).message);
+    } finally {
+      setCreating(null);
+    }
+  };
+
+  const refreshAll = async () => {
+    setConfirmBulk(false);
+    setActionError(null);
+    setNotice(null);
+    const targets = upcoming.filter((s) => s.bookingId && s.calendarEventId);
+    setBulk({ done: 0, total: targets.length });
+    const gagal: string[] = [];
+    for (let i = 0; i < targets.length; i++) {
+      try {
+        await refreshOne(targets[i]);
+      } catch (e) {
+        gagal.push(`${targets[i].studentName ?? 'Peserta'}: ${(e as Error).message}`);
+      }
+      setBulk({ done: i + 1, total: targets.length });
+    }
+    setBulk(null);
+    if (gagal.length > 0) setActionError(`${gagal.length} gagal diperbarui. ${gagal.join(' · ')}`);
+    setNotice(`${targets.length - gagal.length} dari ${targets.length} link Meet diperbarui tanpa email.`);
+  };
 
   const createMeet = async (slot: MentoringSlotDocument) => {
     setCreating(slot.id);
@@ -90,11 +143,37 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
           <h2 style={{ fontSize: '14px', margin: 0 }}>Jadwal terbooking</h2>
           <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', margin: '2px 0 0' }}>Sesi mentoring yang sudah dipesan peserta, per mentor</p>
         </div>
-        <div style={{ display: 'flex', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {tab === 'mendatang' && upcoming.some((s) => s.calendarEventId) && (
+            <button
+              type="button"
+              onClick={() => setConfirmBulk(true)}
+              disabled={bulk !== null}
+              title="Ganti ruang Meet booking yang akan datang agar mentornya menjadi co-host"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '20px', border: '1px solid var(--color-primary)', backgroundColor: '#ffffff', color: 'var(--color-primary)', fontSize: '11px', fontWeight: 700, cursor: bulk ? 'wait' : 'pointer' }}
+            >
+              <RefreshCw size={12} /> {bulk ? `Memperbarui ${bulk.done}/${bulk.total}...` : 'Perbarui semua link Meet'}
+            </button>
+          )}
           {tabButton('mendatang', 'Akan datang', upcoming.length, CalendarCheck)}
           {tabButton('arsip', 'Arsip', archive.length, Archive)}
         </div>
       </div>
+
+      {confirmBulk && (
+        <div role="dialog" aria-label="Konfirmasi pembaruan link Meet" style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'var(--color-primary-light)', fontSize: '12px', color: 'var(--color-text-main)', lineHeight: 1.55, display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ flex: '1 1 300px' }}>
+            Ruang Meet {upcoming.filter((s) => s.calendarEventId).length} booking yang akan datang akan diganti dengan ruang baru yang mentornya co-host.
+            Undangan di kalender ikut berganti <b>tanpa email</b>. Link Meet lama tidak dipakai lagi; mentor dan peserta melihat link baru di kalender dan aplikasi.
+          </span>
+          <button type="button" onClick={refreshAll} style={{ padding: '7px 14px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--color-primary)', color: '#ffffff', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Ya, perbarui</button>
+          <button type="button" onClick={() => setConfirmBulk(false)} style={{ padding: '7px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: '#ffffff', fontSize: '11px', cursor: 'pointer' }}>Batal</button>
+        </div>
+      )}
+
+      {notice && (
+        <div role="status" style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: 'var(--color-success-light)', color: '#3f6212', fontSize: '12px' }}>{notice}</div>
+      )}
 
       {actionError && (
         <div role="alert" style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: 'var(--color-danger-light)', color: 'var(--color-danger)', fontSize: '12px' }}>
@@ -143,9 +222,23 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
                 </div>
                 {tab === 'mendatang' ? (
                   s.meetUrl ? (
-                    <a href={s.meetUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 12px', borderRadius: '8px', backgroundColor: '#0e9f6e', color: '#ffffff', fontSize: '11px', fontWeight: 700, textDecoration: 'none' }}>
-                      <Video size={13} /> Buka Meet
-                    </a>
+                    <span style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                      <a href={s.meetUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 12px', borderRadius: '8px', backgroundColor: '#0e9f6e', color: '#ffffff', fontSize: '11px', fontWeight: 700, textDecoration: 'none' }}>
+                        <Video size={13} /> Buka Meet
+                      </a>
+                      {s.calendarEventId && (
+                        <button
+                          type="button"
+                          onClick={() => refreshSingle(s)}
+                          disabled={creating === s.id || bulk !== null}
+                          aria-label={`Perbarui link Meet ${s.studentName ?? ''}`}
+                          title="Ganti ruang Meet agar mentor menjadi co-host, tanpa email"
+                          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: '#ffffff', cursor: creating === s.id ? 'wait' : 'pointer' }}
+                        >
+                          <RefreshCw size={13} color="var(--color-primary)" />
+                        </button>
+                      )}
+                    </span>
                   ) : s.bookingId ? (
                     <button
                       type="button"

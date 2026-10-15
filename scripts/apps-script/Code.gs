@@ -76,6 +76,8 @@ function doPost(e) {
         return json(createEvent(body));
       case 'cancel':
         return json(cancelEvent(body));
+      case 'refreshMeet':
+        return json(refreshMeet(body));
       default:
         return json({ error: 'Aksi tidak dikenal: ' + body.action }, 400);
     }
@@ -139,15 +141,7 @@ function createEvent(body) {
       private: { app: APP_TAG, bookingId: String(body.bookingId), meetUrl: space ? space.meetingUri : '' },
     },
     conferenceData: space
-      ? {
-          // Ruang yang sudah ada dipasang ke event agar undangan menampilkan
-          // tombol "Gabung dengan Google Meet".
-          // The existing space is attached to the event so the invitation shows
-          // the "Join with Google Meet" button.
-          conferenceId: space.meetingCode,
-          conferenceSolution: { key: { type: 'hangoutsMeet' } },
-          entryPoints: [{ entryPointType: 'video', uri: space.meetingUri, label: space.meetingUri.replace('https://', '') }],
-        }
+      ? spaceConference(space)
       : {
           createRequest: {
             // Tiap booking memakai conference sendiri. Memakai ulang tautan Meet
@@ -230,6 +224,58 @@ function createMeetSpace(mentorEmail, studentEmail) {
     }
   }
   return space;
+}
+
+/**
+ * Conference Calendar untuk ruang Meet yang sudah ada, agar undangan
+ * menampilkan tombol "Gabung dengan Google Meet".
+ *
+ * A Calendar conference for an existing Meet space, so the invitation shows
+ * the "Join with Google Meet" button.
+ */
+function spaceConference(space) {
+  return {
+    conferenceId: space.meetingCode,
+    conferenceSolution: { key: { type: 'hangoutsMeet' } },
+    entryPoints: [{ entryPointType: 'video', uri: space.meetingUri, label: space.meetingUri.replace('https://', '') }],
+  };
+}
+
+/**
+ * Mengganti ruang Meet sebuah event yang sudah ada dengan ruang baru yang
+ * mentornya co-host, tanpa mengirim email apa pun.
+ *
+ * Event yang sama diperbarui, bukan dibatalkan lalu dibuat ulang: undangan di
+ * kalender mentor dan peserta ikut berganti tautannya, tanpa email undangan
+ * baru maupun pembatalan yang membingungkan mereka.
+ *
+ * Replaces an existing event's Meet space with a new one where the mentor is
+ * co-host, without sending any email.
+ *
+ * The same event is updated rather than cancelled and recreated: the invitation
+ * on the mentor's and participant's calendars switches link with it, with no
+ * new-invitation or cancellation email to confuse them.
+ */
+function refreshMeet(body) {
+  var space = createMeetSpace(body.mentorEmail, body.studentEmail);
+  var event = Calendar.Events.get(CALENDAR_ID, body.eventId);
+  var priv = (event.extendedProperties && event.extendedProperties.private) || {};
+  priv.meetUrl = space.meetingUri;
+  var description = String(event.description || '').replace(/\s*Google Meet: \S+/g, '');
+
+  Calendar.Events.patch(
+    {
+      conferenceData: spaceConference(space),
+      description: (description ? description + '\n\n' : '') + 'Google Meet: ' + space.meetingUri,
+      location: space.meetingUri,
+      extendedProperties: { private: priv },
+    },
+    CALENDAR_ID,
+    body.eventId,
+    { conferenceDataVersion: 1, sendUpdates: 'none' }
+  );
+
+  return { eventId: body.eventId, meetUrl: space.meetingUri };
 }
 
 function meetApi(method, url, payload) {

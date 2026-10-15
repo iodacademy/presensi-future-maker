@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getSessionActor } from '@/features/auth/session';
-import { retryBookingCalendarEvent } from '@/features/mentoring/service';
+import { refreshBookingMeet, retryBookingCalendarEvent } from '@/features/mentoring/service';
 
-// Admin membuat ulang link Meet untuk booking yang belum memilikinya.
-// Admins recreate the Meet link for a booking that has none.
+// Admin membuat link Meet untuk booking yang belum memilikinya, atau dengan
+// { refresh: true } mengganti ruang Meet-nya agar mentor menjadi co-host.
+// Admins create the Meet link for a booking that has none, or with
+// { refresh: true } replace its Meet space so the mentor becomes co-host.
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ bookingId: string }> }
 ) {
   const actor = await getSessionActor();
@@ -15,7 +17,10 @@ export async function POST(
 
   const { bookingId } = await params;
   try {
-    const meetUrl = await retryBookingCalendarEvent(actor, bookingId);
+    const body = await request.json().catch(() => ({}));
+    const meetUrl = body?.refresh === true
+      ? await refreshBookingMeet(actor, bookingId)
+      : await retryBookingCalendarEvent(actor, bookingId);
     return NextResponse.json({ meetUrl });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });

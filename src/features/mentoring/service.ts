@@ -28,6 +28,7 @@ import { DISABILITY_LABELS, ENTRY_STATUS_LABELS, GENDER_LABELS, type StudentProf
 import { ageFrom } from '../users/profile-service';
 import {
   createCalendarEvent,
+  refreshMeetSpace,
   cancelCalendarEvent,
   isCalendarConfigured,
 } from '../calendar/client';
@@ -421,6 +422,78 @@ export async function retryBookingCalendarEvent(actor: Actor, bookingId: string)
   if (!meetUrl) {
     throw new Error('Google Calendar belum berhasil membuat link Meet. Coba lagi beberapa saat lagi.');
   }
+  return meetUrl;
+}
+
+/**
+ * Admin memperbarui ruang Meet sebuah booking yang akan datang agar mentornya
+ * menjadi co-host, untuk booking yang dibuat sebelum fitur itu ada.
+ *
+ * Event kalendernya diperbarui di tempat tanpa email: mentor dan peserta
+ * melihat tautan baru di kalender dan aplikasi tanpa menerima undangan atau
+ * pembatalan yang membingungkan.
+ *
+ * An admin refreshes an upcoming booking's Meet space so its mentor becomes
+ * co-host, for bookings made before that feature existed.
+ *
+ * The calendar event is updated in place without email: the mentor and
+ * participant see the new link in their calendar and the app without
+ * receiving a confusing invitation or cancellation.
+ */
+export async function refreshBookingMeet(actor: Actor, bookingId: string): Promise<string> {
+  if (actor.role !== 'admin') {
+    throw new Error('Hanya admin yang dapat memperbarui link Meet');
+  }
+  if (!isCalendarConfigured()) {
+    throw new Error('Google Calendar belum dikonfigurasi');
+  }
+
+  const db = getAdminDb();
+  const bookingRef = db.collection('bookings').doc(bookingId);
+  const booking = (await bookingRef.get()).data() as MentoringBookingDocument | undefined;
+  if (!booking || booking.status !== 'confirmed') {
+    throw new Error('Booking tidak ditemukan atau sudah dibatalkan');
+  }
+  if (booking.endsAt <= new Date().toISOString()) {
+    throw new Error('Sesi ini sudah selesai');
+  }
+  if (!booking.calendarEventId) {
+    throw new Error('Booking ini belum punya undangan kalender. Pakai tombol Buat link Meet.');
+  }
+
+  const [mentorDoc, studentDoc] = await Promise.all([
+    db.collection('users').doc(booking.mentorId).get(),
+    db.collection('users').doc(booking.studentId).get(),
+  ]);
+  const mentorEmail = (mentorDoc.data() as UserDocument | undefined)?.email;
+  const studentEmail = (studentDoc.data() as UserDocument | undefined)?.email;
+  if (!mentorEmail || !studentEmail) {
+    throw new Error('Email mentor atau peserta tidak ditemukan');
+  }
+
+  let meetUrl: string;
+  try {
+    ({ meetUrl } = await refreshMeetSpace({ eventId: booking.calendarEventId, mentorEmail, studentEmail }));
+  } catch (err) {
+    // Biasanya karena jembatan Apps Script belum diperbarui ke versi Meet API.
+    // Usually because the Apps Script bridge is not yet updated to the Meet API version.
+    throw new Error(`Gagal memperbarui link Meet: ${(err as Error).message}`);
+  }
+
+  // Ditulis hanya bila booking masih aktif dan masih memakai event yang sama.
+  // Written only while the booking is still active and on the same event.
+  const slotRef = db.collection('mentoringSlots').doc(booking.slotId);
+  await db.runTransaction(async (tx) => {
+    const [b, sl] = await Promise.all([tx.get(bookingRef), tx.get(slotRef)]);
+    const fresh = b.data() as MentoringBookingDocument | undefined;
+    if (fresh?.status !== 'confirmed' || fresh.calendarEventId !== booking.calendarEventId) {
+      throw new Error('Booking berubah saat link diperbarui. Muat ulang halaman lalu coba lagi.');
+    }
+    tx.update(bookingRef, { meetUrl });
+    if ((sl.data() as MentoringSlotDocument | undefined)?.bookingId === bookingId) {
+      tx.update(slotRef, { meetUrl, updatedAt: new Date().toISOString() });
+    }
+  });
   return meetUrl;
 }
 
