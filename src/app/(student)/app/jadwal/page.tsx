@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   QrCode, Info, Video, FileText, Download, ClipboardList, ClipboardCheck, MessageSquare,
   ChevronDown, ChevronLeft, ChevronRight, Play, ExternalLink, Calendar, MapPin, Lock, FolderOpen,
-  PanelRightClose, PanelRightOpen, X, List as ListIcon, BellRing, Minimize2,
+  PanelRightClose, PanelRightOpen, X, List as ListIcon, BellRing, Minimize2, Trophy,
 } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import { formatTimeWib, formatDateTimeWib, formatDateWib, formatLongDateTimeWib } from '@/lib/time';
@@ -63,8 +63,16 @@ interface Group {
   number?: number;
   /** Keterangan di atas judul grup selain pertemuan / The line above a non-meeting group's title */
   meta?: string;
-  sections: { label: string; kind: Entry['kind']; entries: Entry[] }[];
+  /** Warna khusus grup, mis. capstone / A group's own colour, e.g. capstone */
+  accent?: { fg: string; bg: string };
+  sections: { label: string; kind: Entry['kind']; entries: Entry[]; color?: string }[];
 }
+
+// Capstone berwarna emas: oranye sudah milik tugas dan ungu milik kuis, dan
+// proyek akhir perlu menonjol dari keduanya.
+// Capstone is gold: orange already belongs to tasks and purple to quizzes, and
+// the final project needs to stand out from both.
+const CAPSTONE_ACCENT = { fg: '#a16207', bg: '#fef3c7' };
 
 const ICONS: Record<Entry['kind'], React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>> = {
   info: Calendar,
@@ -186,19 +194,35 @@ function buildGroups(items: SessionItem[], tasks: StudentTaskOutline[], standalo
   });
 
   const others = tasks.filter((t) => !shownTaskIds.has(t.id));
-  if (others.length > 0) {
-    const kinds: TaskKind[] = ['daily', 'working-paper', 'capstone'];
+  const mandiri = others.filter((t) => t.kind !== 'capstone');
+  const capstone = others.filter((t) => t.kind === 'capstone');
+  if (mandiri.length > 0) {
+    const kinds: TaskKind[] = ['daily', 'working-paper'];
     groups.push({
-      id: 'tugas-lainnya',
-      title: 'Tugas Lainnya',
+      id: 'tugas-mandiri',
+      title: 'Tugas Mandiri',
       item: null,
       sections: kinds
         .map((k) => ({
           label: TASK_KIND_LABELS[k],
           kind: 'task' as const,
-          entries: others.filter((t) => t.kind === k).map((t) => taskEntry(t.id, t.title, t.kind, t.dueAt, t, null)),
+          entries: mandiri.filter((t) => t.kind === k).map((t) => taskEntry(t.id, t.title, t.kind, t.dueAt, t, null)),
         }))
         .filter((s) => s.entries.length > 0),
+    });
+  }
+  // Capstone berdiri sendiri, bukan salah satu tugas mandiri: ia proyek akhir
+  // yang baru terbuka setelah seluruh tugas mandiri terkumpul.
+  // Capstone stands on its own rather than as one of the self-study tasks: it is
+  // the final project, opening only once every self-study task is handed in.
+  if (capstone.length > 0) {
+    groups.push({
+      id: 'capstone',
+      title: 'Capstone Project',
+      item: null,
+      meta: capstone.some((t) => t.isUnlocked) ? 'Proyek akhir · terbuka' : 'Proyek akhir · terbuka setelah semua tugas mandiri terkumpul',
+      accent: CAPSTONE_ACCENT,
+      sections: [{ label: 'Capstone Project', kind: 'task', color: CAPSTONE_ACCENT.fg, entries: capstone.map((t) => taskEntry(t.id, t.title, t.kind, t.dueAt, t, null)) }],
     });
   }
   // Pretest membuka jalur kuis sehingga berada paling atas; postest menutupnya
@@ -245,8 +269,9 @@ function BadgeText({ badge }: { badge: NonNullable<Entry['badge']> }) {
 }
 
 function EntryRow({ entry, active, onSelect }: { entry: Entry; active: boolean; onSelect: () => void }) {
-  const Icon = entry.kind === 'recording' ? Play : entry.kind === 'exam' && entry.exam.lock.locked ? Lock : ICONS[entry.kind];
-  const color = KIND_COLORS[entry.kind];
+  const isCapstone = entry.kind === 'task' && entry.taskKind === 'capstone';
+  const Icon = entry.kind === 'recording' ? Play : entry.kind === 'exam' && entry.exam.lock.locked ? Lock : isCapstone ? Trophy : ICONS[entry.kind];
+  const color = isCapstone ? { ...KIND_COLORS.task, ...CAPSTONE_ACCENT } : KIND_COLORS[entry.kind];
   return (
     <div className="cp-row" data-active={active} style={{ display: 'flex', alignItems: 'center', paddingRight: '10px' }}>
       <button
@@ -746,7 +771,10 @@ export default function StudentJadwalPage() {
                     ? { bg: 'var(--color-primary)', fg: '#ffffff' }
                     : g.item
                       ? { bg: 'var(--color-primary-light)', fg: 'var(--color-primary)' }
-                      : { bg: KIND_COLORS.task.bg, fg: KIND_COLORS.task.fg };
+                      : g.accent
+                        ? { bg: 'linear-gradient(135deg, #a16207 0%, #eab308 100%)', fg: '#ffffff' }
+                        : { bg: KIND_COLORS.task.bg, fg: KIND_COLORS.task.fg };
+                const tint = g.accent?.fg ?? 'var(--color-primary)';
                 return (
                   <div key={g.id} style={{ borderBottom: '1px solid var(--color-student-border)' }}>
                     <button
@@ -755,11 +783,13 @@ export default function StudentJadwalPage() {
                       aria-expanded={open}
                       style={{
                         width: '100%', display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '14px 16px', border: 'none', cursor: 'pointer', textAlign: 'left',
-                        background: open ? 'linear-gradient(90deg, var(--color-primary-light) 0%, #ffffff 100%)' : 'none',
+                        background: open
+                          ? `linear-gradient(90deg, ${g.accent?.bg ?? 'var(--color-primary-light)'} 0%, #ffffff 100%)`
+                          : g.accent ? `linear-gradient(90deg, ${g.accent.bg}88 0%, #ffffff 70%)` : 'none',
                       }}
                     >
-                      <span style={{ width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: badge.bg, color: badge.fg, fontFamily: 'var(--font-heading)', fontSize: '12px', fontWeight: 700 }}>
-                        {g.number ?? (g.id === 'pretest' || g.id === 'postest' ? <ClipboardCheck size={14} strokeWidth={2.2} /> : <ClipboardList size={14} strokeWidth={2.2} />)}
+                      <span style={{ width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: badge.bg, color: badge.fg, fontFamily: 'var(--font-heading)', fontSize: '12px', fontWeight: 700 }}>
+                        {g.number ?? (g.id === 'pretest' || g.id === 'postest' ? <ClipboardCheck size={14} strokeWidth={2.2} /> : g.id === 'capstone' ? <Trophy size={14} strokeWidth={2.2} /> : <ClipboardList size={14} strokeWidth={2.2} />)}
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '3px' }}>
@@ -773,13 +803,13 @@ export default function StudentJadwalPage() {
                             <span style={{ fontSize: '8px', fontWeight: 700, color: 'var(--color-success)', backgroundColor: 'var(--color-success-light)', padding: '2px 6px', borderRadius: '10px' }}>HADIR</span>
                           )}
                         </div>
-                        <div style={{ fontFamily: 'var(--font-heading)', fontSize: '13px', fontWeight: 600, color: open ? 'var(--color-primary)' : 'var(--color-text-main)', lineHeight: 1.4 }}>
+                        <div style={{ fontFamily: 'var(--font-heading)', fontSize: '13px', fontWeight: g.accent ? 700 : 600, color: open || g.accent ? tint : 'var(--color-text-main)', lineHeight: 1.4 }}>
                           {g.title}
                         </div>
                       </div>
                       <ChevronDown
                         size={16}
-                        color={open ? 'var(--color-primary)' : 'var(--color-text-faint)'}
+                        color={open ? tint : 'var(--color-text-faint)'}
                         style={{ flexShrink: 0, marginTop: '6px', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}
                       />
                     </button>
@@ -788,8 +818,8 @@ export default function StudentJadwalPage() {
                       <div style={{ paddingBottom: '8px' }}>
                         {g.sections.map((s) => (
                           <div key={s.label}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: KIND_COLORS[s.kind].fg }}>
-                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: KIND_COLORS[s.kind].fg }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: s.color ?? KIND_COLORS[s.kind].fg }}>
+                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: s.color ?? KIND_COLORS[s.kind].fg }} />
                               {s.label}
                             </div>
                             {s.entries.map((e) => (

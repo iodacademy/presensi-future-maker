@@ -30,10 +30,9 @@ describe('Submission Policy', () => {
       })
     ).toThrowError(/Tautan harus berupa URL HTTPS/);
 
-    // Valid file
-    const withFile = validateSubmissionInput({ fileId: 'file-123', url: '' });
-    expect(withFile.sourceType).toBe('file');
-    expect(withFile.fileId).toBe('file-123');
+    // File saja ditolak: formulir lama hanya mengirim nama file tanpa berkas.
+    // A file alone is refused: the old form sent only a file name, no file.
+    expect(() => validateSubmissionInput({ fileId: 'file-123', url: '' })).toThrowError(/berupa tautan/);
 
     // Valid URL
     const withUrl = validateSubmissionInput({

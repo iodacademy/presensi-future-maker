@@ -29,7 +29,10 @@ describe('halaman jadwal peserta (course player)', () => {
 
   it('memuat seluruh tugas, termasuk yang tidak melekat pada pertemuan', () => {
     expect(page).toContain("fetch('/api/tasks/student/outline')");
-    expect(page).toContain('Tugas Lainnya');
+    // Tugas tanpa pertemuan dibagi dua: Tugas Mandiri dan Capstone Project.
+    // Tasks without a meeting split in two: Tugas Mandiri and Capstone Project.
+    expect(page).toContain("title: 'Tugas Mandiri'");
+    expect(page).toContain("title: 'Capstone Project'");
   });
 
   it('memakai judul halaman yang menyebut rekaman', () => {

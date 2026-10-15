@@ -34,6 +34,17 @@ export function validateSubmissionInput(input: {
     throw new Error('Pilih salah satu: unggah file atau cantumkan tautan proyek / Choose either file or URL');
   }
 
+  // Pengumpulan berupa file ditolak sampai unggahan sungguhan tersedia. Formulir
+  // lama hanya mengirim nama file dengan fileId buatan, sehingga tidak ada berkas
+  // yang dapat dibuka penilai, padahal peserta mengira tugasnya sudah terkirim.
+  //
+  // File submissions are refused until a real upload exists. The old form only
+  // sent a file name with a made-up fileId, so there was nothing for a grader to
+  // open, while the participant believed the task had been handed in.
+  if (hasFile && !hasUrl) {
+    throw new Error('Kumpulkan tugas berupa tautan (Google Drive, GitHub, atau lainnya) yang dapat dibuka penilai. Unggah file belum tersedia.');
+  }
+
   if (hasFile && hasUrl) {
     throw new Error('Hanya boleh memilih salah satu: unggah file ATAU cantumkan tautan / Choose either file OR URL');
   }
