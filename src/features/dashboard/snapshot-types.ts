@@ -338,6 +338,8 @@ export interface DashboardSnapshot {
   /** Judul tiap pertemuan, agar titik kehadirannya dapat dilabeli / Each meeting's title, so the attendance dots can be labelled */
   sessionLabels: string[];
   quizLabels: string[];
+  /** Judul kuis per nama kelas, urut kolom quizScores; kosong pada ringkasan lama / Quiz titles per class name, in quizScores column order; absent on older snapshots */
+  quizTitlesByClass?: Record<string, string[]>;
   taskLabels: string[];
   alerts: AlertStudent[];
   thresholds: AlertThresholds;

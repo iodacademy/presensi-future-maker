@@ -228,6 +228,16 @@ describe('tabel peserta', () => {
     expect(compute).toContain("return status ?? 'absent';");
   });
 
+  it('menyimpan judul kuis per kelas untuk detail kuis per jurusan', () => {
+    // Label bersama sering hanya "Kuis n" karena judulnya berbeda antarkelas.
+    // The shared label is often just "Kuis n" since titles differ between classes.
+    const service = read('src/features/dashboard/snapshot-service.ts');
+    expect(service).toMatch(/quizTitlesByClass: Object\.fromEntries\(\s*\[\.\.\.kuisPerKelasId\]/);
+    const page = read('src/app/(admin)/admin/dashboard/page.tsx');
+    expect(page).toContain('Lihat detail per jurusan');
+    expect(page).toContain('quizTitlesByClass={snapshot.quizTitlesByClass}');
+  });
+
   it('membuka daftar peserta dari sel heatmap dan rekap lengkap per kelas', () => {
     const page = read('src/app/(admin)/admin/dashboard/page.tsx');
     expect(page).toMatch(/onCell=\{\(kota, index\) => setSelCell/);

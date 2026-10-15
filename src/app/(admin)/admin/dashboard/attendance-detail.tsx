@@ -17,7 +17,7 @@ const STATUS_STYLE: Record<AttendanceStatus, { bg: string; fg: string; short: st
   absent: { bg: 'var(--color-danger-light)', fg: 'var(--color-danger)', short: 'A' },
 };
 
-function Modal({ title, subtitle, width, onClose, children }: {
+export function Modal({ title, subtitle, width, onClose, children }: {
   title: string;
   subtitle: string;
   width: number;

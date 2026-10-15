@@ -854,6 +854,15 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
       return new Set(judul).size === 1 ? judul[0] : `Pertemuan ${i + 1}`;
     }),
     quizLabels: labelKolom(kuisPerKelasId, kolomKuis, 'Kuis'),
+    // Judul kuis tiap kelas menurut urutan kolomnya, untuk detail kuis per
+    // jurusan: label bersama di atas sering hanya "Kuis n" karena judulnya
+    // berbeda antarkelas.
+    // Each class's quiz titles in column order, for the per-programme quiz
+    // detail: the shared label above is often just "Kuis n" since titles differ
+    // between classes.
+    quizTitlesByClass: Object.fromEntries(
+      [...kuisPerKelasId].map(([cid, daftar]) => [classNames.get(cid) ?? cid, daftar.map((e) => e.title)])
+    ),
     taskLabels: labelKolom(tugasPerKelasId, kolomTugas, 'Tugas'),
     thresholds: ALERT_THRESHOLDS,
   };

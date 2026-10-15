@@ -10,6 +10,7 @@ import { FeedbackPanel } from './feedback-panel';
 import { RankingGroups } from './ranking-groups';
 import { AttendanceCellModal, AttendanceTableModal } from './attendance-detail';
 import { StudentSearch } from './student-search';
+import { QuizDetailModal } from './quiz-detail';
 import { ATTENDANCE_STATUS_LABELS } from '@/features/attendance/types';
 import { formatDateTimeWib } from '@/lib/time';
 import { Pagination, PAGE_SIZE } from '@/components/ui/pagination';
@@ -152,6 +153,7 @@ function DashboardBody({
 
   const [selCell, setSelCell] = useState<{ city: string; index: number } | null>(null);
   const [fullAttendance, setFullAttendance] = useState(false);
+  const [quizDetail, setQuizDetail] = useState(false);
 
   const profilKota = snapshot.profiles.filter((p) => cities.includes(p.city));
   const belumLengkap = cities.reduce((t, k) => t + (snapshot.profilePendingByCity[k] ?? 0), 0);
@@ -390,6 +392,14 @@ function DashboardBody({
             onClose={() => setSelCell(null)}
           />
         )}
+        {quizDetail && (
+          <QuizDetailModal
+            rows={cities.flatMap((k) => perKota.get(k) ?? [])}
+            quizLabels={snapshot.quizLabels}
+            quizTitlesByClass={snapshot.quizTitlesByClass}
+            onClose={() => setQuizDetail(false)}
+          />
+        )}
         {fullAttendance && (
           <AttendanceTableModal
             rows={cities.flatMap((k) => perKota.get(k) ?? [])}
@@ -448,6 +458,9 @@ function DashboardBody({
             <div className={`${s.box} ${s.laItem}`} role="group" aria-labelledby="h-kuis">
               <div className={s.panelHead}>
                 <h3 id="h-kuis">Kuis formatif per sesi</h3>
+                <button type="button" className={s.linkbtn} onClick={() => setQuizDetail(true)} style={{ fontWeight: 600 }}>
+                  Lihat detail per jurusan
+                </button>
               </div>
               <p className={s.hint}>Rata-rata nilai kuis akhir sesi, garis putus-putus adalah KKM 70</p>
               <TrendLines
