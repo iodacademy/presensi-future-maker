@@ -68,7 +68,23 @@ async function callBridge(action: string, payload: Record<string, unknown>): Pro
 
   // Web App Apps Script selalu 200; kegagalan ditandai di dalam body.
   // An Apps Script Web App always returns 200; failures are flagged in the body.
-  const data = await response.json();
+  //
+  // Google membalas halaman HTML, bukan JSON, bila skripnya tidak sempat
+  // berjalan: izin belum disetujui, deployment berubah, atau batas eksekusi.
+  // Judul halamannya yang dilaporkan, bukan galat penguraian JSON yang tidak
+  // memberi tahu apa pun.
+  // Google replies with an HTML page rather than JSON when the script never
+  // got to run: permission not granted, deployment changed, or an execution
+  // limit. Its title is reported, not a JSON parse error that says nothing.
+  const text = await response.text();
+  let data: any;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    const title = text.match(/<title>([^<]*)<\/title>/i)?.[1]?.trim();
+    const body = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+    throw new Error(`Apps Script membalas halaman error, bukan JSON: ${title || body || 'tanpa isi'}. Coba lagi beberapa saat lagi.`);
+  }
   if (data.error) {
     throw new Error(`Google Calendar: ${data.error}`);
   }

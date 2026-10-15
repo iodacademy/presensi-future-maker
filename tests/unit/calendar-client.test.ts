@@ -32,7 +32,7 @@ describe('calendar client', () => {
 
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ eventId: 'evt1', meetUrl: 'https://meet.google.com/abc-defg-hij', conferenceStatus: 'success' }),
+      text: async () => JSON.stringify({ eventId: 'evt1', meetUrl: 'https://meet.google.com/abc-defg-hij', conferenceStatus: 'success' }),
     });
     vi.stubGlobal('fetch', fetchMock);
 
@@ -60,7 +60,7 @@ describe('calendar client', () => {
     vi.stubEnv('GOOGLE_CALENDAR_GAS_SECRET', 'rahasia');
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ error: 'unauthorized' }) })
+      vi.fn().mockResolvedValue({ ok: true, text: async () => JSON.stringify({ error: 'unauthorized' }) })
     );
 
     const { cancelCalendarEvent } = await loadClient();
