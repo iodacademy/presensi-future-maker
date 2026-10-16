@@ -367,8 +367,9 @@ async function attachCalendarEvent(
       // second event would only be a duplicate invitation.
       if (booking?.status !== 'confirmed' || booking.calendarEventId || current?.bookingId !== bookingId) return false;
 
-      tx.update(bookingRef, { meetUrl: result.meetUrl, calendarEventId: result.eventId });
-      tx.update(slotRef, { meetUrl: result.meetUrl, calendarEventId: result.eventId, updatedAt: new Date().toISOString() });
+      const meetCohost = result.cohost === true;
+      tx.update(bookingRef, { meetUrl: result.meetUrl, calendarEventId: result.eventId, meetCohost });
+      tx.update(slotRef, { meetUrl: result.meetUrl, calendarEventId: result.eventId, meetCohost, updatedAt: new Date().toISOString() });
       return true;
     });
 
@@ -475,9 +476,17 @@ export async function refreshBookingMeet(actor: Actor, bookingId: string): Promi
   try {
     ({ meetUrl } = await refreshMeetSpace({ eventId: booking.calendarEventId, mentorEmail, studentEmail }));
   } catch (err) {
+    const message = (err as Error).message;
+    // Google membatasi pembuatan ruang Meet per menit per akun. Galat ini
+    // ditandai agar pemanggil dapat menunggu lalu mencoba lagi.
+    // Google caps Meet space creation per minute per account. This error is
+    // marked so the caller can wait and retry.
+    if (/\b429\b|RESOURCE_EXHAUSTED/.test(message)) {
+      throw Object.assign(new Error('Batas Google untuk membuat ruang Meet per menit tercapai. Tunggu sekitar 1 menit lalu coba lagi.'), { retryAfter: 60 });
+    }
     // Biasanya karena jembatan Apps Script belum diperbarui ke versi Meet API.
     // Usually because the Apps Script bridge is not yet updated to the Meet API version.
-    throw new Error(`Gagal memperbarui link Meet: ${(err as Error).message}`);
+    throw new Error(`Gagal memperbarui link Meet: ${message}`);
   }
 
   // Ditulis hanya bila booking masih aktif dan masih memakai event yang sama.
@@ -489,9 +498,11 @@ export async function refreshBookingMeet(actor: Actor, bookingId: string): Promi
     if (fresh?.status !== 'confirmed' || fresh.calendarEventId !== booking.calendarEventId) {
       throw new Error('Booking berubah saat link diperbarui. Muat ulang halaman lalu coba lagi.');
     }
-    tx.update(bookingRef, { meetUrl });
+    // meetCohost mencegah pembaruan massal berikutnya mengganti tautannya lagi.
+    // meetCohost stops the next bulk refresh from replacing the link again.
+    tx.update(bookingRef, { meetUrl, meetCohost: true });
     if ((sl.data() as MentoringSlotDocument | undefined)?.bookingId === bookingId) {
-      tx.update(slotRef, { meetUrl, updatedAt: new Date().toISOString() });
+      tx.update(slotRef, { meetUrl, meetCohost: true, updatedAt: new Date().toISOString() });
     }
   });
   return meetUrl;

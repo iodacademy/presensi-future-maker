@@ -200,6 +200,9 @@ function createEvent(body) {
     eventId: created.id,
     meetUrl: meetUrl,
     conferenceStatus: status,
+    // true bila ruangnya dibuat lewat Meet API dengan mentor sebagai co-host.
+    // true when the space was made through the Meet API with the mentor as co-host.
+    cohost: Boolean(space),
   };
 }
 

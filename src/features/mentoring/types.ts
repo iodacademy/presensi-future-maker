@@ -22,6 +22,8 @@ export interface MentoringSlotDocument {
   // Terisi hanya setelah slot dibooking / Populated only once the slot is booked
   meetUrl: string | null;
   calendarEventId: string | null;
+  /** Ruang Meet-nya sudah diganti dengan yang mentornya co-host / Its Meet space was replaced with one where the mentor is co-host */
+  meetCohost?: boolean;
   createdAt: string;
   updatedAt: string;
 }

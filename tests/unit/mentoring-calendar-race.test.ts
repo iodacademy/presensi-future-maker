@@ -34,11 +34,13 @@ vi.mock('../../src/features/calendar/client', () => ({
   },
   cancelCalendarEvent: async (id: string) => void cancelled.push(id),
   refreshMeetSpace: async (input: { eventId: string }) => {
+    if (refreshError) throw new Error(refreshError);
     refreshed.push(input.eventId);
     return { meetUrl: 'https://meet.google.com/new-cohost' };
   },
 }));
 const refreshed: string[] = [];
+let refreshError: string | null = null;
 
 import { bookMentoringSlot, refreshBookingMeet, retryBookingCalendarEvent } from '../../src/features/mentoring/service';
 
@@ -129,6 +131,21 @@ describe('admin memperbarui link Meet booking lama tanpa email', () => {
     expect(store.get('bookings/b2')?.meetUrl).toBe('https://meet.google.com/new-cohost');
     expect(store.get('bookings/b2')?.calendarEventId).toBe('evt-old');
     expect(store.get('mentoringSlots/slot1')?.meetUrl).toBe('https://meet.google.com/new-cohost');
+    // Ditandai agar pembaruan massal berikutnya melewatinya.
+    // Marked so the next bulk refresh skips it.
+    expect(store.get('bookings/b2')?.meetCohost).toBe(true);
+    expect(store.get('mentoringSlots/slot1')?.meetCohost).toBe(true);
+  });
+
+  it('menandai batas per menit Google agar pemanggil dapat menunggu lalu mencoba lagi', async () => {
+    seed();
+    refreshError = 'Google Calendar: Meet API 429: { "error": { "status": "RESOURCE_EXHAUSTED" } }';
+    try {
+      await expect(refreshBookingMeet(admin, 'b2')).rejects.toMatchObject({ retryAfter: 60, message: expect.stringMatching(/Tunggu sekitar 1 menit/) });
+      expect(store.get('bookings/b2')?.meetUrl).toBe('https://meet.google.com/old');
+    } finally {
+      refreshError = null;
+    }
   });
 
   it('menolak sesi yang sudah selesai dan booking tanpa undangan', async () => {

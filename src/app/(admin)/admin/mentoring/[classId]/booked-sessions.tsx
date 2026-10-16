@@ -26,7 +26,9 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
   // beberapa detik, dan menembak semuanya sekaligus melampaui batas kuotanya.
   // The bulk refresh runs one at a time: each booking calls Apps Script for a few
   // seconds, and firing all at once overruns its quota.
-  const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null);
+  // wait: detik tersisa sebelum mencoba lagi setelah kena batas Google.
+  // wait: seconds left before retrying after hitting Google's limit.
+  const [bulk, setBulk] = useState<{ done: number; total: number; wait?: number } | null>(null);
   const [confirmBulk, setConfirmBulk] = useState(false);
 
   const refreshOne = async (slot: MentoringSlotDocument): Promise<boolean> => {
@@ -36,8 +38,8 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
       body: JSON.stringify({ refresh: true }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Gagal memperbarui link Meet');
-    setSlots((cur) => cur.map((s) => (s.id === slot.id ? { ...s, meetUrl: data.meetUrl } : s)));
+    if (!res.ok) throw Object.assign(new Error(data.error || 'Gagal memperbarui link Meet'), { retryAfter: res.status === 429 ? data.retryAfter ?? 60 : 0 });
+    setSlots((cur) => cur.map((s) => (s.id === slot.id ? { ...s, meetUrl: data.meetUrl, meetCohost: true } : s)));
     return true;
   };
 
@@ -65,14 +67,29 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
     setConfirmBulk(false);
     setActionError(null);
     setNotice(null);
-    const targets = upcoming.filter((s) => s.bookingId && s.calendarEventId);
+    // Yang sudah co-host dilewati agar tautannya tidak berganti dua kali.
+    // Those already co-hosted are skipped so their link does not change twice.
+    const targets = upcoming.filter((s) => s.bookingId && s.calendarEventId && !s.meetCohost);
     setBulk({ done: 0, total: targets.length });
     const gagal: string[] = [];
     for (let i = 0; i < targets.length; i++) {
-      try {
-        await refreshOne(targets[i]);
-      } catch (e) {
-        gagal.push(`${targets[i].studentName ?? 'Peserta'}: ${(e as Error).message}`);
+      // Kena batas per menit Google: tunggu lalu coba lagi, sampai empat kali.
+      // Hit Google's per-minute limit: wait and retry, up to four times.
+      for (let attempt = 1; ; attempt++) {
+        try {
+          await refreshOne(targets[i]);
+          break;
+        } catch (e) {
+          const retryAfter = (e as { retryAfter?: number }).retryAfter ?? 0;
+          if (!retryAfter || attempt >= 4) {
+            gagal.push(`${targets[i].studentName ?? 'Peserta'}: ${(e as Error).message}`);
+            break;
+          }
+          for (let left = retryAfter + 5; left > 0; left--) {
+            setBulk({ done: i, total: targets.length, wait: left });
+            await new Promise((r) => setTimeout(r, 1000));
+          }
+        }
       }
       setBulk({ done: i + 1, total: targets.length });
     }
@@ -159,7 +176,9 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
             <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-main)' }}>Memperbarui link Meet</div>
             <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', margin: '6px 0 0', lineHeight: 1.5 }}>
               {bulk
-                ? `${bulk.done} dari ${bulk.total} booking selesai. Jangan tutup halaman ini.`
+                ? bulk.wait
+                  ? `${bulk.done} dari ${bulk.total} selesai. Batas Google per menit tercapai, dilanjutkan otomatis dalam ${bulk.wait} detik. Jangan tutup halaman ini.`
+                  : `${bulk.done} dari ${bulk.total} booking selesai. Jangan tutup halaman ini.`
                 : `Membuat ruang Meet baru untuk ${refreshingName} dan menjadikan mentornya co-host.`}
             </p>
             {bulk && (
@@ -177,7 +196,7 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
           <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', margin: '2px 0 0' }}>Sesi mentoring yang sudah dipesan peserta, per mentor</p>
         </div>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {tab === 'mendatang' && upcoming.some((s) => s.calendarEventId) && (
+          {tab === 'mendatang' && upcoming.some((s) => s.calendarEventId && !s.meetCohost) && (
             <button
               type="button"
               onClick={() => setConfirmBulk(true)}
@@ -185,7 +204,7 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
               title="Ganti ruang Meet booking yang akan datang agar mentornya menjadi co-host"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '20px', border: '1px solid var(--color-primary)', backgroundColor: '#ffffff', color: 'var(--color-primary)', fontSize: '11px', fontWeight: 700, cursor: bulk ? 'wait' : 'pointer' }}
             >
-              <RefreshCw size={12} /> {bulk ? `Memperbarui ${bulk.done}/${bulk.total}...` : 'Perbarui semua link Meet'}
+              <RefreshCw size={12} /> {bulk ? `Memperbarui ${bulk.done}/${bulk.total}...` : `Perbarui ${upcoming.filter((s) => s.calendarEventId && !s.meetCohost).length} link Meet`}
             </button>
           )}
           {tabButton('mendatang', 'Akan datang', upcoming.length, CalendarCheck)}
@@ -196,7 +215,7 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
       {confirmBulk && (
         <div role="dialog" aria-label="Konfirmasi pembaruan link Meet" style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'var(--color-primary-light)', fontSize: '12px', color: 'var(--color-text-main)', lineHeight: 1.55, display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ flex: '1 1 300px' }}>
-            Ruang Meet {upcoming.filter((s) => s.calendarEventId).length} booking yang akan datang akan diganti dengan ruang baru yang mentornya co-host.
+            Ruang Meet {upcoming.filter((s) => s.calendarEventId && !s.meetCohost).length} booking yang akan datang (yang belum co-host) akan diganti dengan ruang baru yang mentornya co-host.
             Undangan di kalender ikut berganti <b>tanpa email</b>. Link Meet lama tidak dipakai lagi; mentor dan peserta melihat link baru di kalender dan aplikasi.
           </span>
           <button type="button" onClick={refreshAll} style={{ padding: '7px 14px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--color-primary)', color: '#ffffff', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Ya, perbarui</button>
@@ -259,6 +278,9 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
                       <a href={s.meetUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 12px', borderRadius: '8px', backgroundColor: '#0e9f6e', color: '#ffffff', fontSize: '11px', fontWeight: 700, textDecoration: 'none' }}>
                         <Video size={13} /> Buka Meet
                       </a>
+                      {s.meetCohost && (
+                        <span title="Mentor sudah menjadi co-host di ruang Meet ini" style={{ fontSize: '10px', fontWeight: 700, color: '#3f6212', backgroundColor: 'var(--color-success-light)', padding: '3px 8px', borderRadius: '10px', whiteSpace: 'nowrap' }}>Co-host</span>
+                      )}
                       {s.calendarEventId && (
                         <button
                           type="button"

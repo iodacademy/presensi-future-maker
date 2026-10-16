@@ -14,6 +14,8 @@ export interface CreateEventResult {
   eventId: string;
   meetUrl: string | null;
   conferenceStatus: 'success' | 'pending' | 'failure';
+  /** Ruang Meet dibuat dengan mentor sebagai co-host; kosong pada Apps Script versi lama / Space made with the mentor as co-host; absent on older Apps Script */
+  cohost?: boolean;
 }
 
 /**

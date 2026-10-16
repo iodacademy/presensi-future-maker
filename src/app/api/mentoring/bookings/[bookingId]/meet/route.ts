@@ -23,6 +23,9 @@ export async function POST(
       : await retryBookingCalendarEvent(actor, bookingId);
     return NextResponse.json({ meetUrl });
   } catch (err: any) {
+    if (err.retryAfter) {
+      return NextResponse.json({ error: err.message, retryAfter: err.retryAfter }, { status: 429 });
+    }
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
 }
