@@ -235,7 +235,13 @@ function createMeetSpace(mentorEmail, studentEmail) {
   // participant from outside the organisation must be admitted one by one, and
   // an outside co-host cannot always do that. The link is only sent to that
   // session's mentor and participant.
-  var space = meetApi('post', 'https://meet.googleapis.com/v2/spaces', { config: { accessType: 'OPEN' } });
+  // moderation ON (Host Management): peran co-host dari spaces.members baru
+  // berlaku penuh, termasuk mengizinkan masuk dan merekam, bila moderasinya
+  // menyala. Tanpanya mentor tercatat co-host tetapi tidak mendapat kendalinya.
+  // moderation ON (Host Management): a co-host role from spaces.members only
+  // takes full effect, admitting and recording included, with moderation on.
+  // Without it the mentor is listed as co-host but gets none of the controls.
+  var space = meetApi('post', 'https://meet.googleapis.com/v2/spaces', { config: { accessType: 'OPEN', moderation: 'ON' } });
   if (!space || !space.meetingUri || !space.name) throw new Error('Balasan Meet API tanpa meetingUri');
   enableAutoRecording(space.name);
 
@@ -278,11 +284,13 @@ function enableAutoRecording(spaceName) {
 
 /**
  * Memperbaiki ruang Meet mentoring yang sudah dibuat: akses dibuka (peserta tidak
- * perlu diizinkan masuk) dan rekam otomatis dinyalakan. Jalankan sekali dari
+ * perlu diizinkan masuk), Host Management dinyalakan agar co-host mentor
+ * berlaku, dan rekam otomatis dinyalakan. Jalankan sekali dari
  * editor; aman dijalankan ulang. Hasilnya tampil di Execution log.
  *
  * Fixes Meet spaces already created for mentoring: access is opened (participants
- * need not be admitted) and auto-recording turned on. Run once from the editor;
+ * need not be admitted), Host Management turned on so the mentor's co-host role
+ * applies, and auto-recording turned on. Run once from the editor;
  * safe to rerun. Results show in the Execution log.
  */
 function fixUpcomingMeetSpaces() {
@@ -304,7 +312,7 @@ function fixUpcomingMeetSpaces() {
     if (!code) return;
     try {
       var space = meetApi('get', 'https://meet.googleapis.com/v2/spaces/' + code);
-      meetApi('patch', 'https://meet.googleapis.com/v2/' + space.name + '?updateMask=config.accessType', { config: { accessType: 'OPEN' } });
+      meetApi('patch', 'https://meet.googleapis.com/v2/' + space.name + '?updateMask=config.accessType,config.moderation', { config: { accessType: 'OPEN', moderation: 'ON' } });
       enableAutoRecording(space.name);
       ok++;
       console.log('OK ' + event.summary + ' ' + uri);
