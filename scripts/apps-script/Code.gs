@@ -42,6 +42,10 @@
  *      OAuth consent screen (Internal), then Project Settings -> Change project
  *      -> its project number. Without this, mentors are not made co-host and the
  *      script falls back to the old way.
+ *   2d. Pilih fungsi `fixUpcomingMeetSpaces` lalu Run sekali untuk membuka akses
+ *      dan menyalakan rekam otomatis ruang Meet yang sudah dibuat sebelumnya.
+ *      Select `fixUpcomingMeetSpaces` and Run it once to open access and turn on
+ *      auto-recording for Meet spaces created earlier.
  *   2b. Pilih fungsi `installReminderTrigger` lalu Run sekali, dan setujui
  *      izinnya. Ini memasang pengirim email pengingat tiap 5 menit.
  *      Select `installReminderTrigger`, Run it once, and grant the permissions.
@@ -220,8 +224,20 @@ function createEvent(body) {
  * not fail the space: the meeting still works, just without those rights.
  */
 function createMeetSpace(mentorEmail, studentEmail) {
-  var space = meetApi('post', 'https://meet.googleapis.com/v2/spaces', {});
+  // Akses OPEN: siapa pun yang memegang tautan langsung masuk tanpa mengetuk.
+  // Ruang dari Meet API tidak mengenali tamu undangan Calendar, sehingga dengan
+  // akses bawaan peserta dari luar organisasi harus diizinkan masuk satu per
+  // satu, dan co-host dari luar organisasi tidak selalu dapat melakukannya.
+  // Tautannya hanya dikirim kepada mentor dan peserta sesi itu.
+  //
+  // OPEN access: anyone holding the link joins without knocking. A Meet API
+  // space does not recognise Calendar invitees, so with the default access a
+  // participant from outside the organisation must be admitted one by one, and
+  // an outside co-host cannot always do that. The link is only sent to that
+  // session's mentor and participant.
+  var space = meetApi('post', 'https://meet.googleapis.com/v2/spaces', { config: { accessType: 'OPEN' } });
   if (!space || !space.meetingUri || !space.name) throw new Error('Balasan Meet API tanpa meetingUri');
+  enableAutoRecording(space.name);
 
   if (mentorEmail) {
     try {
@@ -230,16 +246,77 @@ function createMeetSpace(mentorEmail, studentEmail) {
       console.warn('Gagal menjadikan mentor co-host: ' + err);
     }
   }
-  // Peserta didaftarkan sebagai anggota agar tidak perlu mengetuk.
-  // The participant is registered as a member so they need not knock.
-  if (studentEmail) {
-    try {
-      meetApi('post', 'https://meet.googleapis.com/v2/' + space.name + '/members', { email: studentEmail });
-    } catch (err) {
-      console.warn('Gagal mendaftarkan peserta: ' + err);
-    }
-  }
   return space;
+}
+
+/**
+ * Menyalakan rekam otomatis sebuah ruang Meet.
+ *
+ * Rekaman dimulai sendiri begitu rapat berjalan dan tersimpan di Drive akun
+ * bootcamp. Co-host dari luar organisasi tidak selalu boleh merekam, sedangkan
+ * penyelenggara selalu boleh, asalkan edisi Workspace-nya mendukung perekaman.
+ * Kegagalan diabaikan: rapat tetap dapat dipakai tanpa rekaman.
+ *
+ * Turns on auto-recording for a Meet space.
+ *
+ * Recording starts on its own once the meeting runs and lands in the bootcamp
+ * account's Drive. An outside co-host may not always record, while the organiser
+ * always may, provided the Workspace edition supports recording. Failure is
+ * ignored: the meeting still works without a recording.
+ */
+function enableAutoRecording(spaceName) {
+  try {
+    meetApi(
+      'patch',
+      'https://meet.googleapis.com/v2/' + spaceName + '?updateMask=config.artifactConfig.recordingConfig.autoRecordingGeneration',
+      { config: { artifactConfig: { recordingConfig: { autoRecordingGeneration: 'ON' } } } }
+    );
+  } catch (err) {
+    console.warn('Gagal menyalakan rekam otomatis: ' + err);
+  }
+}
+
+/**
+ * Memperbaiki ruang Meet mentoring yang sudah dibuat: akses dibuka (peserta tidak
+ * perlu diizinkan masuk) dan rekam otomatis dinyalakan. Jalankan sekali dari
+ * editor; aman dijalankan ulang. Hasilnya tampil di Execution log.
+ *
+ * Fixes Meet spaces already created for mentoring: access is opened (participants
+ * need not be admitted) and auto-recording turned on. Run once from the editor;
+ * safe to rerun. Results show in the Execution log.
+ */
+function fixUpcomingMeetSpaces() {
+  var now = new Date();
+  var until = new Date(now.getTime() + 120 * 24 * 60 * 60 * 1000);
+  var list = Calendar.Events.list(CALENDAR_ID, {
+    timeMin: now.toISOString(),
+    timeMax: until.toISOString(),
+    singleEvents: true,
+    privateExtendedProperty: 'app=' + APP_TAG,
+    maxResults: 250,
+  });
+  var ok = 0;
+  var failed = 0;
+  (list.items || []).forEach(function (event) {
+    var priv = (event.extendedProperties && event.extendedProperties.private) || {};
+    var uri = priv.meetUrl || event.hangoutLink || '';
+    var code = uri.split('/').pop();
+    if (!code) return;
+    try {
+      var space = meetApi('get', 'https://meet.googleapis.com/v2/spaces/' + code);
+      meetApi('patch', 'https://meet.googleapis.com/v2/' + space.name + '?updateMask=config.accessType', { config: { accessType: 'OPEN' } });
+      enableAutoRecording(space.name);
+      ok++;
+      console.log('OK ' + event.summary + ' ' + uri);
+    } catch (err) {
+      // Ruang buatan Calendar (cara lama) tidak dapat diubah lewat Meet API.
+      // A space made by Calendar (the old way) cannot be changed via the Meet API.
+      failed++;
+      console.log('LEWATI ' + event.summary + ' ' + uri + ': ' + err);
+    }
+    Utilities.sleep(1500);
+  });
+  console.log('Selesai: ' + ok + ' diperbaiki, ' + failed + ' dilewati');
 }
 
 /**
@@ -295,13 +372,16 @@ function refreshMeet(body) {
 }
 
 function meetApi(method, url, payload) {
-  var res = UrlFetchApp.fetch(url, {
+  var options = {
     method: method,
-    contentType: 'application/json',
-    payload: JSON.stringify(payload),
     headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
     muteHttpExceptions: true,
-  });
+  };
+  if (payload !== undefined) {
+    options.contentType = 'application/json';
+    options.payload = JSON.stringify(payload);
+  }
+  var res = UrlFetchApp.fetch(url, options);
   var code = res.getResponseCode();
   if (code < 200 || code >= 300) throw new Error('Meet API ' + code + ': ' + res.getContentText().slice(0, 300));
   return JSON.parse(res.getContentText() || '{}');
