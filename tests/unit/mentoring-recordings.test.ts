@@ -21,14 +21,18 @@ import { POST } from '../../src/app/api/mentoring/recordings/route';
 
 beforeEach(() => {
   store.clear();
-  store.set('bookings/b1', { id: 'b1', slotId: 'slot1' });
+  store.set('bookings/b1', { id: 'b1', slotId: 'slot1', mentorId: 'm1', studentId: 's1' });
+  store.set('users/m1', { email: 'mentor@x.id' });
+  store.set('users/s1', { email: 'peserta@x.id' });
   store.set('mentoringSlots/slot1', { id: 'slot1', bookingId: 'b1' });
   process.env.GOOGLE_CALENDAR_GAS_SECRET = 'rahasia';
 });
 
 describe('rekaman sesi mentoring', () => {
   it('menyimpan tautan Google Drive ke booking dan slotnya', async () => {
-    await saveBookingRecording('b1', 'https://drive.google.com/file/d/F1/view');
+    // Hanya mentor dan peserta booking ini yang diberi akses, menurut data aplikasi.
+    // Only this booking's mentor and participant get access, per the app's data.
+    await expect(saveBookingRecording('b1', 'https://drive.google.com/file/d/F1/view')).resolves.toEqual({ shareWith: ['mentor@x.id', 'peserta@x.id'] });
     expect(store.get('bookings/b1')?.recordingUrl).toBe('https://drive.google.com/file/d/F1/view');
     expect(store.get('mentoringSlots/slot1')?.recordingUrl).toBe('https://drive.google.com/file/d/F1/view');
   });

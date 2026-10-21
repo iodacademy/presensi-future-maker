@@ -25,8 +25,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    await saveBookingRecording(String(body.bookingId ?? ''), String(body.recordingUrl ?? ''));
-    return NextResponse.json({ saved: true });
+    const { shareWith } = await saveBookingRecording(String(body.bookingId ?? ''), String(body.recordingUrl ?? ''));
+    return NextResponse.json({ saved: true, shareWith });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }

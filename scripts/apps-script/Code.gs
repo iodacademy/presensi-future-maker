@@ -142,6 +142,12 @@ function createEvent(body) {
     start: { dateTime: body.startsAt, timeZone: 'Asia/Jakarta' },
     end: { dateTime: body.endsAt, timeZone: 'Asia/Jakarta' },
     attendees: attendees,
+    // Tamu tidak dapat mengundang orang lain atau mengubah event: tautan Meet
+    // dan rekamannya hanya untuk mentor dan peserta sesi ini.
+    // Guests cannot invite others or modify the event: the Meet link and its
+    // recording are only for this session's mentor and participant.
+    guestsCanInviteOthers: false,
+    guestsCanModify: false,
     // Pop-up 1 jam dan 10 menit pada kalender penyelenggara. Google tidak
     // mengizinkan penyelenggara mengatur pengingat di kalender tamu; mereka
     // diingatkan lewat email dari sendReminders().
@@ -320,6 +326,9 @@ function fixUpcomingMeetSpaces() {
       var space = meetApi('get', 'https://meet.googleapis.com/v2/spaces/' + code);
       meetApi('patch', 'https://meet.googleapis.com/v2/' + space.name + '?updateMask=config.accessType,config.moderation', { config: { accessType: 'OPEN', moderation: 'ON' } });
       enableAutoRecording(space.name);
+      // Event lama juga dikunci agar tamu tidak dapat menambah orang lain.
+      // Older events are locked too so guests cannot add anyone else.
+      Calendar.Events.patch({ guestsCanInviteOthers: false, guestsCanModify: false }, CALENDAR_ID, event.id, { sendUpdates: 'none' });
       ok++;
       console.log('OK ' + event.summary + ' ' + uri);
     } catch (err) {
@@ -376,6 +385,8 @@ function refreshMeet(body) {
       description: (description ? description + '\n\n' : '') + 'Google Meet: ' + space.meetingUri,
       location: space.meetingUri,
       extendedProperties: { private: priv },
+      guestsCanInviteOthers: false,
+      guestsCanModify: false,
     },
     CALENDAR_ID,
     body.eventId,
@@ -578,9 +589,31 @@ function attachRecordings() {
       });
       if (files.length === 0) return;
 
-      var guests = (event.attendees || []).map(function (a) { return a.email; });
+      if (!priv.bookingId) return;
+      var url = files[0].exportUri || 'https://drive.google.com/file/d/' + files[0].file + '/view';
+
+      // Aplikasi menyimpan tautannya lebih dulu, lalu membalas dengan email
+      // mentor dan peserta menurut datanya sendiri; hanya keduanya yang diberi
+      // akses. Daftar tamu event tidak dipercaya karena tamu dapat menambah
+      // orang lain. Bila aplikasi gagal, event tidak ditandai, sehingga
+      // percobaan berikutnya mengulang dari awal.
+      // The app stores the link first, then replies with the mentor's and
+      // participant's emails from its own data; only they are given access. The
+      // event's guest list is not trusted because guests can add others. If the
+      // app fails, the event is left unmarked so the next run starts over.
+      var res = UrlFetchApp.fetch(APP_RECORDINGS_URL, {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify({ secret: PropertiesService.getScriptProperties().getProperty('SHARED_SECRET'), bookingId: priv.bookingId, recordingUrl: url }),
+        muteHttpExceptions: true,
+      });
+      if (res.getResponseCode() !== 200) {
+        console.warn('Aplikasi menolak rekaman ' + event.summary + ': ' + res.getContentText().slice(0, 200));
+        return;
+      }
+      var shareWith = JSON.parse(res.getContentText() || '{}').shareWith || [];
       files.forEach(function (f) {
-        guests.forEach(function (email) {
+        shareWith.forEach(function (email) {
           try {
             // sendNotificationEmail false: berbagi tanpa email agar tamu tidak bingung.
             // sendNotificationEmail false: sharing without email so guests are not confused.
@@ -591,7 +624,6 @@ function attachRecordings() {
         });
       });
 
-      var url = files[0].exportUri || 'https://drive.google.com/file/d/' + files[0].file + '/view';
       var attachments = (event.attachments || []).concat(
         files.map(function (f, i) {
           return { fileUrl: f.exportUri || 'https://drive.google.com/file/d/' + f.file + '/view', title: 'Rekaman mentoring' + (files.length > 1 ? ' ' + (i + 1) : ''), mimeType: 'video/mp4' };
@@ -602,15 +634,6 @@ function attachRecordings() {
         supportsAttachments: true,
         sendUpdates: 'none',
       });
-
-      if (priv.bookingId) {
-        UrlFetchApp.fetch(APP_RECORDINGS_URL, {
-          method: 'post',
-          contentType: 'application/json',
-          payload: JSON.stringify({ secret: PropertiesService.getScriptProperties().getProperty('SHARED_SECRET'), bookingId: priv.bookingId, recordingUrl: url }),
-          muteHttpExceptions: true,
-        });
-      }
       console.log('Rekaman dilampirkan: ' + event.summary);
     } catch (err) {
       // Ruang buatan Calendar (cara lama) tidak dapat dibaca lewat Meet API.

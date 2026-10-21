@@ -801,7 +801,7 @@ export async function getMenteeProfile(actor: Actor, studentId: string): Promise
  * Saving repeats without side effects, so Apps Script may send the same link
  * more than once.
  */
-export async function saveBookingRecording(bookingId: string, recordingUrl: string): Promise<void> {
+export async function saveBookingRecording(bookingId: string, recordingUrl: string): Promise<{ shareWith: string[] }> {
   let host = '';
   try {
     const u = new URL(recordingUrl);
@@ -824,4 +824,17 @@ export async function saveBookingRecording(bookingId: string, recordingUrl: stri
   batch.update(bookingRef, { recordingUrl });
   if (slot?.bookingId === bookingId) batch.update(slotRef, { recordingUrl, updatedAt: new Date().toISOString() });
   await batch.commit();
+
+  // Rekaman dibagikan hanya kepada mentor dan peserta booking ini, menurut data
+  // aplikasi. Daftar tamu event Calendar tidak dipakai: tamu dapat menambah
+  // orang lain ke event dan orang itu akan ikut menerima rekamannya.
+  // The recording is shared only with this booking's mentor and participant,
+  // per the app's data. The Calendar event's guest list is not used: guests can
+  // add others to the event, who would then receive the recording too.
+  const [mentor, student] = await Promise.all([
+    db.collection('users').doc(booking.mentorId).get(),
+    db.collection('users').doc(booking.studentId).get(),
+  ]);
+  const shareWith = [mentor.data()?.email, student.data()?.email].filter((e): e is string => typeof e === 'string' && e.includes('@'));
+  return { shareWith };
 }
