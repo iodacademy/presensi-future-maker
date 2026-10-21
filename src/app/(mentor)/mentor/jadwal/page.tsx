@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { CalendarDays, Clock, Video, BellRing, MessageCircle, Mail, X, ChevronRight, TrendingUp } from 'lucide-react';
+import { CalendarDays, Clock, Video, BellRing, MessageCircle, Mail, X, ChevronRight, TrendingUp, PlayCircle } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { StudentDetailModal } from '@/components/student-detail-modal';
 import type { MentorScheduleSlot } from '@/features/mentoring/types';
@@ -155,7 +155,13 @@ function SlotCard({ slot, past = false, onOpen }: { slot: MentorScheduleSlot; pa
       </button>
 
       {past ? (
-        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', backgroundColor: '#eef0f2', padding: '4px 10px', borderRadius: '10px' }}>SELESAI</span>
+        slot.recordingUrl ? (
+          <a href={slot.recordingUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '10px 16px', borderRadius: '10px', backgroundColor: '#7c3aed', color: '#ffffff', fontSize: '13px', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                    <PlayCircle size={16} /> Lihat rekaman
+                  </a>
+        ) : (
+          <span title="Rekaman muncul di sini setelah diproses Google, biasanya kurang dari satu jam setelah sesi" style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', backgroundColor: '#eef0f2', padding: '4px 10px', borderRadius: '10px' }}>SELESAI</span>
+        )
       ) : (
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {slot.meetUrl ? (

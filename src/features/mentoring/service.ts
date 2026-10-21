@@ -785,3 +785,43 @@ export async function getMenteeProfile(actor: Actor, studentId: string): Promise
       : null,
   };
 }
+
+/**
+ * Menyimpan tautan rekaman sesi mentoring yang dikirim Apps Script.
+ *
+ * Hanya tautan Google Drive yang diterima: tautan ini ditampilkan kepada
+ * mentor dan peserta, dan pengirimnya hanya diperiksa lewat secret bersama.
+ * Penyimpanan diulang tanpa efek samping, sehingga Apps Script boleh mengirim
+ * tautan yang sama lebih dari sekali.
+ *
+ * Stores a mentoring session's recording link sent by Apps Script.
+ *
+ * Only Google Drive links are accepted: the link is shown to the mentor and
+ * participant, and its sender is checked only through the shared secret.
+ * Saving repeats without side effects, so Apps Script may send the same link
+ * more than once.
+ */
+export async function saveBookingRecording(bookingId: string, recordingUrl: string): Promise<void> {
+  let host = '';
+  try {
+    const u = new URL(recordingUrl);
+    if (u.protocol === 'https:') host = u.hostname;
+  } catch {
+    // ditolak di bawah / refused below
+  }
+  if (host !== 'drive.google.com' && host !== 'docs.google.com') {
+    throw new Error('Tautan rekaman harus berupa tautan Google Drive');
+  }
+
+  const db = getAdminDb();
+  const bookingRef = db.collection('bookings').doc(bookingId);
+  const booking = (await bookingRef.get()).data() as MentoringBookingDocument | undefined;
+  if (!booking) throw new Error('Booking tidak ditemukan');
+
+  const slotRef = db.collection('mentoringSlots').doc(booking.slotId);
+  const slot = (await slotRef.get()).data() as MentoringSlotDocument | undefined;
+  const batch = db.batch();
+  batch.update(bookingRef, { recordingUrl });
+  if (slot?.bookingId === bookingId) batch.update(slotRef, { recordingUrl, updatedAt: new Date().toISOString() });
+  await batch.commit();
+}

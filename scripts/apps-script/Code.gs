@@ -47,9 +47,11 @@
  *      Select `fixUpcomingMeetSpaces` and Run it once to open access and turn on
  *      auto-recording for Meet spaces created earlier.
  *   2b. Pilih fungsi `installReminderTrigger` lalu Run sekali, dan setujui
- *      izinnya. Ini memasang pengirim email pengingat tiap 5 menit.
+ *      izinnya. Ini memasang pengirim email pengingat tiap 5 menit dan
+ *      pelampir rekaman tiap 30 menit.
  *      Select `installReminderTrigger`, Run it once, and grant the permissions.
- *      This installs the reminder-email sender every 5 minutes.
+ *      This installs the reminder-email sender every 5 minutes and the
+ *      recording attacher every 30 minutes.
  *   3. Deploy -> New deployment -> Web app.
  *        Execute as: Me (akun Workspace bootcamp)
  *        Who has access: Anyone
@@ -70,6 +72,10 @@ var CALENDAR_ID = 'primary';
 // events on the bootcamp account's calendar.
 var APP_TAG = 'futuremakers-mentoring';
 var TZ = 'Asia/Jakarta';
+
+// Endpoint aplikasi yang menerima tautan rekaman; dijaga SHARED_SECRET yang sama.
+// The app endpoint that receives recording links; guarded by the same SHARED_SECRET.
+var APP_RECORDINGS_URL = 'https://innovators.iodacademy.id/api/mentoring/recordings';
 
 function doPost(e) {
   try {
@@ -515,9 +521,103 @@ function markReminded(eventId, priv) {
  */
 function installReminderTrigger() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === 'sendReminders') ScriptApp.deleteTrigger(t);
+    var name = t.getHandlerFunction();
+    if (name === 'sendReminders' || name === 'attachRecordings') ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('sendReminders').timeBased().everyMinutes(5).create();
+  // Rekaman diproses Google beberapa menit sampai satu jam setelah rapat; 30
+  // menit cukup cepat tanpa menghabiskan kuota.
+  // Google processes recordings minutes to an hour after a meeting; 30 minutes
+  // is quick enough without spending quota.
+  ScriptApp.newTrigger('attachRecordings').timeBased().everyMinutes(30).create();
+}
+
+/**
+ * Mencari rekaman sesi mentoring yang sudah selesai, membagikannya kepada
+ * mentor dan peserta tanpa email, melampirkannya ke event Calendar, lalu
+ * mengirim tautannya ke aplikasi.
+ *
+ * Ruang dari Meet API tidak terhubung asli dengan event Calendar, sehingga Meet
+ * tidak melampirkan rekamannya sendiri seperti rapat buatan Calendar.
+ *
+ * Finds recordings of finished mentoring sessions, shares them with the mentor
+ * and participant without email, attaches them to the Calendar event, then
+ * sends the link to the app.
+ *
+ * A Meet API space is not natively tied to its Calendar event, so Meet does not
+ * attach the recording by itself the way it does for Calendar-made meetings.
+ */
+function attachRecordings() {
+  var now = new Date();
+  var since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  var list = Calendar.Events.list(CALENDAR_ID, {
+    timeMin: since.toISOString(),
+    timeMax: now.toISOString(),
+    singleEvents: true,
+    privateExtendedProperty: 'app=' + APP_TAG,
+    maxResults: 250,
+  });
+
+  (list.items || []).forEach(function (event) {
+    var end = new Date(event.end.dateTime || event.end.date);
+    if (end > now) return;
+    var priv = (event.extendedProperties && event.extendedProperties.private) || {};
+    if (priv.recordingUrl) return;
+    var code = String(priv.meetUrl || event.hangoutLink || '').split('/').pop();
+    if (!code) return;
+
+    try {
+      var space = meetApi('get', 'https://meet.googleapis.com/v2/spaces/' + code);
+      var records = meetApi('get', 'https://meet.googleapis.com/v2/conferenceRecords?filter=' + encodeURIComponent('space.name="' + space.name + '"')).conferenceRecords || [];
+      var files = [];
+      records.forEach(function (record) {
+        var recs = meetApi('get', 'https://meet.googleapis.com/v2/' + record.name + '/recordings').recordings || [];
+        recs.forEach(function (r) {
+          if (r.state === 'FILE_GENERATED' && r.driveDestination && r.driveDestination.file) files.push(r.driveDestination);
+        });
+      });
+      if (files.length === 0) return;
+
+      var guests = (event.attendees || []).map(function (a) { return a.email; });
+      files.forEach(function (f) {
+        guests.forEach(function (email) {
+          try {
+            // sendNotificationEmail false: berbagi tanpa email agar tamu tidak bingung.
+            // sendNotificationEmail false: sharing without email so guests are not confused.
+            Drive.Permissions.create({ role: 'reader', type: 'user', emailAddress: email }, f.file, { sendNotificationEmail: false });
+          } catch (err) {
+            console.warn('Gagal membagikan rekaman ke ' + email + ': ' + err);
+          }
+        });
+      });
+
+      var url = files[0].exportUri || 'https://drive.google.com/file/d/' + files[0].file + '/view';
+      var attachments = (event.attachments || []).concat(
+        files.map(function (f, i) {
+          return { fileUrl: f.exportUri || 'https://drive.google.com/file/d/' + f.file + '/view', title: 'Rekaman mentoring' + (files.length > 1 ? ' ' + (i + 1) : ''), mimeType: 'video/mp4' };
+        })
+      );
+      priv.recordingUrl = url;
+      Calendar.Events.patch({ attachments: attachments, extendedProperties: { private: priv } }, CALENDAR_ID, event.id, {
+        supportsAttachments: true,
+        sendUpdates: 'none',
+      });
+
+      if (priv.bookingId) {
+        UrlFetchApp.fetch(APP_RECORDINGS_URL, {
+          method: 'post',
+          contentType: 'application/json',
+          payload: JSON.stringify({ secret: PropertiesService.getScriptProperties().getProperty('SHARED_SECRET'), bookingId: priv.bookingId, recordingUrl: url }),
+          muteHttpExceptions: true,
+        });
+      }
+      console.log('Rekaman dilampirkan: ' + event.summary);
+    } catch (err) {
+      // Ruang buatan Calendar (cara lama) tidak dapat dibaca lewat Meet API.
+      // A space made by Calendar (the old way) cannot be read through the Meet API.
+      console.warn('Lewati ' + event.summary + ': ' + err);
+    }
+  });
 }
 
 function safeEquals(a, b) {

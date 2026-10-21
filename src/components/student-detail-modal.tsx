@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, MessageSquareText, CalendarClock, UserRound, StickyNote, ClipboardList, ExternalLink } from 'lucide-react';
+import { X, MessageSquareText, CalendarClock, UserRound, StickyNote, ClipboardList, ExternalLink, PlayCircle } from 'lucide-react';
 import { TASK_KIND_LABELS } from '@/features/tasks/types';
 import type { StudentDetail } from '@/features/dashboard/types';
 import { HomePerformance } from '@/app/(student)/app/home-performance';
@@ -124,6 +124,11 @@ export function StudentDetailModal({ studentId, name, subtitle, summary, onClose
                             <span style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)' }}>{formatLongDateWib(b.date)} · {b.startTime} - {b.endTime} WIB</span>
                           </span>
                           {b.status === 'cancelled' && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)' }}>DIBATALKAN</span>}
+                          {b.status !== 'cancelled' && b.recordingUrl && (
+                            <a href={b.recordingUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: '#7c3aed', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                              <PlayCircle size={13} /> Rekaman
+                            </a>
+                          )}
                         </li>
                       ))}
                     </ul>

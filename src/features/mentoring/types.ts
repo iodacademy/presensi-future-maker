@@ -24,6 +24,8 @@ export interface MentoringSlotDocument {
   calendarEventId: string | null;
   /** Ruang Meet-nya sudah diganti dengan yang mentornya co-host / Its Meet space was replaced with one where the mentor is co-host */
   meetCohost?: boolean;
+  /** Tautan rekaman di Google Drive, diisi Apps Script setelah sesi selesai / The recording link on Google Drive, filled by Apps Script after the session */
+  recordingUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -50,6 +52,7 @@ export interface MentoringBookingDocument {
   endsAt: string;
   meetUrl: string | null;
   calendarEventId: string | null;
+  recordingUrl?: string | null;
   status: 'confirmed' | 'cancelled';
   createdAt: string;
   cancelledAt?: string | null;

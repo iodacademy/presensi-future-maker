@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Video, CalendarX2, CheckCircle2, CalendarDays, Clock, Loader2 } from 'lucide-react';
+import { Video, CalendarX2, CheckCircle2, CalendarDays, Clock, Loader2, PlayCircle } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import { Button } from '@/components/ui/button';
 import type { MentoringStudentView, MentoringSlotDocument } from '@/features/mentoring/types';
@@ -315,6 +315,11 @@ export default function StudentMentoringPage() {
                         <span>
                           <b style={{ color: 'var(--color-text-main)' }}>{formatLongDateWib(sl.date)}</b>
                           <span style={{ display: 'block', color: 'var(--color-text-muted)' }}>{sl.startTime}-{sl.endTime} WIB · Mentor {sl.mentorName}</span>
+                          {sl.recordingUrl && (
+                            <a href={sl.recordingUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', color: '#7c3aed', fontWeight: 700, textDecoration: 'none' }}>
+                              <PlayCircle size={13} /> Lihat rekaman
+                            </a>
+                          )}
                         </span>
                       </li>
                     ))}

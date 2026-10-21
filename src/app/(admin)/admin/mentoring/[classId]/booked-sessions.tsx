@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { CalendarDays, Clock, Video, Archive, CalendarCheck, RefreshCw, Loader2 } from 'lucide-react';
+import { CalendarDays, Clock, Video, Archive, CalendarCheck, RefreshCw, Loader2, PlayCircle } from 'lucide-react';
 import type { NumberedSlot as MentoringSlotDocument } from '@/features/mentoring/types';
 import type { Phase } from '@/features/assignments/types';
 import { formatLongDateWib } from '@/lib/time';
@@ -308,7 +308,13 @@ export function BookedSessions({ classId, phase }: { classId: string; phase: Pha
                     <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Link Meet menyusul</span>
                   )
                 ) : (
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', backgroundColor: '#eef0f2', padding: '3px 8px', borderRadius: '10px' }}>SELESAI</span>
+                  s.recordingUrl ? (
+                  <a href={s.recordingUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 12px', borderRadius: '8px', backgroundColor: '#7c3aed', color: '#ffffff', fontSize: '11px', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                    <PlayCircle size={13} /> Lihat rekaman
+                  </a>
+                  ) : (
+                  <span title="Rekaman muncul di sini setelah diproses Google, biasanya kurang dari satu jam setelah sesi" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', backgroundColor: '#eef0f2', padding: '3px 8px', borderRadius: '10px' }}>SELESAI</span>
+                  )
                 )}
               </div>
             ))}

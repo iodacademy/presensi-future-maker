@@ -70,7 +70,7 @@ export async function getStudentDetail(actor: Actor, uid: string): Promise<Stude
     db.collection('attendance').where('studentId', '==', uid).select('sessionId', 'status').get(),
     db.collection('submissions').where('studentId', '==', uid).select('taskId', 'score', 'late', 'url', 'fileId', 'fileName', 'submittedAt', 'feedbackPreview').get(),
     db.collection('examAttempts').where('studentId', '==', uid).select('examId', 'status', 'score', 'passed').get(),
-    db.collection('bookings').where('studentId', '==', uid).select('mentorName', 'date', 'startTime', 'endTime', 'status', 'phase').get(),
+    db.collection('bookings').where('studentId', '==', uid).select('mentorName', 'date', 'startTime', 'endTime', 'status', 'phase', 'recordingUrl').get(),
     // Feedback dan catatan admin tidak dibaca untuk mentor: feedback ditujukan
     // kepada penyelenggara, dan peserta menulisnya tanpa mengira mentornya ikut
     // membaca.
@@ -149,7 +149,7 @@ export async function getStudentDetail(actor: Actor, uid: string): Promise<Stude
     }),
     mentoring: {
       used: bookings.filter((b) => b.status === 'confirmed' && b.phase === 'bootcamp').length,
-      bookings: bookings.map((b) => ({ id: b.id, mentorName: b.mentorName, date: b.date, startTime: b.startTime, endTime: b.endTime, status: b.status })),
+      bookings: bookings.map((b) => ({ id: b.id, mentorName: b.mentorName, date: b.date, startTime: b.startTime, endTime: b.endTime, status: b.status, recordingUrl: b.recordingUrl ?? null })),
     },
     feedback: !isAdmin ? null : responsesSnap.docs
       .map((d) => {
