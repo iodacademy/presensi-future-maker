@@ -426,14 +426,14 @@ function DashboardBody({
                 cities={cities}
                 columnLabel="Tugas"
                 columns={snapshot.taskLabels}
-                valueFor={(kota, i) => rasioKumpul(perKota.get(kota) ?? [], (r) => r.taskSubmitted[i])}
+                valueFor={(kota, i) => rasioKumpul(perKota.get(kota) ?? [], (r) => r.taskSubmitted[i], (r) => (snapshot.taskCountByClass?.[r.className] ?? 0) > i)}
               />
               <h4 style={{ margin: '14px 0 4px', fontSize: '13px', color: '#b45309' }}>Capstone Project</h4>
               <Heatmap
                 cities={cities}
                 columnLabel="Capstone"
                 columns={snapshot.capstoneLabels ?? []}
-                valueFor={(kota, i) => rasioKumpul(perKota.get(kota) ?? [], (r) => r.capstoneSubmitted?.[i] ?? null)}
+                valueFor={(kota, i) => rasioKumpul(perKota.get(kota) ?? [], (r) => r.capstoneSubmitted?.[i] ?? null, (r) => (snapshot.capstoneCountByClass?.[r.className] ?? 0) > i)}
               />
               <div className={s.legend}>
                 <span><span className={`${s.sw} ${s.ok}`} />85% ke atas</span>
@@ -666,9 +666,17 @@ function rata(xs: (number | null)[]): number | null {
   return Math.round(ada.reduce((a, b) => a + b, 0) / ada.length);
 }
 
-/** Terkumpul dari yang sudah dibuka; null bila belum ada yang dibuka / Submitted out of those opened; null when none is open yet */
-function rasioKumpul(baris: RosterRow[], status: (r: RosterRow) => boolean | null): { hit: number; total: number } | null {
-  const terbuka = baris.filter((r) => status(r) !== null);
+/**
+ * Terkumpul dari seluruh peserta yang kelasnya punya tugas itu, termasuk yang
+ * tenggatnya belum lewat. Ringkasan lama tanpa jumlah tugas per kelas hanya
+ * dapat membagi dengan yang sudah terkumpul atau terlewat.
+ *
+ * Submitted out of every participant whose class has that task, including those
+ * whose deadline has not passed. Older snapshots without per-class task counts
+ * can only divide by those submitted or missed.
+ */
+function rasioKumpul(baris: RosterRow[], status: (r: RosterRow) => boolean | null, punyaTugas: (r: RosterRow) => boolean): { hit: number; total: number } | null {
+  const terbuka = baris.filter((r) => status(r) !== null || punyaTugas(r));
   if (terbuka.length === 0) return null;
   return { hit: terbuka.filter((r) => status(r) === true).length, total: terbuka.length };
 }

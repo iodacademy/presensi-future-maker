@@ -87,8 +87,10 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  *    before joining still do not count.
  * 8: only Tugas Praktik Mandiri count as tasks; in-class practice results no
  *    longer do, and capstones get their own submission columns.
+ * 9: per-class task counts, so the per-task submission figure divides by every
+ *    participant of the class rather than only those submitted or overdue.
  */
-export const SNAPSHOT_VERSION = 8;
+export const SNAPSHOT_VERSION = 9;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -879,6 +881,8 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     ),
     taskLabels: labelKolom(tugasPerKelasId, kolomTugas, 'Tugas'),
     capstoneLabels: labelKolom(capstonePerKelasId, kolomCapstone, 'Capstone'),
+    taskCountByClass: Object.fromEntries([...tugasPerKelasId].map(([cid, d]) => [classNames.get(cid) ?? cid, d.length])),
+    capstoneCountByClass: Object.fromEntries([...capstonePerKelasId].map(([cid, d]) => [classNames.get(cid) ?? cid, d.length])),
     thresholds: ALERT_THRESHOLDS,
   };
 }

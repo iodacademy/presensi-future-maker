@@ -345,6 +345,15 @@ export interface DashboardSnapshot {
   taskLabels: string[];
   /** Judul kolom capstone; kosong pada ringkasan lama / Capstone column titles; absent on older snapshots */
   capstoneLabels?: string[];
+  /**
+   * Jumlah tugas tiap kelas menurut nama kelasnya, agar pengumpulan per tugas
+   * dibagi seluruh peserta kelas yang punya tugas itu; kosong pada ringkasan lama.
+   *
+   * Each class's task count by class name, so per-task submission divides by
+   * every participant whose class has that task; absent on older snapshots.
+   */
+  taskCountByClass?: Record<string, number>;
+  capstoneCountByClass?: Record<string, number>;
   alerts: AlertStudent[];
   thresholds: AlertThresholds;
 }
