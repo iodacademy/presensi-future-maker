@@ -11,7 +11,7 @@ import type { SurveyResponseDocument } from '../survey/types';
 import { DISABILITY_LABELS, ENTRY_STATUS_LABELS, GENDER_LABELS, type StudentProfileDocument } from '../users/profile-types';
 import { ageFrom } from '../users/profile-service';
 import { buildStudentPerformance } from './performance';
-import { isLostSubmissionFile, isStoredSubmissionFile } from '../tasks/submission-policy';
+import { isLateForStudent, isLostSubmissionFile, isStoredSubmissionFile } from '../tasks/submission-policy';
 import { joinMoment } from '../users/join-policy';
 import { isMenteeOf } from '../mentoring/service';
 import type { StudentDetail } from './types';
@@ -104,6 +104,7 @@ export async function getStudentDetail(actor: Actor, uid: string): Promise<Stude
     .map((d) => ({ ...(d.data() as MentoringBookingDocument), id: d.id }))
     .sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`));
 
+  const tenggat = new Map(tasksSnap.docs.map((d) => [d.id, (d.data().dueAt as string | null | undefined) ?? null]));
   const profile = profileSnap.exists ? (profileSnap.data() as StudentProfileDocument) : null;
   const note = noteSnap?.exists ? (noteSnap.data() as { note?: string; followUp?: string }) : null;
 
@@ -142,7 +143,7 @@ export async function getStudentDetail(actor: Actor, uid: string): Promise<Stude
         fileUrl: isStoredSubmissionFile(s.fileId) ? `/api/submissions/${encodeURIComponent(d.id)}/file` : null,
         fileLost: isLostSubmissionFile(s.fileId),
         submittedAt: s.submittedAt,
-        late: s.late === true,
+        late: isLateForStudent(s.late, tenggat.get(s.taskId), joinMoment(user)),
         score: s.score ?? null,
         feedbackPreview: s.feedbackPreview ?? null,
       };

@@ -248,7 +248,10 @@ export default function AdminTugasPage() {
               <tbody>
                 {halaman.map((t, i) => {
                   const pct = studentCount > 0 ? Math.min(100, Math.round((t.submitted / studentCount) * 100)) : 0;
-                  const menunggu = t.submitted - t.graded;
+                  // Hasil praktik di kelas tidak dinilai, jadi tidak pernah menunggu nilai.
+                  // In-class practice results are not graded, so they never await a score.
+                  const tanpaNilai = t.kind === 'working-paper';
+                  const menunggu = tanpaNilai ? 0 : t.submitted - t.graded;
                   return (
                     <tr
                       key={t.id}
@@ -277,7 +280,7 @@ export default function AdminTugasPage() {
                         </div>
                         {t.late > 0 && <div style={{ fontSize: '10px', color: 'var(--color-warning)', marginTop: '2px' }}>{t.late} terlambat</div>}
                       </td>
-                      <td style={{ ...td, textAlign: 'center', fontWeight: 700, color: 'var(--color-success)' }}>{t.graded}</td>
+                      <td style={{ ...td, textAlign: 'center', fontWeight: 700, color: 'var(--color-success)' }}>{tanpaNilai ? <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--color-text-muted)' }}>Tidak dinilai</span> : t.graded}</td>
                       <td style={{ ...td, textAlign: 'center' }}>
                         {menunggu > 0 ? (
                           <span style={{ fontSize: '11px', fontWeight: 700, color: '#ffffff', backgroundColor: 'var(--color-warning)', padding: '3px 10px', borderRadius: '10px' }}>{menunggu}</span>

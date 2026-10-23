@@ -85,8 +85,10 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  *    against them.
  * 7: tasks stay required for late joiners, only without a deadline; meetings
  *    before joining still do not count.
+ * 8: only Tugas Praktik Mandiri count as tasks; in-class practice results no
+ *    longer do, and capstones get their own submission columns.
  */
-export const SNAPSHOT_VERSION = 7;
+export const SNAPSHOT_VERSION = 8;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -270,15 +272,23 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   // one run makes the "Tugas 2" column belong to one class alone, and participants
   // from other classes -- who cannot possibly submit it -- count as zero percent
   // once its deadline passes.
+  //
+  // Hanya Tugas Praktik Mandiri yang dihitung sebagai tugas. Hasil praktik di
+  // kelas tidak dinilai, dan capstone punya kolom pengumpulannya sendiri.
+  // Only Tugas Praktik Mandiri count as tasks. In-class practice results are not
+  // graded, and capstones get their own submission columns.
   const tugasPerKelasId = new Map<string, { id: string; title: string; order: number }[]>();
+  const capstonePerKelasId = new Map<string, { id: string; title: string; order: number }[]>();
   for (const d of tasksSnap.docs) {
     const t = d.data() as { id: string; title: string; order: number; kind: string; classId: string };
-    if (t.kind === 'capstone') continue;
-    if (!tugasPerKelasId.has(t.classId)) tugasPerKelasId.set(t.classId, []);
-    tugasPerKelasId.get(t.classId)!.push(t);
+    const per = t.kind === 'daily' ? tugasPerKelasId : t.kind === 'capstone' ? capstonePerKelasId : null;
+    if (!per) continue;
+    if (!per.has(t.classId)) per.set(t.classId, []);
+    per.get(t.classId)!.push(t);
   }
-  for (const daftar of tugasPerKelasId.values()) daftar.sort((a, b) => a.order - b.order);
+  for (const daftar of [...tugasPerKelasId.values(), ...capstonePerKelasId.values()]) daftar.sort((a, b) => a.order - b.order);
   const kolomTugas = Math.max(0, ...[...tugasPerKelasId.values()].map((d) => d.length));
+  const kolomCapstone = Math.max(0, ...[...capstonePerKelasId.values()].map((d) => d.length));
 
   // --- kuis per sesi dan learning gain --------------------------------
   const exams = examsSnap.docs.map((d) => d.data() as { id: string; title: string; kind: string; classId: string; sessionId: string | null });
@@ -559,8 +569,29 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     }
   }
 
+  // true terkumpul, false lewat tenggat tanpa dikumpulkan, null belum dibuka.
+  // true submitted, false past deadline with nothing handed in, null not yet open.
+  const statusKumpul = (uid: string, t: { id: string } | undefined): boolean | null => {
+    if (!t) return null;
+    if (terkumpulPerSiswa.get(uid)?.has(t.id)) return true;
+    // Tenggat yang belum lewat bernilai null, bukan false: peserta masih
+    // punya waktu, dan menandainya sebagai tidak mengumpulkan membuat
+    // admin menghubungi orang yang tidak terlambat.
+    //
+    // A deadline not yet passed is null, not false: the participant still
+    // has time, and marking it as missed would have an admin contact
+    // someone who is not late.
+    const tenggat = tenggatTugas.get(t.id);
+    if (!tenggat || tenggat > nowIso) return null;
+    // Tenggat yang lewat sebelum ia bergabung tidak berlaku baginya: tugasnya
+    // masih terbuka, belum terlewat. / A deadline that passed before they
+    // joined does not apply: the task is still open, not missed.
+    if (!effectiveDueAt(tenggat, joinPerSiswa.get(uid))) return null;
+    return false;
+  };
+
   // Tugas tetap wajib bagi peserta yang bergabung belakangan; hanya tenggatnya
-  // yang tidak berlaku (lihat taskSubmitted).
+  // yang tidak berlaku (lihat statusKumpul).
   // Tasks stay required for late joiners; only their deadline does not apply
   // (see taskSubmitted).
   const tugasTerhitung = (uid: string, cid: string): { kumpul: number; dari: number } => {
@@ -788,25 +819,8 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
           const t = tugasPerKelasId.get(cid)?.[i];
           return t ? tugasSiswa?.get(t.id) ?? null : null;
         }),
-        taskSubmitted: Array.from({ length: kolomTugas }, (_, i) => {
-          const t = tugasPerKelasId.get(cid)?.[i];
-          if (!t) return null;
-          if (terkumpulPerSiswa.get(s.uid)?.has(t.id)) return true;
-          // Tenggat yang belum lewat bernilai null, bukan false: peserta masih
-          // punya waktu, dan menandainya sebagai tidak mengumpulkan membuat
-          // admin menghubungi orang yang tidak terlambat.
-          //
-          // A deadline not yet passed is null, not false: the participant still
-          // has time, and marking it as missed would have an admin contact
-          // someone who is not late.
-          const tenggat = tenggatTugas.get(t.id);
-          if (!tenggat || tenggat > nowIso) return null;
-          // Tenggat yang lewat sebelum ia bergabung tidak berlaku baginya: tugasnya
-          // masih terbuka, belum terlewat. / A deadline that passed before they
-          // joined does not apply: the task is still open, not missed.
-          if (!effectiveDueAt(tenggat, joinPerSiswa.get(s.uid))) return null;
-          return false;
-        }),
+        taskSubmitted: Array.from({ length: kolomTugas }, (_, i) => statusKumpul(s.uid, tugasPerKelasId.get(cid)?.[i])),
+        capstoneSubmitted: Array.from({ length: kolomCapstone }, (_, i) => statusKumpul(s.uid, capstonePerKelasId.get(cid)?.[i])),
         status: (!s.active ? 'nonaktif' : issueCount > 0 ? 'siaga' : 'aktif') as 'aktif' | 'siaga' | 'nonaktif',
         issueCount,
         note: c?.note ?? '',
@@ -864,6 +878,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
       [...kuisPerKelasId].map(([cid, daftar]) => [classNames.get(cid) ?? cid, daftar.map((e) => e.title)])
     ),
     taskLabels: labelKolom(tugasPerKelasId, kolomTugas, 'Tugas'),
+    capstoneLabels: labelKolom(capstonePerKelasId, kolomCapstone, 'Capstone'),
     thresholds: ALERT_THRESHOLDS,
   };
 }

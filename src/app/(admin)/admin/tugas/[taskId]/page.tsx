@@ -86,6 +86,9 @@ export default function AdminTaskSubmissionsPage({ params }: { params: Promise<{
     dinilai: rows.filter((r) => r.status === 'dinilai').length,
     belum: rows.filter((r) => r.status === 'belum').length,
   };
+  // Hasil praktik di kelas tidak dinilai, jadi hanya terkumpul atau belum.
+  // In-class practice results are not graded, so only submitted or not.
+  const tanpaNilai = roster?.task.kind === 'working-paper';
   const needle = query.trim().toLowerCase();
   const visible = rows.filter((r) => (filter === 'semua' || r.status === filter) && (needle === '' || r.studentName.toLowerCase().includes(needle)));
   const halaman = visible.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -160,8 +163,10 @@ export default function AdminTaskSubmissionsPage({ params }: { params: Promise<{
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             {([
               ['Terkumpul', `${roster.submitted.length}/${rows.length}`, 'var(--color-primary)'],
-              ['Menunggu nilai', String(counts.menunggu), '#b45309'],
-              ['Sudah dinilai', String(counts.dinilai), '#3d7a00'],
+              ...(tanpaNilai ? [] : [
+                ['Menunggu nilai', String(counts.menunggu), '#b45309'],
+                ['Sudah dinilai', String(counts.dinilai), '#3d7a00'],
+              ] as const),
               ['Belum mengumpulkan', String(counts.belum), 'var(--color-text-muted)'],
             ] as const).map(([label, value, color]) => (
               <div key={label} style={{ flex: '1 1 150px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '12px 14px' }}>
@@ -172,7 +177,10 @@ export default function AdminTaskSubmissionsPage({ params }: { params: Promise<{
           </div>
 
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {([['semua', 'Semua'], ['menunggu', 'Menunggu nilai'], ['dinilai', 'Sudah dinilai'], ['belum', 'Belum mengumpulkan']] as const).map(([value, label]) => (
+            {(tanpaNilai
+              ? ([['semua', 'Semua'], ['belum', 'Belum mengumpulkan']] as const)
+              : ([['semua', 'Semua'], ['menunggu', 'Menunggu nilai'], ['dinilai', 'Sudah dinilai'], ['belum', 'Belum mengumpulkan']] as const)
+            ).map(([value, label]) => (
               <button
                 key={value}
                 type="button"
@@ -215,7 +223,7 @@ export default function AdminTaskSubmissionsPage({ params }: { params: Promise<{
                   </thead>
                   <tbody>
                     {halaman.map((r, i) => {
-                      const st = STATUS_STYLE[r.status];
+                      const st = tanpaNilai && r.status !== 'belum' ? { label: 'Terkumpul', color: '#3d7a00', bg: 'var(--color-success-light)' } : STATUS_STYLE[r.status];
                       return (
                         <tr key={r.studentId}>
                           <td style={{ ...td, textAlign: 'center', color: 'var(--color-text-muted)' }}>{page * PAGE_SIZE + i + 1}</td>
@@ -249,10 +257,10 @@ export default function AdminTaskSubmissionsPage({ params }: { params: Promise<{
                             )}
                           </td>
                           <td style={{ ...td, textAlign: 'center', fontSize: '14px', fontWeight: 700, color: 'var(--color-success)' }}>
-                            {r.status === 'dinilai' ? r.sub.score : '-'}
+                            {tanpaNilai ? <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--color-text-muted)' }}>Tidak dinilai</span> : r.status === 'dinilai' ? r.sub.score : '-'}
                           </td>
                           <td style={{ ...td, textAlign: 'right' }}>
-                            {r.status !== 'belum' && (
+                            {r.status !== 'belum' && !tanpaNilai && (
                               <Button variant={r.status === 'dinilai' ? 'secondary' : 'primary'} onClick={() => openGrade(r.sub)} style={{ fontSize: '11px', padding: '7px 12px' }}>
                                 {r.status === 'dinilai' ? 'Ubah nilai' : 'Nilai'}
                               </Button>

@@ -158,7 +158,7 @@ export default function StudentTaskSubmitPage({
     : missingLink
       ? 'Terkumpul · unggah ulang berkas'
       : submission
-        ? `Terkumpul${submission.late ? ' · terlambat' : ''} · menunggu nilai`
+        ? `Terkumpul${submission.late ? ' · terlambat' : ''}${task?.kind === 'working-paper' ? '' : ' · menunggu nilai'}`
         : sisa?.overdue ? 'Lewat tenggat' : 'Belum dikumpulkan';
 
   // Langkah pengerjaan: membaca, mengirim tautan, lalu dinilai.
@@ -166,7 +166,8 @@ export default function StudentTaskSubmitPage({
   const steps = [
     { label: 'Baca instruksi', done: true },
     { label: 'Kumpulkan tugas', done: handedIn || isGraded },
-    { label: 'Dinilai', done: isGraded },
+    // Hasil praktik di kelas tidak dinilai / In-class practice results are not graded
+    ...(task?.kind === 'working-paper' ? [] : [{ label: 'Dinilai', done: isGraded }]),
   ];
 
   return (

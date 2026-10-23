@@ -233,7 +233,7 @@ describe('penyaring daerah', () => {
 describe('status pengumpulan tugas', () => {
   it('mencatat terkumpul atau tidak terpisah dari nilainya', () => {
     expect(types).toMatch(/taskSubmitted: \(boolean \| null\)\[\]/);
-    expect(service).toMatch(/terkumpulPerSiswa\.get\(s\.uid\)\?\.has\(t\.id\)/);
+    expect(service).toMatch(/terkumpulPerSiswa\.get\(uid\)\?\.has\(t\.id\)/);
   });
 
   it('tidak menandai tugas yang tenggatnya belum lewat sebagai tidak mengumpulkan', () => {
@@ -242,7 +242,7 @@ describe('status pengumpulan tugas', () => {
     //
     // The participant still has time, and marking it late would have an admin
     // contact someone who is not late.
-    const blok = service.slice(service.indexOf('taskSubmitted: Array.from'), service.indexOf('status: (!s.active'));
+    const blok = service.slice(service.indexOf('const statusKumpul'), service.indexOf('const tugasTerhitung'));
     expect(blok).toMatch(/if \(!tenggat \|\| tenggat > nowIso\) return null;/);
   });
 
@@ -561,7 +561,7 @@ describe('versi bentuk ringkasan', () => {
 describe('kolom tugas dan kuis per kelas', () => {
   it('mengelompokkan tugasnya per kelas, bukan satu deret untuk semua', () => {
     expect(service).toMatch(/const tugasPerKelasId = new Map/);
-    expect(service).toMatch(/tugasPerKelasId\.get\(t\.classId\)!\.push\(t\)/);
+    expect(service).toMatch(/per\.get\(t\.classId\)!\.push\(t\)/);
     expect(service).not.toMatch(/const tasks = tasksSnap\.docs/);
   });
 
@@ -587,7 +587,7 @@ describe('kolom tugas dan kuis per kelas', () => {
     // mengumpulkan.
     //
     // A class with fewer tasks must not read as one that failed to submit.
-    const blok = service.slice(service.indexOf('taskSubmitted: Array.from'), service.indexOf('status: (!s.active'));
+    const blok = service.slice(service.indexOf('const statusKumpul'), service.indexOf('const tugasTerhitung'));
     sebelumTeks(blok, 'if (!t) return null;', 'return false;');
   });
 

@@ -57,7 +57,9 @@ const TODO_ORDER: Record<State, number> = { 'perlu-tautan': 0, lewat: 1, mendesa
 
 function TaskCard({ item, state, nowMs }: { item: StudentTaskItem; state: State; nowMs: number }) {
   const { task, submission, feedback } = item;
-  const st = STATE_STYLE[state];
+  // Hasil praktik di kelas tidak dinilai, jadi cukup tercatat terkumpul.
+  // In-class practice results are not graded, so being handed in is enough.
+  const st = state === 'menunggu' && task.kind === 'working-paper' ? { ...STATE_STYLE.dinilai, label: 'Terkumpul' } : STATE_STYLE[state];
   const Icon = st.icon;
   const done = state === 'menunggu' || state === 'dinilai' || state === 'perlu-tautan';
   // Hitung mundur hanya untuk yang belum dikumpulkan / Countdown only for work not yet handed in

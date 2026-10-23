@@ -1,7 +1,7 @@
 // Layanan pengumpulan tugas siswa dan penilaian admin di Firestore
 // Student task submission and admin grading service in Firestore
 import { getAdminDb } from '../../lib/firebase/admin';
-import { effectiveDueAt } from '../users/join-policy';
+import { effectiveDueAt, joinMoment } from '../users/join-policy';
 import type { Actor } from '../auth/types';
 import type { TaskKind } from './types';
 import type {
@@ -21,6 +21,7 @@ import {
   isLostSubmissionFile,
   isStoredSubmissionFile,
   isSubmissionLate,
+  isLateForStudent,
   canReplaceSubmission,
   validateGradeInput,
 } from './submission-policy';
@@ -236,7 +237,7 @@ export async function listStudentTasksWithSubmissions(actor: Actor): Promise<Stu
           materials: t.materials ?? [],
           sessionId: t.sessionId ?? null,
         },
-        submission: sub,
+        submission: sub && { ...sub, late: isLateForStudent(sub.late, t.dueAt, actor.joinIso) },
         feedback,
         isUnlocked: t.kind === 'daily' ? true : capstoneUnlocked,
       };
@@ -307,7 +308,7 @@ export async function listStudentTaskOutline(actor: Actor): Promise<StudentTaskO
         sessionId: t.sessionId ?? null,
         submitted: Boolean(sub),
         score: sub?.score ?? null,
-        late: sub?.late ?? false,
+        late: isLateForStudent(sub?.late, t.dueAt, actor.joinIso),
         isUnlocked: t.kind === 'capstone' ? capstoneUnlocked : true,
       };
     })
@@ -335,6 +336,11 @@ export async function gradeSubmission(actor: Actor, input: GradeSubmissionInput)
   }
 
   const subData = subDoc.data() as SubmissionDocument;
+  // Hasil praktik di kelas tidak dinilai; ia hanya dicatat terkumpul atau tidak.
+  // In-class practice results are not graded; only whether they were handed in counts.
+  if (subData.taskKind === 'working-paper') {
+    throw new Error('Hasil praktik di kelas tidak dinilai');
+  }
   const now = new Date().toISOString();
   const feedbackPreview = feedback.slice(0, 160);
 
@@ -398,7 +404,8 @@ export async function listSubmissionsForAdmin(
   // The cap rises from 50: one class holds nineteen participants times a dozen
   // tasks, so fifty rows cut the list off on exactly the busiest class.
   const snapshot = await query.limit(500).get();
-  const submissions = snapshot.docs.map((doc) => doc.data() as SubmissionDocument);
+  const raw = snapshot.docs.map((doc) => doc.data() as SubmissionDocument);
+  const submissions = await withLateForStudent(raw);
 
   // Dinilai atau belum disaring di sini, bukan lewat kueri: Firestore menuntut
   // indeks gabungan untuk tiap padanan penyaring, dan jumlah barisnya sudah
@@ -473,14 +480,14 @@ export async function getTaskSubmissionRoster(
   const pending: { studentId: string; studentName: string; email: string }[] = [];
 
   for (const doc of studentsSnap.docs) {
-    const u = doc.data() as { uid: string; name: string; email: string };
+    const u = doc.data() as { uid: string; name: string; email: string; joinedAt?: string | null; createdAt?: string | null };
     const sub = submissions.get(u.uid);
     if (sub) {
       submitted.push({
         studentId: u.uid,
         studentName: u.name,
         submittedAt: sub.submittedAt,
-        late: sub.late,
+        late: isLateForStudent(sub.late, task.dueAt, joinMoment(u)),
         score: sub.score ?? null,
         url: sub.url,
         submissionId: sub.id,
@@ -532,19 +539,21 @@ export async function listClassTaskSummary(
   }
 
   const db = getAdminDb();
-  const [tasksSnap, subsSnap, studentsCount] = await Promise.all([
+  const [tasksSnap, subsSnap, studentsSnap] = await Promise.all([
     db.collection('tasks').where('classId', '==', classId).select('id', 'title', 'kind', 'order', 'dueAt', 'published').get(),
     db.collection('submissions').where('classId', '==', classId).select('taskId', 'studentId', 'score', 'late').get(),
-    db.collection('users').where('classId', '==', classId).where('role', '==', 'student').where('active', '==', true).count().get(),
+    db.collection('users').where('classId', '==', classId).where('role', '==', 'student').where('active', '==', true).select('joinedAt', 'createdAt').get(),
   ]);
 
+  const joinPerSiswa = new Map(studentsSnap.docs.map((d) => [d.id, joinMoment(d.data())]));
+  const tenggat = new Map(tasksSnap.docs.map((d) => [d.data().id as string, (d.data().dueAt as string | null | undefined) ?? null]));
   const perTask = new Map<string, { submitted: number; graded: number; late: number }>();
   for (const d of subsSnap.docs) {
-    const sub = d.data() as Pick<SubmissionDocument, 'taskId' | 'score' | 'late'>;
+    const sub = d.data() as Pick<SubmissionDocument, 'taskId' | 'studentId' | 'score' | 'late'>;
     const t = perTask.get(sub.taskId) ?? { submitted: 0, graded: 0, late: 0 };
     t.submitted += 1;
     if (sub.score !== null && sub.score !== undefined) t.graded += 1;
-    if (sub.late) t.late += 1;
+    if (isLateForStudent(sub.late, tenggat.get(sub.taskId), joinPerSiswa.get(sub.studentId))) t.late += 1;
     perTask.set(sub.taskId, t);
   }
 
@@ -561,5 +570,25 @@ export async function listClassTaskSummary(
     }))
     .sort((a, b) => a.order - b.order || (a.dueAt ?? '').localeCompare(b.dueAt ?? ''));
 
-  return { studentCount: studentsCount.data().count, tasks };
+  return { studentCount: studentsSnap.size, tasks };
+}
+
+/**
+ * Menilai ulang tanda terlambat sekumpulan pengumpulan menurut tanggal bergabung
+ * pesertanya. Peserta dan tugasnya dibaca sekali, hanya kolom yang dipakai.
+ *
+ * Re-judges the late flag of a set of submissions by each participant's join
+ * date. Participants and tasks are read once, only the columns used.
+ */
+async function withLateForStudent(subs: SubmissionDocument[]): Promise<SubmissionDocument[]> {
+  const terlambat = subs.filter((x) => x.late);
+  if (terlambat.length === 0) return subs;
+  const db = getAdminDb();
+  const [users, tasks] = await Promise.all([
+    db.getAll(...[...new Set(terlambat.map((x) => x.studentId))].map((id) => db.collection('users').doc(id)), { fieldMask: ['joinedAt', 'createdAt'] }),
+    db.getAll(...[...new Set(terlambat.map((x) => x.taskId))].map((id) => db.collection('tasks').doc(id)), { fieldMask: ['dueAt'] }),
+  ]);
+  const join = new Map(users.map((d) => [d.id, joinMoment(d.data() ?? {})]));
+  const tenggat = new Map(tasks.map((d) => [d.id, (d.data()?.dueAt as string | null | undefined) ?? null]));
+  return subs.map((x) => (x.late ? { ...x, late: isLateForStudent(true, tenggat.get(x.taskId), join.get(x.studentId)) } : x));
 }

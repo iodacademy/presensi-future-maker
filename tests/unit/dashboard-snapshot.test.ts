@@ -168,13 +168,13 @@ describe('perhitungan angkanya', () => {
     expect(types).toContain('thresholds: AlertThresholds');
   });
 
-  it('mengecualikan capstone dari hitungan tugas', () => {
-    // Capstone punya bobotnya sendiri pada nilai akhir; menghitungnya sebagai
-    // tugas harian membuatnya terhitung dua kali.
+  it('hanya menghitung Tugas Praktik Mandiri sebagai tugas', () => {
+    // Capstone punya bobotnya sendiri pada nilai akhir, dan hasil praktik di
+    // kelas tidak dinilai; keduanya tidak masuk hitungan tugas.
     //
-    // The capstone carries its own weight in the final score; counting it as a
-    // daily task would count it twice.
-    expect(compute).toMatch(/if \(t\.kind === 'capstone'\) continue;/);
+    // The capstone carries its own weight in the final score, and in-class
+    // practice results are not graded; neither counts as a task.
+    expect(compute).toMatch(/t\.kind === 'daily' \? tugasPerKelasId : t\.kind === 'capstone' \? capstonePerKelasId : null/);
   });
 
   it('menghitung peringkat dari rata-rata tiga angka yang sama dengan daftar siaga', () => {

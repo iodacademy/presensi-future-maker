@@ -13,7 +13,11 @@ const data: Record<string, object[]> = {
     { taskId: 't1', studentId: 'a', score: 90, late: false },
     { taskId: 't1', studentId: 'b', score: null, late: true },
     { taskId: 't2', studentId: 'a', score: null, late: false },
+    // Bergabung setelah tenggat t1 lewat: tercatat terlambat, tetapi tidak dihitung.
+    // Joined after t1's deadline passed: stored as late, but not counted.
+    { taskId: 't1', studentId: 'c', score: null, late: true },
   ],
+  users: Array.from({ length: 30 }, (_, i) => ({ id: i === 2 ? 'c' : i === 1 ? 'b' : i === 0 ? 'a' : `u${i}`, createdAt: '2026-09-01T00:00:00.000Z', ...(i === 2 ? { joinedAt: '2026-10-05' } : {}) })),
 };
 vi.mock('../../src/lib/firebase/admin', () => ({
   getAdminDb: () => ({
@@ -21,8 +25,7 @@ vi.mock('../../src/lib/firebase/admin', () => ({
       const query = {
         where: () => query,
         select: () => query,
-        get: async () => ({ docs: (data[name] ?? []).map((d) => ({ data: () => d })) }),
-        count: () => ({ get: async () => ({ data: () => ({ count: 30 }) }) }),
+        get: async () => ({ size: (data[name] ?? []).length, docs: (data[name] ?? []).map((d) => ({ id: (d as { id?: string }).id, data: () => d })) }),
       };
       return query;
     },
@@ -38,7 +41,7 @@ describe('ringkasan pengumpulan per tugas', () => {
     const r = await listClassTaskSummary(admin, 'k1');
     expect(r.studentCount).toBe(30);
     expect(r.tasks.map((t) => [t.id, t.submitted, t.graded, t.late, t.published])).toEqual([
-      ['t1', 2, 1, 1, true],
+      ['t1', 3, 1, 1, true],
       ['t2', 1, 0, 0, true],
       ['t3', 0, 0, 0, false],
     ]);

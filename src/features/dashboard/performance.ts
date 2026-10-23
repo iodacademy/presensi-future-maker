@@ -5,6 +5,7 @@ import type { TaskDocument } from '../tasks/types';
 import type { SubmissionDocument } from '../tasks/submission-types';
 import type { ExamDocument, AttemptDocument } from '../exams/types';
 import { countsAfterJoin, effectiveDueAt } from '../users/join-policy';
+import { isLateForStudent } from '../tasks/submission-policy';
 
 const ATTENDANCE_STATUS = { present: 'hadir', excused: 'izin', sick: 'sakit', absent: 'alpa' } as const;
 
@@ -80,7 +81,12 @@ export function buildStudentPerformance(input: {
     });
 
   const subs = new Map(input.submissions.map((s) => [s.taskId, s]));
+  // Hanya Tugas Praktik Mandiri yang dihitung performa; hasil praktik di kelas
+  // tidak dinilai dan capstone dinilai terpisah.
+  // Only Tugas Praktik Mandiri count toward performance; in-class practice
+  // results are not graded and capstones are assessed separately.
   const tasks = input.tasks
+    .filter((t) => t.kind === 'daily')
     .map((t) => ({ ...t, dueAt: effectiveDueAt(t.dueAt, joinIso) }))
     .sort((a, b) => (a.dueAt ?? '9999').localeCompare(b.dueAt ?? '9999') || a.order - b.order)
     .map((t) => {
@@ -92,7 +98,7 @@ export function buildStudentPerformance(input: {
         : t.dueAt && t.dueAt < nowIso
           ? 'lewat'
           : 'belum';
-      return { id: t.id, title: t.title, kind: t.kind, dueAt: t.dueAt, status, score: sub?.score ?? null, late: sub?.late ?? false };
+      return { id: t.id, title: t.title, kind: t.kind, dueAt: t.dueAt, status, score: sub?.score ?? null, late: isLateForStudent(sub?.late, t.dueAt, joinIso) };
     });
 
   return { attendance, quizzes, tasks };

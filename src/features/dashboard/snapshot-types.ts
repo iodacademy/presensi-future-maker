@@ -121,6 +121,8 @@ export interface RosterRow {
    * for different action.
    */
   taskSubmitted: (boolean | null)[];
+  /** Sama dengan taskSubmitted, untuk capstone; kosong pada ringkasan lama / Same as taskSubmitted, for capstones; absent on older snapshots */
+  capstoneSubmitted?: (boolean | null)[];
   /**
    * Status yang diturunkan dari ambangnya.
    *
@@ -341,6 +343,8 @@ export interface DashboardSnapshot {
   /** Judul kuis per nama kelas, urut kolom quizScores; kosong pada ringkasan lama / Quiz titles per class name, in quizScores column order; absent on older snapshots */
   quizTitlesByClass?: Record<string, string[]>;
   taskLabels: string[];
+  /** Judul kolom capstone; kosong pada ringkasan lama / Capstone column titles; absent on older snapshots */
+  capstoneLabels?: string[];
   alerts: AlertStudent[];
   thresholds: AlertThresholds;
 }

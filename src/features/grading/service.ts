@@ -167,7 +167,13 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
   const sessionEnd = new Map<string, string>();
   for (const d of [...sessionsSnap.docs, ...sharedSessionsSnap.docs]) sessionEnd.set(d.id, d.data().endsAt as string);
 
-  const tasks = tasksSnap.docs.map((d) => d.data() as { id: string; dueAt?: string | null });
+  // Nilai Tugas hanya dari Tugas Praktik Mandiri: hasil praktik di kelas tidak
+  // dinilai, dan capstone punya komponennya sendiri.
+  // The task score comes only from Tugas Praktik Mandiri: in-class practice
+  // results are not graded, and capstones have their own component.
+  const tasks = tasksSnap.docs
+    .map((d) => d.data() as { id: string; kind: string; dueAt?: string | null })
+    .filter((t) => t.kind === 'daily');
   // Pretest dikecualikan: ia mengukur titik awal sebelum diajar, dan
   // memasukkannya ke nilai akhir menghukum peserta karena belum tahu materi
   // yang memang belum diajarkan.

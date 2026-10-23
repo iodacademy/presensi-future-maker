@@ -1,6 +1,7 @@
 // Aturan validasi pengumpulan tugas, batas ukuran, keterlambatan dan penilaian
 // Policy for task submissions, size boundaries, lateness, and grading
 import type { GradeSubmissionInput } from './submission-types';
+import { effectiveDueAt } from '../users/join-policy';
 
 export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MiB (10.485.760 bytes)
 
@@ -108,6 +109,19 @@ export function isSubmissionLate(submittedAt: string, dueAt: string | null): boo
 
   // Lewat dari deadline dianggap terlambat / Past due time is late
   return submitTime > dueTime;
+}
+
+/**
+ * Tanda terlambat yang tersimpan, dinilai ulang saat dibaca. Tanda itu dicatat
+ * saat mengumpulkan, sehingga tanggal bergabung yang diisi belakangan tidak
+ * mengubahnya: tenggat yang lewat sebelum peserta bergabung tidak berlaku.
+ *
+ * The stored late flag, re-judged on read. It is recorded at submission time,
+ * so a join date set later does not change it: a deadline that passed before
+ * the participant joined does not apply.
+ */
+export function isLateForStudent(late: boolean | undefined, dueAt: string | null | undefined, joinIso: string | undefined): boolean {
+  return late === true && effectiveDueAt(dueAt, joinIso) !== null;
 }
 
 /**

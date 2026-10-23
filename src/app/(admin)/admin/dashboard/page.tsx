@@ -421,16 +421,19 @@ function DashboardBody({
                 <h3 id="h-tugas">Tugas terkumpul per tugas</h3>
               </div>
               <p className={s.hint}>Dihitung dari peserta aktif</p>
+              <h4 style={{ margin: '8px 0 4px', fontSize: '13px' }}>Tugas Praktik Mandiri</h4>
               <Heatmap
                 cities={cities}
                 columnLabel="Tugas"
                 columns={snapshot.taskLabels}
-                valueFor={(kota, i) => {
-                  const baris = perKota.get(kota) ?? [];
-                  const terbuka = baris.filter((r) => r.taskSubmitted[i] !== null);
-                  if (terbuka.length === 0) return null;
-                  return { hit: terbuka.filter((r) => r.taskSubmitted[i] === true).length, total: terbuka.length };
-                }}
+                valueFor={(kota, i) => rasioKumpul(perKota.get(kota) ?? [], (r) => r.taskSubmitted[i])}
+              />
+              <h4 style={{ margin: '14px 0 4px', fontSize: '13px', color: '#b45309' }}>Capstone Project</h4>
+              <Heatmap
+                cities={cities}
+                columnLabel="Capstone"
+                columns={snapshot.capstoneLabels ?? []}
+                valueFor={(kota, i) => rasioKumpul(perKota.get(kota) ?? [], (r) => r.capstoneSubmitted?.[i] ?? null)}
               />
               <div className={s.legend}>
                 <span><span className={`${s.sw} ${s.ok}`} />85% ke atas</span>
@@ -661,6 +664,13 @@ function rata(xs: (number | null)[]): number | null {
   const ada = xs.filter((x): x is number => x !== null);
   if (ada.length === 0) return null;
   return Math.round(ada.reduce((a, b) => a + b, 0) / ada.length);
+}
+
+/** Terkumpul dari yang sudah dibuka; null bila belum ada yang dibuka / Submitted out of those opened; null when none is open yet */
+function rasioKumpul(baris: RosterRow[], status: (r: RosterRow) => boolean | null): { hit: number; total: number } | null {
+  const terbuka = baris.filter((r) => status(r) !== null);
+  if (terbuka.length === 0) return null;
+  return { hit: terbuka.filter((r) => status(r) === true).length, total: terbuka.length };
 }
 
 function CityLegend({ cities }: { cities: string[] }) {
