@@ -801,7 +801,7 @@ export async function listStudentSessionsWithAttendance(actor: Actor): Promise<{
   );
   const locks = computeExamLocks({
     exams: examDocs,
-    sessions: sessions.map((x) => ({ id: x.id, startsAt: x.startsAt })),
+    sessions: sessions.map((x) => ({ id: x.id, startsAt: x.startsAt, title: x.title, endsAt: x.endsAt })),
     finishedExamIds: finishedExams,
     nowIso: new Date().toISOString(),
   });

@@ -1009,13 +1009,13 @@ async function examLockFor(actor: Actor, exam: ExamDocument): Promise<ExamLock> 
     db.collection('exams').where('classId', '==', classId).where('published', '==', true).select('id', 'title', 'kind', 'sessionId', 'questionCount', 'dueAt').get(),
     // Dua kueri sesi seperti listSessionsForClass: sesi bersama mencantumkan kelasnya di classIds.
     // Two session queries like listSessionsForClass: a shared session lists the class in classIds.
-    db.collection('sessions').where('classId', '==', classId).select('id', 'startsAt').get(),
-    db.collection('sessions').where('classIds', 'array-contains', classId).select('id', 'startsAt').get(),
+    db.collection('sessions').where('classId', '==', classId).select('id', 'startsAt', 'title', 'endsAt').get(),
+    db.collection('sessions').where('classIds', 'array-contains', classId).select('id', 'startsAt', 'title', 'endsAt').get(),
     db.collection('examAttempts').where('studentId', '==', actor.uid).select('examId', 'status').get(),
   ]);
-  const sessions = new Map<string, { id: string; startsAt: string }>();
+  const sessions = new Map<string, { id: string; startsAt: string; title: string; endsAt: string }>();
   for (const d of [...ownedSnap.docs, ...sharedSnap.docs]) {
-    const x = d.data() as { id: string; startsAt: string };
+    const x = d.data() as { id: string; startsAt: string; title: string; endsAt: string };
     sessions.set(x.id, x);
   }
   const finished = new Set(

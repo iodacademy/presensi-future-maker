@@ -41,8 +41,8 @@ export async function listStudentReminders(actor: Actor): Promise<StudentReminde
   const [ownedSnap, sharedSnap, attendanceSnap, formSnap, responseSnap, examSnap, attemptSnap] = await Promise.all([
     // Dua kueri sesi seperti listSessionsForClass, tetapi hanya kolom yang dipakai.
     // Two session queries like listSessionsForClass, but only the columns used.
-    db.collection('sessions').where('classId', '==', classId).select('id', 'title', 'startsAt').get(),
-    db.collection('sessions').where('classIds', 'array-contains', classId).select('id', 'title', 'startsAt').get(),
+    db.collection('sessions').where('classId', '==', classId).select('id', 'title', 'startsAt', 'endsAt').get(),
+    db.collection('sessions').where('classIds', 'array-contains', classId).select('id', 'title', 'startsAt', 'endsAt').get(),
     db.collection('attendance').where('classId', '==', classId).where('studentId', '==', actor.uid).select('sessionId').get(),
     db.collection('surveyForms').where('published', '==', true).get(),
     db.collection('surveyResponses').where('studentId', '==', actor.uid).select('formId', 'sessionId').get(),
@@ -55,10 +55,10 @@ export async function listStudentReminders(actor: Actor): Promise<StudentReminde
     db.collection('examAttempts').where('studentId', '==', actor.uid).select('examId', 'status', 'passed').get(),
   ]);
 
-  const sessions = new Map<string, { title: string; startsAt: string }>();
+  const sessions = new Map<string, { title: string; startsAt: string; endsAt: string }>();
   for (const d of [...ownedSnap.docs, ...sharedSnap.docs]) {
-    const s = d.data() as { id: string; title: string; startsAt: string };
-    sessions.set(s.id, { title: s.title, startsAt: s.startsAt });
+    const s = d.data() as { id: string; title: string; startsAt: string; endsAt: string };
+    sessions.set(s.id, { title: s.title, startsAt: s.startsAt, endsAt: s.endsAt });
   }
 
   const attended = attendanceSnap.docs.map((d) => (d.data() as { sessionId: string }).sessionId).filter((id) => sessions.has(id));
@@ -95,7 +95,7 @@ export async function listStudentReminders(actor: Actor): Promise<StudentReminde
   // locked one asks the participant for the impossible.
   const locks = computeExamLocks({
     exams: examDocs,
-    sessions: [...sessions.entries()].map(([id, x]) => ({ id, startsAt: x.startsAt })),
+    sessions: [...sessions.entries()].map(([id, x]) => ({ id, ...x })),
     finishedExamIds: new Set(
       [...attemptsByExam.entries()].filter(([, list]) => list.some((a) => a.status === 'selesai')).map(([id]) => id)
     ),

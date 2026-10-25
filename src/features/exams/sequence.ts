@@ -46,7 +46,10 @@ export function orderExams<T extends SequenceExam>(exams: T[], sessionStart: Map
  *   kuis sebelumnya di jalur sudah dikerjakan. Kuis yang terlewat tetap dapat
  *   dikejar sesudahnya; menguncinya lagi setelah sesi berakhir membuat peserta
  *   yang absen tidak pernah dapat menyelesaikan jalurnya.
- * - Postest terbuka setelah pretest dikerjakan dan pertemuan terakhir dimulai.
+ * - Postest terbuka setelah pretest dikerjakan dan pertemuan materi terakhir
+ *   ("Pertemuan N" bernomor terbesar) selesai. Showcase dan kelas karier
+ *   sesudahnya bukan materi yang diukur postest, jadi tidak perlu ditunggu.
+ *   Tanpa pertemuan bernomor, postest terbuka saat pertemuan terakhir dimulai.
  *
  * "Dikerjakan" berarti punya percobaan yang selesai, lulus atau tidak: syarat
  * kelulusan akan mengunci peserta yang kesempatannya sudah habis. Kuis tanpa
@@ -62,7 +65,10 @@ export function orderExams<T extends SequenceExam>(exams: T[], sessionStart: Map
  *   quiz on the path is done. A missed quiz can still be caught up afterwards;
  *   relocking it after the session ends would leave an absent participant
  *   unable to ever finish the path.
- * - The posttest opens once the pretest is done and the last meeting starts.
+ * - The posttest opens once the pretest is done and the last material meeting
+ *   (the highest-numbered "Pertemuan N") has ended. The showcase and career
+ *   classes after it are not material the posttest measures, so they are not
+ *   waited for. Without numbered meetings, it opens when the last meeting starts.
  *
  * "Done" means having a finished attempt, passed or not: requiring a pass would
  * lock out a participant whose attempts ran out. A quiz with no questions and a
@@ -71,7 +77,7 @@ export function orderExams<T extends SequenceExam>(exams: T[], sessionStart: Map
  */
 export function computeExamLocks(input: {
   exams: SequenceExam[];
-  sessions: { id: string; startsAt: string }[];
+  sessions: { id: string; startsAt: string; title?: string; endsAt?: string }[];
   finishedExamIds: Set<string>;
   nowIso: string;
 }): Map<string, ExamLock> {
@@ -80,6 +86,9 @@ export function computeExamLocks(input: {
     e.questionCount > 0 && !finishedExamIds.has(e.id) && !(e.dueAt && e.dueAt < nowIso);
   const sessionStart = new Map(input.sessions.map((s) => [s.id, s.startsAt]));
   const lastStart = input.sessions.map((s) => s.startsAt).sort().at(-1) ?? null;
+  const nomor = (s: { title?: string }) => Number(/^Pertemuan\s+(\d+)/i.exec(s.title ?? '')?.[1] ?? 0);
+  const materiTerakhir = input.sessions.filter((s) => nomor(s) > 0 && s.endsAt).sort((a, b) => nomor(b) - nomor(a))[0];
+  const postestBuka = materiTerakhir?.endsAt ?? lastStart;
   const ordered = orderExams(input.exams, sessionStart);
   const locks = new Map<string, ExamLock>();
 
@@ -95,9 +104,9 @@ export function computeExamLocks(input: {
 
     if (e.kind === 'posttest') {
       if (pendingPretest) {
-        locks.set(e.id, { locked: true, reason: 'pretest', waitingFor: pendingPretest.title, availableFrom: lastStart });
-      } else if (lastStart && lastStart > nowIso) {
-        locks.set(e.id, { locked: true, reason: 'jadwal', availableFrom: lastStart });
+        locks.set(e.id, { locked: true, reason: 'pretest', waitingFor: pendingPretest.title, availableFrom: postestBuka });
+      } else if (postestBuka && postestBuka > nowIso) {
+        locks.set(e.id, { locked: true, reason: 'jadwal', availableFrom: postestBuka });
       } else {
         locks.set(e.id, { locked: false });
       }

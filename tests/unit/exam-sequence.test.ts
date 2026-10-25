@@ -42,6 +42,18 @@ describe('urutan dan jadwal kuis', () => {
     expect(locks(['pre'], '2026-10-20T13:00:00.000Z').get('post')).toEqual({ locked: false });
   });
 
+  it('membuka postest setelah pertemuan bernomor terakhir selesai, tanpa menunggu showcase', () => {
+    const jadwal = [
+      ...sessions,
+      { id: 's12', title: 'Pertemuan 12: Capstone', startsAt: '2026-10-23T02:00:00.000Z', endsAt: '2026-10-23T09:00:00.000Z' },
+      { id: 's11', title: 'Pertemuan 11: Persiapan', startsAt: '2026-10-21T02:00:00.000Z', endsAt: '2026-10-21T09:00:00.000Z' },
+      { id: 'sc', title: 'Showcase: Presentasi', startsAt: '2026-10-30T02:00:00.000Z', endsAt: '2026-10-30T09:00:00.000Z' },
+    ];
+    const l = (nowIso: string) => computeExamLocks({ exams, sessions: jadwal, finishedExamIds: new Set(['pre']), nowIso }).get('post');
+    expect(l('2026-10-23T05:00:00.000Z')).toEqual({ locked: true, reason: 'jadwal', availableFrom: '2026-10-23T09:00:00.000Z' });
+    expect(l('2026-10-23T09:00:01.000Z')).toEqual({ locked: false });
+  });
+
   it('tidak menjadikan kuis tanpa soal sebagai syarat', () => {
     const l = computeExamLocks({
       exams: [...exams.filter((e) => e.id !== 'k1'), { id: 'k1', title: 'Kuis kosong', kind: 'kuis', sessionId: 's1', questionCount: 0 }],
