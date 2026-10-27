@@ -21,6 +21,15 @@ interface TaskRow {
   late: number;
 }
 
+// Awalan sheet, judul kolom, dan nama berkas Excel per jenis tugas / Sheet prefix, column heading, and Excel file name per task kind
+const EXPORT_KIND: Record<TaskKind, { prefix: string; column: string; file: string }> = {
+  'working-paper': { prefix: 'HP', column: 'Link Hasil Praktik', file: 'Hasil_Praktik' },
+  daily: { prefix: 'PM', column: 'Link Tugas', file: 'Tugas_Praktik_Mandiri' },
+  capstone: { prefix: 'CP', column: 'Link Capstone', file: 'Capstone' },
+};
+// Urutan sheet mengikuti alur program: praktik di kelas, praktik mandiri, lalu capstone / Sheets follow the programme's flow: in-class practice, independent practice, then capstone
+const EXPORT_ORDER: TaskKind[] = ['working-paper', 'daily', 'capstone'];
+
 /**
  * Rekap pengumpulan tugas, dikelompokkan per tugas.
  *
@@ -93,7 +102,7 @@ export default function AdminTugasPage() {
   // three rows while on page three shows an empty list.
   useEffect(() => { setPage(0); }, [classId, kind, query]);
 
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<'kind' | 'all' | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
 
   /**
@@ -101,16 +110,24 @@ export default function AdminTugasPage() {
    * aktif tercantum, termasuk yang belum mengumpulkan, agar yang kosong
    * terlihat tanpa mencocokkan daftar nama sendiri.
    *
+   * Ekspor semua jenis memberi awalan jenis pada nama sheet: tanpa itu "1. Sesi
+   * 2" milik hasil praktik dan milik praktik mandiri tidak dapat dibedakan.
+   *
    * One sheet per task holding No, Name and the link to the work. Every active
    * participant is listed, including those yet to submit, so the gaps show
    * without matching name lists by hand.
+   *
+   * Exporting every kind prefixes sheet names with the kind: without it a
+   * practice result's "1. Sesi 2" and an independent task's cannot be told
+   * apart.
    */
-  async function exportExcel() {
+  async function exportExcel(mode: 'kind' | 'all') {
     if (!selectedClass) return;
-    setExporting(true);
+    setExporting(mode);
     setExportError(null);
     try {
-      const daftar = ofKind.filter((t) => t.published);
+      const kinds = mode === 'all' ? EXPORT_ORDER : [kind];
+      const daftar = kinds.flatMap((k) => tasks.filter((t) => t.kind === k && t.published));
       const rosters = await Promise.all(
         daftar.map(async (t) => {
           const resp = await fetch(`/api/tasks/${encodeURIComponent(t.id)}/roster`);
@@ -141,8 +158,7 @@ export default function AdminTugasPage() {
             .map((r) => ({ nama: r.studentName, link: null, ket: 'Belum mengumpulkan' })),
         ];
 
-        const label = kind === 'capstone' ? 'Link Capstone' : 'Link Tugas';
-        const ws = XLSX.utils.aoa_to_sheet([['No', 'Nama', label], ...baris.map((b, j) => [j + 1, b.nama, b.link ?? b.ket])]);
+        const ws = XLSX.utils.aoa_to_sheet([['No', 'Nama', EXPORT_KIND[t.kind].column], ...baris.map((b, j) => [j + 1, b.nama, b.link ?? b.ket])]);
         baris.forEach((b, j) => {
           if (b.link) ws[XLSX.utils.encode_cell({ r: j + 1, c: 2 })].l = { Target: b.link };
         });
@@ -151,18 +167,20 @@ export default function AdminTugasPage() {
 
         // Nama sheet paling panjang 31 karakter, tanpa : \ / ? * [ ], dan harus unik.
         // A sheet name is at most 31 characters, without : \ / ? * [ ], and unique.
-        let nama = `${i + 1}. ${t.title}`.replace(/[:\\/?*[\]]/g, ' ').slice(0, 31).trim();
+        const urutan = daftar.slice(0, i + 1).filter((x) => x.kind === t.kind).length;
+        const awalan = mode === 'all' ? `${EXPORT_KIND[t.kind].prefix} ` : '';
+        let nama = `${awalan}${urutan}. ${t.title}`.replace(/[:\\/?*[\]]/g, ' ').slice(0, 31).trim();
         while (dipakai.has(nama)) nama = `${nama.slice(0, 28)} ${dipakai.size}`;
         dipakai.add(nama);
         XLSX.utils.book_append_sheet(wb, ws, nama);
       });
-      if (daftar.length === 0) throw new Error(`Belum ada ${TASK_KIND_LABELS[kind].toLowerCase()} yang terbit`);
-      const jenis = kind === 'capstone' ? 'Capstone' : 'Tugas_Praktik_Mandiri';
+      if (daftar.length === 0) throw new Error(mode === 'all' ? 'Belum ada tugas yang terbit' : `Belum ada ${TASK_KIND_LABELS[kind].toLowerCase()} yang terbit`);
+      const jenis = mode === 'all' ? 'Semua_Tugas' : EXPORT_KIND[kind].file;
       XLSX.writeFile(wb, `${jenis}_${selectedClass.canonicalName.replace(/[^\w-]+/g, '_')}.xlsx`);
     } catch (e) {
       setExportError((e as Error).message);
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   }
 
@@ -245,16 +263,17 @@ export default function AdminTugasPage() {
           >
             <Download size={12} strokeWidth={2} /> Ekspor CSV
           </a>
-          {(kind === 'daily' || kind === 'capstone') && (
+          {([['kind', `Ekspor Excel ${TASK_KIND_LABELS[kind]}`], ['all', 'Ekspor Excel Semua Tugas']] as const).map(([mode, label]) => (
             <button
+              key={mode}
               type="button"
-              onClick={exportExcel}
-              disabled={exporting}
+              onClick={() => exportExcel(mode)}
+              disabled={exporting !== null}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '8px 14px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--color-primary)', color: '#ffffff', fontSize: '11px', fontWeight: 700, cursor: exporting ? 'wait' : 'pointer', opacity: exporting ? 0.7 : 1 }}
             >
-              <Download size={12} strokeWidth={2} /> {exporting ? 'Menyiapkan...' : `Ekspor Excel ${TASK_KIND_LABELS[kind]}`}
+              <Download size={12} strokeWidth={2} /> {exporting === mode ? 'Menyiapkan...' : label}
             </button>
-          )}
+          ))}
         </div>
         {exportError && <p role="alert" style={{ fontSize: '11px', color: 'var(--color-danger)', margin: 0 }}>Ekspor gagal: {exportError}</p>}
       </div>
