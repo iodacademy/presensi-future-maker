@@ -11,7 +11,9 @@ export type WorkStatus = 'draft' | 'published' | 'hidden';
 export type MediaKind = 'site' | 'html' | 'carousel' | 'video' | 'pdf';
 
 // url kosong untuk carousel, slides kosong untuk lainnya / url is empty for carousel, slides empty otherwise
-export interface WorkMedia { kind: MediaKind; url: string; slides: string[] }
+// noEmbed: situs menolak dimuat di iframe (X-Frame-Options/CSP), jadi hanya tautan demo yang ditampilkan
+// noEmbed: the site refuses to load in an iframe (X-Frame-Options/CSP), so only the demo link is shown
+export interface WorkMedia { kind: MediaKind; url: string; slides: string[]; noEmbed?: boolean }
 // String kosong bila tidak ada gambar / Empty strings when there is no image
 export interface WorkCover { thumb: string; full: string }
 

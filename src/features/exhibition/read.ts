@@ -117,9 +117,9 @@ async function readCollectionDetail(id: string) {
   if (!s.exists) return null;
   const c = s.data() as Doc;
   const snap = await db.collection('exhibitionWorks')
-    .where('collectionId', '==', id).where('status', '==', 'published').select(...CARD_FIELDS, 'media.url').get();
+    .where('collectionId', '==', id).where('status', '==', 'published').select(...CARD_FIELDS, 'media.url', 'media.noEmbed').get();
   const owners = new Map<string, string | null>();
-  const versions: (GalleryCard & { siteUrl: string })[] = [];
+  const versions: (GalleryCard & { siteUrl: string; noEmbed: boolean })[] = [];
   for (const w of snap.docs) {
     const d = w.data();
     if (!owners.has(d.personUid)) {
@@ -127,7 +127,7 @@ async function readCollectionDetail(id: string) {
       owners.set(d.personUid, o ? nick(o.nickname) : null);
     }
     const nickname = owners.get(d.personUid);
-    if (nickname) versions.push({ ...toCard(w.id, d, nickname), siteUrl: d.media?.url ?? '' });
+    if (nickname) versions.push({ ...toCard(w.id, d, nickname), siteUrl: d.media?.url ?? '', noEmbed: !!d.media?.noEmbed });
   }
   if (versions.length === 0) return null;
   const collection: ExhibitionCollection = {

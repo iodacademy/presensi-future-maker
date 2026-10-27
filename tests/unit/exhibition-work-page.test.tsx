@@ -34,6 +34,12 @@ const card = (id: string): GalleryCard => ({
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe('halaman karya', () => {
+  it('situs yang menolak iframe hanya menampilkan Buka demo', () => {
+    render(<WorkView work={work({ media: { kind: 'site', url: 'https://kopi.example.com', slides: [], noEmbed: true } })} related={[]} />);
+    expect(screen.queryByText('Coba langsung')).toBeNull();
+    expect(screen.getByText('Buka demo')).toBeTruthy();
+  });
+
   it('situs mati tetap menampilkan tautan Buka demo', () => {
     render(<WorkView work={work({ coverFull: '' })} related={[]} />);
     const a = screen.getByText('Buka demo').closest('a')!;

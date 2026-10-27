@@ -123,7 +123,7 @@ export function WorkView({ work, related }: { work: WorkDetail; related: Gallery
                       ) : (
                         <span style={css('font-family:var(--font-caption);font-style:italic;font-size:15px;color:var(--text-muted)')}>{TYPE[work.type]?.thumb ?? work.type}</span>
                       )}
-                      {url && <Hv onClick={() => setLive(true)} s="all:unset;cursor:pointer;position:absolute;left:50%;bottom:20px;transform:translateX(-50%);padding:12px 22px;border-radius:999px;background:var(--dark-blue);color:#fff;font-weight:700;font-size:15px;box-shadow:var(--shadow-md)" h="background:var(--plan-blue)">Coba langsung</Hv>}
+                      {url && !work.media.noEmbed && <Hv onClick={() => setLive(true)} s="all:unset;cursor:pointer;position:absolute;left:50%;bottom:20px;transform:translateX(-50%);padding:12px 22px;border-radius:999px;background:var(--dark-blue);color:#fff;font-weight:700;font-size:15px;box-shadow:var(--shadow-md)" h="background:var(--plan-blue)">Coba langsung</Hv>}
                     </>
                   )}
                 </div>

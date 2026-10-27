@@ -5,7 +5,7 @@ import { COH, cohLabel } from '@/features/exhibition/content';
 import { safeExternalUrl, type ExhibitionCollection, type GalleryCard } from '@/features/exhibition/model';
 import { Hv, css } from '@/features/exhibition/ui';
 
-type Version = GalleryCard & { siteUrl: string };
+type Version = GalleryCard & { siteUrl: string; noEmbed?: boolean };
 
 /**
  * Halaman satu koleksi: satu brief, banyak versi. Iframe baru dimuat setelah
@@ -29,10 +29,10 @@ export function CollectionView({ collection, versions }: { collection: Exhibitio
       <section style={css('padding:32px 22px clamp(72px,10vw,120px)')}>
         <div style={css('max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px')}>
           {versions.map((v) => {
-            const url = safeExternalUrl(v.siteUrl);
+            const url = safeExternalUrl(v.siteUrl), embed = url && !v.noEmbed;
             return (
             <div key={v.id} style={css('background:#fff;border-radius:18px;overflow:hidden;border:1px solid #ececea;display:flex;flex-direction:column')}>
-              <button type="button" onClick={() => url && setLive(v)} aria-label={'Coba langsung versi ' + v.nickname} style={css(`all:unset;cursor:pointer;position:relative;aspect-ratio:16/10;background:${coh.tint};overflow:hidden`)}>
+              <button type="button" onClick={() => embed && setLive(v)} aria-label={'Coba langsung versi ' + v.nickname} style={css(`all:unset;cursor:pointer;position:relative;aspect-ratio:16/10;background:${coh.tint};overflow:hidden`)}>
                 {v.thumb && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={v.thumb} alt={collection.title + ' versi ' + v.nickname} loading="lazy" style={css('width:100%;height:100%;object-fit:cover;object-position:top')} />
@@ -42,7 +42,7 @@ export function CollectionView({ collection, versions }: { collection: Exhibitio
                 <span style={css(`width:30px;height:30px;flex:none;border-radius:50%;background:${coh.color};color:${coh.fg};display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-weight:700;font-size:11px`)}>{v.nickname[0]?.toUpperCase()}</span>
                 <span style={css('flex:1;font-size:15px;font-weight:700;color:var(--dark-blue)')}>{'Versi ' + v.nickname}</span>
                 {v.aiAssisted && <span style={css('font-size:11px;font-weight:700;color:var(--text-muted)')}>Dibuat dengan bantuan AI</span>}
-                {url && <Hv onClick={() => setLive(v)} s="all:unset;cursor:pointer;padding:7px 12px;border-radius:999px;background:var(--surface-muted);color:var(--dark-blue);font-size:13px;font-weight:700" h="background:#e3eff9">Coba langsung</Hv>}
+                {embed && <Hv onClick={() => setLive(v)} s="all:unset;cursor:pointer;padding:7px 12px;border-radius:999px;background:var(--surface-muted);color:var(--dark-blue);font-size:13px;font-weight:700" h="background:#e3eff9">Coba langsung</Hv>}
                 {url && <Hv as="a" href={url} target="_blank" rel="noreferrer" s="all:unset;cursor:pointer;padding:7px 12px;border-radius:999px;background:var(--dark-blue);color:#fff;font-size:13px;font-weight:700" h="background:var(--plan-blue)">Buka demo ↗</Hv>}
               </div>
             </div>
