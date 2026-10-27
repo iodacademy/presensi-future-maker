@@ -135,16 +135,18 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
         </div>
       </section>
 
+      {best.length > 0 && (
       <section style={css('padding:clamp(64px,9vw,112px) 22px;background:var(--surface-muted)')}>
         <div style={css('max-width:1180px;margin:0 auto')}>
           <div style={css('display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px')}>
+            <span style={css('font-size:15px;font-weight:700;color:var(--plan-blue)')}>Capstone project</span>
             <h2 style={css(H2)}>Contoh Karya Setiap Kelas</h2>
           </div>
           <div style={css('margin-top:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:16px')}>
             {best.map((bw) => {
               const c = COH[bw.cohort], tk = TRACKS[c.track];
               return (
-                <div key={c.key} style={css(`background:${c.color};color:${c.fg};border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:16px`)}>
+                <div key={bw.href} style={css(`background:${c.color};color:${c.fg};border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:16px`)}>
                   <div style={css('display:flex;flex-direction:column;gap:2px')}>
                     <span style={css('font-size:14px;font-weight:700')}>{tk.name}</span>
                     <span style={css('font-family:var(--font-headline);font-weight:700;font-size:26px;line-height:1.1;letter-spacing:-0.02em')}>{c.city}</span>
@@ -163,6 +165,7 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
           </div>
         </div>
       </section>
+      )}
 
       {tpA && (
       <section style={css('padding:clamp(64px,9vw,112px) 22px')}>
