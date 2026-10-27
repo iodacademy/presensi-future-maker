@@ -98,7 +98,7 @@ describe('halaman karya', () => {
 describe('halaman peserta', () => {
   it('profil tanpa karya tidak menampilkan bagian karya', () => {
     render(<PersonView person={person()} mates={[]} />);
-    expect(screen.getByText('Ani')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Ani' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: /^Karya/ })).toBeNull();
   });
 

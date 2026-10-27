@@ -6,6 +6,6 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   const person = await getPersonDetail((await params).id);
   if (!person) notFound();
   const { people } = await getCatalog();
-  const mates = people.filter((x) => x.cohort === person.cohort).map((x) => ({ uid: x.uid, nickname: x.nickname, workCount: x.workCount }));
+  const mates = people.filter((x) => x.cohort === person.cohort);
   return <PersonView person={person} mates={mates} />;
 }

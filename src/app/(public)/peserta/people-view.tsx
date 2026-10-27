@@ -19,7 +19,7 @@ const STEP = 30;
  * track run vertically in a dark band on the left edge. Participants without a
  * photo get their class colour with a large initial, so the grid stays solid.
  */
-function PersonTile({ u }: { u: PublicPerson }) {
+export function PersonTile({ u }: { u: PublicPerson }) {
   const c = COH[u.cohort], photo = safeExternalUrl(u.photoUrl);
   return (
     <Hv as={Link} href={'/peserta/' + u.uid} aria-label={`${u.nickname}, ${cohLabel(c)}`} s={`all:unset;cursor:pointer;position:relative;display:block;aspect-ratio:3/4;overflow:hidden;background:${c.tint}`} h="filter:brightness(1.04)">
