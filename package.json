@@ -24,7 +24,8 @@
     "diagnose-attendance": "tsx scripts/diagnose-attendance.ts",
     "diagnose-submissions": "tsx scripts/diagnose-submissions.ts",
     "deploy-indexes": "firebase deploy --only firestore:indexes",
-    "seed-feedback-form": "tsx scripts/seed-feedback-form.ts"
+    "seed-feedback-form": "tsx scripts/seed-feedback-form.ts",
+    "upload-pameran-photos": "tsx --env-file=.env.local scripts/upload-pameran-photos.ts"
   },
   "dependencies": {
     "firebase": "^12.18.0",
@@ -47,6 +48,7 @@
     "@types/react-dom": "^19.0.4",
     "esbuild": "0.28.2",
     "jsdom": "^29.1.1",
+    "sharp": "^0.35.4",
     "tsx": "^4.23.15",
     "typescript": "^5.7.3",
     "vitest": "^3.0.5"

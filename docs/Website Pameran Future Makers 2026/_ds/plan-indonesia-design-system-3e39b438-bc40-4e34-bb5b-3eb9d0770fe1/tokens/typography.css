@@ -1,0 +1,29 @@
+/* Plan Indonesia — Typography
+   Hierarchy per Brand Manual (Penggunaan tipografi). No other fonts. Body >= 9pt. */
+:root {
+  --font-headline: 'Poppins', system-ui, sans-serif; /* headlines, intro, sub-head, quote/stat */
+  --font-body: Arial, 'Helvetica Neue', Helvetica, sans-serif; /* body, highlight, paragraph heading */
+  --font-caption: Georgia, 'Times New Roman', serif; /* captions, image credits, quotes (alt) */
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Type scale — display headlines are Poppins Bold, tight leading */
+  --fs-display: 64px;
+  --fs-h1: 48px;
+  --fs-h2: 36px;
+  --fs-h3: 28px;
+  --fs-intro: 22px;   /* lead paragraph */
+  --fs-body: 16px;
+  --fs-small: 14px;
+  --fs-caption: 13px;
+
+  --lh-tight: 1.05; /* @kind other */
+  --lh-heading: 1.15; /* @kind other */
+  --lh-body: 1.55; /* @kind other */
+
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+}

@@ -7,5 +7,11 @@ service firebase.storage {
     match /{allPaths=**} {
       allow read, write: if false;
     }
+
+    // Foto website pameran dibuka publik; unggahan tetap lewat skrip admin
+    // Exhibition website photos are publicly readable; uploads still go through the admin script
+    match /pameran/{allPaths=**} {
+      allow read: if true;
+    }
   }
 }

@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/plan-indonesia-design-system-3e39b438-bc40-4e34-bb5b-3eb9d0770fe1/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/plan-indonesia-design-system-3e39b438-bc40-4e34-bb5b-3eb9d0770fe1/tokens/colors.css">
+<link rel="stylesheet" href="_ds/plan-indonesia-design-system-3e39b438-bc40-4e34-bb5b-3eb9d0770fe1/tokens/typography.css">
+<link rel="stylesheet" href="_ds/plan-indonesia-design-system-3e39b438-bc40-4e34-bb5b-3eb9d0770fe1/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/plan-indonesia-design-system-3e39b438-bc40-4e34-bb5b-3eb9d0770fe1/tokens/effects.css">
+<link rel="stylesheet" href="_ds/plan-indonesia-design-system-3e39b438-bc40-4e34-bb5b-3eb9d0770fe1/styles.css">
+<script src="_ds/plan-indonesia-design-system-3e39b438-bc40-4e34-bb5b-3eb9d0770fe1/_ds_bundle.js"></script>
+<script src="./image-slot.js"></script>
+<style>body{margin:0;background:#fff;color:var(--dark-blue);font-family:var(--font-body);-webkit-font-smoothing:antialiased}a{color:var(--text-link);text-decoration:none}a:hover{color:var(--text-link-hover);text-decoration:underline}*{box-sizing:border-box}*::-webkit-scrollbar{display:none}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column">
+
+<header style="position:sticky;top:12px;z-index:30;padding:12px 16px 0;margin-bottom:-68px;pointer-events:none">
+  <div style="pointer-events:auto;max-width:1080px;margin:0 auto;height:56px;padding:0 8px 0 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;background:#fff;border-radius:999px;border:1px solid #ececea;box-shadow:0 8px 28px rgba(36,60,75,.12)">
+    <button onClick="{{ goHome }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;font-family:var(--font-headline);font-weight:700;font-size:15px;letter-spacing:-0.01em;white-space:nowrap">
+      <img src="assets/logo-plan-indonesia.png" alt="Plan International Indonesia" style="display:block;height:40px;width:auto;flex:none">
+    </button>
+    <nav style="display:flex;flex-wrap:nowrap;gap:2px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;overflow-y:hidden">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="4">
+        <button onClick="{{ n.onClick }}" style="all:unset;cursor:pointer;white-space:nowrap;padding:9px 16px;border-radius:999px;font-size:14px;font-weight:700;color:{{ n.fg }};background:{{ n.bg }};transition:background 160ms ease,color 160ms ease" style-hover="background:{{ n.hoverBg }}">{{ n.label }}</button>
+      </sc-for>
+    </nav>
+  </div>
+</header>
+
+<main style="flex:1">
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+  <section style="background:var(--plan-blue);color:#fff;padding:calc(80px + clamp(48px,7vw,88px)) 22px clamp(56px,7vw,88px)">
+    <div style="max-width:880px;margin:0 auto;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px">
+      <span style="font-size:17px;font-weight:700;color:var(--yellow)">Pameran Karya Bootcamp</span>
+      <h1 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(48px,8vw,96px);line-height:1.04;letter-spacing:-0.035em;margin:0">Future Makers 2026.</h1>
+    </div>
+    <div style="max-width:1180px;margin:clamp(36px,5vw,56px) auto 0;position:relative;aspect-ratio:16/9;border-radius:24px;overflow:hidden;background:var(--dark-blue)">
+      <sc-if value="{{ heroIdle }}" hint-placeholder-val="{{ true }}">
+        <image-slot id="hero-poster" shape="rect" placeholder="Poster / cuplikan after movie" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;pointer-events:none">
+          <button onClick="{{ playHero }}" style="all:unset;cursor:pointer;pointer-events:auto;width:96px;height:96px;border-radius:50%;background:var(--yellow);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md);transition:transform 160ms ease" style-hover="transform:scale(1.06)" style-active="transform:scale(.96)"><span style="width:0;height:0;border-left:25px solid var(--dark-blue);border-top:15px solid transparent;border-bottom:15px solid transparent;margin-left:7px"></span></button>
+          <span style="font-weight:700;font-size:17px;color:#fff;background:var(--dark-blue);padding:6px 14px;border-radius:999px">Putar after movie</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{ heroIsYT }}" hint-placeholder-val="{{ false }}">
+        <iframe src="{{ heroEmbed }}" title="After movie Future Makers 2026" allow="autoplay; encrypted-media; fullscreen" allowfullscreen="true" style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe>
+      </sc-if>
+      <sc-if value="{{ heroIsFile }}" hint-placeholder-val="{{ false }}">
+        <video src="{{ afterMovieUrl }}" controls="true" autoPlay="true" playsInline="true" style="position:absolute;inset:0;width:100%;height:100%;background:#000"></video>
+      </sc-if>
+      <sc-if value="{{ heroNotice }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center">
+          <span style="font-family:var(--font-headline);font-weight:700;font-size:22px">Video after movie belum ditambahkan</span>
+          <span style="font-size:15px">Masukkan link YouTube atau file .mp4 di panel Tweaks.</span>
+          <button onClick="{{ stopHero }}" style="all:unset;cursor:pointer;margin-top:8px;font-size:15px;font-weight:700;color:var(--yellow)">Kembali ›</button>
+        </div>
+      </sc-if>
+    </div>
+    <div style="max-width:880px;margin:clamp(40px,5vw,56px) auto 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));text-align:center">
+      <sc-for list="{{ stats }}" as="st" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:4px;padding:0 8px">
+          <span style="font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.4vw,52px);line-height:1;letter-spacing:-0.03em">{{ st.value }}</span>
+          <span style="font-size:15px">{{ st.label }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="padding:clamp(64px,9vw,112px) 22px">
+    <div style="max-width:1180px;margin:0 auto">
+      <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:15px;font-weight:700;color:var(--magenta)">Dokumentasi</span>
+          <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.4vw,52px);line-height:1.05;letter-spacing:-0.03em;margin:0">Selama kegiatan.</h2>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onClick="{{ prevSlide }}" aria-label="Sebelumnya" style="all:unset;cursor:pointer;width:44px;height:44px;border-radius:50%;background:var(--surface-muted);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700" style-hover="background:var(--light-grey)">‹</button>
+          <button onClick="{{ nextSlide }}" aria-label="Berikutnya" style="all:unset;cursor:pointer;width:44px;height:44px;border-radius:50%;background:var(--surface-muted);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700" style-hover="background:var(--light-grey)">›</button>
+        </div>
+      </div>
+      <div style="margin-top:32px;border-radius:24px;overflow:hidden">
+        <div style="display:flex;transform:translateX({{ slideX }});transition:transform 600ms cubic-bezier(.2,.7,.2,1)">
+          <sc-for list="{{ slides }}" as="sl" hint-placeholder-count="5">
+            <div style="flex:0 0 100%;position:relative;aspect-ratio:16/8;min-height:260px;background:var(--surface-muted)">
+              <image-slot id="{{ sl.slotId }}" shape="rect" placeholder="Foto dokumentasi" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+              <div style="position:absolute;left:24px;bottom:24px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;pointer-events:none">
+                <span style="font-family:var(--font-headline);font-weight:700;font-size:clamp(18px,2vw,24px);padding:6px 14px;background:{{ sl.color }};color:{{ sl.fg }}">{{ sl.caption }}</span>
+                <span style="font-size:14px;font-weight:700;padding:4px 10px;background:#fff;color:var(--dark-blue)">{{ sl.place }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:center;gap:8px;margin-top:20px">
+        <sc-for list="{{ slides }}" as="sl" hint-placeholder-count="5">
+          <button onClick="{{ sl.go }}" aria-label="{{ sl.caption }}" style="all:unset;cursor:pointer;height:8px;width:{{ sl.dotW }};border-radius:999px;background:{{ sl.dotBg }};transition:width 300ms ease,background 300ms ease"></button>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:0 22px clamp(64px,9vw,112px)">
+    <div style="max-width:1180px;margin:0 auto">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="font-size:15px;font-weight:700;color:var(--orange)">Galeri foto</span>
+        <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.4vw,52px);line-height:1.05;letter-spacing:-0.03em;margin:0">Momen bersama.</h2>
+      </div>
+      <div style="margin-top:32px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:clamp(110px,16vw,210px);grid-auto-flow:dense;gap:12px">
+        <sc-for list="{{ bento }}" as="bt" hint-placeholder-count="8">
+          <div style="grid-column:span {{ bt.cols }};grid-row:span {{ bt.rows }};position:relative;border-radius:20px;overflow:hidden;background:{{ bt.bg }};color:{{ bt.fg }}">
+            <sc-if value="{{ bt.isPhoto }}" hint-placeholder-val="{{ true }}">
+              <image-slot id="{{ bt.slotId }}" shape="rect" placeholder="{{ bt.label }}" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+            </sc-if>
+            <sc-if value="{{ bt.isStat }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;padding:clamp(14px,2vw,24px);display:flex;flex-direction:column;justify-content:flex-end;gap:2px">
+                <span style="font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,5vw,64px);line-height:1;letter-spacing:-0.03em">{{ bt.value }}</span>
+                <span style="font-weight:700;font-size:clamp(13px,1.3vw,16px)">{{ bt.label }}</span>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:clamp(64px,9vw,112px) 22px;background:var(--surface-muted)">
+    <div style="max-width:1180px;margin:0 auto">
+      <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px">
+        <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.4vw,52px);line-height:1.05;letter-spacing:-0.03em;margin:0">Contoh Karya Setiap Kelas</h2>
+      </div>
+      <div style="margin-top:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:16px">
+        <sc-for list="{{ best }}" as="bw" hint-placeholder-count="4">
+          <div style="background:{{ bw.bg }};color:{{ bw.fg }};border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:14px;font-weight:700">{{ bw.trackName }}</span>
+              <span style="font-family:var(--font-headline);font-weight:700;font-size:26px;line-height:1.1;letter-spacing:-0.02em">{{ bw.city }}</span>
+            </div>
+            <div style="position:relative;aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:#fff;color:var(--dark-blue)">
+              <image-slot id="{{ bw.slotId }}" shape="rect" placeholder="{{ bw.thumbLabel }}" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font-family:var(--font-headline);font-weight:700;font-size:19px;line-height:1.2">{{ bw.title }}</span>
+              <span style="font-size:14px;font-weight:700">{{ bw.personName }} · {{ bw.type }}</span>
+            </div>
+            <button onClick="{{ bw.open }}" style="all:unset;cursor:pointer;margin-top:auto;align-self:flex-start;padding:9px 16px;border-radius:999px;background:#fff;color:var(--dark-blue);font-weight:700;font-size:14px" style-hover="transform:translateY(-1px)">Lihat karya ›</button>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:clamp(64px,9vw,112px) 22px">
+    <div style="max-width:1180px;margin:0 auto">
+      <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:15px;font-weight:700;color:var(--magenta)">Testimoni peserta</span>
+          <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.4vw,52px);line-height:1.05;letter-spacing:-0.03em;margin:0">Apa kata mereka?</h2>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-family:var(--font-headline);font-weight:700;font-size:15px;min-width:56px">{{ tpCounter }}</span>
+          <button onClick="{{ tpPrev }}" aria-label="Sebelumnya" style="all:unset;cursor:pointer;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--dark-blue);display:flex;align-items:center;justify-content:center;font-size:18px" style-hover="background:var(--dark-blue);color:#fff">←</button>
+          <button onClick="{{ tpNext }}" aria-label="Berikutnya" style="all:unset;cursor:pointer;width:44px;height:44px;border-radius:50%;background:var(--dark-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px" style-hover="background:var(--plan-blue)">→</button>
+        </div>
+      </div>
+      <div style="margin-top:36px;display:flex;flex-wrap:wrap;gap:clamp(24px,4vw,56px);align-items:stretch">
+        <div style="flex:0 1 380px;min-width:260px;position:relative;aspect-ratio:4/5;border-radius:28px;overflow:hidden;background:{{ tpA.bg }};padding:14px;transition:background 300ms ease">
+          <div style="position:relative;width:100%;height:100%;border-radius:18px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue)">
+            <sc-for list="{{ testiPeserta }}" as="tp" hint-placeholder-count="1">
+              <div style="position:absolute;inset:0;display:{{ tp.display }}">
+                <image-slot id="{{ tp.slotId }}" shape="rect" placeholder="Cuplikan video testimoni" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+              </div>
+            </sc-for>
+            <button onClick="{{ tpA.play }}" aria-label="Putar video" style="all:unset;cursor:pointer;position:absolute;left:16px;bottom:16px;display:flex;align-items:center;gap:10px;padding:6px 18px 6px 6px;border-radius:999px;background:#fff;color:var(--dark-blue);font-weight:700;font-size:14px;box-shadow:var(--shadow-md)" style-hover="transform:scale(1.04)"><span style="width:44px;height:44px;border-radius:50%;background:var(--yellow);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md)"><span style="width:0;height:0;border-left:12px solid var(--dark-blue);border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:4px"></span></span>Putar video</button>
+          </div>
+        </div>
+        <div style="flex:1 1 420px;min-width:0;display:flex;flex-direction:column;gap:28px;padding:clamp(8px,2vw,24px) 0">
+          <span style="font-family:var(--font-headline);font-weight:700;font-size:clamp(96px,10vw,140px);line-height:0.6;height:0.45em;color:{{ tpA.bg }};transition:color 300ms ease">“</span>
+          <p style="margin:0;font-family:var(--font-headline);font-weight:700;font-size:clamp(26px,3.2vw,40px);line-height:1.2;letter-spacing:-0.02em;text-wrap:pretty">{{ tpA.quote }}</p>
+          <button onClick="{{ tpA.openPerson }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:14px">
+            <span style="width:52px;height:52px;border-radius:50%;background:{{ tpA.bg }};color:{{ tpA.fg }};display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-weight:700;font-size:17px">{{ tpA.initials }}</span>
+            <span style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-weight:700;font-size:17px">{{ tpA.name }}</span>
+              <span style="font-size:14px;color:var(--text-muted)">{{ tpA.cohort }} · Lihat profil ›</span>
+            </span>
+          </button>
+          <div style="margin-top:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;padding-top:12px">
+            <sc-for list="{{ testiPeserta }}" as="tp" hint-placeholder-count="4">
+              <button onClick="{{ tp.select }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:14px;background:{{ tp.tabBg }};color:{{ tp.tabFg }};border-top:4px solid {{ tp.bg }};transition:background 200ms ease" style-hover="background:{{ tp.tabHover }}">
+                <span style="font-weight:700;font-size:14px">{{ tp.name }}</span>
+                <span style="font-size:12px">{{ tp.cohortShort }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:clamp(64px,9vw,112px) 22px;background:var(--dark-blue);color:#fff">
+    <div style="max-width:1180px;margin:0 auto">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="font-size:15px;font-weight:700;color:var(--light-blue)">Testimoni trainer</span>
+        <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.4vw,52px);line-height:1.05;letter-spacing:-0.03em;margin:0">Apa Kata Trainer?</h2>
+      </div>
+      <div style="margin-top:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:clamp(20px,3vw,32px)">
+        <sc-for list="{{ testiTrainer }}" as="tt" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:22px">
+            <button onClick="{{ tt.play }}" aria-label="Putar video" style="all:unset;cursor:pointer;position:relative;display:block;aspect-ratio:4/5;border-radius:24px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue);transition:transform 260ms ease" style-hover="transform:translateY(-4px)">
+              <image-slot id="{{ tt.slotId }}" shape="rect" placeholder="Cuplikan video trainer" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+              <span style="position:absolute;top:16px;left:16px;padding:6px 12px;border-radius:999px;background:{{ tt.color }};color:{{ tt.fg }};font-size:12px;font-weight:700;pointer-events:none">{{ tt.trackName }}</span>
+              <span style="position:absolute;right:16px;bottom:16px;pointer-events:none"><span style="width:56px;height:56px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md)"><span style="width:0;height:0;border-left:15px solid var(--dark-blue);border-top:9px solid transparent;border-bottom:9px solid transparent;margin-left:4px"></span></span></span>
+            </button>
+            <div style="display:flex;flex-direction:column;gap:14px;padding:0 4px">
+              <p style="margin:0;font-family:var(--font-headline);font-weight:600;font-size:19px;line-height:1.4;text-wrap:pretty"><span style="color:{{ tt.color }}">“</span>{{ tt.quote }}<span style="color:{{ tt.color }}">”</span></p>
+              <div style="display:flex;flex-direction:column;gap:2px;padding-top:14px;border-top:1px solid rgba(255,255,255,.25)">
+                <span style="font-weight:700;font-size:15px">{{ tt.name }}</span>
+                <span style="font-size:13px">{{ tt.role }}</span>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:clamp(64px,9vw,112px) 22px;background:var(--yellow);color:var(--dark-blue)">
+    <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;align-items:center;text-align:center;gap:28px">
+      <span style="font-size:15px;font-weight:700">Dari Plan Indonesia</span>
+      <span style="font-family:var(--font-headline);font-weight:700;font-size:clamp(96px,10vw,140px);line-height:0.6;height:0.4em;color:var(--plan-blue)">“</span>
+      <p style="margin:0;max-width:900px;font-family:var(--font-headline);font-weight:700;font-size:clamp(28px,3.6vw,48px);line-height:1.18;letter-spacing:-0.025em;text-wrap:balance">{{ testiPlan.quote }}</p>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <span style="font-weight:700;font-size:17px">{{ testiPlan.name }}</span>
+        <span style="font-family:var(--font-caption);font-style:italic;font-size:15px">{{ testiPlan.role }}</span>
+      </div>
+      <div style="width:100%;max-width:960px;margin-top:20px;position:relative;aspect-ratio:16/9;border-radius:28px;overflow:hidden;background:#fff;color:var(--dark-blue);box-shadow:var(--shadow-lg)">
+        <image-slot id="testi-plan" shape="rect" placeholder="Cuplikan video Plan Indonesia" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+        <button onClick="{{ testiPlan.play }}" aria-label="Putar video" style="all:unset;cursor:pointer;position:absolute;left:20px;bottom:20px;display:flex;align-items:center;gap:12px;padding:8px 22px 8px 8px;border-radius:999px;background:var(--plan-blue);color:#fff;font-weight:700;font-size:15px;box-shadow:var(--shadow-md)" style-hover="transform:scale(1.04)"><span style="width:48px;height:48px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md)"><span style="width:0;height:0;border-left:13px solid var(--plan-blue);border-top:8px solid transparent;border-bottom:8px solid transparent;margin-left:4px"></span></span>Tonton pesan Plan Indonesia</button>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:clamp(64px,9vw,112px) 12px">
+    <div style="max-width:1180px;margin:0 auto;background:var(--plan-blue);color:#fff;border-radius:32px;padding:clamp(56px,8vw,96px) 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px">
+      <div style="display:flex;gap:8px">
+        <span style="width:14px;height:14px;border-radius:50%;background:var(--yellow)"></span>
+        <span style="width:14px;height:14px;border-radius:50%;background:var(--magenta)"></span>
+        <span style="width:14px;height:14px;border-radius:50%;background:var(--green)"></span>
+        <span style="width:14px;height:14px;border-radius:50%;background:var(--orange)"></span>
+      </div>
+      <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(36px,5.6vw,68px);line-height:1.04;letter-spacing:-0.035em;margin:0;text-wrap:balance">Jelajahi semua karya.</h2>
+      <p style="font-family:var(--font-headline);font-weight:500;font-size:clamp(18px,2vw,22px);margin:0">{{ ctaText }}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:center;margin-top:12px">
+        <button onClick="{{ goGalleryAll }}" style="all:unset;cursor:pointer;padding:14px 28px;border-radius:999px;background:var(--yellow);color:var(--dark-blue);font-weight:700;font-size:17px" style-hover="transform:translateY(-2px)" style-active="transform:scale(.97)">Buka galeri</button>
+        <button onClick="{{ goPeople }}" style="all:unset;cursor:pointer;font-size:17px;font-weight:700;color:#fff" style-hover="text-decoration:underline">Kenali para peserta ›</button>
+      </div>
+    </div>
+  </section>
+</sc-if>
+
+<sc-if value="{{ isGallery }}" hint-placeholder-val="{{ false }}">
+  <section style="background:{{ gHead.bg }};color:{{ gHead.fg }};padding:calc(80px + clamp(40px,6vw,72px)) 22px clamp(32px,4vw,48px);transition:background 320ms ease,color 320ms ease">
+    <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:32px">
+      <div style="display:flex;flex-wrap:wrap;gap:16px 40px;align-items:flex-end;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <span style="font-size:15px;font-weight:700">{{ gHead.eyebrow }}</span>
+          <h1 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(48px,8vw,104px);line-height:0.95;letter-spacing:-0.045em;margin:0">Galeri karya</h1>
+        </div>
+        <p style="margin:0;font-size:17px;line-height:1.5;max-width:340px">Pilih kelas, lalu saring berdasarkan jenis karya atau cari nama peserta.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:10px">
+        <sc-for list="{{ gTiles }}" as="t" hint-placeholder-count="5">
+          <button onClick="{{ t.onClick }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:16px;padding:16px 18px;border-radius:20px;background:{{ t.bg }};color:{{ t.fg }};box-shadow:var(--shadow-sm);transition:transform 200ms ease,background 200ms ease" style-hover="transform:translateY(-3px)" style-active="transform:scale(.98)">
+            <span style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+              <span style="width:16px;height:16px;border-radius:50%;background:{{ t.dot }};border:2px solid {{ t.dotRing }}"></span>
+              <span style="font-size:13px;font-weight:700">{{ t.count }}</span>
+            </span>
+            <span style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-family:var(--font-headline);font-weight:700;font-size:20px;line-height:1.1;letter-spacing:-0.01em">{{ t.city }}</span>
+              <span style="font-size:13px">{{ t.track }}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+  <div style="background:#fff;border-bottom:1px solid #ececea">
+    <div style="max-width:1180px;margin:0 auto;padding:12px 22px;display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+      <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;flex:1 1 360px;min-width:0;padding:2px 0">
+        <sc-for list="{{ typeFilters }}" as="f" hint-placeholder-count="5">
+          <button onClick="{{ f.onClick }}" style="all:unset;cursor:pointer;white-space:nowrap;padding:8px 14px;border-radius:999px;font-size:14px;font-weight:700;background:{{ f.bg }};color:{{ f.fg }};transition:background 160ms ease">{{ f.label }}</button>
+        </sc-for>
+      </div>
+      <div style="flex:0 1 320px;min-width:220px"><x-import component-from-global-scope="PlanIndonesiaDesignSystem_3e39b4.Input" placeholder="Cari judul atau nama peserta" value="{{ q }}" onChange="{{ onQ }}" hint-size="100%,44px"></x-import></div>
+    </div>
+  </div>
+  <section style="padding:28px 22px clamp(72px,10vw,120px)">
+    <div style="max-width:1180px;margin:0 auto">
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:24px">
+        <span style="font-size:15px;font-weight:700">{{ resultText }}</span>
+        <sc-if value="{{ gHasFilter }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ resetGallery }}" style="all:unset;cursor:pointer;font-size:14px;font-weight:700;color:var(--plan-blue)" style-hover="text-decoration:underline">Hapus semua filter ×</button>
+        </sc-if>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px">
+        <sc-for list="{{ galleryItems }}" as="w" hint-placeholder-count="8">
+          <button onClick="{{ w.open }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;background:#fff;border-radius:22px;overflow:hidden;border:1px solid #ececea;transition:transform 240ms ease,box-shadow 240ms ease" style-hover="transform:translateY(-6px);box-shadow:var(--shadow-lg)">
+            <div style="position:relative;aspect-ratio:4/3;background:{{ w.cTint }};display:flex;align-items:center;justify-content:center;padding:16px">
+              <span style="position:absolute;top:12px;left:12px;padding:5px 10px;border-radius:999px;background:{{ w.cColor }};color:{{ w.cFg }};font-size:12px;font-weight:700">{{ w.cLabel }}</span>
+              <span style="font-family:var(--font-caption);font-style:italic;font-size:14px;color:var(--text-muted);text-align:center">{{ w.thumbLabel }}</span>
+              <span style="position:absolute;bottom:12px;right:12px;padding:5px 10px;border-radius:999px;background:#fff;color:var(--dark-blue);font-size:12px;font-weight:700">{{ w.type }}</span>
+            </div>
+            <div style="padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px;flex:1">
+              <span style="font-family:var(--font-headline);font-weight:700;font-size:18px;line-height:1.25;letter-spacing:-0.01em;color:var(--dark-blue)">{{ w.title }}</span>
+              <span style="margin-top:auto;display:flex;align-items:center;gap:10px">
+                <span style="width:30px;height:30px;flex:none;border-radius:50%;background:{{ w.cColor }};color:{{ w.cFg }};display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-weight:700;font-size:11px">{{ w.initials }}</span>
+                <span style="flex:1;font-size:14px;font-weight:700;color:var(--dark-blue)">{{ w.personName }}</span>
+                <span style="font-size:18px;font-weight:700;color:var(--dark-blue)">→</span>
+              </span>
+            </div>
+          </button>
+        </sc-for>
+      </div>
+      <sc-if value="{{ galleryEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:72px 22px;border-radius:24px;background:var(--surface-muted);display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center">
+          <span style="font-family:var(--font-headline);font-weight:700;font-size:24px">Belum ada karya yang cocok.</span>
+          <span style="font-size:16px;color:var(--text-muted)">Coba kata kunci lain atau hapus filter.</span>
+          <button onClick="{{ resetGallery }}" style="all:unset;cursor:pointer;padding:14px 28px;border-radius:999px;background:var(--dark-blue);color:#fff;font-weight:700;font-size:16px">Hapus filter</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ galleryMore }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:56px">
+          <button onClick="{{ loadMore }}" style="all:unset;cursor:pointer;padding:14px 28px;border-radius:999px;background:var(--dark-blue);color:#fff;font-weight:700;font-size:16px" style-hover="background:var(--plan-blue)">Tampilkan lebih banyak</button>
+          <span style="font-size:13px;color:var(--text-muted)">{{ moreText }}</span>
+        </div>
+      </sc-if>
+    </div>
+  </section>
+</sc-if>
+
+<sc-if value="{{ isWork }}" hint-placeholder-val="{{ false }}">
+  <section style="padding:calc(80px + clamp(40px,6vw,72px)) 22px 40px;text-align:center">
+    <div style="max-width:880px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:14px">
+      <button onClick="{{ work.openTrack }}" style="all:unset;cursor:pointer;font-size:15px;font-weight:700;color:var(--plan-blue)">{{ work.trackName }} · {{ work.type }}</button>
+      <h1 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(36px,5.6vw,64px);line-height:1.06;letter-spacing:-0.035em;margin:0;text-wrap:balance">{{ work.title }}</h1>
+      <button onClick="{{ work.openPerson }}" style="all:unset;cursor:pointer;font-size:19px;color:var(--text-muted)" style-hover="color:var(--dark-blue)">oleh {{ work.personName }} ›</button>
+      <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:center;margin-top:12px">
+        <sc-for list="{{ work.links }}" as="l" hint-placeholder-count="2">
+          <sc-if value="{{ l.primary }}" hint-placeholder-val="{{ true }}">
+            <x-import component-from-global-scope="PlanIndonesiaDesignSystem_3e39b4.Button" variant="brand" size="md" as="a" href="#" hint-size="150px,44px">{{ l.label }}</x-import>
+          </sc-if>
+          <sc-if value="{{ l.secondary }}" hint-placeholder-val="{{ false }}">
+            <a href="#" style="font-size:17px">{{ l.label }} ›</a>
+          </sc-if>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+  <section style="padding:0 22px">
+    <div style="max-width:1180px;margin:0 auto">
+      <sc-if value="{{ work.isShot }}" hint-placeholder-val="{{ false }}">
+        <div style="background:var(--surface-muted);border-radius:24px;padding:clamp(24px,5vw,64px) clamp(16px,5vw,64px) 0;overflow:hidden">
+          <div style="max-width:960px;margin:0 auto;background:#fff;border-radius:12px 12px 0 0;box-shadow:var(--shadow-md);overflow:hidden">
+            <div style="display:flex;gap:6px;align-items:center;padding:10px 14px;border-bottom:1px solid #ececea">
+              <span style="width:10px;height:10px;border-radius:50%;background:var(--light-grey)"></span>
+              <span style="width:10px;height:10px;border-radius:50%;background:var(--light-grey)"></span>
+              <span style="width:10px;height:10px;border-radius:50%;background:var(--light-grey)"></span>
+              <span style="flex:1;text-align:center;font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ work.url }}</span>
+            </div>
+            <div style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center">
+              <span style="font-family:var(--font-caption);font-style:italic;font-size:15px;color:var(--text-muted)">Screenshot aplikasi</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ work.isDash }}" hint-placeholder-val="{{ false }}">
+        <div style="aspect-ratio:16/9;background:var(--surface-muted);border-radius:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:24px;text-align:center">
+          <span style="font-family:var(--font-headline);font-weight:600;font-size:19px">Embed dashboard interaktif</span>
+          <span style="font-family:var(--font-caption);font-style:italic;font-size:14px;color:var(--text-muted)">Looker Studio / Tableau Public dimuat di sini</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{ work.isPdf }}" hint-placeholder-val="{{ false }}">
+        <div style="background:var(--surface-muted);border-radius:24px;padding:clamp(32px,6vw,80px) 22px;display:flex;justify-content:center">
+          <div style="width:min(100%,400px);aspect-ratio:1/1.414;background:#fff;border-radius:6px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;padding:32px;gap:10px">
+            <span style="font-size:11px;font-weight:700;color:var(--plan-blue)">{{ work.trackName }}</span>
+            <span style="font-family:var(--font-headline);font-weight:700;font-size:20px;line-height:1.2;letter-spacing:-0.01em">{{ work.title }}</span>
+            <span style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--font-caption);font-style:italic;font-size:14px;color:var(--text-muted);text-align:center">Pratinjau PDF · {{ work.pdfPages }} halaman</span>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ work.isSocial }}" hint-placeholder-val="{{ false }}">
+        <div style="background:var(--surface-muted);border-radius:24px;padding:clamp(24px,5vw,64px)">
+          <div style="max-width:{{ work.socialW }};margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+            <sc-for list="{{ work.slots }}" as="sl" hint-placeholder-count="6">
+              <div style="aspect-ratio:{{ work.slotRatio }};background:#fff;border-radius:12px;display:flex;align-items:flex-end;padding:12px">
+                <span style="font-family:var(--font-caption);font-style:italic;font-size:12px;color:var(--text-muted)">{{ sl }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+      <p style="text-align:center;font-family:var(--font-caption);font-style:italic;font-size:13px;color:var(--text-muted);margin:14px 0 0">{{ work.mediaCaption }}</p>
+    </div>
+  </section>
+  <section style="padding:clamp(56px,8vw,96px) 22px">
+    <div style="max-width:880px;margin:0 auto;display:flex;flex-wrap:wrap;gap:48px">
+      <p style="flex:1 1 380px;margin:0;font-family:var(--font-headline);font-weight:500;font-size:clamp(19px,2vw,22px);line-height:1.45;letter-spacing:-0.01em;text-wrap:pretty">{{ work.desc }}</p>
+      <dl style="flex:1 1 280px;margin:0;display:flex;flex-direction:column">
+        <sc-for list="{{ work.specs }}" as="sp" hint-placeholder-count="4">
+          <div style="display:flex;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid #ececea;font-size:15px">
+            <dt style="color:var(--text-muted)">{{ sp.k }}</dt>
+            <dd style="margin:0;text-align:right">{{ sp.v }}</dd>
+          </div>
+        </sc-for>
+      </dl>
+    </div>
+  </section>
+  <sc-if value="{{ work.hasRelated }}" hint-placeholder-val="{{ false }}">
+    <section style="padding:clamp(56px,8vw,96px) 22px;background:var(--surface-muted)">
+      <div style="max-width:1180px;margin:0 auto">
+        <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(28px,3.4vw,40px);line-height:1.1;letter-spacing:-0.025em;margin:0;text-align:center">Karya serupa.</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;margin-top:40px">
+          <sc-for list="{{ work.related }}" as="w" hint-placeholder-count="4">
+            <button onClick="{{ w.open }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:14px;background:#fff;border-radius:18px;padding:14px 14px 20px;transition:transform 240ms ease" style-hover="transform:scale(1.015)">
+              <div style="aspect-ratio:4/3;border-radius:12px;background:{{ w.tint }};display:flex;align-items:center;justify-content:center">
+                <span style="font-family:var(--font-caption);font-style:italic;font-size:13px;color:var(--text-muted)">{{ w.thumbLabel }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;padding:0 4px">
+                <span style="font-family:var(--font-headline);font-weight:600;font-size:16px;line-height:1.25">{{ w.title }}</span>
+                <span style="font-size:14px;color:var(--text-muted)">{{ w.personName }}</span>
+              </div>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+  </sc-if>
+</sc-if>
+
+<sc-if value="{{ isPeople }}" hint-placeholder-val="{{ false }}">
+  <section style="background:{{ pHead.bg }};color:{{ pHead.fg }};padding:calc(80px + clamp(40px,6vw,72px)) 22px clamp(32px,4vw,48px);transition:background 320ms ease,color 320ms ease">
+    <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:32px">
+      <div style="display:flex;flex-wrap:wrap;gap:16px 40px;align-items:flex-end;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <span style="font-size:15px;font-weight:700">{{ pHead.eyebrow }}</span>
+          <h1 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(48px,8vw,104px);line-height:0.95;letter-spacing:-0.045em;margin:0">Para peserta</h1>
+        </div>
+        <p style="margin:0;font-size:17px;line-height:1.5;max-width:340px">Kenali peserta dari setiap kelas. Klik kartu untuk melihat profil dan karyanya.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:10px">
+        <sc-for list="{{ pTiles }}" as="t" hint-placeholder-count="5">
+          <button onClick="{{ t.onClick }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:16px;padding:16px 18px;border-radius:20px;background:{{ t.bg }};color:{{ t.fg }};box-shadow:var(--shadow-sm);transition:transform 200ms ease,background 200ms ease" style-hover="transform:translateY(-3px)" style-active="transform:scale(.98)">
+            <span style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+              <span style="width:16px;height:16px;border-radius:50%;background:{{ t.dot }};border:2px solid {{ t.dotRing }}"></span>
+              <span style="font-size:13px;font-weight:700">{{ t.count }}</span>
+            </span>
+            <span style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-family:var(--font-headline);font-weight:700;font-size:20px;line-height:1.1;letter-spacing:-0.01em">{{ t.city }}</span>
+              <span style="font-size:13px">{{ t.track }}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+  <div style="background:#fff;border-bottom:1px solid #ececea">
+    <div style="max-width:1180px;margin:0 auto;padding:12px 22px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between">
+      <span style="font-size:15px;font-weight:700">{{ peopleText }}</span>
+      <div style="flex:0 1 320px;min-width:220px"><x-import component-from-global-scope="PlanIndonesiaDesignSystem_3e39b4.Input" placeholder="Cari nama peserta" value="{{ pq }}" onChange="{{ onPq }}" hint-size="100%,44px"></x-import></div>
+    </div>
+  </div>
+  <section style="padding:32px 22px clamp(72px,10vw,120px)">
+    <div style="max-width:1180px;margin:0 auto">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px">
+        <sc-for list="{{ peopleItems }}" as="p" hint-placeholder-count="12">
+          <button onClick="{{ p.open }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;background:#fff;border-radius:24px;overflow:hidden;border:1px solid #ececea;transition:transform 240ms ease,box-shadow 240ms ease" style-hover="transform:translateY(-6px);box-shadow:var(--shadow-lg)">
+            <div style="position:relative;height:104px;background:{{ p.cColor }};color:{{ p.cFg }}">
+              <span style="position:absolute;top:14px;right:16px;font-size:12px;font-weight:700">{{ p.workLabel }}</span>
+              <span style="position:absolute;left:18px;bottom:-38px;width:84px;height:84px;border-radius:50%;background:{{ p.cTint }};border:4px solid #fff;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-weight:700;font-size:26px;color:var(--dark-blue)">{{ p.initials }}</span>
+            </div>
+            <div style="padding:50px 18px 20px;display:flex;flex-direction:column;gap:4px;flex:1">
+              <span style="font-family:var(--font-headline);font-weight:700;font-size:19px;line-height:1.15;color:var(--dark-blue)">{{ p.name }}</span>
+              <span style="font-size:13px;color:var(--text-muted)">{{ p.cLabel }}</span>
+              <span style="margin-top:14px;font-size:14px;font-weight:700;color:var(--dark-blue)">Lihat profil →</span>
+            </div>
+          </button>
+        </sc-for>
+      </div>
+      <sc-if value="{{ peopleEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:72px 22px;border-radius:24px;background:var(--surface-muted);text-align:center;font-family:var(--font-headline);font-weight:700;font-size:22px">Tidak ada peserta dengan nama itu.</div>
+      </sc-if>
+      <sc-if value="{{ peopleMore }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;justify-content:center;margin-top:56px">
+          <button onClick="{{ loadMorePeople }}" style="all:unset;cursor:pointer;padding:14px 28px;border-radius:999px;background:var(--dark-blue);color:#fff;font-weight:700;font-size:16px" style-hover="background:var(--plan-blue)">Tampilkan lebih banyak</button>
+        </div>
+      </sc-if>
+    </div>
+  </section>
+</sc-if>
+
+<sc-if value="{{ isPerson }}" hint-placeholder-val="{{ false }}">
+  <section style="background:{{ person.cColor }};color:{{ person.cFg }};padding:104px 22px clamp(56px,8vw,96px)">
+    <div style="max-width:1180px;margin:0 auto">
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between">
+        <button onClick="{{ goPeople }}" style="all:unset;cursor:pointer;font-weight:700;font-size:14px;text-decoration:underline">← Semua peserta</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:13px;font-weight:700;margin-right:4px">{{ person.posText }}</span>
+          <button onClick="{{ person.prev }}" aria-label="Peserta sebelumnya" style="all:unset;cursor:pointer;width:40px;height:40px;border-radius:50%;background:#fff;color:var(--dark-blue);display:flex;align-items:center;justify-content:center;font-size:17px">←</button>
+          <button onClick="{{ person.next }}" aria-label="Peserta berikutnya" style="all:unset;cursor:pointer;width:40px;height:40px;border-radius:50%;background:#fff;color:var(--dark-blue);display:flex;align-items:center;justify-content:center;font-size:17px">→</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:clamp(28px,5vw,64px);align-items:center;margin-top:clamp(28px,4vw,48px)">
+        <div style="flex:0 0 auto;width:clamp(160px,22vw,260px);aspect-ratio:1;border-radius:50%;overflow:hidden;background:#fff;border:6px solid #fff;color:var(--dark-blue);position:relative;box-shadow:var(--shadow-lg)">
+          <image-slot id="{{ person.slotId }}" shape="circle" placeholder="Foto peserta" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+        </div>
+        <div style="flex:1 1 420px;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:16px">
+          <span style="padding:6px 14px;border-radius:999px;background:#fff;color:var(--dark-blue);font-size:14px;font-weight:700">{{ person.cLabel }}</span>
+          <h1 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(48px,7vw,96px);line-height:0.95;letter-spacing:-0.045em;margin:0">{{ person.name }}</h1>
+          <p style="margin:0;font-size:19px;line-height:1.5;max-width:580px;text-wrap:pretty">{{ person.bio }}</p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ person.skills }}" as="sk" hint-placeholder-count="4">
+              <span style="font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;border:2px solid {{ person.cFg }}">{{ sk }}</span>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px">
+            <a href="#" style="padding:12px 22px;border-radius:999px;background:#fff;color:var(--dark-blue);font-weight:700;font-size:15px;text-decoration:none">LinkedIn</a>
+            <a href="#" style="padding:10px 20px;border-radius:999px;border:2px solid {{ person.cFg }};color:{{ person.cFg }};font-weight:700;font-size:15px;text-decoration:none">{{ person.portfolioLabel }}</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section style="padding:clamp(48px,7vw,88px) 22px">
+    <div style="max-width:1180px;margin:0 auto">
+      <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.4vw,52px);line-height:1;letter-spacing:-0.03em;margin:0;display:flex;align-items:center;gap:14px">Karya <span style="font-size:0.5em;padding:6px 14px;border-radius:999px;background:{{ person.cColor }};color:{{ person.cFg }};letter-spacing:0">{{ person.workCount }}</span></h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:20px;margin-top:32px">
+        <sc-for list="{{ person.works }}" as="w" hint-placeholder-count="2">
+          <button onClick="{{ w.open }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;background:#fff;border-radius:22px;overflow:hidden;border:1px solid #ececea;transition:transform 240ms ease,box-shadow 240ms ease" style-hover="transform:translateY(-6px);box-shadow:var(--shadow-lg)">
+            <div style="position:relative;aspect-ratio:4/3;background:{{ w.cTint }};display:flex;align-items:center;justify-content:center;padding:16px">
+              <span style="position:absolute;top:12px;left:12px;padding:5px 10px;border-radius:999px;background:{{ w.cColor }};color:{{ w.cFg }};font-size:12px;font-weight:700">{{ w.cLabel }}</span>
+              <span style="font-family:var(--font-caption);font-style:italic;font-size:14px;color:var(--text-muted);text-align:center">{{ w.thumbLabel }}</span>
+              <span style="position:absolute;bottom:12px;right:12px;padding:5px 10px;border-radius:999px;background:#fff;color:var(--dark-blue);font-size:12px;font-weight:700">{{ w.type }}</span>
+            </div>
+            <div style="padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px;flex:1">
+              <span style="font-family:var(--font-headline);font-weight:700;font-size:18px;line-height:1.25;letter-spacing:-0.01em;color:var(--dark-blue)">{{ w.title }}</span>
+              <span style="margin-top:auto;display:flex;align-items:center;gap:10px">
+                <span style="width:30px;height:30px;flex:none;border-radius:50%;background:{{ w.cColor }};color:{{ w.cFg }};display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-weight:700;font-size:11px">{{ w.initials }}</span>
+                <span style="flex:1;font-size:14px;font-weight:700;color:var(--dark-blue)">{{ w.personName }}</span>
+                <span style="font-size:18px;font-weight:700;color:var(--dark-blue)">→</span>
+              </span>
+            </div>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+  <section style="padding:clamp(48px,7vw,80px) 0 clamp(72px,10vw,120px);background:{{ person.cTint }}">
+    <div style="max-width:1180px;margin:0 auto;padding:0 22px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between">
+      <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(26px,3vw,36px);line-height:1.1;letter-spacing:-0.025em;margin:0">Teman sekelas</h2>
+      <button onClick="{{ person.openCohort }}" style="all:unset;cursor:pointer;font-size:15px;font-weight:700;color:var(--dark-blue)" style-hover="text-decoration:underline">Lihat semua di kelas ini →</button>
+    </div>
+    <div style="max-width:1180px;margin:0 auto;display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;padding:24px 22px 8px;scroll-snap-type:x mandatory">
+      <sc-for list="{{ person.mates }}" as="m" hint-placeholder-count="8">
+        <button onClick="{{ m.open }}" style="all:unset;cursor:pointer;flex:0 0 160px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:20px 12px;border-radius:20px;background:#fff;transition:transform 200ms ease" style-hover="transform:translateY(-4px)">
+          <span style="width:72px;height:72px;border-radius:50%;background:{{ m.cColor }};color:{{ m.cFg }};display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-weight:700;font-size:22px">{{ m.initials }}</span>
+          <span style="font-weight:700;font-size:15px;color:var(--dark-blue)">{{ m.name }}</span>
+          <span style="font-size:12px;color:var(--text-muted)">{{ m.workLabel }}</span>
+        </button>
+      </sc-for>
+    </div>
+  </section>
+</sc-if>
+
+<sc-if value="{{ isAbout }}" hint-placeholder-val="{{ false }}">
+  <section style="padding:calc(80px + clamp(56px,9vw,112px)) 22px clamp(56px,8vw,96px);text-align:center;background:var(--yellow);color:var(--dark-blue)">
+    <div style="max-width:880px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:16px">
+      <span style="font-size:17px;font-weight:700;color:var(--dark-blue)">Tentang bootcamp</span>
+      <h1 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(44px,7vw,80px);line-height:1.04;letter-spacing:-0.035em;margin:0;text-wrap:balance">Belajar dari praktik. Pulang membawa karya.</h1>
+      <p style="font-family:var(--font-headline);font-weight:500;font-size:clamp(19px,2.2vw,24px);line-height:1.35;margin:8px 0 0;max-width:640px;text-wrap:balance">Future Makers adalah bootcamp keterampilan digital untuk kaum muda. Setiap peserta menyelesaikan proyek nyata di akhir program.</p>
+    </div>
+  </section>
+  <section style="padding:clamp(48px,7vw,80px) 12px clamp(56px,8vw,96px)">
+    <div style="max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px">
+      <sc-for list="{{ trackCards }}" as="t" hint-placeholder-count="3">
+        <div style="background:{{ t.color }};color:{{ t.fg }};border-radius:24px;padding:40px 32px;display:flex;flex-direction:column;gap:14px">
+          <h2 style="font-family:var(--font-headline);font-weight:700;font-size:28px;line-height:1.1;letter-spacing:-0.025em;margin:0">{{ t.name }}</h2>
+          <p style="margin:0;font-size:17px;line-height:1.45">{{ t.desc }}</p>
+          <ul style="margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column">
+            <sc-for list="{{ t.outputs }}" as="o" hint-placeholder-count="3">
+              <li style="font-size:15px;font-weight:700;padding:12px 0;border-top:2px solid {{ t.fg }}">{{ o }}</li>
+            </sc-for>
+          </ul>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+  <section style="padding:clamp(56px,8vw,96px) 22px clamp(72px,10vw,120px);text-align:center;background:var(--plan-blue);color:#fff">
+    <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:14px">
+      <span style="font-size:15px;color:var(--yellow);font-weight:700">Diselenggarakan oleh</span>
+      <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(28px,3.4vw,40px);line-height:1.1;letter-spacing:-0.025em;margin:0">Yayasan Plan International Indonesia</h2>
+      <p style="margin:0;font-size:17px;line-height:1.6;text-wrap:pretty">Plan Indonesia bekerja di Indonesia sejak 1969 dan menjalankan program perlindungan anak, kesehatan remaja, ketenagakerjaan dan kewirausahaan kaum muda, serta kesiapsiagaan bencana. Kami tidak akan berhenti sampai semua setara.</p>
+      <button onClick="{{ goGalleryAll }}" style="all:unset;cursor:pointer;margin-top:12px;padding:14px 28px;border-radius:999px;background:var(--yellow);color:var(--dark-blue);font-weight:700;font-size:17px" style-hover="transform:translateY(-2px)">Lihat karya peserta</button>
+    </div>
+  </section>
+</sc-if>
+
+<sc-if value="{{ modal.open }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ modal.close }}" style="position:fixed;inset:0;z-index:50;background:rgba(36,60,75,.94);display:flex;align-items:center;justify-content:center;padding:24px">
+    <div onClick="{{ modal.stop }}" style="width:min(100%,960px);display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;color:#fff">
+        <span style="font-family:var(--font-headline);font-weight:700;font-size:18px">{{ modal.title }}</span>
+        <button onClick="{{ modal.close }}" aria-label="Tutup" style="all:unset;cursor:pointer;width:40px;height:40px;border-radius:50%;background:#fff;color:var(--dark-blue);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">×</button>
+      </div>
+      <div style="position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#000">
+        <sc-if value="{{ modal.isYT }}" hint-placeholder-val="{{ false }}"><iframe src="{{ modal.embed }}" title="{{ modal.title }}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen="true" style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe></sc-if>
+        <sc-if value="{{ modal.isFile }}" hint-placeholder-val="{{ false }}"><video src="{{ modal.src }}" controls="true" autoPlay="true" playsInline="true" style="position:absolute;inset:0;width:100%;height:100%"></video></sc-if>
+        <sc-if value="{{ modal.empty }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#fff;text-align:center;padding:24px"><span style="font-family:var(--font-headline);font-weight:700;font-size:20px">Video belum ditambahkan</span><span style="font-size:15px">Video testimoni akan diputar di sini.</span></div></sc-if>
+      </div>
+    </div>
+  </div>
+</sc-if>
+<sc-if value="{{ isDocs }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;top:0;left:0;z-index:50;height:4px;width:{{ docPagePct }};background:var(--magenta);transition:width 80ms linear"></div>
+
+  <section style="background:var(--dark-blue);color:#fff;padding:calc(80px + clamp(48px,7vw,88px)) 22px clamp(56px,8vw,96px);overflow:hidden">
+    <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(40px,6vw,72px)">
+      <div style="display:flex;flex-wrap:wrap;gap:24px 48px;align-items:flex-end;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <span style="font-size:15px;font-weight:700;color:var(--yellow)">{{ docEyebrow }}</span>
+          <h1 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(52px,9vw,120px);line-height:0.92;letter-spacing:-0.045em;margin:0">Dokumentasi <span style="display:inline-block;background:var(--yellow);color:var(--dark-blue);padding:0 0.12em 0.06em">kelas</span></h1>
+        </div>
+        <p style="margin:0;font-size:18px;line-height:1.5;max-width:380px;text-wrap:pretty">Foto dan momen selama bootcamp, dari hari pertama sampai presentasi akhir. Pilih kelas untuk melihat dokumentasinya.</p>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <sc-for list="{{ docChips }}" as="c" hint-placeholder-count="5">
+          <button onClick="{{ c.onClick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;font-weight:700;font-size:15px;background:{{ c.bg }};color:{{ c.fg }};border:2px solid {{ c.border }};transition:background 200ms ease" style-active="transform:scale(.97)"><span style="width:10px;height:10px;border-radius:50%;background:{{ c.dot }}"></span>{{ c.label }}</button>
+        </sc-for>
+      </div>
+      <div style="display:flex;justify-content:center;padding:20px 0 12px">
+        <sc-for list="{{ docHero }}" as="h" hint-placeholder-count="5">
+          <div style="position:relative;flex:0 0 clamp(130px,19vw,250px);aspect-ratio:3/4;margin:0 clamp(-28px,-2.4vw,-14px);transform:rotate({{ h.rot }}) translateY({{ h.ty }});background:#fff;padding:8px 8px 34px;box-shadow:var(--shadow-lg);transition:transform 280ms ease;z-index:{{ h.z }}" style-hover="transform:rotate(0deg) translateY(-12px) scale(1.06);z-index:9">
+            <div style="position:relative;width:100%;height:100%;background:var(--surface-muted);color:var(--dark-blue);overflow:hidden">
+              <image-slot id="{{ h.slotId }}" shape="rect" placeholder="Foto kegiatan" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+              <button onClick="{{ h.open }}" aria-label="Perbesar foto" style="all:unset;cursor:pointer;position:absolute;top:10px;right:10px;z-index:2;width:34px;height:34px;border-radius:50%;background:#fff;color:var(--dark-blue);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);transition:transform 160ms ease" style-hover="transform:scale(1.1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path></svg></button>
+            </div>
+            <span style="position:absolute;left:10px;right:10px;bottom:9px;font-family:var(--font-caption);font-style:italic;font-size:13px;color:var(--dark-blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ h.caption }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section ref="{{ filmRef }}" style="position:relative;height:360vh;background:var(--plan-blue);color:#fff">
+    <div style="position:sticky;top:0;height:100vh;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:clamp(20px,3vw,36px);padding-top:76px">
+      <div style="width:100%;max-width:1180px;margin:0 auto;padding:0 22px;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:15px;font-weight:700;color:var(--yellow)">Perjalanan kelas</span>
+          <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.6vw,60px);line-height:1;letter-spacing:-0.035em;margin:0">Minggu demi minggu.</h2>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;min-width:240px">
+          <span style="font-family:var(--font-headline);font-weight:700;font-size:15px;white-space:nowrap">{{ filmCounter }}</span>
+          <div style="flex:1;height:6px;border-radius:999px;background:rgba(255,255,255,.3);overflow:hidden">
+            <div style="height:100%;width:{{ filmPct }};background:var(--yellow);border-radius:999px"></div>
+          </div>
+        </div>
+      </div>
+      <div ref="{{ trackRef }}" style="display:flex;gap:clamp(16px,2vw,28px);width:max-content;padding:0 max(22px,calc((100vw - 1180px) / 2));transform:translateX({{ filmX }});will-change:transform">
+        <sc-for list="{{ docFilm }}" as="fm" hint-placeholder-count="4">
+          <div style="flex:0 0 clamp(280px,54vw,760px);display:flex;flex-direction:column;gap:16px;opacity:{{ fm.op }};transition:opacity 300ms ease">
+            <div style="position:relative;aspect-ratio:16/10;max-height:58vh;border-radius:24px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue)">
+              <image-slot id="{{ fm.slotId }}" shape="rect" placeholder="Foto dokumentasi" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+              <span style="position:absolute;top:14px;left:14px;z-index:2;padding:5px 12px;border-radius:999px;background:{{ fm.color }};color:{{ fm.fg }};font-size:12px;font-weight:700;pointer-events:none">{{ fm.cohortLabel }}</span>
+              <button onClick="{{ fm.open }}" aria-label="Perbesar foto" style="all:unset;cursor:pointer;position:absolute;top:10px;right:10px;z-index:2;width:34px;height:34px;border-radius:50%;background:#fff;color:var(--dark-blue);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);transition:transform 160ms ease" style-hover="transform:scale(1.1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path></svg></button>
+            </div>
+            <div style="display:flex;gap:16px;align-items:flex-start">
+              <span style="font-family:var(--font-headline);font-weight:700;font-size:clamp(36px,4vw,56px);line-height:0.9;letter-spacing:-0.04em;color:var(--yellow)">{{ fm.num }}</span>
+              <span style="display:flex;flex-direction:column;gap:4px;padding-top:2px">
+                <span style="font-family:var(--font-headline);font-weight:700;font-size:clamp(18px,1.8vw,24px);line-height:1.15">{{ fm.title }}</span>
+                <span style="font-size:15px;line-height:1.45;max-width:460px">{{ fm.caption }}</span>
+              </span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:clamp(64px,9vw,112px) 22px">
+    <div style="max-width:1180px;margin:0 auto">
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:36px">
+        <span style="font-size:15px;font-weight:700;color:var(--magenta)">Sorotan momen</span>
+        <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.4vw,52px);line-height:1.05;letter-spacing:-0.03em;margin:0">Dari kelas ke panggung.</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-auto-rows:clamp(96px,13vw,170px);grid-auto-flow:dense;gap:clamp(8px,1.2vw,14px)">
+        <sc-for list="{{ docBento }}" as="b" hint-placeholder-count="11">
+          <div style="grid-column:span {{ b.c }};grid-row:span {{ b.r }};position:relative;border-radius:20px;overflow:hidden;background:{{ b.bg }};color:{{ b.fg }}">
+            <sc-if value="{{ b.isPhoto }}" hint-placeholder-val="{{ true }}">
+              <image-slot id="{{ b.slotId }}" shape="rect" placeholder="Foto kegiatan" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+              <span style="position:absolute;left:12px;bottom:12px;z-index:2;padding:5px 12px;border-radius:999px;background:#fff;color:var(--dark-blue);font-size:12px;font-weight:700;pointer-events:none">{{ b.caption }}</span>
+              <button onClick="{{ b.open }}" aria-label="Perbesar foto" style="all:unset;cursor:pointer;position:absolute;top:10px;right:10px;z-index:2;width:34px;height:34px;border-radius:50%;background:#fff;color:var(--dark-blue);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);transition:transform 160ms ease" style-hover="transform:scale(1.1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path></svg></button>
+            </sc-if>
+            <sc-if value="{{ b.isText }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;padding:clamp(12px,1.6vw,20px);display:flex;flex-direction:column;justify-content:flex-end">
+                <span style="font-family:var(--font-headline);font-weight:700;font-size:clamp(20px,2.6vw,36px);line-height:0.95;letter-spacing:-0.03em">{{ b.word }}</span>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <sc-for list="{{ docKelas }}" as="k" hint-placeholder-count="4">
+    <section style="background:{{ k.color }};color:{{ k.fg }};padding:clamp(56px,8vw,96px) 22px">
+      <div style="max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:clamp(28px,4vw,56px);align-items:stretch">
+        <div style="flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:14px;justify-content:space-between">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <span style="font-size:15px;font-weight:700">{{ k.num }} · {{ k.track }}</span>
+            <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(40px,5.4vw,80px);line-height:0.92;letter-spacing:-0.045em;margin:0;overflow-wrap:anywhere">{{ k.city }}</h2>
+            <p style="margin:6px 0 0;font-size:17px;line-height:1.5;max-width:360px">{{ k.desc }}</p>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px">
+            <button onClick="{{ k.openWorks }}" style="all:unset;cursor:pointer;padding:12px 22px;border-radius:999px;background:#fff;color:var(--dark-blue);font-weight:700;font-size:15px" style-hover="transform:translateY(-2px)">Karya kelas ini</button>
+            <button onClick="{{ k.openPeople }}" style="all:unset;cursor:pointer;padding:10px 20px;border-radius:999px;border:2px solid {{ k.fg }};font-weight:700;font-size:15px">Peserta</button>
+          </div>
+        </div>
+        <div style="flex:2 1 520px;min-width:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,clamp(120px,15vw,200px));gap:12px">
+          <sc-for list="{{ k.photos }}" as="kp" hint-placeholder-count="4">
+            <div style="grid-column:{{ kp.gc }};grid-row:{{ kp.gr }};position:relative;border-radius:18px;overflow:hidden;background:#fff;color:var(--dark-blue)">
+              <image-slot id="{{ kp.slotId }}" shape="rect" placeholder="Foto kelas" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+              <button onClick="{{ kp.open }}" aria-label="Perbesar foto" style="all:unset;cursor:pointer;position:absolute;top:10px;right:10px;z-index:2;width:34px;height:34px;border-radius:50%;background:#fff;color:var(--dark-blue);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);transition:transform 160ms ease" style-hover="transform:scale(1.1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path></svg></button>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+  </sc-for>
+
+  <section style="padding:clamp(64px,9vw,112px) 22px">
+    <div style="max-width:1180px;margin:0 auto">
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:36px">
+        <span style="font-size:15px;font-weight:700;color:var(--plan-blue)">Momen lainnya</span>
+        <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.4vw,52px);line-height:1.05;letter-spacing:-0.03em;margin:0">Di sela-sela kelas.</h2>
+      </div>
+      <div style="columns:3 260px;column-gap:16px">
+        <sc-for list="{{ docMasonry }}" as="m" hint-placeholder-count="12">
+          <figure style="break-inside:avoid;margin:0 0 16px;display:flex;flex-direction:column;gap:8px">
+            <div style="position:relative;aspect-ratio:{{ m.ratio }};border-radius:16px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue);border-bottom:5px solid {{ m.color }}">
+              <image-slot id="{{ m.slotId }}" shape="rect" placeholder="Foto kegiatan" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+              <button onClick="{{ m.open }}" aria-label="Perbesar foto" style="all:unset;cursor:pointer;position:absolute;top:10px;right:10px;z-index:2;width:34px;height:34px;border-radius:50%;background:#fff;color:var(--dark-blue);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);transition:transform 160ms ease" style-hover="transform:scale(1.1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path></svg></button>
+            </div>
+            <figcaption style="display:flex;justify-content:space-between;gap:12px;padding:0 4px;font-size:13px">
+              <span style="font-family:var(--font-caption);font-style:italic">{{ m.caption }}</span>
+              <span style="color:var(--text-muted);white-space:nowrap">{{ m.city }}</span>
+            </figcaption>
+          </figure>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="background:var(--yellow);color:var(--dark-blue);padding:clamp(64px,9vw,112px) 22px;overflow:hidden">
+    <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:clamp(32px,5vw,56px)">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
+        <span style="font-size:15px;font-weight:700">Papan kenangan</span>
+        <h2 style="font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.4vw,52px);line-height:1.05;letter-spacing:-0.03em;margin:0">Yang akan selalu diingat.</h2>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(12px,2vw,28px)">
+        <sc-for list="{{ docPolaroid }}" as="pl" hint-placeholder-count="6">
+          <div style="position:relative;flex:0 0 clamp(150px,22vw,250px);background:#fff;padding:10px 10px 0;box-shadow:var(--shadow-md);transform:rotate({{ pl.rot }});transition:transform 260ms ease" style-hover="transform:rotate(0deg) scale(1.05)">
+            <span style="position:absolute;top:-10px;left:50%;width:64px;height:20px;margin-left:-32px;background:{{ pl.tape }};opacity:.85;transform:rotate(-3deg);z-index:3"></span>
+            <div style="position:relative;aspect-ratio:1;background:var(--surface-muted);color:var(--dark-blue);overflow:hidden">
+              <image-slot id="{{ pl.slotId }}" shape="rect" placeholder="Foto" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+              <button onClick="{{ pl.open }}" aria-label="Perbesar foto" style="all:unset;cursor:pointer;position:absolute;top:10px;right:10px;z-index:2;width:34px;height:34px;border-radius:50%;background:#fff;color:var(--dark-blue);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);transition:transform 160ms ease" style-hover="transform:scale(1.1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path></svg></button>
+            </div>
+            <p style="margin:0;padding:12px 4px 16px;text-align:center;font-family:var(--font-caption);font-style:italic;font-size:15px">{{ pl.caption }}</p>
+          </div>
+        </sc-for>
+      </div>
+      <button onClick="{{ goGalleryAll }}" style="all:unset;cursor:pointer;padding:14px 28px;border-radius:999px;background:var(--dark-blue);color:#fff;font-weight:700;font-size:16px" style-hover="background:var(--plan-blue)">Lihat karya peserta</button>
+    </div>
+  </section>
+
+  <sc-if value="{{ lbOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:60;background:rgba(20,34,43,.94);color:#fff;display:flex;flex-direction:column;padding:20px clamp(16px,3vw,32px)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:16px">
+        <span style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700"><span style="width:10px;height:10px;border-radius:50%;background:{{ lbCur.color }}"></span>{{ lbCur.cohortLabel }}</span>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-family:var(--font-headline);font-weight:700;font-size:14px">{{ lbCounter }}</span>
+          <button onClick="{{ lbClose }}" aria-label="Tutup" style="all:unset;cursor:pointer;width:44px;height:44px;border-radius:50%;background:#fff;color:var(--dark-blue);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700">×</button>
+        </div>
+      </div>
+      <div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;gap:16px;padding:20px 0">
+        <button onClick="{{ lbPrev }}" aria-label="Sebelumnya" style="all:unset;cursor:pointer;flex:none;width:48px;height:48px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:20px">←</button>
+        <div style="position:relative;flex:1;max-width:1100px;height:100%;max-height:78vh;border-radius:16px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue)">
+          <sc-for list="{{ lbItems }}" as="li" hint-placeholder-count="1">
+            <div style="position:absolute;inset:0;display:{{ li.display }}">
+              <image-slot id="{{ li.slotId }}" shape="rect" fit="contain" placeholder="Foto dokumentasi" style="position:absolute;inset:0;width:100%;height:100%"></image-slot>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ lbNext }}" aria-label="Berikutnya" style="all:unset;cursor:pointer;flex:none;width:48px;height:48px;border-radius:50%;background:#fff;color:var(--dark-blue);display:flex;align-items:center;justify-content:center;font-size:20px">→</button>
+      </div>
+      <p style="margin:0;text-align:center;font-family:var(--font-caption);font-style:italic;font-size:16px">{{ lbCur.caption }}</p>
+    </div>
+  </sc-if>
+</sc-if>
+</main>
+
+<footer style="background:var(--surface-muted);padding:32px 22px">
+  <div style="max-width:1024px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:12px;color:var(--text-muted)">
+    <span>Pameran Karya Bootcamp Future Makers 2026 · Plan Indonesia</span>
+    <span>Sampai semua setara</span>
+  </div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;afterMovieUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Hero&quot;},&quot;slideInterval&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:5,&quot;min&quot;:2,&quot;max&quot;:15,&quot;step&quot;:1,&quot;unit&quot;:&quot;detik&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Dokumentasi&quot;},&quot;pageSize&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:24,&quot;min&quot;:8,&quot;max&quot;:60,&quot;step&quot;:4,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Galeri&quot;}}">
+const TRACKS = {
+  web: { key: 'web', name: 'Web Programming', short: 'Web Programming', color: '#0072CE', fg: '#FFFFFF', tint: '#E3EFF9',
+    tagline: 'Aplikasi yang dibangun dari rancangan sampai siap dipakai.',
+    desc: 'Peserta membangun aplikasi web dari rancangan antarmuka sampai siap dipakai pengguna.',
+    types: ['Aplikasi Web', 'Landing Page', 'REST API'],
+    outputs: ['Aplikasi web dengan demo yang bisa dicoba', 'Repositori kode di GitHub', 'Dokumentasi fitur dan API'] },
+  da: { key: 'da', name: 'Data Analyst', short: 'Data Analyst', color: '#8AC208', fg: '#243C4B', tint: '#EEF6DC',
+    tagline: 'Dari data mentah ke dashboard yang menjawab pertanyaan.',
+    desc: 'Peserta mengolah data mentah menjadi dataset bersih, analisis, dan dashboard.',
+    types: ['Data Cleaning', 'Dashboard', 'Analisis Data'],
+    outputs: ['Dataset hasil data cleaning', 'Dashboard interaktif (Looker Studio / Tableau)', 'Laporan analisis dan rekomendasi'] },
+  smm: { key: 'smm', name: 'Social Media Marketing', short: 'SMM', color: '#DC0080', fg: '#FFFFFF', tint: '#FBE5F2',
+    tagline: 'Konten, campaign, dan laporan performanya.',
+    desc: 'Peserta merancang konten, menjalankan campaign, dan melaporkan performanya.',
+    types: ['Konten Feed', 'Reels & TikTok', 'Laporan Campaign', 'Kalender Konten'],
+    outputs: ['Konten feed, Reels, dan TikTok', 'Laporan performa campaign', 'Kalender konten bulanan'] }
+};
+const TYPE = {
+  'Aplikasi Web': { kind: 'shot', thumb: 'Screenshot aplikasi', tools: ['React', 'Node.js', 'PostgreSQL'], links: ['Lihat demo', 'Kode di GitHub'],
+    titles: ['Sistem Antrean Puskesmas', 'Aplikasi Bank Sampah Warga', 'Platform Les Privat Mahasiswa', 'Pencatat Keuangan UMKM', 'Marketplace Kerajinan Lokal', 'Aplikasi Lapor Jalan Rusak', 'Pendaftaran Posyandu Online', 'Sistem Peminjaman Buku Desa'] },
+  'Landing Page': { kind: 'shot', thumb: 'Screenshot landing page', tools: ['HTML', 'CSS', 'JavaScript'], links: ['Lihat demo', 'Kode di GitHub'],
+    titles: ['Landing Page Kedai Kopi', 'Profil Komunitas Literasi', 'Halaman Donasi Bencana', 'Portofolio Fotografer', 'Landing Page Wisata Desa', 'Profil Karang Taruna'] },
+  'REST API': { kind: 'shot', thumb: 'Dokumentasi API', tools: ['Express', 'MongoDB', 'Swagger'], links: ['Dokumentasi API', 'Kode di GitHub'],
+    titles: ['API Jadwal Angkot', 'API Katalog Produk UMKM', 'API Absensi Sekolah', 'API Reservasi Lapangan'] },
+  'Data Cleaning': { kind: 'pdf', thumb: 'Dataset sebelum & sesudah', tools: ['Python', 'Pandas', 'Google Sheets'], links: ['Unduh laporan', 'Lihat notebook'],
+    titles: ['Pembersihan Data Penjualan Ritel', 'Data Survei Kepuasan Pelanggan', 'Data Transaksi E-commerce', 'Data Peserta Pelatihan Kerja', 'Data Harga Pangan Pasar'] },
+  'Dashboard': { kind: 'dash', thumb: 'Dashboard interaktif', tools: ['Looker Studio', 'BigQuery', 'SQL'], links: ['Buka dashboard', 'Unduh dataset'],
+    titles: ['Dashboard Penjualan Kopi Nusantara', 'Dashboard Kualitas Udara Kota', 'Dashboard Kinerja Toko Online', 'Dashboard Lowongan Kerja Muda', 'Dashboard Kunjungan Wisata', 'Dashboard Pengeluaran Rumah Tangga'] },
+  'Analisis Data': { kind: 'pdf', thumb: 'Laporan analisis', tools: ['Python', 'Tableau', 'Excel'], links: ['Unduh laporan', 'Lihat notebook'],
+    titles: ['Analisis Churn Pelanggan Telko', 'Pola Belanja Akhir Pekan', 'Analisis Ulasan Aplikasi Ojol', 'Faktor Keterlambatan Pengiriman'] },
+  'Konten Feed': { kind: 'social', ratio: '4/5', slots: 6, slotLabel: 'Post', socialW: '720px', thumb: 'Konten feed Instagram', tools: ['Canva', 'Instagram', 'Meta Business Suite'], links: ['Lihat di Instagram'],
+    titles: ['Seri Edukasi Kesehatan Mental', 'Konten Promo Produk Lokal', 'Kampanye Hemat Air', 'Seri Tips Wawancara Kerja', 'Konten Hari Anak Nasional'] },
+  'Reels & TikTok': { kind: 'social', ratio: '9/16', slots: 3, slotLabel: 'Video', socialW: '640px', thumb: 'Video Reels / TikTok', tools: ['CapCut', 'TikTok', 'Instagram Reels'], links: ['Lihat di TikTok', 'Lihat di Instagram'],
+    titles: ['Reels Sehari Jadi Barista', 'TikTok Mitos vs Fakta Gizi', 'Reels Behind the Scene UMKM', 'Seri Video Literasi Keuangan'] },
+  'Laporan Campaign': { kind: 'pdf', thumb: 'Laporan performa', tools: ['Meta Ads', 'Google Sheets', 'Looker Studio'], links: ['Unduh laporan'],
+    titles: ['Laporan Campaign Ramadan Toko Kue', 'Performa Campaign Open Donasi', 'Laporan Iklan Kelas Bahasa', 'Evaluasi Campaign Brand Fesyen'] },
+  'Kalender Konten': { kind: 'pdf', thumb: 'Kalender konten', tools: ['Notion', 'Google Sheets', 'Canva'], links: ['Unduh kalender'],
+    titles: ['Kalender Konten Kafe Satu Bulan', 'Rencana Konten Komunitas Lari', 'Kalender Konten Klinik Gigi', 'Kalender Konten Toko Buku'] }
+};
+const FIRST = ['Aulia','Bima','Citra','Dimas','Eka','Fajar','Gita','Hana','Ilham','Intan','Joko','Kirana','Laras','Mega','Nanda','Oki','Putri','Rafi','Rani','Sari','Tegar','Utari','Vina','Wulan','Yoga','Zahra','Ayu','Bayu','Dewi','Farhan','Galih','Hesti','Indra','Nabila','Rizky','Salsa','Tiara','Wahyu','Yusuf','Anisa'];
+const CITIES = ['Jakarta','Bandung','Semarang','Surabaya','Kupang','Lombok Barat','Makassar','Bogor','Yogyakarta','Malang','Medan','Soe'];
+const BIO = {
+  web: 'Tertarik membangun aplikasi yang membantu kegiatan warga sehari-hari. Selama bootcamp fokus pada front-end dan integrasi API.',
+  da: 'Suka menemukan pola dari data dan menyampaikannya lewat visual yang mudah dipahami. Selama bootcamp fokus pada SQL dan dashboard.',
+  smm: 'Senang membuat konten yang dekat dengan audiens muda. Selama bootcamp fokus pada perencanaan konten dan analisis performa.'
+};
+const COHORTS = [
+  { key: 'web-smg', track: 'web', city: 'Semarang', n: 44, color: '#0072CE', fg: '#FFFFFF', tint: '#E3EFF9' },
+  { key: 'da-jkt', track: 'da', city: 'DKI Jakarta', n: 42, color: '#8AC208', fg: '#243C4B', tint: '#EEF6DC' },
+  { key: 'smm-yk', track: 'smm', city: 'Yogyakarta', n: 20, color: '#DC0080', fg: '#FFFFFF', tint: '#FBE5F2' },
+  { key: 'smm-sby', track: 'smm', city: 'Surabaya', n: 20, color: '#ED632F', fg: '#FFFFFF', tint: '#FDE8DF' }
+];
+const COH = Object.fromEntries(COHORTS.map(c => [c.key, c]));
+const cohLabel = c => TRACKS[c.track].name + ' · ' + c.city;
+const DOC_WEEKS = [
+  ['Kick-off dan perkenalan', 'Peserta bertemu trainer dan teman sekelas untuk pertama kali.'],
+  ['Materi dasar', 'Fondasi keterampilan sesuai jurusan masing-masing.'],
+  ['Praktik terpandu', 'Latihan langsung dengan pendampingan trainer.'],
+  ['Kerja kelompok', 'Peserta berlatih berkolaborasi dalam tim kecil.'],
+  ['Sesi bersama praktisi', 'Berbagi pengalaman dari dunia kerja.'],
+  ['Mengerjakan proyek akhir', 'Setiap peserta mulai membangun karyanya sendiri.'],
+  ['Mentoring dan review', 'Karya dikaji bersama trainer sebelum dipresentasikan.'],
+  ['Presentasi dan kelulusan', 'Peserta mempresentasikan karya dan merayakan kelulusan.']
+];
+const DOC_HERO = ['Hari pertama', 'Fokus belajar', 'Diskusi tim', 'Presentasi', 'Foto bersama'];
+const DOC_BENTO = [
+  { c: 3, r: 2, cap: 'Kick-off' }, { c: 1, r: 1, word: 'Belajar.', bg: '#DC0080', fg: '#fff' }, { c: 2, r: 2, cap: 'Sesi kelas' },
+  { c: 1, r: 1, cap: 'Diskusi' }, { c: 2, r: 1, cap: 'Kerja kelompok' }, { c: 1, r: 1, word: 'Berkarya.', bg: '#FFD500', fg: '#243C4B' },
+  { c: 2, r: 2, cap: 'Mentoring' }, { c: 1, r: 2, cap: 'Di balik layar' }, { c: 1, r: 1, word: 'Presentasi.', bg: '#8AC208', fg: '#243C4B' },
+  { c: 2, r: 1, cap: 'Presentasi akhir' }, { c: 1, r: 1, cap: 'Sertifikat' }, { c: 1, r: 1, word: 'Lulus!', bg: '#0072CE', fg: '#fff' }
+];
+const DOC_MASONRY = ['Diskusi kelompok', 'Sesi tanya jawab', 'Istirahat bareng', 'Coding bersama', 'Membaca data', 'Syuting konten', 'Presentasi ide', 'Review karya', 'Ice breaking', 'Mentoring satu lawan satu', 'Foto bersama', 'Penyerahan sertifikat'];
+const DOC_RATIOS = ['4/5', '1/1', '3/4', '4/3', '2/3', '5/4'];
+const DOC_POLAROID = ['Hari pertama!', 'Tim paling kompak', 'Lembur demi deadline', 'Akhirnya jalan juga', 'Konten pertama tayang', 'Kami lulus!'];
+const DOC_DESC = { web: 'Dari menulis baris kode pertama sampai aplikasi yang bisa dicoba pengguna.', da: 'Dari spreadsheet berantakan sampai dashboard yang menjawab pertanyaan.', smm: 'Dari ide konten sampai campaign yang tayang dan dilaporkan.' };
+const SLIDES = [
+  { caption: 'Pembukaan bootcamp', place: 'Semarang', color: '#0072CE', fg: '#FFFFFF' },
+  { caption: 'Sesi kelas Data Analyst', place: 'DKI Jakarta', color: '#8AC208', fg: '#243C4B' },
+  { caption: 'Praktik produksi konten', place: 'Yogyakarta', color: '#DC0080', fg: '#FFFFFF' },
+  { caption: 'Presentasi campaign', place: 'Surabaya', color: '#ED632F', fg: '#FFFFFF' },
+  { caption: 'Demo day', place: 'Semua kota', color: '#FFD500', fg: '#243C4B' }
+];
+const BENTO = [
+  { type: 'photo', cols: 2, rows: 2, label: 'Foto sesi kelas' },
+  { type: 'stat', cols: 1, rows: 1, key: 'people', label: 'peserta', bg: '#0072CE', fg: '#FFFFFF' },
+  { type: 'photo', cols: 1, rows: 1, label: 'Foto mentoring' },
+  { type: 'photo', cols: 1, rows: 2, label: 'Foto peserta berkarya' },
+  { type: 'stat', cols: 1, rows: 1, value: '4', label: 'kota', bg: '#DC0080', fg: '#FFFFFF' },
+  { type: 'photo', cols: 2, rows: 1, label: 'Foto presentasi' },
+  { type: 'stat', cols: 1, rows: 1, value: '3', label: 'jurusan', bg: '#8AC208', fg: '#243C4B' },
+  { type: 'photo', cols: 1, rows: 1, label: 'Foto kebersamaan' },
+  { type: 'photo', cols: 2, rows: 1, label: 'Foto demo day' },
+  { type: 'stat', cols: 1, rows: 1, key: 'works', label: 'karya', bg: '#FFD500', fg: '#243C4B' }
+];
+const TESTI_P = {
+  'web-smg': 'Dulu aku cuma bisa ikut tutorial. Sekarang aku punya aplikasi sendiri yang bisa dipakai orang lain.',
+  'da-jkt': 'Aku belajar bahwa data berantakan itu biasa. Yang penting tahu cara merapikannya dan pertanyaan apa yang mau dijawab.',
+  'smm-yk': 'Bikin kalender konten sebulan penuh bikin aku sadar konten yang bagus itu direncanakan, bukan kebetulan.',
+  'smm-sby': 'Awalnya angka di laporan iklan bikin bingung. Di akhir bootcamp aku bisa membaca dan menjelaskannya sendiri.'
+};
+const TESTI_T = [
+  { track: 'web', name: 'Nama Trainer', quote: 'Latar belakang peserta beragam, tapi semuanya menyelesaikan proyek yang bisa didemokan.' },
+  { track: 'da', name: 'Nama Trainer', quote: 'Mereka terbiasa bertanya “datanya bilang apa?” sebelum membuat grafik. Itu kebiasaan analis yang baik.' },
+  { track: 'smm', name: 'Nama Trainer', quote: 'Banyak campaign peserta yang dijalankan untuk usaha nyata di sekitar mereka.' }
+];
+const TESTI_PLAN = { name: 'Nama Perwakilan', role: 'Yayasan Plan International Indonesia', quote: 'Future Makers adalah bagian dari komitmen kami membuka kesempatan kerja yang setara bagi kaum muda. Karya di pameran ini menunjukkan apa yang mereka capai saat diberi ruang.' };
+const SKILLS = { web: ['HTML & CSS','JavaScript','React','Git','REST API'], da: ['Excel','SQL','Python','Looker Studio','Data cleaning'], smm: ['Copywriting','Canva','Perencanaan konten','Meta Ads','Analisis performa'] };
+
+function rng(seed) { return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
+function build() {
+  const r = rng(2026), people = [], works = [];
+    let pid = 0, wid = 0;
+  COHORTS.forEach(c => {
+    const tk = c.track;
+    for (let i = 0; i < c.n; i++) {
+      const first = FIRST[Math.floor(r() * FIRST.length)];
+      const init = String.fromCharCode(65 + Math.floor(r() * 26));
+      const p = { id: 'p' + (pid++), track: tk, name: first + ' ' + init + '.', initials: first[0] + init, city: c.city, cohort: c.key, works: [] };
+      const n = r() < 0.45 ? 2 : 1;
+      TRACKS[tk].types.slice().sort(() => r() - 0.5).slice(0, n).forEach(ty => {
+        const T = TYPE[ty];
+        const w = { id: 'w' + (wid++), track: tk, cohort: c.key, type: ty, person: p.id, title: T.titles[Math.floor(r() * T.titles.length)], pdfPages: 6 + Math.floor(r() * 18) };
+        works.push(w); p.works.push(w.id);
+      });
+      people.push(p);
+    }
+  });
+  return { people, works, P: Object.fromEntries(people.map(p => [p.id, p])), W: Object.fromEntries(works.map(w => [w.id, w])) };
+}
+const DATA = build();
+
+function descFor(w) {
+  const k = TYPE[w.type].kind;
+  if (w.type === 'Data Cleaning') return 'Dataset mentah dirapikan dari duplikasi, nilai kosong, dan format yang tidak konsisten. Laporan berisi langkah pembersihan, perbandingan sebelum dan sesudah, serta dataset final.';
+  if (w.type === 'Dashboard') return 'Dashboard interaktif yang merangkum indikator utama dan bisa difilter per periode serta kategori. Data diolah dengan SQL sebelum divisualisasikan.';
+  if (w.type === 'Analisis Data') return 'Analisis eksploratif untuk menjawab pertanyaan bisnis, lengkap dengan temuan utama dan rekomendasi tindak lanjut.';
+  if (w.type === 'Laporan Campaign') return 'Laporan performa campaign selama empat minggu: jangkauan, engagement, klik, dan biaya per hasil, beserta evaluasi dan rekomendasi.';
+  if (w.type === 'Kalender Konten') return 'Rencana konten satu bulan berisi pilar konten, format, jadwal unggah, dan caption untuk setiap posting.';
+  if (k === 'social') return 'Rangkaian konten yang dirancang untuk audiens muda, dari riset ide, naskah, desain visual, sampai caption dan jadwal unggah.';
+  if (w.type === 'REST API') return 'Layanan backend dengan endpoint yang terdokumentasi, autentikasi pengguna, dan pengujian dasar.';
+  return 'Aplikasi web yang dirancang untuk menyelesaikan masalah nyata pengguna, mulai dari riset kebutuhan, desain antarmuka, sampai deployment.';
+}
+
+class Component extends DCLogic {
+  filmRef = React.createRef();
+  trackRef = React.createRef();
+  onDocScroll = () => {
+    if (this.state.view !== 'docs' || this._raf) return;
+    this._raf = requestAnimationFrame(() => {
+      this._raf = null;
+      const el = this.filmRef.current, tr = this.trackRef.current, d = document.documentElement;
+      const page = Math.min(1, Math.max(0, window.scrollY / Math.max(1, d.scrollHeight - window.innerHeight)));
+      let p = 0, x = 0;
+      if (el && tr) {
+        const r = el.getBoundingClientRect();
+        p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - window.innerHeight)));
+        x = -p * Math.max(0, tr.scrollWidth - window.innerWidth);
+      }
+      this.setState({ docP: p, docX: x, docPage: page });
+    });
+  };
+  onKey = e => {
+    if (this.state.lb == null) return;
+    if (e.key === 'Escape') this.setState({ lb: null });
+    if (e.key === 'ArrowRight') this.setState(st => ({ lb: (st.lb + 1) % (this._lbN || 1) }));
+    if (e.key === 'ArrowLeft') this.setState(st => ({ lb: (st.lb - 1 + (this._lbN || 1)) % (this._lbN || 1) }));
+  };
+  state = { docC: 'all', docP: 0, docX: 0, docPage: 0, lb: null, playing: false, slide: 0, modal: null, view: 'home', id: null, track: 'all', type: 'all', q: '', limit: null, pTrack: 'all', pq: '', pLimit: 30, cohort: 'all', pCohort: 'all' };
+
+  go(view, id, extra) { this.setState({ view, id: id || null, lb: null, docP: 0, docX: 0, docPage: 0, ...(extra || {}) }); window.scrollTo(0, 0); }
+
+  card(w) {
+    const t = TRACKS[w.track], p = DATA.P[w.person];
+    const c = COH[w.cohort];
+    return { id: w.id, title: w.title, type: w.type, trackShort: t.short, trackName: t.name, color: t.color, tint: t.tint, city: p.city,
+      cColor: c.color, cFg: c.fg, cTint: c.tint, cLabel: cohLabel(c), initials: p.initials, thumbLabel: TYPE[w.type].thumb, personName: p.name, open: () => this.go('work', w.id) };
+  }
+
+  seg(label, active, onClick, k) {
+    const c = k && k !== 'all' ? TRACKS[k].color : '#243C4B';
+    return { label, onClick, bg: active ? c : 'transparent', fg: active ? (k === 'da' ? '#243C4B' : '#fff') : 'var(--dark-blue)', shadow: 'none' };
+  }
+
+  componentDidMount() {
+    window.addEventListener('scroll', this.onDocScroll, { passive: true });
+    window.addEventListener('resize', this.onDocScroll);
+    window.addEventListener('keydown', this.onKey);
+    this._t = setInterval(() => {
+      if (this.state.view === 'home' && !this.state.modal) this.setState(st => ({ slide: (st.slide + 1) % SLIDES.length }));
+    }, Math.max(2, this.props.slideInterval ?? 5) * 1000);
+  }
+  componentWillUnmount() { clearInterval(this._t); window.removeEventListener('scroll', this.onDocScroll); window.removeEventListener('resize', this.onDocScroll); window.removeEventListener('keydown', this.onKey); }
+
+  docsVals() {
+    const s = this.state, dc = s.docC, list = [];
+    const at = i => dc === 'all' ? { co: COHORTS[i % 4], n: Math.floor(i / 4) } : { co: COH[dc], n: i };
+    const add = (co, sec, n, extra) => {
+      const it = { slotId: 'doc-' + co.key + '-' + sec + '-' + n, cohortLabel: cohLabel(co), city: co.city, color: co.color, fg: co.fg, ...extra };
+      it.idx = list.length; it.open = () => this.setState({ lb: it.idx }); list.push(it); return it;
+    };
+    const rots = ['-8deg', '-3deg', '2deg', '6deg', '-4deg'], tys = ['10px', '-14px', '6px', '-8px', '14px'];
+    const docHero = DOC_HERO.map((cap, i) => { const { co, n } = at(i); return add(co, 'hero', n, { caption: cap, rot: rots[i], ty: tys[i], z: i === 2 ? 5 : 5 - Math.abs(2 - i) }); });
+    const fi = Math.min(7, Math.round(s.docP * 7));
+    const docFilm = DOC_WEEKS.map(([title, caption], i) => { const { co, n } = at(i); return add(co, 'film', n, { title, caption, num: String(i + 1).padStart(2, '0'), op: i === fi ? 1 : 0.55 }); });
+    let pi = 0;
+    const docBento = DOC_BENTO.map(b => {
+      if (b.word) return { c: b.c, r: b.r, isText: true, isPhoto: false, word: b.word, bg: b.bg, fg: b.fg };
+      const { co, n } = at(pi++); return { ...add(co, 'bento', n, { caption: b.cap }), c: b.c, r: b.r, isPhoto: true, isText: false, bg: 'var(--surface-muted)', fg: 'var(--dark-blue)' };
+    });
+    const cohs = dc === 'all' ? COHORTS : [COH[dc]];
+    const lay = [['1 / 3', '1 / 3'], ['3 / 4', '1 / 2'], ['3 / 4', '2 / 3']];
+    const docKelas = cohs.map(co => ({ city: co.city, track: TRACKS[co.track].name, num: String(COHORTS.indexOf(co) + 1).padStart(2, '0'), color: co.color, fg: co.fg, desc: DOC_DESC[co.track],
+      openWorks: () => this.go('gallery', null, { cohort: co.key, track: 'all', type: 'all', q: '', limit: null }),
+      openPeople: () => this.go('people', null, { pCohort: co.key, pTrack: 'all', pq: '', pLimit: 30 }),
+      photos: lay.map(([gc, gr], n) => add(co, 'kelas', n, { gc, gr, caption: 'Kelas ' + cohLabel(co) })) }));
+    const docMasonry = DOC_MASONRY.map((cap, i) => { const { co, n } = at(i); return add(co, 'momen', n, { caption: cap, ratio: DOC_RATIOS[i % DOC_RATIOS.length] }); });
+    const prot = ['-4deg', '3deg', '-2deg', '5deg', '-3deg', '2deg'], tapes = ['#58CAE7', '#DC0080', '#8AC208', '#ED632F', '#0072CE', '#9900FF'];
+    const docPolaroid = DOC_POLAROID.map((cap, i) => { const { co, n } = at(i); return add(co, 'kenangan', n, { caption: cap, rot: prot[i], tape: tapes[i] }); });
+    this._lbN = list.length;
+    const lbOpen = s.lb != null && !!list[s.lb];
+    const docChips = [{ key: 'all' }, ...COHORTS].map(c => { const on = dc === c.key, all = c.key === 'all';
+      return { label: all ? 'Semua kelas' : c.city, dot: all ? '#FFD500' : c.color, bg: on ? (all ? '#fff' : c.color) : 'transparent', fg: on ? (all ? '#243C4B' : c.fg) : '#fff', border: on ? (all ? '#fff' : c.color) : 'rgba(255,255,255,.5)',
+        onClick: () => this.setState({ docC: c.key, lb: null }) }; });
+    return {
+      docHero, docFilm, docBento, docKelas, docMasonry, docPolaroid, docChips,
+      docEyebrow: dc === 'all' ? 'Empat kelas · Future Makers 2026' : cohLabel(COH[dc]),
+      filmRef: this.filmRef, trackRef: this.trackRef, filmX: Math.round(s.docX) + 'px', filmPct: (s.docP * 100).toFixed(1) + '%',
+      filmCounter: String(fi + 1).padStart(2, '0') + ' / 08', docPagePct: (s.docPage * 100).toFixed(1) + '%',
+      lbOpen, lbItems: lbOpen ? list.map((it, i) => ({ slotId: it.slotId, display: i === s.lb ? 'block' : 'none' })) : [],
+      lbCur: lbOpen ? list[s.lb] : {}, lbCounter: lbOpen ? (s.lb + 1) + ' / ' + list.length : '',
+      lbClose: () => this.setState({ lb: null }),
+      lbPrev: () => this.setState(st => ({ lb: (st.lb - 1 + list.length) % list.length })),
+      lbNext: () => this.setState(st => ({ lb: (st.lb + 1) % list.length }))
+    };
+  }
+
+  media(url) {
+    const u = (url || '').trim(), m = u.match(/(?:youtu\.be\/|[?&]v=|embed\/|shorts\/)([\w-]{6,})/);
+    return { url: u, isYT: !!m, embed: m ? 'https://www.youtube.com/embed/' + m[1] + '?autoplay=1&rel=0' : '', isFile: !!u && !m };
+  }
+
+  openVideo(title, url) { this.setState({ modal: { title, url: url || '' } }); }
+
+  homeVals() {
+    const s = this.state, hero = this.media(this.props.afterMovieUrl);
+    const slides = SLIDES.map((sl, i) => ({ ...sl, slotId: 'doc-' + (i + 1), go: () => this.setState({ slide: i }),
+      dotW: i === s.slide ? '28px' : '8px', dotBg: i === s.slide ? (sl.color === '#FFD500' ? '#243C4B' : sl.color) : 'var(--light-grey)' }));
+    const bento = BENTO.map((b, i) => ({ ...b, slotId: 'bento-' + (i + 1), isPhoto: b.type === 'photo', isStat: b.type === 'stat',
+      bg: b.bg || 'var(--surface-muted)', fg: b.fg || 'var(--dark-blue)',
+      value: b.key === 'people' ? DATA.people.length : b.key === 'works' ? DATA.works.length : b.value }));
+    const best = COHORTS.map(c => { const w = DATA.works.find(x => x.cohort === c.key);
+      return { ...this.card(w), bg: c.color, fg: c.fg, slotId: 'best-' + c.key }; });
+    const ti = s.testiIdx || 0, nT = COHORTS.length;
+    const testiPeserta = COHORTS.map((c, i) => { const p = DATA.people.filter(x => x.cohort === c.key)[3], on = i === ti;
+      return { name: p.name, initials: p.initials, cohort: TRACKS[c.track].name + ' · ' + c.city, cohortShort: c.city, quote: TESTI_P[c.key], bg: c.color, fg: c.fg, slotId: 'testi-' + c.key,
+        display: on ? 'block' : 'none', tabBg: on ? 'var(--dark-blue)' : 'var(--surface-muted)', tabFg: on ? '#fff' : 'var(--dark-blue)', tabHover: on ? 'var(--dark-blue)' : '#e9ecee',
+        select: () => this.setState({ testiIdx: i }),
+        play: () => this.openVideo('Testimoni ' + p.name, ''), openPerson: () => this.go('person', p.id) }; });
+    const tpA = testiPeserta[ti];
+    const testiTrainer = TESTI_T.map(t => ({ ...t, color: TRACKS[t.track].color, fg: TRACKS[t.track].fg, trackName: TRACKS[t.track].name, role: 'Trainer ' + TRACKS[t.track].name, slotId: 'trainer-' + t.track,
+      play: () => this.openVideo(t.name + ' · Trainer ' + TRACKS[t.track].name, '') }));
+    const testiPlan = { ...TESTI_PLAN, play: () => this.openVideo('Testimoni Plan Indonesia', '') };
+    const mm = s.modal ? this.media(s.modal.url) : {};
+    return {
+      afterMovieUrl: hero.url, heroIdle: !s.playing, heroIsYT: s.playing && hero.isYT, heroEmbed: hero.embed,
+      heroIsFile: s.playing && hero.isFile, heroNotice: s.playing && !hero.url,
+      playHero: () => this.setState({ playing: true }), stopHero: () => this.setState({ playing: false }),
+      slides, slideX: (-100 * s.slide) + '%',
+      nextSlide: () => this.setState(st => ({ slide: (st.slide + 1) % SLIDES.length })),
+      prevSlide: () => this.setState(st => ({ slide: (st.slide - 1 + SLIDES.length) % SLIDES.length })),
+      bento, best, testiPeserta, testiTrainer, testiPlan, tpA,
+      tpCounter: String(ti + 1).padStart(2, '0') + ' / ' + String(nT).padStart(2, '0'),
+      tpPrev: () => this.setState(st => ({ testiIdx: ((st.testiIdx || 0) - 1 + nT) % nT })),
+      tpNext: () => this.setState(st => ({ testiIdx: ((st.testiIdx || 0) + 1) % nT })),
+      ctaText: DATA.works.length + ' karya dari ' + DATA.people.length + ' peserta di empat kota.',
+      modal: { open: !!s.modal, title: s.modal ? s.modal.title : '', isYT: !!mm.isYT, embed: mm.embed || '', isFile: !!mm.isFile, src: mm.url || '', empty: !!s.modal && !mm.url,
+        close: () => this.setState({ modal: null }), stop: e => e.stopPropagation() }
+    };
+  }
+
+  renderVals() {
+    const s = this.state, pageSize = this.props.pageSize ?? 24;
+    const limit = s.limit ?? pageSize;
+    const activeNav = s.view === 'work' ? 'gallery' : s.view === 'person' ? 'people' : s.view;
+    const nav = [['home', 'Beranda'], ['gallery', 'Galeri'], ['people', 'Peserta'], ['docs', 'Dokumentasi'], ['about', 'Tentang']].map(([v, label]) => ({
+      label, onClick: () => this.go(v, null, v === 'gallery' ? { limit: null } : {}), fg: activeNav === v ? '#fff' : 'var(--dark-blue)', bg: activeNav === v ? 'var(--dark-blue)' : 'transparent', hoverBg: activeNav === v ? 'var(--dark-blue)' : 'var(--surface-muted)' }));
+
+    const openTrack = tk => () => this.go('gallery', null, { track: tk, cohort: 'all', type: 'all', q: '', limit: null });
+    const tileList = (curC, curT, counts, pick, allColor, allFg, allLabel) => [{ key: 'all' }, ...COHORTS].map(c => {
+      const isAll = c.key === 'all', on = isAll ? (curC === 'all' && curT === 'all') : (curC === c.key || (curC === 'all' && curT === c.track));
+      return { city: isAll ? 'Semua kelas' : c.city, track: isAll ? allLabel : TRACKS[c.track].name, count: counts(c.key),
+        bg: on ? '#243C4B' : '#fff', fg: on ? '#fff' : '#243C4B', dot: isAll ? allColor : c.color, dotRing: on ? '#fff' : (isAll ? allColor : c.color),
+        onClick: () => pick(c.key) };
+    });
+    const headFor = (curC, curT, allColor, allFg, eyebrowAll) => {
+      if (curC !== 'all') { const c = COH[curC]; return { bg: c.color, fg: c.fg, eyebrow: cohLabel(c) }; }
+      if (curT !== 'all') { const t = TRACKS[curT]; return { bg: t.color, fg: t.fg, eyebrow: t.name }; }
+      return { bg: allColor, fg: allFg, eyebrow: eyebrowAll };
+    };
+    const trackCards = Object.values(TRACKS).map(t => ({ ...t, count: DATA.works.filter(w => w.track === t.key).length, open: openTrack(t.key) }));
+
+    
+
+    const q = s.q.trim().toLowerCase();
+    const filtered = DATA.works.filter(w => (s.track === 'all' || w.track === s.track) && (s.cohort === 'all' || w.cohort === s.cohort) && (s.type === 'all' || w.type === s.type) &&
+      (!q || w.title.toLowerCase().includes(q) || DATA.P[w.person].name.toLowerCase().includes(q)));
+    const trackOpts = [['all', 'Semua'], ...Object.values(TRACKS).map(t => [t.key, t.name])];
+    const trackFilters = trackOpts.map(([k, l]) => this.seg(l, s.track === k, () => this.setState({ track: k, type: 'all', limit: null }), k));
+    const ctxTrack = s.cohort !== 'all' ? COH[s.cohort].track : s.track;
+    const typeList = ctxTrack !== 'all' ? TRACKS[ctxTrack].types : Object.keys(TYPE);
+    const typeFilters = ['all', ...typeList].map(ty => ({
+      label: ty === 'all' ? 'Semua jenis' : ty, onClick: () => this.setState({ type: ty, limit: null }),
+      bg: s.type === ty ? '#243C4B' : 'var(--surface-muted)', fg: s.type === ty ? '#fff' : '#243C4B' }));
+    const gTiles = tileList(s.cohort, s.track, k => (k === 'all' ? DATA.works.length : DATA.works.filter(w => w.cohort === k).length) + ' karya',
+      k => this.setState({ cohort: k, track: 'all', type: 'all', limit: null }), '#DC0080', '#fff', 'Tiga jurusan');
+    const gHead = headFor(s.cohort, s.track, '#DC0080', '#FFFFFF', 'Pameran karya Future Makers 2026');
+
+    let work = {};
+    if (s.view === 'work' && DATA.W[s.id]) {
+      const w = DATA.W[s.id], t = TRACKS[w.track], T = TYPE[w.type], p = DATA.P[w.person];
+      work = { ...this.card(w), trackName: t.name, desc: descFor(w), pdfPages: w.pdfPages,
+        isShot: T.kind === 'shot', isDash: T.kind === 'dash', isPdf: T.kind === 'pdf', isSocial: T.kind === 'social',
+        url: w.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.futuremakers.id', slotRatio: T.ratio || '1', socialW: T.socialW || '720px',
+        slots: Array.from({ length: T.slots || 0 }, (_, i) => T.slotLabel + ' ' + (i + 1)),
+        mediaCaption: { shot: 'Tampilan aplikasi. Buka demo untuk mencoba langsung.', dash: 'Dashboard dimuat dari Looker Studio / Tableau Public.', pdf: 'Dokumen lengkap tersedia dalam format PDF.', social: 'Konten dimuat dari Instagram / TikTok peserta.' }[T.kind],
+        links: T.links.map((label, i) => ({ label, primary: i === 0, secondary: i > 0 })),
+        specs: [{ k: 'Peserta', v: p.name }, { k: 'Track', v: t.name }, { k: 'Jenis karya', v: w.type }, { k: 'Tools', v: T.tools.join(', ') }, { k: 'Kota', v: p.city }],
+        openPerson: () => this.go('person', p.id), openTrack: openTrack(w.track) };
+      work.related = DATA.works.filter(x => x.track === w.track && x.id !== w.id && x.type === w.type).slice(0, 4).map(x => this.card(x));
+      work.hasRelated = work.related.length > 0;
+    }
+
+    const pq = s.pq.trim().toLowerCase();
+    const pFiltered = DATA.people.filter(p => (s.pTrack === 'all' || p.track === s.pTrack) && (s.pCohort === 'all' || p.cohort === s.pCohort) && (!pq || p.name.toLowerCase().includes(pq) || p.city.toLowerCase().includes(pq)));
+    const peopleFilters = trackOpts.map(([k, l]) => this.seg(l, s.pTrack === k, () => this.setState({ pTrack: k, pLimit: 30 }), k));
+    const pTiles = tileList(s.pCohort, s.pTrack, k => (k === 'all' ? DATA.people.length : DATA.people.filter(p => p.cohort === k).length) + ' peserta',
+      k => this.setState({ pCohort: k, pTrack: 'all', pLimit: 30 }), '#8AC208', '#243C4B', 'Empat kota');
+    const pHead = headFor(s.pCohort, s.pTrack, '#8AC208', '#243C4B', 'Future Makers 2026');
+    const personCard = p => { const c = COH[p.cohort];
+      return { ...p, trackShort: TRACKS[p.track].short, tint: TRACKS[p.track].tint, workCount: p.works.length, workLabel: p.works.length + ' karya',
+        cColor: c.color, cFg: c.fg, cTint: c.tint, cLabel: cohLabel(c), open: () => this.go('person', p.id) }; };
+
+    let person = {};
+    if (s.view === 'person' && DATA.P[s.id]) {
+      const p = DATA.P[s.id];
+      const mates = DATA.people.filter(x => x.cohort === p.cohort), mi = mates.indexOf(p), nM = mates.length;
+      person = { ...personCard(p), trackName: TRACKS[p.track].name, bio: BIO[p.track], skills: SKILLS[p.track], slotId: 'foto-' + p.id,
+        portfolioLabel: p.track === 'web' ? 'GitHub' : 'Portofolio', works: p.works.map(id => this.card(DATA.W[id])),
+        posText: (mi + 1) + ' / ' + nM,
+        prev: () => this.go('person', mates[(mi - 1 + nM) % nM].id), next: () => this.go('person', mates[(mi + 1) % nM].id),
+        openCohort: () => this.go('people', null, { pCohort: p.cohort, pTrack: 'all', pq: '', pLimit: 30 }),
+        mates: mates.filter(x => x !== p).slice(0, 10).map(personCard) };
+    }
+
+    return {
+      nav, trackCards, work, person, ...this.homeVals(), ...(s.view === 'docs' ? this.docsVals() : { isDocsEmpty: true }),
+      isDocs: s.view === 'docs',
+      isHome: s.view === 'home', isGallery: s.view === 'gallery', isWork: s.view === 'work', isPeople: s.view === 'people', isPerson: s.view === 'person', isAbout: s.view === 'about',
+      showFeatured: this.props.showFeatured ?? true, showHeroImage: this.props.showHeroImage ?? true,
+      stats: [{ value: DATA.people.length, label: 'peserta' }, { value: DATA.works.length, label: 'karya' }, { value: 3, label: 'jurusan' }, { value: 4, label: 'kota' }],
+      goHome: () => this.go('home'), goAbout: () => this.go('about'), goPeople: () => this.go('people'),
+      goGalleryAll: () => this.go('gallery', null, { track: 'all', cohort: 'all', type: 'all', q: '', limit: null }),
+      gTiles, gHead, pTiles, pHead,
+      gHasFilter: s.cohort !== 'all' || s.track !== 'all' || s.type !== 'all' || !!s.q,
+      resetGallery: () => this.setState({ cohort: 'all', track: 'all', type: 'all', q: '', limit: null }),
+      moreText: Math.min(limit, filtered.length) + ' dari ' + filtered.length + ' karya ditampilkan',
+      peopleEmpty: pFiltered.length === 0,
+      trackFilters, typeFilters, hasTypeFilters: typeFilters.length > 0,
+      q: s.q, onQ: e => this.setState({ q: e.target.value, limit: null }),
+      galleryItems: filtered.slice(0, limit).map(w => this.card(w)), galleryEmpty: filtered.length === 0, galleryMore: filtered.length > limit,
+      resultText: filtered.length + ' karya ditemukan',
+      loadMore: () => this.setState({ limit: limit + pageSize }),
+      peopleFilters, pq: s.pq, onPq: e => this.setState({ pq: e.target.value, pLimit: 30 }),
+      peopleItems: pFiltered.slice(0, s.pLimit).map(personCard), peopleMore: pFiltered.length > s.pLimit,
+      peopleText: pFiltered.length + ' peserta',
+      loadMorePeople: () => this.setState({ pLimit: s.pLimit + 30 })
+    };
+  }
+}
+</script>
+</body>
+</html>

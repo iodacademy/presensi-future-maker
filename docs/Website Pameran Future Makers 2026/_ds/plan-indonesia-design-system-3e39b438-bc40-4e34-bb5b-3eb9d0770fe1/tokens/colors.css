@@ -1,0 +1,50 @@
+/* Plan Indonesia — Color system
+   Source: Global Brand Manual (Warna). Max 3 colors per design. */
+:root {
+  /* Primary */
+  --plan-blue: #0072CE;
+
+  /* Secondary */
+  --light-blue: #58CAE7;
+  --orange: #ED632F;
+  --yellow: #FFD500;
+  --purple: #9900FF;
+
+  /* Alternative / accent */
+  --magenta: #DC0080;
+  --dark-blue: #243C4B;
+  --green: #8AC208;
+  --red: #D40D15;
+
+  /* Neutral */
+  --black: #000000;
+  --white: #FFFFFF;
+  --light-grey: #D9D9D6;
+
+  /* ---- Semantic aliases ---- */
+  --brand: var(--plan-blue);
+  --brand-ink: var(--dark-blue);
+
+  --text-strong: var(--dark-blue);
+  --text-body: #243C4B;
+  --text-muted: #5b6b74;
+  --text-on-brand: var(--white);
+  --text-link: var(--plan-blue);
+  --text-link-hover: #005ba6;
+
+  --surface-page: var(--white);
+  --surface-card: var(--white);
+  --surface-muted: #f4f6f7;
+  --surface-brand: var(--plan-blue);
+  --surface-inverse: var(--dark-blue);
+
+  --border-subtle: var(--light-grey);
+  --border-strong: var(--dark-blue);
+
+  /* Highlight pairs (Poppins Bold word on a solid block) */
+  --highlight-bg: var(--plan-blue);
+  --highlight-fg: var(--white);
+
+  /* Focus */
+  --focus-ring: var(--light-blue);
+}
