@@ -10,11 +10,11 @@ const th: React.CSSProperties = { textAlign: 'left', fontSize: '10px', fontWeigh
 const td: React.CSSProperties = { fontSize: '12px', padding: '10px 12px', borderBottom: '1px solid var(--color-border)' };
 
 /**
- * Tab Peserta: daftar per kelas dan formulir profil. Daftar tidak membawa bio dan tautan,
- * jadi formulir hanya mengirim kolom yang diubah.
+ * Tab Peserta: daftar per kelas dan formulir profil. Formulir memuat satu peserta lengkap saat dibuka
+ * dan hanya mengirim kolom yang diubah.
  *
- * People tab: list per cohort and a profile form. The list carries no bio or links,
- * so the form only sends the fields that were changed.
+ * People tab: list per cohort and a profile form. The form loads the full person when it opens
+ * and only sends the fields that were changed.
  */
 export function PeopleTab() {
   const [people, setPeople] = useState<AdminPersonRow[]>([]);
@@ -69,6 +69,12 @@ function PersonForm({ person, onClose }: { person: AdminPersonRow; onClose: (sav
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (d: Draft) => setDraft((o) => ({ ...o, ...d }));
+  // Nilai tersimpan dimuat saat formulir dibuka / Stored values are loaded when the form opens
+  const [stored, setStored] = useState<Partial<ExhibitionPerson>>({});
+
+  useEffect(() => {
+    api(`/api/pameran/people/${person.uid}`).then((d: { person: ExhibitionPerson }) => setStored(d.person)).catch((e) => setError((e as Error).message));
+  }, [person.uid]);
 
   useEffect(() => {
     // Daftar karya difilter di klien / Works list is filtered on the client
@@ -95,25 +101,25 @@ function PersonForm({ person, onClose }: { person: AdminPersonRow; onClose: (sav
     try { set({ photoUrl: (await uploadImage(file, `peserta/${person.uid}`)).full }); } catch (err) { setError((err as Error).message); } finally { setBusy(false); }
   }
 
-  const photo = draft.photoUrl ?? person.photoUrl;
+  const photo = draft.photoUrl ?? stored.photoUrl ?? person.photoUrl;
   return (
     <form onSubmit={save} style={card}>
       <h2 style={{ fontSize: '14px', fontWeight: 700, margin: 0 }}>Ubah peserta: {person.fullName}</h2>
-      <label style={label}>Nama panggilan<input value={draft.nickname ?? person.nickname} onChange={(e) => set({ nickname: e.target.value })} style={field} /></label>
+      <label style={label}>Nama panggilan<input value={draft.nickname ?? stored.nickname ?? person.nickname} onChange={(e) => set({ nickname: e.target.value })} style={field} /></label>
       <label style={{ ...label, flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
-        <input type="checkbox" checked={draft.visible ?? person.visible} onChange={(e) => set({ visible: e.target.checked })} /> Tampil di pameran
+        <input type="checkbox" checked={draft.visible ?? stored.visible ?? person.visible} onChange={(e) => set({ visible: e.target.checked })} /> Tampil di pameran
       </label>
       <div style={label}>
         Foto
         {photo && <img src={photo} alt="Foto peserta" width={96} style={{ borderRadius: '8px' }} />}
         <input type="file" accept="image/*" aria-label="Unggah foto" disabled={busy} onChange={(e) => onPhoto(e.target.files?.[0])} />
       </div>
-      <label style={label}>Bio<textarea rows={4} value={draft.bio ?? ''} placeholder="Kosongkan bila tidak diubah" onChange={(e) => set({ bio: e.target.value })} style={field} /></label>
-      <label style={label}>Keahlian (pisahkan dengan koma)<input value={draft.skills ?? ''} onChange={(e) => set({ skills: e.target.value })} style={field} /></label>
-      <label style={label}>LinkedIn<input value={draft.linkedinUrl ?? ''} placeholder="https://" onChange={(e) => set({ linkedinUrl: e.target.value })} style={field} /></label>
-      <label style={label}>Portofolio<input value={draft.portfolioUrl ?? ''} placeholder="https://" onChange={(e) => set({ portfolioUrl: e.target.value })} style={field} /></label>
+      <label style={label}>Bio<textarea rows={4} value={draft.bio ?? stored.bio ?? ''} onChange={(e) => set({ bio: e.target.value })} style={field} /></label>
+      <label style={label}>Keahlian (pisahkan dengan koma)<input value={draft.skills ?? (stored.skills ?? []).join(', ')} onChange={(e) => set({ skills: e.target.value })} style={field} /></label>
+      <label style={label}>LinkedIn<input value={draft.linkedinUrl ?? stored.linkedinUrl ?? ''} placeholder="https://" onChange={(e) => set({ linkedinUrl: e.target.value })} style={field} /></label>
+      <label style={label}>Portofolio<input value={draft.portfolioUrl ?? stored.portfolioUrl ?? ''} placeholder="https://" onChange={(e) => set({ portfolioUrl: e.target.value })} style={field} /></label>
       <label style={label}>Karya utama
-        <select aria-label="Karya utama" value={draft.mainWorkId ?? person.mainWorkId ?? ''} onChange={(e) => set({ mainWorkId: e.target.value })} style={field}>
+        <select aria-label="Karya utama" value={draft.mainWorkId ?? stored.mainWorkId ?? person.mainWorkId ?? ''} onChange={(e) => set({ mainWorkId: e.target.value })} style={field}>
           <option value="">Otomatis</option>
           {works.map((w) => <option key={w.id} value={w.id}>{w.title}</option>)}
         </select>

@@ -34,7 +34,7 @@ import {
   createCollection, listCollections, listPeople, updateCollection, updatePerson, updateSiteContent,
 } from '../../src/features/exhibition/admin-content';
 import { GET as peopleGet } from '../../src/app/api/pameran/people/route';
-import { PATCH as personPatch } from '../../src/app/api/pameran/people/[uid]/route';
+import { GET as personGet, PATCH as personPatch } from '../../src/app/api/pameran/people/[uid]/route';
 import { GET as siteGet, PATCH as sitePatch } from '../../src/app/api/pameran/site/route';
 
 beforeEach(() => {
@@ -110,5 +110,15 @@ describe('API admin peserta, koleksi, konten situs', () => {
     const got = await (await siteGet()).json();
     expect(got.content.testiPlan.role).toBe('Peran');
     expect(got.content.photos).toBeDefined();
+  });
+
+  it('GET peserta mengembalikan bio tersimpan untuk admin, 403 untuk non-admin, 404 bila tidak ada', async () => {
+    data.exhibitionPeople.s1.bio = 'Bio Nur';
+    const ctx = (uid: string) => ({ params: Promise.resolve({ uid }) });
+    const ok = await personGet(new Request('http://x'), ctx('s1'));
+    expect((await ok.json()).person).toMatchObject({ uid: 's1', bio: 'Bio Nur' });
+    expect((await personGet(new Request('http://x'), ctx('nope'))).status).toBe(404);
+    getSessionActor.mockResolvedValue({ role: 'student' });
+    expect((await personGet(new Request('http://x'), ctx('s1'))).status).toBe(403);
   });
 });

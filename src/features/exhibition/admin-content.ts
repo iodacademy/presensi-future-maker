@@ -46,6 +46,16 @@ export async function listPeople(): Promise<AdminPersonRow[]> {
 const PERSON_KEYS = ['nickname', 'photoUrl', 'bio', 'skills', 'linkedinUrl', 'portfolioUrl', 'visible', 'mainWorkId'];
 const STRING_KEYS = ['photoUrl', 'bio', 'linkedinUrl', 'portfolioUrl'];
 
+/**
+ * Satu peserta lengkap dengan bio, untuk mengisi formulir ubah. Daftar tidak memuat bio.
+ *
+ * One full person including bio, to prefill the edit form. The list never loads bio.
+ */
+export async function getPersonAdmin(uid: string): Promise<ExhibitionPerson | null> {
+  const snap = await db().collection('exhibitionPeople').doc(uid).get();
+  return snap.exists ? ({ ...(snap.data() as Omit<ExhibitionPerson, 'uid'>), uid }) : null;
+}
+
 export async function updatePerson(uid: string, patch: PersonPatch): Promise<void> {
   const p = checkKeys(patch, PERSON_KEYS);
   const out: Record<string, unknown> = { ...p };

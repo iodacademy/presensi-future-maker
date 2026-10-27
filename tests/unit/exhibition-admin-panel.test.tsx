@@ -70,7 +70,8 @@ const person = { uid: 'u1', fullName: 'Budi Santoso', nickname: 'Budi', cohort: 
 function mockContent(patch: (url: string, body: unknown) => void, collections: unknown[] = []) {
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     if (init?.method) { patch(url, JSON.parse(String(init.body))); return new Response(JSON.stringify({ ok: true, id: 'c9' })); }
-    const body = url === '/api/pameran/people' ? { people: [person] }
+    const body = url === '/api/pameran/people/u1' ? { person: { ...person, bio: 'Bio tersimpan', skills: ['HTML', 'CSS'], linkedinUrl: 'https://li/x', portfolioUrl: '', mainWorkId: null } }
+      : url === '/api/pameran/people' ? { people: [person] }
       : url === '/api/pameran/works' ? { works: [w('w1', 'web-smg'), w('x1', 'web-smg', { personUid: 'u2' })] }
       : url === '/api/pameran/collections' ? { collections }
       : url === '/api/pameran/site' ? { content: { photos: {}, videos: { afterMovie: '', peserta: {}, trainer: {}, plan: '' }, testiPeserta: {}, testiTrainer: [], testiPlan: { name: '', role: '', quote: '' } } } : {};
@@ -123,5 +124,14 @@ describe('panel admin Pameran, tab Peserta, Koleksi, Konten Situs', () => {
     const [url, body] = patch.mock.calls[0];
     expect(url).toBe('/api/pameran/site');
     expect((body as { videos: { afterMovie: string } }).videos.afterMovie).toBe('https://youtu.be/x');
+  });
+
+  it('formulir peserta menampilkan bio dan keahlian yang sudah tersimpan', async () => {
+    mockContent(vi.fn()); openTab('peserta');
+    render(<AdminPameranPage />);
+    await screen.findByText('Budi Santoso');
+    fireEvent.click(screen.getByRole('button', { name: 'Ubah' }));
+    await waitFor(() => expect((screen.getByLabelText(/^Bio/) as HTMLTextAreaElement).value).toBe('Bio tersimpan'));
+    expect((screen.getByLabelText(/^Keahlian/) as HTMLInputElement).value).toBe('HTML, CSS');
   });
 });
