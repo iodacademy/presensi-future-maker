@@ -71,3 +71,19 @@ export function cohortOf(cls: { programName: string; city: string }): Cohort | n
 export function nicknameOf(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] ?? '';
 }
+
+/**
+ * Hanya tautan http(s) yang boleh dirender sebagai href atau src iframe; `javascript:`
+ * akan berjalan di origin kita.
+ *
+ * Only http(s) links may be rendered as an href or iframe src; `javascript:`
+ * would run in our origin.
+ */
+export function safeExternalUrl(u: string): string | null {
+  try {
+    const p = new URL(u).protocol;
+    return p === 'https:' || p === 'http:' ? u : null;
+  } catch {
+    return null;
+  }
+}

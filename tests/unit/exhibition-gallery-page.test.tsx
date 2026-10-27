@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({
 
 import { GalleryView } from '../../src/app/(public)/galeri/gallery-view';
 import { CollectionView } from '../../src/app/(public)/koleksi/[id]/collection-view';
-import type { GalleryCard, GalleryItem } from '../../src/features/exhibition/model';
+import { safeExternalUrl, type GalleryCard, type GalleryItem } from '../../src/features/exhibition/model';
 
 const c = (id: string, over: Partial<GalleryCard> = {}): GalleryCard => ({
   id, title: `Karya ${id}`, type: 'Landing Page', cohort: 'web-smg', track: 'web', personUid: 'u' + id,
@@ -70,5 +70,25 @@ describe('halaman koleksi', () => {
     expect(container.querySelector('iframe')).toBeNull();
     fireEvent.click(screen.getByText('Coba langsung'));
     expect(container.querySelector('iframe')?.getAttribute('sandbox')).toBe('allow-scripts allow-same-origin allow-forms allow-popups');
+  });
+
+  it('siteUrl javascript: tidak menampilkan tautan demo maupun Coba langsung', () => {
+    const data = {
+      collection: { id: 'k1', title: 'Dapur Nia', brief: '', classId: 'x', cohort: 'web-smg', type: 'Aplikasi Web', coverUrls: [] },
+      versions: [{ ...c('m1', { collectionId: 'k1' }), siteUrl: 'javascript:alert(1)' }],
+    };
+    const { container } = render(<CollectionView {...data} />);
+    expect(screen.queryByText('Coba langsung')).toBeNull();
+    expect(container.querySelector('a[href^="javascript"]')).toBeNull();
+    expect(screen.queryByText(/Buka demo/)).toBeNull();
+  });
+});
+
+describe('safeExternalUrl', () => {
+  it('hanya menerima http(s)', () => {
+    expect(safeExternalUrl('https://a.id/x')).toBe('https://a.id/x');
+    expect(safeExternalUrl('http://a.id')).toBe('http://a.id');
+    expect(safeExternalUrl('javascript:alert(1)')).toBeNull();
+    expect(safeExternalUrl('bukan url')).toBeNull();
   });
 });
