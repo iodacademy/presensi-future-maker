@@ -97,7 +97,13 @@ export function WorkForm({ workId, people, collections, onClose }: {
     const s = [...m.slides]; [s[i], s[i + d]] = [s[i + d], s[i]]; return { ...m, slides: s };
   });
 
-  if (!loaded) return <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: 'var(--color-text-muted)' }}>{error ?? 'Memuat karya...'}</div>;
+  // Tombol Batal tetap ada agar kegagalan memuat tidak mengunci admin / Batal stays so a load failure does not trap the admin
+  if (!loaded) return (
+    <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: 'var(--color-text-muted)', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+      <div role={error ? 'alert' : undefined}>{error ?? 'Memuat karya...'}</div>
+      <button type="button" style={btn} onClick={() => onClose(false)}>Batal</button>
+    </div>
+  );
 
   return (
     <form
