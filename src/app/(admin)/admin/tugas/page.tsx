@@ -93,6 +93,75 @@ export default function AdminTugasPage() {
   // three rows while on page three shows an empty list.
   useEffect(() => { setPage(0); }, [classId, kind, query]);
 
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  /**
+   * Satu sheet per tugas berisi No, Nama, dan tautan hasilnya. Seluruh peserta
+   * aktif tercantum, termasuk yang belum mengumpulkan, agar yang kosong
+   * terlihat tanpa mencocokkan daftar nama sendiri.
+   *
+   * One sheet per task holding No, Name and the link to the work. Every active
+   * participant is listed, including those yet to submit, so the gaps show
+   * without matching name lists by hand.
+   */
+  async function exportExcel() {
+    if (!selectedClass) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const daftar = ofKind.filter((t) => t.published);
+      const rosters = await Promise.all(
+        daftar.map(async (t) => {
+          const resp = await fetch(`/api/tasks/${encodeURIComponent(t.id)}/roster`);
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || `Gagal memuat ${t.title}`);
+          return data as {
+            submitted: { studentName: string; url: string | null; fileUrl: string | null; fileLost: boolean }[];
+            pending: { studentName: string }[];
+          };
+        })
+      );
+      const XLSX = await import('xlsx');
+      const wb = XLSX.utils.book_new();
+      const dipakai = new Set<string>();
+      daftar.forEach((t, i) => {
+        const baris = [
+          ...rosters[i].submitted.map((r) => ({
+            nama: r.studentName,
+            // Berkas unggahan dibuka lewat aplikasi, jadi tautannya harus lengkap dengan alamatnya.
+            // Uploaded files open through the app, so the link needs its full address.
+            link: r.url ?? (r.fileUrl ? `${window.location.origin}${r.fileUrl}` : null),
+            ket: r.fileLost ? 'Berkas tidak tersimpan, perlu unggah ulang' : 'Terkumpul tanpa tautan',
+          })),
+          ...rosters[i].pending.map((r) => ({ nama: r.studentName, link: null, ket: 'Belum mengumpulkan' })),
+        ].sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+
+        const label = kind === 'capstone' ? 'Link Capstone' : 'Link Tugas';
+        const ws = XLSX.utils.aoa_to_sheet([['No', 'Nama', label], ...baris.map((b, j) => [j + 1, b.nama, b.link ?? b.ket])]);
+        baris.forEach((b, j) => {
+          if (b.link) ws[XLSX.utils.encode_cell({ r: j + 1, c: 2 })].l = { Target: b.link };
+        });
+        ws['!cols'] = [{ wch: 5 }, { wch: 34 }, { wch: 70 }];
+        ws['!autofilter'] = { ref: `A1:C${baris.length + 1}` };
+
+        // Nama sheet paling panjang 31 karakter, tanpa : \ / ? * [ ], dan harus unik.
+        // A sheet name is at most 31 characters, without : \ / ? * [ ], and unique.
+        let nama = `${i + 1}. ${t.title}`.replace(/[:\\/?*[\]]/g, ' ').slice(0, 31).trim();
+        while (dipakai.has(nama)) nama = `${nama.slice(0, 28)} ${dipakai.size}`;
+        dipakai.add(nama);
+        XLSX.utils.book_append_sheet(wb, ws, nama);
+      });
+      if (daftar.length === 0) throw new Error(`Belum ada ${TASK_KIND_LABELS[kind].toLowerCase()} yang terbit`);
+      const jenis = kind === 'capstone' ? 'Capstone' : 'Tugas_Praktik_Mandiri';
+      XLSX.writeFile(wb, `${jenis}_${selectedClass.canonicalName.replace(/[^\w-]+/g, '_')}.xlsx`);
+    } catch (e) {
+      setExportError((e as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const ofKind = tasks.filter((t) => t.kind === kind);
   const needle = query.trim().toLowerCase();
   const visible = ofKind.filter((t) => needle === '' || t.title.toLowerCase().includes(needle));
@@ -172,7 +241,18 @@ export default function AdminTugasPage() {
           >
             <Download size={12} strokeWidth={2} /> Ekspor CSV
           </a>
+          {(kind === 'daily' || kind === 'capstone') && (
+            <button
+              type="button"
+              onClick={exportExcel}
+              disabled={exporting}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '8px 14px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--color-primary)', color: '#ffffff', fontSize: '11px', fontWeight: 700, cursor: exporting ? 'wait' : 'pointer', opacity: exporting ? 0.7 : 1 }}
+            >
+              <Download size={12} strokeWidth={2} /> {exporting ? 'Menyiapkan...' : `Ekspor Excel ${TASK_KIND_LABELS[kind]}`}
+            </button>
+          )}
         </div>
+        {exportError && <p role="alert" style={{ fontSize: '11px', color: 'var(--color-danger)', margin: 0 }}>Ekspor gagal: {exportError}</p>}
       </div>
 
       {/* Jenisnya diturunkan dari TASK_KIND_LABELS: daftar tertutup pernah
