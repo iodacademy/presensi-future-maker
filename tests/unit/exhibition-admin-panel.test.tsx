@@ -65,3 +65,63 @@ describe('panel admin Pameran, tab Karya', () => {
     expect(links.every((l) => l.getAttribute('href') === '/admin/pameran')).toBe(true);
   });
 });
+
+const person = { uid: 'u1', fullName: 'Budi Santoso', nickname: 'Budi', cohort: 'web-smg', visible: true, photoUrl: '', mainWorkId: null, workCount: 2 };
+function mockContent(patch: (url: string, body: unknown) => void, collections: unknown[] = []) {
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method) { patch(url, JSON.parse(String(init.body))); return new Response(JSON.stringify({ ok: true, id: 'c9' })); }
+    const body = url === '/api/pameran/people' ? { people: [person] }
+      : url === '/api/pameran/works' ? { works: [w('w1', 'web-smg'), w('x1', 'web-smg', { personUid: 'u2' })] }
+      : url === '/api/pameran/collections' ? { collections }
+      : url === '/api/pameran/site' ? { content: { photos: {}, videos: { afterMovie: '', peserta: {}, trainer: {}, plan: '' }, testiPeserta: {}, testiTrainer: [], testiPlan: { name: '', role: '', quote: '' } } } : {};
+    return new Response(JSON.stringify(body));
+  }));
+}
+const openTab = (key: string) => window.history.replaceState(null, '', `/admin/pameran?tab=${key}`);
+
+describe('panel admin Pameran, tab Peserta, Koleksi, Konten Situs', () => {
+  it('form peserta mengirim patch nama panggilan dan tampil', async () => {
+    const patch = vi.fn(); mockContent(patch); openTab('peserta');
+    render(<AdminPameranPage />);
+    await screen.findByText('Budi Santoso');
+    fireEvent.click(screen.getByRole('button', { name: 'Ubah' }));
+    fireEvent.change(await screen.findByLabelText('Nama panggilan'), { target: { value: 'Dinda' } });
+    fireEvent.click(screen.getByLabelText('Tampil di pameran'));
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan' }));
+    await waitFor(() => expect(patch).toHaveBeenCalled());
+    expect(patch).toHaveBeenCalledWith('/api/pameran/people/u1', { nickname: 'Dinda', visible: false });
+  });
+
+  it('karya utama hanya menawarkan karya milik peserta itu', async () => {
+    mockContent(vi.fn()); openTab('peserta');
+    render(<AdminPameranPage />);
+    await screen.findByText('Budi Santoso');
+    fireEvent.click(screen.getByRole('button', { name: 'Ubah' }));
+    const select = await screen.findByLabelText('Karya utama');
+    await waitFor(() => expect(select.querySelectorAll('option').length).toBe(2));
+    expect(screen.getByRole('option', { name: 'Karya w1' })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: 'Karya x1' })).toBeNull();
+  });
+
+  it('koleksi baru dikirim dengan judul, kelas, dan jenis', async () => {
+    const patch = vi.fn(); mockContent(patch); openTab('koleksi');
+    render(<AdminPameranPage />);
+    fireEvent.change(await screen.findByLabelText('Judul koleksi'), { target: { value: 'Konten Mei' } });
+    fireEvent.change(screen.getByLabelText('Kelas koleksi'), { target: { value: 'smm-yk' } });
+    fireEvent.change(screen.getByLabelText('Jenis koleksi'), { target: { value: 'Reels' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Buat koleksi' }));
+    await waitFor(() => expect(patch).toHaveBeenCalled());
+    expect(patch).toHaveBeenCalledWith('/api/pameran/collections', { title: 'Konten Mei', brief: '', cohort: 'smm-yk', type: 'Reels', classId: '', coverUrls: [] });
+  });
+
+  it('konten situs menyimpan tautan video after movie', async () => {
+    const patch = vi.fn(); mockContent(patch); openTab('situs');
+    render(<AdminPameranPage />);
+    fireEvent.change(await screen.findByLabelText('Video after movie'), { target: { value: 'https://youtu.be/x' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan konten situs' }));
+    await waitFor(() => expect(patch).toHaveBeenCalled());
+    const [url, body] = patch.mock.calls[0];
+    expect(url).toBe('/api/pameran/site');
+    expect((body as { videos: { afterMovie: string } }).videos.afterMovie).toBe('https://youtu.be/x');
+  });
+});

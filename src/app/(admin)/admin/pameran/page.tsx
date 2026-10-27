@@ -3,6 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { AppShell } from '@/components/app-shell';
 import { WorksTab } from './works-tab';
+import { PeopleTab } from './people-tab';
+import { CollectionsTab } from './collections-tab';
+import { SiteTab } from './site-tab';
 
 const TABS = [
   { key: 'karya', label: 'Karya' },
@@ -13,10 +16,8 @@ const TABS = [
 
 /**
  * Panel admin pameran. Tab dipilih lewat ?tab= agar muat ulang tidak kembali ke Karya.
- * Tab Peserta, Koleksi, dan Konten Situs diisi oleh tugas berikutnya.
  *
  * Exhibition admin panel. The tab lives in ?tab= so a reload does not jump back to Karya.
- * The Peserta, Koleksi, and Konten Situs tabs are filled in by later tasks.
  */
 export default function AdminPameranPage() {
   const [tab, setTab] = useState<string>('karya');
@@ -48,11 +49,7 @@ export default function AdminPameranPage() {
           </button>
         ))}
       </div>
-      {tab === 'karya' ? <WorksTab /> : (
-        <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px dashed var(--color-border)', padding: '36px', textAlign: 'center', fontSize: '13px', color: 'var(--color-text-muted)' }}>
-          Tab ini belum tersedia.
-        </div>
-      )}
+      {tab === 'peserta' ? <PeopleTab /> : tab === 'koleksi' ? <CollectionsTab /> : tab === 'situs' ? <SiteTab /> : <WorksTab />}
     </AppShell>
   );
 }
