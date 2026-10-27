@@ -544,16 +544,15 @@ function installReminderTrigger() {
 }
 
 /**
- * Mencari rekaman sesi mentoring yang sudah selesai, membagikannya kepada
- * mentor dan peserta tanpa email, melampirkannya ke event Calendar, lalu
+ * Mencari rekaman sesi mentoring yang sudah selesai, membukanya untuk siapa
+ * saja yang memegang tautannya, melampirkannya ke event Calendar, lalu
  * mengirim tautannya ke aplikasi.
  *
  * Ruang dari Meet API tidak terhubung asli dengan event Calendar, sehingga Meet
  * tidak melampirkan rekamannya sendiri seperti rapat buatan Calendar.
  *
- * Finds recordings of finished mentoring sessions, shares them with the mentor
- * and participant without email, attaches them to the Calendar event, then
- * sends the link to the app.
+ * Finds recordings of finished mentoring sessions, opens them to anyone holding
+ * the link, attaches them to the Calendar event, then sends the link to the app.
  *
  * A Meet API space is not natively tied to its Calendar event, so Meet does not
  * attach the recording by itself the way it does for Calendar-made meetings.
@@ -592,15 +591,10 @@ function attachRecordings() {
       if (!priv.bookingId) return;
       var url = files[0].exportUri || 'https://drive.google.com/file/d/' + files[0].file + '/view';
 
-      // Aplikasi menyimpan tautannya lebih dulu, lalu membalas dengan email
-      // mentor dan peserta menurut datanya sendiri; hanya keduanya yang diberi
-      // akses. Daftar tamu event tidak dipercaya karena tamu dapat menambah
-      // orang lain. Bila aplikasi gagal, event tidak ditandai, sehingga
-      // percobaan berikutnya mengulang dari awal.
-      // The app stores the link first, then replies with the mentor's and
-      // participant's emails from its own data; only they are given access. The
-      // event's guest list is not trusted because guests can add others. If the
-      // app fails, the event is left unmarked so the next run starts over.
+      // Aplikasi menyimpan tautannya lebih dulu. Bila aplikasi gagal, event
+      // tidak ditandai, sehingga percobaan berikutnya mengulang dari awal.
+      // The app stores the link first. If the app fails, the event is left
+      // unmarked so the next run starts over.
       var res = UrlFetchApp.fetch(APP_RECORDINGS_URL, {
         method: 'post',
         contentType: 'application/json',
@@ -611,17 +605,8 @@ function attachRecordings() {
         console.warn('Aplikasi menolak rekaman ' + event.summary + ': ' + res.getContentText().slice(0, 200));
         return;
       }
-      var shareWith = JSON.parse(res.getContentText() || '{}').shareWith || [];
       files.forEach(function (f) {
-        shareWith.forEach(function (email) {
-          try {
-            // sendNotificationEmail false: berbagi tanpa email agar tamu tidak bingung.
-            // sendNotificationEmail false: sharing without email so guests are not confused.
-            Drive.Permissions.create({ role: 'reader', type: 'user', emailAddress: email }, f.file, { sendNotificationEmail: false });
-          } catch (err) {
-            console.warn('Gagal membagikan rekaman ke ' + email + ': ' + err);
-          }
-        });
+        shareRecordingPublic(f.file);
       });
 
       var attachments = (event.attachments || []).concat(
@@ -641,6 +626,56 @@ function attachRecordings() {
       console.warn('Lewati ' + event.summary + ': ' + err);
     }
   });
+}
+
+/**
+ * Membuka rekaman untuk siapa saja yang memegang tautannya. Berbagi per email
+ * gagal bila peserta memakai akun di luar organisasi dan Workspace menolak
+ * berbagi ke luar, sehingga tidak ada yang dapat membukanya.
+ *
+ * Opens a recording to anyone holding its link. Per-email sharing fails when
+ * participants use accounts outside the organisation and Workspace refuses
+ * outside sharing, leaving nobody able to open it.
+ */
+function shareRecordingPublic(fileId) {
+  try {
+    Drive.Permissions.create({ role: 'reader', type: 'anyone', allowFileDiscovery: false }, fileId, { supportsAllDrives: true });
+    return true;
+  } catch (err) {
+    // Biasanya karena kebijakan berbagi Drive di Admin Console.
+    // Usually the Drive sharing policy in the Admin Console.
+    console.warn('Gagal membuka rekaman ' + fileId + ' untuk publik: ' + err);
+    return false;
+  }
+}
+
+/**
+ * Dijalankan sekali dari editor: membuka rekaman yang sudah terlampir selama 90
+ * hari terakhir untuk siapa saja yang memegang tautannya.
+ *
+ * Run once from the editor: opens recordings already attached in the last 90
+ * days to anyone holding the link.
+ */
+function shareExistingRecordingsPublic() {
+  var now = new Date();
+  var list = Calendar.Events.list(CALENDAR_ID, {
+    timeMin: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+    timeMax: now.toISOString(),
+    singleEvents: true,
+    privateExtendedProperty: 'app=' + APP_TAG,
+    maxResults: 2500,
+  });
+  var ok = 0;
+  var gagal = 0;
+  (list.items || []).forEach(function (event) {
+    (event.attachments || []).forEach(function (a) {
+      var id = a.fileId || ((String(a.fileUrl || '').match(/\/d\/([\w-]+)/) || [])[1]);
+      if (!id || String(a.title || '').indexOf('Rekaman') !== 0) return;
+      if (shareRecordingPublic(id)) ok++;
+      else gagal++;
+    });
+  });
+  console.log('Rekaman dibuka untuk publik: ' + ok + ', gagal: ' + gagal);
 }
 
 function safeEquals(a, b) {
