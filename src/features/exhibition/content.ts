@@ -101,14 +101,14 @@ export const COH: Record<string, Cohort> = Object.fromEntries(COHORTS.map((c) =>
 export const cohLabel = (c: Cohort) => TRACKS[c.track].name + ' · ' + c.city;
 
 export const DOC_WEEKS: [string, string][] = [
-  ['Kick-off dan perkenalan', 'Peserta bertemu trainer dan teman sekelas untuk pertama kali.'],
-  ['Materi dasar', 'Fondasi keterampilan sesuai jurusan masing-masing.'],
-  ['Praktik terpandu', 'Latihan langsung dengan pendampingan trainer.'],
-  ['Kerja kelompok', 'Peserta berlatih berkolaborasi dalam tim kecil.'],
-  ['Sesi bersama praktisi', 'Berbagi pengalaman dari dunia kerja.'],
-  ['Mengerjakan proyek akhir', 'Setiap peserta mulai membangun karyanya sendiri.'],
-  ['Mentoring dan review', 'Karya dikaji bersama trainer sebelum dipresentasikan.'],
-  ['Presentasi dan kelulusan', 'Peserta mempresentasikan karya dan merayakan kelulusan.'],
+  ['Foto bersama', 'Peserta dan fasilitator dalam satu bingkai.'],
+  ['Pemaparan materi', 'Fasilitator membuka sesi dengan materi baru.'],
+  ['Pendampingan', 'Trainer mendampingi peserta saat praktik.'],
+  ['Diskusi kelompok', 'Peserta bertukar ide dalam tim kecil.'],
+  ['Praktik langsung', 'Materi langsung dicoba di laptop masing-masing.'],
+  ['Mengerjakan proyek', 'Peserta membangun karyanya sendiri.'],
+  ['Belajar dibimbing', 'Pertanyaan dijawab langsung di meja peserta.'],
+  ['Presentasi', 'Peserta menyampaikan hasil kerjanya di depan kelas.'],
 ];
 export const DOC_HERO = ['Hari pertama', 'Fokus belajar', 'Diskusi tim', 'Presentasi', 'Foto bersama'];
 export const DOC_BENTO: { c: number; r: number; cap?: string; word?: string; bg?: string; fg?: string }[] = [

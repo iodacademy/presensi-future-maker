@@ -64,7 +64,13 @@ export function DocsView({ photos: sitePhotos, captions = {} }: { photos: Record
   const rots = ['-8deg', '-3deg', '2deg', '6deg', '-4deg'], tys = ['10px', '-14px', '6px', '-8px', '14px'];
   const docHero = DOC_HERO.map((cap, i) => { const { co, n } = at(i); return { ...add(co, 'hero', n, cap), rot: rots[i], ty: tys[i], z: i === 2 ? 5 : 5 - Math.abs(2 - i) }; });
   const fi = Math.min(7, Math.round(scroll.p * 7));
-  const docFilm = DOC_WEEKS.map(([title, caption], i) => { const { co, n } = at(i); return { ...add(co, 'film', n, caption), title, num: String(i + 1).padStart(2, '0'), op: i === fi ? 1 : 0.55 }; });
+  const docFilm = DOC_WEEKS.map(([title, caption], i) => {
+    const { co, n } = at(i);
+    const it = add(co, 'film', n, caption);
+    // Keterangan foto menjadi judul; teks bawaan hanya untuk slot tanpa keterangan / The photo caption becomes the title; built-in text only for slots without one
+    const own = captions[it.slotId];
+    return { ...it, title: own || title, caption: own ? '' : caption, num: String(i + 1).padStart(2, '0'), op: i === fi ? 1 : 0.55 };
+  });
   let pi = 0;
   const docBento = DOC_BENTO.map((b) => {
     if (b.word) return { ...b, item: null };
@@ -120,8 +126,8 @@ export function DocsView({ photos: sitePhotos, captions = {} }: { photos: Record
         <div style={css('position:sticky;top:0;height:100vh;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:clamp(20px,3vw,36px);padding-top:76px')}>
           <div style={css('width:100%;max-width:1180px;margin:0 auto;padding:0 22px;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between')}>
             <div style={css('display:flex;flex-direction:column;gap:8px')}>
-              <span style={css('font-size:15px;font-weight:700;color:var(--yellow)')}>Perjalanan kelas</span>
-              <h2 style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.6vw,60px);line-height:1;letter-spacing:-0.035em;margin:0')}>Minggu demi minggu.</h2>
+              <span style={css('font-size:15px;font-weight:700;color:var(--yellow)')}>Sorotan kelas</span>
+              <h2 style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.6vw,60px);line-height:1;letter-spacing:-0.035em;margin:0')}>Momen di kelas.</h2>
             </div>
             <div style={css('display:flex;align-items:center;gap:16px;min-width:240px')}>
               <span style={css('font-family:var(--font-headline);font-weight:700;font-size:15px;white-space:nowrap')}>{String(fi + 1).padStart(2, '0') + ' / 08'}</span>
@@ -142,7 +148,7 @@ export function DocsView({ photos: sitePhotos, captions = {} }: { photos: Record
                   <span style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(36px,4vw,56px);line-height:0.9;letter-spacing:-0.04em;color:var(--yellow)')}>{fm.num}</span>
                   <span style={css('display:flex;flex-direction:column;gap:4px;padding-top:2px')}>
                     <span style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(18px,1.8vw,24px);line-height:1.15')}>{fm.title}</span>
-                    <span style={css('font-size:15px;line-height:1.45;max-width:460px')}>{fm.caption}</span>
+                    {fm.caption && <span style={css('font-size:15px;line-height:1.45;max-width:460px')}>{fm.caption}</span>}
                   </span>
                 </div>
               </div>
