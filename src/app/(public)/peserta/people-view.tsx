@@ -11,13 +11,13 @@ import { CohortHead, Field, Hv, css } from '@/features/exhibition/ui';
 const STEP = 30;
 
 /**
- * Ubin potret ala halaman tim: foto memenuhi ubin, nama panggilan dan jurusan
- * ditulis tegak di pita gelap tepi kiri. Peserta tanpa foto memakai warna
- * kelasnya dengan huruf awal besar, supaya grid tetap rapat tanpa lubang.
+ * Ubin potret: foto memenuhi ubin, nama panggilan dan jurusan di bagian bawah
+ * di atas bayangan gelap transparan. Peserta tanpa foto memakai warna kelasnya
+ * dengan huruf awal besar, supaya grid tetap rapat tanpa lubang.
  *
- * Team-page style portrait tile: the photo fills the tile, the nickname and
- * track run vertically in a dark band on the left edge. Participants without a
- * photo get their class colour with a large initial, so the grid stays solid.
+ * Portrait tile: the photo fills the tile, the nickname and track sit at the
+ * bottom over a translucent dark shade. Participants without a photo get their
+ * class colour with a large initial, so the grid stays solid.
  */
 export function PersonTile({ u }: { u: PublicPerson }) {
   const c = COH[u.cohort], photo = safeExternalUrl(u.photoUrl);
@@ -26,10 +26,10 @@ export function PersonTile({ u }: { u: PublicPerson }) {
       {photo
         // eslint-disable-next-line @next/next/no-img-element
         ? <img src={photo} alt="" loading="lazy" style={css('position:absolute;inset:0;width:100%;height:100%;object-fit:cover')} />
-        : <span aria-hidden="true" style={css(`position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-left:32px;background:${c.color};color:${c.fg};font-family:var(--font-headline);font-weight:700;font-size:clamp(64px,9vw,112px);letter-spacing:-0.04em;opacity:.92`)}>{u.nickname[0]?.toUpperCase() ?? '?'}</span>}
-      <span style={css('position:absolute;left:0;bottom:0;max-height:86%;background:var(--dark-blue);color:#fff;writing-mode:vertical-rl;transform:rotate(180deg);padding:14px 7px;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden')}>
-        <span style={css('font-family:var(--font-caption);font-weight:700;font-size:clamp(14px,1.4vw,17px)')}>{u.nickname}</span>
-        <span style={css(`font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:${c.color === '#8AC208' ? '#C6E87A' : '#9FD0F5'}`)}>{TRACKS[c.track].name}</span>
+        : <span aria-hidden="true" style={css(`position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-bottom:28px;background:${c.color};color:${c.fg};font-family:var(--font-headline);font-weight:700;font-size:clamp(64px,9vw,112px);letter-spacing:-0.04em;opacity:.92`)}>{u.nickname[0]?.toUpperCase() ?? '?'}</span>}
+      <span style={css('position:absolute;left:0;right:0;bottom:0;padding:48px 14px 14px;background:linear-gradient(to top,rgba(36,60,75,.88) 0%,rgba(36,60,75,.55) 55%,rgba(36,60,75,0) 100%);color:#fff;display:flex;flex-direction:column;gap:2px')}>
+        <span style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(16px,1.5vw,19px);line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{u.nickname}</span>
+        <span style={css(`font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${c.color === '#8AC208' ? '#C6E87A' : '#BFE0F8'}`)}>{TRACKS[c.track].name}</span>
       </span>
     </Hv>
   );
