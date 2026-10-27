@@ -25,7 +25,8 @@
     "diagnose-submissions": "tsx scripts/diagnose-submissions.ts",
     "deploy-indexes": "firebase deploy --only firestore:indexes",
     "seed-feedback-form": "tsx scripts/seed-feedback-form.ts",
-    "upload-pameran-photos": "tsx --env-file=.env.local scripts/upload-pameran-photos.ts"
+    "upload-pameran-photos": "tsx --env-file=.env.local scripts/upload-pameran-photos.ts",
+    "import-pameran": "tsx --env-file=.env.local scripts/import-pameran.ts"
   },
   "dependencies": {
     "firebase": "^12.18.0",
