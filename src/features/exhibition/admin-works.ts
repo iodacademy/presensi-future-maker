@@ -68,7 +68,7 @@ export async function createWork(input: WorkInput): Promise<string> {
 const EDITABLE = ['type', 'title', 'description', 'tools', 'aiAssisted', 'collectionId', 'cover', 'media', 'status'];
 const BULK_KEYS = ['status', 'aiAssisted', 'collectionId'];
 
-function checkKeys(patch: unknown, allowed: string[]): Record<string, unknown> {
+export function checkKeys(patch: unknown, allowed: string[]): Record<string, unknown> {
   if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('Perubahan harus berupa objek');
   const keys = Object.keys(patch);
   if (keys.length === 0) throw new Error('Perubahan tidak boleh kosong');
