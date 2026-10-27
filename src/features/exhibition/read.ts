@@ -63,8 +63,11 @@ async function readCatalog(): Promise<Catalog> {
     const members = cards.filter((x) => x.collectionId === c.id);
     const d = c.data();
     if (members.length === 0) return [];
+    // Tanpa sampul tersimpan, pakai tiga thumb anggota pertama / Without stored covers, use the first three member thumbs
+    const stored: string[] = d.coverUrls ?? [];
+    const coverUrls = stored.length ? stored : members.map((m) => m.thumb).filter(Boolean).slice(0, 3);
     return [{
-      id: c.id, title: d.title ?? '', cohort: d.cohort ?? '', type: d.type ?? '', coverUrls: d.coverUrls ?? [],
+      id: c.id, title: d.title ?? '', cohort: d.cohort ?? '', type: d.type ?? '', coverUrls,
       count: members.length, nicknames: [...new Set(members.map((m) => m.nickname))],
     }];
   });
@@ -138,7 +141,7 @@ export async function readSiteContent(): Promise<SiteContent> {
   const s = await getAdminDb().collection('exhibitionSite').doc('content').get();
   const stored = (s.exists ? s.data() : {}) as Partial<SiteContent>;
   // ponytail: gabungan dangkal per kunci teratas, dalamkan bila admin menyunting sebagian objek / shallow merge per top-level key, deepen if admins edit partial objects
-  return { photos: {}, videos: VIDEOS, testiPeserta: TESTI_P, testiTrainer: TESTI_T, testiPlan: TESTI_PLAN, ...stored };
+  return { photos: {}, videos: VIDEOS, testiPeserta: TESTI_P, testiAuthors: {}, testiTrainer: TESTI_T, testiPlan: TESTI_PLAN, ...stored };
 }
 
 export type WorkDetail = NonNullable<Awaited<ReturnType<typeof readWorkDetail>>>;

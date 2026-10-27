@@ -150,7 +150,7 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
                     <span style={css('font-family:var(--font-headline);font-weight:700;font-size:26px;line-height:1.1;letter-spacing:-0.02em')}>{c.city}</span>
                   </div>
                   <div style={css('position:relative;aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:#fff;color:var(--dark-blue)')}>
-                    <Photo src={site.photos['best-' + c.key] || bw.thumb} placeholder={bw.type} />
+                    <Photo src={bw.thumb} placeholder={bw.type} />
                   </div>
                   <div style={css('display:flex;flex-direction:column;gap:4px')}>
                     <span style={css('font-family:var(--font-headline);font-weight:700;font-size:19px;line-height:1.2')}>{bw.title}</span>

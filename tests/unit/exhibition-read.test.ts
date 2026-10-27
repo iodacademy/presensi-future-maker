@@ -72,6 +72,20 @@ describe('modul baca pameran', () => {
     expect(c.cards.map((x) => x.id).sort()).toEqual(['w1', 'w5', 'w6']);
     expect(c.cards.find((x) => x.id === 'w1')).toMatchObject({ nickname: 'Adinda', thumb: 't.webp', personUid: 'p1' });
   });
+  it('koleksi tanpa sampul memakai tiga thumb anggota pertama', async () => {
+    const saved = data.exhibitionCollections.c1.coverUrls;
+    data.exhibitionCollections.c1.coverUrls = [];
+    ['a', 'b', 'c'].forEach((k) => { data.exhibitionWorks['m' + k] = work({ collectionId: 'c1', cover: { thumb: k + '.webp', full: '' } }); });
+    data.exhibitionWorks.mz = work({ collectionId: 'c1', cover: { thumb: '', full: '' } });
+    try {
+      const col = (await getCatalog()).collections.find((x) => x.id === 'c1')!;
+      expect(col.coverUrls).toHaveLength(3);
+      expect(col.coverUrls.every(Boolean)).toBe(true);
+    } finally {
+      data.exhibitionCollections.c1.coverUrls = saved;
+      ['ma', 'mb', 'mc', 'mz'].forEach((k) => delete data.exhibitionWorks[k]);
+    }
+  });
   it('tidak ada nama lengkap atau kolom panjang di katalog', async () => {
     const json = JSON.stringify(await getCatalog());
     expect(json).not.toContain('Maharani');

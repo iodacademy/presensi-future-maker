@@ -17,7 +17,7 @@ export function buildSlots(): { id: string; name: string }[] {
   const out: { id: string; name: string }[] = [{ id: 'hero-poster', name: 'Poster after movie' }];
   SLIDES.forEach((s, i) => out.push({ id: 'doc-' + (i + 1), name: `Slide dokumentasi ${i + 1}: ${s.caption}` }));
   BENTO.forEach((b, i) => { if (b.type === 'photo') out.push({ id: 'bento-' + (i + 1), name: b.label }); });
-  COHORTS.forEach((c) => out.push({ id: 'best-' + c.key, name: `Karya terbaik ${c.city}` }, { id: 'testi-' + c.key, name: `Testimoni ${c.city}` }));
+  COHORTS.forEach((c) => out.push({ id: 'testi-' + c.key, name: `Testimoni ${c.city}` }));
   (Object.keys(TRACKS) as TrackKey[]).forEach((t) => out.push({ id: 'trainer-' + t, name: `Trainer ${TRACKS[t].name}` }));
   out.push({ id: 'testi-plan', name: 'Testimoni Plan Indonesia' });
 
@@ -48,8 +48,10 @@ export function SiteTab() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [people, setPeople] = useState<{ uid: string; fullName: string; nickname: string; cohort: string }[]>([]);
   const slots = useMemo(buildSlots, []);
 
+  useEffect(() => { api('/api/pameran/people').then((d) => setPeople(d.people ?? [])).catch(() => {}); }, []);
   useEffect(() => { api('/api/pameran/site').then((d) => setContent(d.content)).catch((e) => setError((e as Error).message)); }, []);
   if (!content) return error ? <div role="alert" style={alertBox}>{error}</div> : <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: 'var(--color-text-muted)' }}>Memuat konten situs...</div>;
 
@@ -67,8 +69,8 @@ export function SiteTab() {
   const save = (e: React.FormEvent) => {
     e.preventDefault();
     run(async () => {
-      const { photos, videos, testiPeserta, testiTrainer, testiPlan } = content;
-      await send('/api/pameran/site', 'PATCH', { photos, videos, testiPeserta, testiTrainer, testiPlan });
+      const { photos, videos, testiPeserta, testiAuthors, testiTrainer, testiPlan } = content;
+      await send('/api/pameran/site', 'PATCH', { photos, videos, testiPeserta, testiAuthors, testiTrainer, testiPlan });
       setSaved(true);
     });
   };
@@ -103,6 +105,15 @@ export function SiteTab() {
         {COHORTS.map((c) => (
           <label key={c.key} style={label}>Peserta {c.city}
             <textarea rows={2} value={content.testiPeserta[c.key] ?? ''} onChange={(e) => edit((s) => ({ ...s, testiPeserta: { ...s.testiPeserta, [c.key]: e.target.value } }))} style={field} />
+          </label>
+        ))}
+        {COHORTS.map((c) => (
+          <label key={'a-' + c.key} style={label}>Penulis kutipan {c.city}
+            <select value={content.testiAuthors?.[c.key] ?? ''} style={field}
+              onChange={(e) => edit((s) => ({ ...s, testiAuthors: { ...s.testiAuthors, [c.key]: e.target.value } }))}>
+              <option value="">Tidak ditampilkan</option>
+              {people.filter((p) => p.cohort === c.key).map((p) => <option key={p.uid} value={p.uid}>{p.nickname} ({p.fullName})</option>)}
+            </select>
           </label>
         ))}
         {content.testiTrainer.map((t, i) => (

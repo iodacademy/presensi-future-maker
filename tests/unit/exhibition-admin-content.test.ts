@@ -109,6 +109,11 @@ describe('API admin peserta, koleksi, konten situs', () => {
     const res = await sitePatch(new Request('http://x', { method: 'PATCH', body: JSON.stringify({ photos: [] }) }));
     expect(res.status).toBe(400);
   });
+  it('testiAuthors diterima sebagai objek dan ditolak bila bukan objek', async () => {
+    await updateSiteContent({ testiAuthors: { 'web-smg': 'u1' } });
+    expect((data.exhibitionSite.content as { testiAuthors: unknown }).testiAuthors).toEqual({ 'web-smg': 'u1' });
+    await expect(updateSiteContent({ testiAuthors: [] } as never)).rejects.toThrow();
+  });
   it('GET situs: bawaan bila belum ada dokumen, isi tersimpan bila ada', async () => {
     delete data.exhibitionSite.content;
     const def = await (await siteGet()).json();

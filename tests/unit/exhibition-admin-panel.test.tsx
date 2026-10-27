@@ -56,6 +56,18 @@ describe('panel admin Pameran, tab Karya', () => {
     expect(bulk).toHaveBeenCalledWith({ ids: ['s2'], patch: { aiAssisted: true } });
   });
 
+  it('aksi massal tidak mengirim baris terpilih yang tersembunyi oleh saringan', async () => {
+    const bulk = vi.fn(); mockFetch(bulk);
+    render(<AdminPameranPage />);
+    await screen.findByText('Karya s2');
+    fireEvent.click(screen.getByLabelText('Pilih Karya s2'));
+    fireEvent.click(screen.getByLabelText('Pilih Karya w1'));
+    fireEvent.change(screen.getByLabelText('Kelas'), { target: { value: 'web-smg' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Nyalakan label AI' }));
+    await waitFor(() => expect(bulk).toHaveBeenCalled());
+    expect(bulk).toHaveBeenCalledWith({ ids: ['w1'], patch: { aiAssisted: true } });
+  });
+
   it('menu Pameran ada di sidebar admin', async () => {
     (globalThis as { __realShell?: boolean }).__realShell = true;
     mockFetch(vi.fn());

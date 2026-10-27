@@ -36,6 +36,8 @@ export interface SiteContent {
   photos: Record<string, string>;
   videos: { afterMovie: string; peserta: Record<string, string>; trainer: Record<TrackKey, string>; plan: string };
   testiPeserta: Record<string, string>;
+  // Kunci kohor -> uid peserta yang diberi kutipan / Cohort key -> uid of the participant credited with the quote
+  testiAuthors: Record<string, string>;
   testiTrainer: { track: TrackKey; name: string; quote: string }[];
   testiPlan: { name: string; role: string; quote: string };
 }
@@ -47,6 +49,18 @@ export interface GalleryCard {
 
 export interface CollectionCard {
   id: string; title: string; cohort: string; type: string; coverUrls: string[]; count: number; nicknames: string[];
+}
+
+/**
+ * Penulis testimoni beranda: hanya kohor yang dipilih admin dan pesertanya tampil di katalog.
+ *
+ * Homepage testimonial authors: only cohorts an admin picked whose person is visible in the catalog.
+ */
+export function homeTesti(people: { uid: string; nickname: string }[], authors: Record<string, string>) {
+  return COHORTS.flatMap((c) => {
+    const p = people.find((x) => x.uid === authors[c.key]);
+    return p ? [{ cohort: c.key, uid: p.uid, nickname: p.nickname }] : [];
+  });
 }
 
 export type GalleryItem = { kind: 'work'; card: GalleryCard } | { kind: 'collection'; collection: CollectionCard };

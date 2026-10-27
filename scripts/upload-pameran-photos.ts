@@ -10,7 +10,7 @@
  *
  * Id slot:
  *   hero-poster, testi-plan, doc-1..doc-5, bento-1/3/4/6/8/9
- *   best-<kelas>, testi-<kelas>, trainer-<web|da|smm>
+ *   testi-<kelas>, trainer-<web|da|smm>
  *   doc-<kelas>-<hero|film|bento|kelas|momen|kenangan>-<n>
  * <kelas> = web-smg | da-jkt | smm-yk | smm-sby
  *
@@ -33,7 +33,7 @@ import path from 'path';
 import sharp from 'sharp';
 import { getAdminDb, getAdminStorage } from '../src/lib/firebase/admin';
 
-const SLOT = /^(hero-poster|testi-plan|doc-[1-5]|bento-(1|3|4|6|8|9)|(best|testi)-(web-smg|da-jkt|smm-yk|smm-sby)|trainer-(web|da|smm)|doc-(web-smg|da-jkt|smm-yk|smm-sby)-(hero|film|bento|kelas|momen|kenangan)-\d+)$/;
+const SLOT = /^(hero-poster|testi-plan|doc-[1-5]|bento-(1|3|4|6|8|9)|testi-(web-smg|da-jkt|smm-yk|smm-sby)|trainer-(web|da|smm)|doc-(web-smg|da-jkt|smm-yk|smm-sby)-(hero|film|bento|kelas|momen|kenangan)-\d+)$/;
 const MAX_BYTES = 300 * 1024;
 
 async function compress(file: string): Promise<Buffer> {

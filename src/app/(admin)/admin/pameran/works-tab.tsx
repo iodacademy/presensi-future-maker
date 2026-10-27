@@ -86,7 +86,8 @@ export function WorksTab() {
     if (!confirm(`Terbitkan ${shown.length} karya yang tampil?`)) return;
     bulk(shown.map((w) => w.id), { status: 'published' });
   }
-  const ids = [...picked];
+  // Hanya id terpilih yang masih tampil; yang tersembunyi filter tidak disentuh / Only picked ids still shown; filter-hidden rows stay untouched
+  const ids = shown.filter((w) => picked.has(w.id)).map((w) => w.id);
   const allShown = shown.length > 0 && shown.every((w) => picked.has(w.id));
   const toggle = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const toggleAll = () => setPicked(allShown ? new Set() : new Set(shown.map((w) => w.id)));
@@ -126,10 +127,10 @@ export function WorksTab() {
           ['Terbitkan', { status: 'published' }], ['Sembunyikan', { status: 'hidden' }], ['Jadikan draf', { status: 'draft' }],
           ['Nyalakan label AI', { aiAssisted: true }], ['Matikan label AI', { aiAssisted: false }],
         ] as const).map(([label, patch]) => (
-          <button key={label} type="button" style={btn} disabled={busy || picked.size === 0} onClick={() => bulk(ids, patch)}>{label}</button>
+          <button key={label} type="button" style={btn} disabled={busy || ids.length === 0} onClick={() => bulk(ids, patch)}>{label}</button>
         ))}
         <select
-          aria-label="Masukkan ke koleksi" value="" disabled={busy || picked.size === 0} style={field}
+          aria-label="Masukkan ke koleksi" value="" disabled={busy || ids.length === 0} style={field}
           onChange={(e) => e.target.value && bulk(ids, { collectionId: e.target.value === '-' ? null : e.target.value })}
         >
           <option value="">Masukkan ke koleksi</option>

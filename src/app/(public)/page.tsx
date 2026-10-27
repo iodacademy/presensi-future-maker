@@ -4,6 +4,7 @@ import { getSessionActor, getRoleRedirectPath } from '@/features/auth/session';
 import { COHORTS } from '@/features/exhibition/content';
 import { orderGallery } from '@/features/exhibition/gallery-order';
 import { getCatalog, getSiteContent, todayWib } from '@/features/exhibition/read';
+import { homeTesti } from '@/features/exhibition/model';
 import HomePage, { type HomeBest, type HomeTesti } from './home-page';
 
 // Pengguna yang sudah login langsung ke dashboard; pengunjung lain melihat pameran / Signed-in users go straight to their dashboard; other visitors see the exhibition
@@ -20,9 +21,7 @@ export default async function IndexPage() {
       ? [{ cohort: c.key, title: it.card.title, nickname: it.card.nickname, type: it.card.type, href: '/karya/' + it.card.id, thumb: it.card.thumb }]
       : [{ cohort: c.key, title: it.collection.title, nickname: it.collection.nicknames[0] ?? '', type: 'Koleksi', href: '/koleksi/' + it.collection.id, thumb: it.collection.coverUrls[0] ?? '' }];
   });
-  const testi = COHORTS.flatMap((c): HomeTesti[] => {
-    const p = catalog.people.find((x) => x.cohort === c.key);
-    return p ? [{ cohort: c.key, uid: p.uid, nickname: p.nickname }] : [];
-  });
+  // Kutipan hanya untuk peserta yang dipilih admin dan tampil / Quotes only for the participant an admin picked who is visible
+  const testi: HomeTesti[] = homeTesti(catalog.people, site.testiAuthors ?? {});
   return <HomePage people={catalog.people.length} works={catalog.cards.length} best={best} testi={testi} site={site} />;
 }
