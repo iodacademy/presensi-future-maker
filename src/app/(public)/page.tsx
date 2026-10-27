@@ -36,7 +36,7 @@ export default function HomePage() {
       <section style={css('background:var(--plan-blue);color:#fff;padding:calc(80px + clamp(48px,7vw,88px)) 22px clamp(56px,7vw,88px)')}>
         <div style={css('max-width:880px;margin:0 auto;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px')}>
           <span style={css('font-size:17px;font-weight:700;color:var(--yellow)')}>Pameran Karya Bootcamp</span>
-          <h1 style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(48px,8vw,96px);line-height:1.04;letter-spacing:-0.035em;margin:0')}>Future Makers 2026.</h1>
+          <h1 style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(48px,8vw,96px);line-height:1.04;letter-spacing:-0.035em;margin:0')}>Future Innovators 2026.</h1>
         </div>
         <div style={css('max-width:1180px;margin:clamp(36px,5vw,56px) auto 0;position:relative;aspect-ratio:16/9;border-radius:24px;overflow:hidden;background:var(--dark-blue)')}>
           {!playing && (
@@ -49,7 +49,7 @@ export default function HomePage() {
             </>
           )}
           {playing && hero.isEmbed && (
-            <iframe src={hero.embed} title="After movie Future Makers 2026" allow="autoplay; encrypted-media; fullscreen" allowFullScreen style={css('position:absolute;inset:0;width:100%;height:100%;border:0')} />
+            <iframe src={hero.embed} title="After movie Bootcamp Future Innovators 2026" allow="autoplay; encrypted-media; fullscreen" allowFullScreen style={css('position:absolute;inset:0;width:100%;height:100%;border:0')} />
           )}
           {playing && hero.isFile && (
             <video src={hero.url} controls autoPlay playsInline style={css('position:absolute;inset:0;width:100%;height:100%;background:#000')} />

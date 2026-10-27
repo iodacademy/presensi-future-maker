@@ -13,8 +13,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: 'Pameran Future Makers 2026',
-  description: 'Pameran karya peserta bootcamp Future Makers 2026 · Plan Indonesia',
+  title: 'Pameran Bootcamp Future Innovators 2026',
+  description: 'Pameran karya peserta Bootcamp Future Innovators 2026 · Plan Indonesia',
 };
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -24,7 +24,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <main style={{ flex: 1 }}>{children}</main>
       <footer style={{ background: 'var(--surface-muted)', padding: '32px 22px' }}>
         <div style={{ maxWidth: 1024, margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)' }}>
-          <span>Pameran Karya Bootcamp Future Makers 2026 · Plan Indonesia</span>
+          <span>Pameran Karya Bootcamp Future Innovators 2026 · Plan Indonesia</span>
           <span>Sampai semua setara</span>
         </div>
       </footer>

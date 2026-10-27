@@ -90,7 +90,7 @@ export default function DocsPage() {
         <div style={css('max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(40px,6vw,72px)')}>
           <div style={css('display:flex;flex-wrap:wrap;gap:24px 48px;align-items:flex-end;justify-content:space-between')}>
             <div style={css('display:flex;flex-direction:column;gap:10px')}>
-              <span style={css('font-size:15px;font-weight:700;color:var(--yellow)')}>{dc === 'all' ? 'Empat kelas · Future Makers 2026' : cohLabel(COH[dc])}</span>
+              <span style={css('font-size:15px;font-weight:700;color:var(--yellow)')}>{dc === 'all' ? 'Empat kelas · Bootcamp Future Innovators 2026' : cohLabel(COH[dc])}</span>
               <h1 style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(52px,9vw,120px);line-height:0.92;letter-spacing:-0.045em;margin:0')}>Dokumentasi <span style={css('display:inline-block;background:var(--yellow);color:var(--dark-blue);padding:0 0.12em 0.06em')}>kelas</span></h1>
             </div>
             <p style={css('margin:0;font-size:18px;line-height:1.5;max-width:380px;text-wrap:pretty')}>Foto dan momen selama bootcamp, dari hari pertama sampai presentasi akhir. Pilih kelas untuk melihat dokumentasinya.</p>

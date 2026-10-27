@@ -12,7 +12,7 @@ export default function AboutPage() {
         <div style={css('max-width:880px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:16px')}>
           <span style={css('font-size:17px;font-weight:700;color:var(--dark-blue)')}>Tentang bootcamp</span>
           <h1 style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(44px,7vw,80px);line-height:1.04;letter-spacing:-0.035em;margin:0;text-wrap:balance')}>Belajar dari praktik. Pulang membawa karya.</h1>
-          <p style={css('font-family:var(--font-headline);font-weight:500;font-size:clamp(19px,2.2vw,24px);line-height:1.35;margin:8px 0 0;max-width:640px;text-wrap:balance')}>Future Makers adalah bootcamp keterampilan digital untuk kaum muda. Setiap peserta menyelesaikan proyek nyata di akhir program.</p>
+          <p style={css('font-family:var(--font-headline);font-weight:500;font-size:clamp(19px,2.2vw,24px);line-height:1.35;margin:8px 0 0;max-width:640px;text-wrap:balance')}>Bootcamp Future Innovators adalah program keterampilan digital untuk kaum muda. Setiap peserta menyelesaikan proyek nyata di akhir program.</p>
         </div>
       </section>
       <section style={css('padding:clamp(48px,7vw,80px) 12px clamp(56px,8vw,96px)')}>

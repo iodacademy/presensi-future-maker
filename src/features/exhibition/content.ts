@@ -1,12 +1,12 @@
 /**
- * Isi website pameran Future Makers 2026.
+ * Isi website pameran Bootcamp Future Innovators 2026.
  *
  * Disalin apa adanya dari desain (docs/Website Pameran Future Makers 2026),
  * termasuk peserta dan karya contoh yang dibangkitkan dari benih tetap. Bila
  * data asli dari Firestore sudah siap, cukup berkas ini yang diganti; halaman
  * hanya membaca bentuk datanya.
  *
- * Content of the Future Makers 2026 exhibition website.
+ * Content of the Bootcamp Future Innovators 2026 exhibition website.
  *
  * Copied as-is from the design (docs/Website Pameran Future Makers 2026),
  * including the sample people and works generated from a fixed seed. Once real
@@ -209,7 +209,7 @@ export const TESTI_T: { track: TrackKey; name: string; quote: string }[] = [
   { track: 'da', name: 'Nama Trainer', quote: 'Mereka terbiasa bertanya “datanya bilang apa?” sebelum membuat grafik. Itu kebiasaan analis yang baik.' },
   { track: 'smm', name: 'Nama Trainer', quote: 'Banyak campaign peserta yang dijalankan untuk usaha nyata di sekitar mereka.' },
 ];
-export const TESTI_PLAN = { name: 'Nama Perwakilan', role: 'Yayasan Plan International Indonesia', quote: 'Future Makers adalah bagian dari komitmen kami membuka kesempatan kerja yang setara bagi kaum muda. Karya di pameran ini menunjukkan apa yang mereka capai saat diberi ruang.' };
+export const TESTI_PLAN = { name: 'Nama Perwakilan', role: 'Yayasan Plan International Indonesia', quote: 'Bootcamp Future Innovators adalah bagian dari komitmen kami membuka kesempatan kerja yang setara bagi kaum muda. Karya di pameran ini menunjukkan apa yang mereka capai saat diberi ruang.' };
 export const SKILLS: Record<TrackKey, string[]> = { web: ['HTML & CSS','JavaScript','React','Git','REST API'], da: ['Excel','SQL','Python','Looker Studio','Data cleaning'], smm: ['Copywriting','Canva','Perencanaan konten','Meta Ads','Analisis performa'] };
 
 function rng(seed: number) { return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
@@ -257,8 +257,15 @@ function build() {
     const tk = c.track;
     for (let i = 0; i < c.n; i++) {
       const first = FIRST[Math.floor(r() * FIRST.length)];
-      const init = String.fromCharCode(65 + Math.floor(r() * 26));
-      const p: Person = { id: 'p' + (pid++), track: tk, name: first + ' ' + init + '.', initials: first[0] + init, city: c.city, cohort: c.key, works: [] };
+      // Desain mengundi inisial nama belakang di sini. Undiannya tetap dijalankan agar
+      // karya contoh tidak bergeser, tetapi hasilnya dibuang: demi privasi, yang tampil
+      // hanya nama panggilan.
+      //
+      // The design draws a surname initial here. The draw still runs so the sample
+      // works do not shift, but its result is discarded: for privacy, only the
+      // nickname is shown.
+      r();
+      const p: Person = { id: 'p' + (pid++), track: tk, name: first, initials: first[0], city: c.city, cohort: c.key, works: [] };
       const n = r() < 0.45 ? 2 : 1;
       chromeSort(TRACKS[tk].types, () => r() - 0.5).slice(0, n).forEach((ty) => {
         const T = TYPE[ty];

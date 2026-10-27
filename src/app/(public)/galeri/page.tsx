@@ -45,7 +45,7 @@ function Gallery({ initialCohort, initialTrack }: { initialCohort: string; initi
   return (
     <>
       <CohortHead
-        cohort={cohort} track={track} allColor="#DC0080" allFg="#FFFFFF" eyebrowAll="Pameran karya Future Makers 2026" allLabel="Tiga jurusan"
+        cohort={cohort} track={track} allColor="#DC0080" allFg="#FFFFFF" eyebrowAll="Pameran karya Bootcamp Future Innovators 2026" allLabel="Tiga jurusan"
         title="Galeri karya" intro="Pilih kelas, lalu saring berdasarkan jenis karya atau cari nama peserta."
         count={(k) => (k === 'all' ? DATA.works.length : DATA.works.filter((w) => w.cohort === k).length) + ' karya'}
         pick={(k) => { setCohort(k); setTrack('all'); setType('all'); setLimit(PAGE_SIZE); }}

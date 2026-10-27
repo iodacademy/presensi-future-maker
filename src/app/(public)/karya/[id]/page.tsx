@@ -13,7 +13,7 @@ export default function WorkPage() {
   const w = DATA.W[id];
   if (!w) notFound();
   const t = TRACKS[w.track], T = TYPE[w.type], p = DATA.P[w.person];
-  const url = w.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.futuremakers.id';
+  const url = w.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.futureinnovators.id';
   const specs = [{ k: 'Peserta', v: p.name }, { k: 'Track', v: t.name }, { k: 'Jenis karya', v: w.type }, { k: 'Tools', v: T.tools.join(', ') }, { k: 'Kota', v: p.city }];
   const related = DATA.works.filter((x) => x.track === w.track && x.id !== w.id && x.type === w.type).slice(0, 4).map(card);
 

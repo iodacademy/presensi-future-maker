@@ -33,7 +33,7 @@ function People({ initialCohort }: { initialCohort: string }) {
   return (
     <>
       <CohortHead
-        cohort={cohort} track="all" allColor="#8AC208" allFg="#243C4B" eyebrowAll="Future Makers 2026" allLabel="Empat kota"
+        cohort={cohort} track="all" allColor="#8AC208" allFg="#243C4B" eyebrowAll="Bootcamp Future Innovators 2026" allLabel="Empat kota"
         title="Para peserta" intro="Kenali peserta dari setiap kelas. Klik kartu untuk melihat profil dan karyanya."
         count={(k) => (k === 'all' ? DATA.people.length : DATA.people.filter((p) => p.cohort === k).length) + ' peserta'}
         pick={(k) => { setCohort(k); setLimit(STEP); }}
