@@ -5,7 +5,7 @@
  * Shapes of the real exhibition data (works, people, collections, site content)
  * and small helpers shared by the admin and public sides.
  */
-import { COHORTS, type Cohort, type TrackKey } from './content';
+import { COH, COHORTS, TYPE, cohLabel, type Cohort, type TrackKey } from './content';
 
 export type WorkStatus = 'draft' | 'published' | 'hidden';
 export type MediaKind = 'site' | 'html' | 'carousel' | 'video' | 'pdf';
@@ -86,4 +86,18 @@ export function safeExternalUrl(u: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Data kartu karya dari kartu galeri; dipakai galeri, profil, dan karya serupa.
+ *
+ * Work card data from a gallery card; shared by the gallery, profiles, and related works.
+ */
+export function toCardData(c: GalleryCard) {
+  const coh = COH[c.cohort];
+  return {
+    href: '/karya/' + c.id, cTint: coh.tint, cColor: coh.color, cFg: coh.fg, cLabel: cohLabel(coh),
+    thumbLabel: TYPE[c.type]?.thumb ?? c.type, type: c.type, title: c.title, initials: c.nickname[0]?.toUpperCase() ?? '?',
+    personName: c.nickname, thumb: c.thumb, aiAssisted: c.aiAssisted,
+  };
 }

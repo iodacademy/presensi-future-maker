@@ -2,17 +2,11 @@
 
 import React, { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { COH, PAGE_SIZE, TRACKS, TYPE, cohLabel } from '@/features/exhibition/content';
-import type { GalleryCard, GalleryItem } from '@/features/exhibition/model';
+import { COH, PAGE_SIZE, TRACKS, TYPE } from '@/features/exhibition/content';
+import { toCardData, type GalleryCard, type GalleryItem } from '@/features/exhibition/model';
 import { CohortHead, CollectionCard, Field, Hv, WorkCard, css } from '@/features/exhibition/ui';
 
 interface Props { items: GalleryItem[]; members?: GalleryCard[]; counts: Record<string, number> }
-
-const toCardData = (c: GalleryCard) => ({
-  href: '/karya/' + c.id, cTint: COH[c.cohort].tint, cColor: COH[c.cohort].color, cFg: COH[c.cohort].fg, cLabel: cohLabel(COH[c.cohort]),
-  thumbLabel: TYPE[c.type]?.thumb ?? c.type, type: c.type, title: c.title, initials: c.nickname[0]?.toUpperCase() ?? '?',
-  personName: c.nickname, thumb: c.thumb, aiAssisted: c.aiAssisted,
-});
 
 /**
  * Filter awal dibaca dari ?kelas= atau ?jurusan= agar tombol "Karya kelas

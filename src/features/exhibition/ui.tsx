@@ -4,8 +4,8 @@ import React, { useState, type CSSProperties, type ElementType } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { toEmbedUrl } from '@/lib/embed-url';
-import { COHORTS, COH, PHOTOS, TRACKS, cohLabel } from './content';
-import type { CollectionCard as CollectionCardData } from './model';
+import { COHORTS, COH, TRACKS, cohLabel } from './content';
+import { safeExternalUrl, type CollectionCard as CollectionCardData } from './model';
 
 const cache = new Map<string, CSSProperties>();
 
@@ -68,18 +68,17 @@ export function Hv({ as: Tag = 'button', s, h, a, ...rest }: HvProps) {
 }
 
 /**
- * Slot foto pengganti <image-slot> desain. Foto diambil dari PHOTOS menurut
- * id slot; slot kosong meniru tampilan placeholder desain tanpa kontrol
- * unggah milik alat desainnya.
+ * Slot foto pengganti <image-slot> desain. Alamat foto datang dari pemanggil
+ * (isi situs di Firestore); slot tanpa alamat meniru tampilan placeholder
+ * desain tanpa kontrol unggah milik alat desainnya.
  *
- * Photo slot replacing the design's <image-slot>. The photo comes from PHOTOS
- * by slot id; an empty slot mimics the design's placeholder without the design
- * tool's upload controls.
+ * Photo slot replacing the design's <image-slot>. The photo address comes from
+ * the caller (site content in Firestore); a slot without one mimics the
+ * design's placeholder without the design tool's upload controls.
  */
-export function Photo({ id, placeholder, fit = 'cover', circle }: { id: string; placeholder: string; fit?: 'cover' | 'contain'; circle?: boolean }) {
-  const src = PHOTOS[id];
+export function Photo({ src, placeholder, fit = 'cover', circle }: { src?: string; placeholder: string; fit?: 'cover' | 'contain'; circle?: boolean }) {
   const round = circle ? ';border-radius:50%' : '';
-  if (src) {
+  if (src && safeExternalUrl(src)) {
     // <img> biasa: foto sudah WebP terkompres di CDN, next/image hanya menambah kerja CPU Cloud Run / Plain <img>: photos are already compressed WebP on a CDN, next/image would only add Cloud Run CPU work
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={src} alt={placeholder} loading="lazy" decoding="async" style={css(`position:absolute;inset:0;width:100%;height:100%;object-fit:${fit}`)} />;

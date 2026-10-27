@@ -8,7 +8,7 @@
 import { unstable_cache } from 'next/cache';
 import { getAdminDb } from '../../lib/firebase/admin';
 import { wibDate } from '../../lib/time';
-import { PHOTOS, VIDEOS, TESTI_P, TESTI_T, TESTI_PLAN, type TrackKey } from './content';
+import { VIDEOS, TESTI_P, TESTI_T, TESTI_PLAN, type TrackKey } from './content';
 import type { CollectionCard, ExhibitionCollection, GalleryCard, SiteContent, WorkMedia } from './model';
 
 export interface PublicPerson {
@@ -138,8 +138,11 @@ export async function readSiteContent(): Promise<SiteContent> {
   const s = await getAdminDb().collection('exhibitionSite').doc('content').get();
   const stored = (s.exists ? s.data() : {}) as Partial<SiteContent>;
   // ponytail: gabungan dangkal per kunci teratas, dalamkan bila admin menyunting sebagian objek / shallow merge per top-level key, deepen if admins edit partial objects
-  return { photos: PHOTOS, videos: VIDEOS, testiPeserta: TESTI_P, testiTrainer: TESTI_T, testiPlan: TESTI_PLAN, ...stored };
+  return { photos: {}, videos: VIDEOS, testiPeserta: TESTI_P, testiTrainer: TESTI_T, testiPlan: TESTI_PLAN, ...stored };
 }
+
+export type WorkDetail = NonNullable<Awaited<ReturnType<typeof readWorkDetail>>>;
+export type PersonDetail = NonNullable<Awaited<ReturnType<typeof readPersonDetail>>>;
 
 export const getCatalog = cache('catalog', readCatalog);
 export const getWorkDetail = cache('work', readWorkDetail);
