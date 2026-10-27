@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { GraduationCap, Users, ChevronRight } from 'lucide-react';
+import { GraduationCap, Users, ChevronRight, Download } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import type { ClassSummary } from '@/features/classes/types';
 
@@ -35,13 +35,22 @@ export default function AdminMentoringPage() {
 
   return (
     <AppShell role="admin" userName="Administrator">
-      <div>
-        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '16px', fontWeight: 700, color: 'var(--color-text-main)' }}>
-          Mentoring
-        </h1>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '10px', marginTop: '2px' }}>
-          Pilih kelas untuk mengatur penugasan mentor dan slot mentoring
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '16px', fontWeight: 700, color: 'var(--color-text-main)' }}>
+            Mentoring
+          </h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '10px', marginTop: '2px' }}>
+            Pilih kelas untuk mengatur penugasan mentor dan slot mentoring
+          </p>
+        </div>
+        <a
+          href="/api/exports/mentoring-recordings"
+          title="Sesi 1-on-1 yang sudah selesai dan punya rekaman, satu sheet per kelas"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '8px 14px', borderRadius: '8px', backgroundColor: 'var(--color-primary)', color: '#ffffff', textDecoration: 'none', fontSize: '11px', fontWeight: 700 }}
+        >
+          <Download size={12} strokeWidth={2} /> Ekspor Rekaman Mentoring
+        </a>
       </div>
 
       {loading ? (
