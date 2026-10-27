@@ -9,7 +9,7 @@ type Item = { slotId: string; cohortLabel: string; city: string; color: string; 
 
 const H2 = 'font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.4vw,52px);line-height:1.05;letter-spacing:-0.03em;margin:0';
 
-export function DocsView({ photos: sitePhotos }: { photos: Record<string, string> }) {
+export function DocsView({ photos: sitePhotos, captions = {} }: { photos: Record<string, string>; captions?: Record<string, string> }) {
   const [dc, setDc] = useState('all');
   const [scroll, setScroll] = useState({ p: 0, x: 0, page: 0 });
   const [lb, setLb] = useState<number | null>(null);
@@ -55,7 +55,9 @@ export function DocsView({ photos: sitePhotos }: { photos: Record<string, string
   const list: Item[] = [];
   const at = (i: number) => (dc === 'all' ? { co: COHORTS[i % 4], n: Math.floor(i / 4) } : { co: COH[dc], n: i });
   const add = (co: Cohort, sec: string, n: number, caption: string): Item => {
-    const it = { slotId: 'doc-' + co.key + '-' + sec + '-' + n, cohortLabel: cohLabel(co), city: co.city, color: co.color, fg: co.fg, caption, idx: list.length };
+    const slotId = 'doc-' + co.key + '-' + sec + '-' + n;
+    // Keterangan tersimpan per slot menggantikan teks bawaan / A caption stored per slot replaces the built-in text
+    const it = { slotId, cohortLabel: cohLabel(co), city: co.city, color: co.color, fg: co.fg, caption: captions[slotId] || caption, idx: list.length };
     list.push(it);
     return it;
   };

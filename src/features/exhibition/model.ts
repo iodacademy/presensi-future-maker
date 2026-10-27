@@ -34,6 +34,8 @@ export interface ExhibitionCollection {
 
 export interface SiteContent {
   photos: Record<string, string>;
+  // Id slot foto -> keterangan / Photo slot id -> caption
+  captions: Record<string, string>;
   videos: { afterMovie: string; peserta: Record<string, string>; trainer: Record<TrackKey, string>; plan: string };
   testiPeserta: Record<string, string>;
   // Kunci kohor -> uid peserta yang diberi kutipan / Cohort key -> uid of the participant credited with the quote

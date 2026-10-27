@@ -122,6 +122,7 @@ describe('modul baca pameran', () => {
   });
   it('konten situs memakai default bila dokumen belum ada', async () => {
     expect((await getSiteContent()).testiPlan.role).toBe('Yayasan Plan International Indonesia');
+    expect((await getSiteContent()).captions).toEqual({});
   });
   it('todayWib berbentuk YYYY-MM-DD', () => {
     expect(todayWib()).toMatch(/^\d{4}-\d{2}-\d{2}$/);

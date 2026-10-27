@@ -105,6 +105,9 @@ describe('API admin peserta, koleksi, konten situs', () => {
     expect(revalidateTag).toHaveBeenCalledWith('pameran');
     await expect(updateSiteContent({ foo: 1 } as never)).rejects.toThrow('tidak boleh diubah');
     await expect(updateSiteContent({ photos: null } as never)).rejects.toThrow();
+    await updateSiteContent({ captions: { 'doc-1': 'Hari pertama' } });
+    expect(data.exhibitionSite.content.captions).toEqual({ 'doc-1': 'Hari pertama' });
+    await expect(updateSiteContent({ captions: null } as never)).rejects.toThrow();
     await expect(updateSiteContent({ testiTrainer: {} } as never)).rejects.toThrow();
     const res = await sitePatch(new Request('http://x', { method: 'PATCH', body: JSON.stringify({ photos: [] }) }));
     expect(res.status).toBe(400);

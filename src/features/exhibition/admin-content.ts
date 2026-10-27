@@ -120,7 +120,7 @@ export async function updateCollection(id: string, patch: Partial<Pick<Exhibitio
 }
 
 const SITE_ARRAYS = ['testiTrainer'];
-const SITE_OBJECTS = ['photos', 'videos', 'testiPeserta', 'testiAuthors', 'testiPlan'];
+const SITE_OBJECTS = ['photos', 'captions', 'videos', 'testiPeserta', 'testiAuthors', 'testiPlan'];
 
 // Isi situs untuk admin: sama dengan jalur publik tapi tanpa cache / Site content for admin: same as the public path but uncached
 export const getSiteContentAdmin = readSiteContent;

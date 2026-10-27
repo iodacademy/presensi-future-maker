@@ -69,8 +69,8 @@ export function SiteTab() {
   const save = (e: React.FormEvent) => {
     e.preventDefault();
     run(async () => {
-      const { photos, videos, testiPeserta, testiAuthors, testiTrainer, testiPlan } = content;
-      await send('/api/pameran/site', 'PATCH', { photos, videos, testiPeserta, testiAuthors, testiTrainer, testiPlan });
+      const { photos, captions, videos, testiPeserta, testiAuthors, testiTrainer, testiPlan } = content;
+      await send('/api/pameran/site', 'PATCH', { photos, captions, videos, testiPeserta, testiAuthors, testiTrainer, testiPlan });
       setSaved(true);
     });
   };
@@ -139,6 +139,7 @@ export function SiteTab() {
           <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '11px' }}>
             {content.photos[s.id] ? <img src={content.photos[s.id]} alt="" width={48} height={36} loading="lazy" style={{ objectFit: 'cover', borderRadius: '6px' }} /> : <div style={{ width: 48, height: 36, borderRadius: '6px', backgroundColor: 'var(--color-border)' }} />}
             <span style={{ flex: 1 }}><code>{s.id}</code> {s.name}</span>
+            <input aria-label={`Keterangan ${s.id}`} placeholder="Keterangan" value={content.captions?.[s.id] ?? ''} onChange={(e) => edit((c) => ({ ...c, captions: { ...c.captions, [s.id]: e.target.value } }))} style={{ ...field, width: 180 }} />
             <input type="file" accept="image/*" aria-label={`Unggah ${s.id}`} disabled={busy} onChange={(e) => onPhoto(s.id, e.target.files?.[0])} />
           </div>
         ))}

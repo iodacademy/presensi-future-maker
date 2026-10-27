@@ -141,7 +141,7 @@ export async function readSiteContent(): Promise<SiteContent> {
   const s = await getAdminDb().collection('exhibitionSite').doc('content').get();
   const stored = (s.exists ? s.data() : {}) as Partial<SiteContent>;
   // ponytail: gabungan dangkal per kunci teratas, dalamkan bila admin menyunting sebagian objek / shallow merge per top-level key, deepen if admins edit partial objects
-  return { photos: {}, videos: VIDEOS, testiPeserta: TESTI_P, testiAuthors: {}, testiTrainer: TESTI_T, testiPlan: TESTI_PLAN, ...stored };
+  return { photos: {}, captions: {}, videos: VIDEOS, testiPeserta: TESTI_P, testiAuthors: {}, testiTrainer: TESTI_T, testiPlan: TESTI_PLAN, ...stored };
 }
 
 export type WorkDetail = NonNullable<Awaited<ReturnType<typeof readWorkDetail>>>;

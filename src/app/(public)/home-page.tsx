@@ -98,7 +98,7 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
                 <div key={i} style={css('flex:0 0 100%;position:relative;aspect-ratio:16/8;min-height:260px;background:var(--surface-muted)')}>
                   <Photo src={site.photos['doc-' + (i + 1)]} placeholder="Foto dokumentasi" />
                   <div style={css('position:absolute;left:24px;bottom:24px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;pointer-events:none')}>
-                    <span style={css(`font-family:var(--font-headline);font-weight:700;font-size:clamp(18px,2vw,24px);padding:6px 14px;background:${sl.color};color:${sl.fg}`)}>{sl.caption}</span>
+                    <span style={css(`font-family:var(--font-headline);font-weight:700;font-size:clamp(18px,2vw,24px);padding:6px 14px;background:${sl.color};color:${sl.fg}`)}>{site.captions['doc-' + (i + 1)] || sl.caption}</span>
                     <span style={css('font-size:14px;font-weight:700;padding:4px 10px;background:#fff;color:var(--dark-blue)')}>{sl.place}</span>
                   </div>
                 </div>
@@ -107,7 +107,7 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
           </div>
           <div style={css('display:flex;justify-content:center;gap:8px;margin-top:20px')}>
             {SLIDES.map((sl, i) => (
-              <button key={i} type="button" onClick={() => setSlide(i)} aria-label={sl.caption} style={css(`all:unset;cursor:pointer;height:8px;width:${i === slide ? '28px' : '8px'};border-radius:999px;background:${i === slide ? (sl.color === '#FFD500' ? '#243C4B' : sl.color) : 'var(--light-grey)'};transition:width 300ms ease,background 300ms ease`)} />
+              <button key={i} type="button" onClick={() => setSlide(i)} aria-label={site.captions['doc-' + (i + 1)] || sl.caption} style={css(`all:unset;cursor:pointer;height:8px;width:${i === slide ? '28px' : '8px'};border-radius:999px;background:${i === slide ? (sl.color === '#FFD500' ? '#243C4B' : sl.color) : 'var(--light-grey)'};transition:width 300ms ease,background 300ms ease`)} />
             ))}
           </div>
         </div>
@@ -122,7 +122,7 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
           <div style={css('margin-top:32px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:clamp(110px,16vw,210px);grid-auto-flow:dense;gap:12px')}>
             {BENTO.map((b, i) => (
               <div key={i} style={css(`grid-column:span ${b.cols};grid-row:span ${b.rows};position:relative;border-radius:20px;overflow:hidden;background:${b.bg || 'var(--surface-muted)'};color:${b.fg || 'var(--dark-blue)'}`)}>
-                {b.type === 'photo' && <Photo src={site.photos['bento-' + (i + 1)]} placeholder={b.label} />}
+                {b.type === 'photo' && <Photo src={site.photos['bento-' + (i + 1)]} placeholder={site.captions['bento-' + (i + 1)] || b.label} />}
                 {b.type === 'stat' && (
                   <div style={css('position:absolute;inset:0;padding:clamp(14px,2vw,24px);display:flex;flex-direction:column;justify-content:flex-end;gap:2px')}>
                     <span style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,5vw,64px);line-height:1;letter-spacing:-0.03em')}>{b.key === 'people' ? people : b.key === 'works' ? works : b.value}</span>

@@ -6,5 +6,5 @@ export const dynamic = 'force-dynamic';
 
 export default async function DocsPage() {
   const site = await getSiteContent();
-  return <DocsView photos={site.photos} />;
+  return <DocsView photos={site.photos} captions={site.captions} />;
 }
