@@ -184,11 +184,10 @@ export function planImport(input: ImportInput): ImportPlan {
 
   // Anggota koleksi paling akhir / Collection members rank last
   const rank = (w: PlannedWork) => (w.collectionKey ? 1000 : WORK_PRIORITY.includes(w.type) ? WORK_PRIORITY.indexOf(w.type) : 500);
-  const fresh = new Set(plan.newPeople.map((p) => p.uid));
   const best = new Map<string, PlannedWork>();
   for (const w of plan.works) {
     const cur = best.get(w.personUid);
-    if (fresh.has(w.personUid) && (!cur || rank(w) < rank(cur))) best.set(w.personUid, w);
+    if (!cur || rank(w) < rank(cur)) best.set(w.personUid, w);
   }
   for (const [uid, w] of best) plan.mainWork[uid] = w.sourceKey;
 

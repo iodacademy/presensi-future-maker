@@ -108,4 +108,9 @@ describe('planImport', () => {
     const r = planImport({ ...base(), tasks: [site('HP 1. A', 'https://dapur-nia.app')] });
     expect(r.mainWork.u1).toBe(r.works[0].sourceKey);
   });
+  it('karya utama tetap dihitung untuk peserta yang sudah punya profil', () => {
+    const p = planImport({ ...base(), existingPeople: new Set(['u1']), tasks: [site('HP 9. L', 'https://lp.app')] });
+    expect(p.newPeople.map((x) => x.uid)).toEqual(['u2']);
+    expect(p.mainWork.u1).toBe(p.works[0].sourceKey);
+  });
 });
