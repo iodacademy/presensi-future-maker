@@ -81,8 +81,12 @@ async function shotOfFile(file: string): Promise<Buffer> {
     browser = await chromium.launch();
   }
   const page = await browser!.newPage({ viewport: { width: 1440, height: 900 } });
+  // Chromium gagal membuka jalur Windows di atas 260 karakter, jadi buka salinan pendek di tmp
+  // Chromium fails to open Windows paths over 260 characters, so open a short copy in tmp
+  const short = path.join(tmp, 'shot-' + crypto.createHash('sha1').update(file).digest('hex').slice(0, 10) + path.extname(file));
+  fs.copyFileSync(file, short);
   try {
-    await page.goto(pathToFileURL(file).href, { waitUntil: 'load', timeout: 30000 });
+    await page.goto(pathToFileURL(short).href, { waitUntil: 'load', timeout: 30000 });
     await page.waitForTimeout(1500);
     return await page.screenshot();
   } finally { await page.close(); }
