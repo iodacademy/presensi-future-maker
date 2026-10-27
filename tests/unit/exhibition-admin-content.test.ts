@@ -59,6 +59,13 @@ describe('API admin peserta, koleksi, konten situs', () => {
     expect(data.exhibitionPeople.s1.nickname).toBe('Nur Aini');
     expect(revalidateTag).toHaveBeenCalledWith('pameran');
   });
+  it('tautan peserta non-http(s) ditolak / non-http(s) person links are rejected', async () => {
+    for (const k of ['photoUrl', 'linkedinUrl', 'portfolioUrl']) {
+      await expect(updatePerson('s1', { [k]: 'javascript:alert(1)' } as never)).rejects.toThrow(/http/i);
+    }
+    await updatePerson('s1', { linkedinUrl: 'https://linkedin.com/in/x', portfolioUrl: '' });
+    expect(data.exhibitionPeople.s1.linkedinUrl).toBe('https://linkedin.com/in/x');
+  });
   it('karya utama harus milik peserta itu', async () => {
     await expect(updatePerson('s1', { mainWorkId: 'work-of-s2' })).rejects.toThrow();
     await updatePerson('s1', { mainWorkId: 'w2' });

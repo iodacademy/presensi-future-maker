@@ -10,7 +10,7 @@ import { getAdminDb } from '../../lib/firebase/admin';
 import { checkKeys } from './admin-works';
 import { COH, TRACKS } from './content';
 import { readSiteContent } from './read';
-import type { ExhibitionCollection, ExhibitionPerson, SiteContent } from './model';
+import { safeExternalUrl, type ExhibitionCollection, type ExhibitionPerson, type SiteContent } from './model';
 
 export interface AdminPersonRow {
   uid: string; fullName: string; nickname: string; cohort: string; visible: boolean;
@@ -64,6 +64,10 @@ export async function updatePerson(uid: string, patch: PersonPatch): Promise<voi
     out.nickname = p.nickname.trim();
   }
   for (const k of STRING_KEYS) if (p[k] !== undefined && typeof p[k] !== 'string') throw new Error(`${k} harus teks`);
+  // Foto dan tautan peserta tampil di halaman publik, jadi hanya http(s) / Photo and links show on public pages, so http(s) only
+  for (const k of ['photoUrl', 'linkedinUrl', 'portfolioUrl']) {
+    if (p[k] && !safeExternalUrl(p[k] as string)) throw new Error(`${k} harus diawali http:// atau https://`);
+  }
   if (p.visible !== undefined && typeof p.visible !== 'boolean') throw new Error('visible harus true atau false');
   if (p.skills !== undefined && (!Array.isArray(p.skills) || p.skills.some((s) => typeof s !== 'string'))) {
     throw new Error('skills harus daftar teks');

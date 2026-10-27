@@ -8,7 +8,7 @@
 import { revalidateTag } from 'next/cache';
 import { getAdminDb } from '../../lib/firebase/admin';
 import { TRACKS, type TrackKey } from './content';
-import type { ExhibitionWork, WorkStatus } from './model';
+import { safeExternalUrl, type ExhibitionWork, type WorkCover, type WorkMedia, type WorkStatus } from './model';
 
 export interface AdminWorkRow {
   id: string; title: string; type: string; cohort: string; personUid: string; nickname: string;
@@ -26,6 +26,18 @@ function checkStatus(s: unknown) {
 }
 function checkType(track: TrackKey, type: string) {
   if (!TRACKS[track]?.types.includes(type)) throw new Error(`Jenis karya "${type}" tidak ada di jalur ini`);
+}
+
+/**
+ * Tautan tersimpan harus kosong atau http(s); `javascript:` dan `data:` ditolak sebelum menyentuh Firestore.
+ *
+ * Stored links must be empty or http(s); `javascript:` and `data:` are rejected before they reach Firestore.
+ */
+function checkLinks(media?: Partial<WorkMedia>, cover?: Partial<WorkCover>) {
+  const urls = [media?.url, ...(media?.slides ?? []), cover?.thumb, cover?.full];
+  if (urls.some((u) => u !== undefined && u !== '' && (typeof u !== 'string' || !safeExternalUrl(u)))) {
+    throw new Error('Tautan karya harus diawali http:// atau https://');
+  }
 }
 
 export async function listWorks(): Promise<AdminWorkRow[]> {
@@ -55,6 +67,7 @@ export async function createWork(input: WorkInput): Promise<string> {
   if (!p.exists) throw new Error('Peserta tidak ditemukan');
   const person = p.data() as { classId: string; cohort: string; track: TrackKey };
   checkType(person.track, input.type);
+  checkLinks(input.media, input.cover);
   const t = now();
   const ref = await works().add({
     ...input, classId: person.classId, cohort: person.cohort, track: person.track,
@@ -83,6 +96,7 @@ export async function updateWork(id: string, patch: Partial<WorkInput & { status
   const s = await ref.get();
   if (!s.exists) throw new Error('Karya tidak ditemukan');
   if (patch.status !== undefined) checkStatus(patch.status);
+  checkLinks(patch.media, patch.cover);
   if (patch.type !== undefined) checkType((s.data() as { track: TrackKey }).track, patch.type);
   await ref.update({ ...patch, updatedAt: now() });
   revalidateTag('pameran');

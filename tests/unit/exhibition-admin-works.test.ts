@@ -122,4 +122,19 @@ describe('API admin karya pameran', () => {
     await expect(bulkUpdateWorks(ids, { status: 'published' })).rejects.toThrow('gagal tulis');
     expect(revalidateTag).toHaveBeenCalledWith('pameran');
   });
+
+  it('tautan non-http(s) ditolak di createWork dan updateWork / non-http(s) links are rejected', async () => {
+    const bad = 'javascript:alert(1)';
+    await expect(createWork({ ...input, media: { kind: 'site', url: bad, slides: [] } })).rejects.toThrow(/http/i);
+    await expect(createWork({ ...input, media: { kind: 'carousel', url: '', slides: ['https://x/a.webp', bad] } })).rejects.toThrow(/http/i);
+    await expect(createWork({ ...input, cover: { thumb: bad, full: '' } })).rejects.toThrow(/http/i);
+    await expect(createWork({ ...input, cover: { thumb: '', full: bad } })).rejects.toThrow(/http/i);
+    data.exhibitionWorks.w1 = { track: 'web', status: 'draft' };
+    await expect(updateWork('w1', { media: { kind: 'pdf', url: bad, slides: [] } })).rejects.toThrow(/http/i);
+    await expect(updateWork('w1', { cover: { thumb: 'data:text/html,x', full: '' } })).rejects.toThrow(/http/i);
+    expect(Object.keys(data.exhibitionWorks)).toEqual(['w1']);
+    // string kosong tetap boleh / empty strings stay allowed
+    await updateWork('w1', { cover: { thumb: '', full: '' }, media: { kind: 'carousel', url: '', slides: ['https://x/a.webp'] } });
+  });
 });
+
