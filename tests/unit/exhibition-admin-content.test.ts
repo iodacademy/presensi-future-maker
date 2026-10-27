@@ -6,7 +6,7 @@ const data: Record<string, Record<string, Record<string, unknown>>> = {};
 const revalidateTag = vi.fn();
 const getSessionActor = vi.fn();
 
-vi.mock('next/cache', () => ({ revalidateTag: (t: string) => revalidateTag(t) }));
+vi.mock('next/cache', () => ({ revalidateTag: (t: string) => revalidateTag(t), unstable_cache: (fn: unknown) => fn }));
 vi.mock('../../src/features/auth/session', () => ({ getSessionActor: () => getSessionActor() }));
 vi.mock('../../src/lib/firebase/admin', () => {
   const docRef = (col: string, id: string) => ({
@@ -35,7 +35,7 @@ import {
 } from '../../src/features/exhibition/admin-content';
 import { GET as peopleGet } from '../../src/app/api/pameran/people/route';
 import { PATCH as personPatch } from '../../src/app/api/pameran/people/[uid]/route';
-import { PATCH as sitePatch } from '../../src/app/api/pameran/site/route';
+import { GET as siteGet, PATCH as sitePatch } from '../../src/app/api/pameran/site/route';
 
 beforeEach(() => {
   revalidateTag.mockClear();
@@ -101,5 +101,14 @@ describe('API admin peserta, koleksi, konten situs', () => {
     await expect(updateSiteContent({ testiTrainer: {} } as never)).rejects.toThrow();
     const res = await sitePatch(new Request('http://x', { method: 'PATCH', body: JSON.stringify({ photos: [] }) }));
     expect(res.status).toBe(400);
+  });
+  it('GET situs: bawaan bila belum ada dokumen, isi tersimpan bila ada', async () => {
+    delete data.exhibitionSite.content;
+    const def = await (await siteGet()).json();
+    expect(def.content.testiPlan.role).toBe('Yayasan Plan International Indonesia');
+    data.exhibitionSite.content = { testiPlan: { name: 'N', role: 'Peran', quote: 'q' } };
+    const got = await (await siteGet()).json();
+    expect(got.content.testiPlan.role).toBe('Peran');
+    expect(got.content.photos).toBeDefined();
   });
 });

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionActor } from '@/features/auth/session';
-import { getSiteContentRaw, updateSiteContent } from '@/features/exhibition/admin-content';
+import { getSiteContentAdmin, updateSiteContent } from '@/features/exhibition/admin-content';
 
 // Hanya admin / Admin only
 async function isAdmin() {
@@ -13,7 +13,7 @@ const fail = (err: unknown) => NextResponse.json({ error: (err as Error).message
 export async function GET() {
   if (!(await isAdmin())) return forbidden();
   try {
-    return NextResponse.json({ content: await getSiteContentRaw() });
+    return NextResponse.json({ content: await getSiteContentAdmin() });
   } catch (err) {
     return fail(err);
   }

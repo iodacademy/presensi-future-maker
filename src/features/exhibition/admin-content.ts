@@ -9,6 +9,7 @@ import { revalidateTag } from 'next/cache';
 import { getAdminDb } from '../../lib/firebase/admin';
 import { checkKeys } from './admin-works';
 import { COH, TRACKS } from './content';
+import { readSiteContent } from './read';
 import type { ExhibitionCollection, ExhibitionPerson, SiteContent } from './model';
 
 export interface AdminPersonRow {
@@ -107,6 +108,9 @@ export async function updateCollection(id: string, patch: Partial<Pick<Exhibitio
 const SITE_ARRAYS = ['testiTrainer'];
 const SITE_OBJECTS = ['photos', 'videos', 'testiPeserta', 'testiPlan'];
 
+// Isi situs untuk admin: sama dengan jalur publik tapi tanpa cache / Site content for admin: same as the public path but uncached
+export const getSiteContentAdmin = readSiteContent;
+
 export async function updateSiteContent(patch: Partial<SiteContent>): Promise<void> {
   const p = checkKeys(patch, [...SITE_ARRAYS, ...SITE_OBJECTS]);
   for (const [k, v] of Object.entries(p)) {
@@ -115,10 +119,4 @@ export async function updateSiteContent(patch: Partial<SiteContent>): Promise<vo
   }
   await db().collection('exhibitionSite').doc('content').set(p, { merge: true });
   revalidateTag('pameran');
-}
-
-// Isi tersimpan apa adanya, tanpa default, agar admin melihat yang benar-benar diubah / Stored content as-is, without defaults, so admin sees what was really overridden
-export async function getSiteContentRaw(): Promise<Partial<SiteContent>> {
-  const s = await db().collection('exhibitionSite').doc('content').get();
-  return (s.exists ? s.data() : {}) as Partial<SiteContent>;
 }
