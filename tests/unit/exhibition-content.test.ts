@@ -8,9 +8,9 @@ describe('data contoh pameran', () => {
     expect(DATA.works).toHaveLength(176);
     const first = DATA.works.slice(0, 3).map((w) => `${w.type}|${w.title}|${DATA.P[w.person].name}`);
     expect(first).toEqual([
-      'Landing Page|Profil Komunitas Literasi|Aulia',
-      'Landing Page|Landing Page Kedai Kopi|Joko',
-      'Aplikasi Web|Pencatat Keuangan UMKM|Gita',
+      'Aplikasi Web|Platform Les Privat Mahasiswa|Aulia',
+      'Aplikasi Web|Sistem Antrean Puskesmas|Joko',
+      'Landing Page|Halaman Donasi Bencana|Gita',
     ]);
   });
 });
