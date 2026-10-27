@@ -183,7 +183,7 @@ export function planImport(input: ImportInput): ImportPlan {
   }
 
   // Anggota koleksi paling akhir / Collection members rank last
-  const rank = (w: PlannedWork) => (w.collectionKey ? 1000 : WORK_PRIORITY.includes(w.type) ? WORK_PRIORITY.indexOf(w.type) : 500);
+  const rank = (w: PlannedWork) => rankWork({ type: w.type, collectionId: w.collectionKey });
   const best = new Map<string, PlannedWork>();
   for (const w of plan.works) {
     const cur = best.get(w.personUid);
@@ -195,4 +195,13 @@ export function planImport(input: ImportInput): ImportPlan {
     plan.collections.push({ key, id: `web-smg-${key}`, title: COLLECTIONS[key], cohort: 'web-smg', type: 'Aplikasi Web' });
   }
   return plan;
+}
+
+/**
+ * Peringkat karya utama; makin kecil makin utama. Anggota koleksi paling akhir.
+ *
+ * Main-work rank; lower wins. Collection members rank last.
+ */
+export function rankWork(w: { type: string; collectionId: string | null }): number {
+  return w.collectionId ? 1000 : WORK_PRIORITY.includes(w.type) ? WORK_PRIORITY.indexOf(w.type) : 500;
 }

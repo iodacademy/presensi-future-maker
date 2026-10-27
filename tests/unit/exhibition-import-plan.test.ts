@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planImport, type ImportInput, type SourceTask } from '../../src/features/exhibition/import-plan';
+import { planImport, rankWork, type ImportInput, type SourceTask } from '../../src/features/exhibition/import-plan';
 
 const classes = [
   { id: 'c-web', programName: 'Web Programming', city: 'Semarang' },
@@ -112,5 +112,14 @@ describe('planImport', () => {
     const p = planImport({ ...base(), existingPeople: new Set(['u1']), tasks: [site('HP 9. L', 'https://lp.app')] });
     expect(p.newPeople.map((x) => x.uid)).toEqual(['u2']);
     expect(p.mainWork.u1).toBe(p.works[0].sourceKey);
+  });
+});
+
+describe('rankWork', () => {
+  it('Capstone mengalahkan Landing Page, lalu jenis lain, lalu anggota koleksi', () => {
+    const r = (type: string, collectionId: string | null = null) => rankWork({ type, collectionId });
+    expect(r('Capstone')).toBeLessThan(r('Landing Page'));
+    expect(r('Reels')).toBeLessThan(r('Brand Identity'));
+    expect(r('Brand Identity')).toBeLessThan(r('Aplikasi Web', 'c1'));
   });
 });

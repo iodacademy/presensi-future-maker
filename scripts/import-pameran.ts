@@ -9,6 +9,7 @@
  *   npm run import-pameran              (pratinjau / preview)
  *   npm run import-pameran -- --apply   (tulis / write)
  */
+import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -18,7 +19,7 @@ import { spawnSync } from 'child_process';
 import type { Firestore, WriteBatch } from 'firebase-admin/firestore';
 import { getAdminDb } from '../src/lib/firebase/admin';
 import { formatCanonicalClassName } from '../src/features/classes/policy';
-import { planImport, type PlannedWork, type SourceFile, type SourceTask } from '../src/features/exhibition/import-plan';
+import { planImport, rankWork, type PlannedWork, type SourceFile, type SourceTask } from '../src/features/exhibition/import-plan';
 import { storeHtml, storeImage, storePdf } from '../src/features/exhibition/media';
 import { notebookToHtml } from '../src/features/exhibition/notebook-html';
 import { cohortOf, type WorkCover, type WorkMedia } from '../src/features/exhibition/model';
@@ -118,12 +119,14 @@ async function buildMedia(w: PlannedWork, id: string): Promise<{ media: WorkMedi
     return { media: { kind: 'pdf', url, slides: [] }, cover: await storeImage(fs.readFileSync(path.join(tmp, png)), folder) };
   }
   if (m.kind === 'carousel') {
+    if (!m.slides.length) throw new Error('carousel tanpa slide / carousel has no slides');
     const covers: WorkCover[] = [];
     for (const s of m.slides) covers.push(await storeImage(fs.readFileSync(local(s)), folder));
     return { media: { kind: 'carousel', url: '', slides: covers.map((c) => c.full) }, cover: covers[0] };
   }
+  if (!w.coverSource) throw new Error('video tanpa berkas sumber / video has no source file');
   const out = path.join(tmp, `${id}.png`);
-  run('ffmpeg', ['-y', '-ss', '1', '-i', local(w.coverSource ?? ''), '-frames:v', '1', out]);
+  run('ffmpeg', ['-y', '-ss', '1', '-i', local(w.coverSource), '-frames:v', '1', out]);
   return { media: { kind: 'video', url: m.source, slides: [] }, cover: await storeImage(fs.readFileSync(out), folder) };
 }
 
@@ -185,27 +188,7 @@ async function main() {
   }
 
   const now = new Date().toISOString();
-  const idByKey = new Map<string, string>();
-  const workOps: Op[] = [];
-  let failed = 0;
-  for (const w of plan.works) {
-    const ref = db.collection('exhibitionWorks').doc();
-    try {
-      const { media, cover } = await buildMedia(w, ref.id);
-      idByKey.set(w.sourceKey, ref.id);
-      workOps.push((b) => b.set(ref, {
-        personUid: w.personUid, classId: w.classId, cohort: w.cohort, track: w.track, type: w.type, title: w.title,
-        description: '', tools: [], status: 'draft', aiAssisted: w.aiAssisted,
-        collectionId: w.collectionKey ? `${w.cohort}-${w.collectionKey}` : null,
-        cover, media, sourceKey: w.sourceKey, createdAt: now, updatedAt: now,
-      }));
-      console.log(`ok   ${w.sourceKey}`);
-    } catch (err) {
-      failed += 1;
-      console.error(`GAGAL ${w.sourceKey}: ${err instanceof Error ? err.message : err}`);
-    }
-  }
-
+  // Orang dan koleksi dulu, agar karya yang masuk selalu punya induk / People and collections first so every work has a parent
   const peopleOps: Op[] = plan.newPeople.map((p) => (b) => b.set(db.collection('exhibitionPeople').doc(p.uid), {
     classId: p.classId, cohort: p.cohort, track: p.track, nickname: p.nickname, photoUrl: '', bio: '', skills: [],
     linkedinUrl: '', portfolioUrl: '', visible: true, mainWorkId: null, updatedAt: now,
@@ -216,17 +199,47 @@ async function main() {
   const colOps: Op[] = plan.collections.filter((_, i) => !colExists[i].exists).map((c) => (b) => b.set(db.collection('exhibitionCollections').doc(c.id), {
     title: c.title, brief: '', classId: classes.find((k) => cohortOf(k)?.key === c.cohort)?.id ?? '', cohort: c.cohort, type: c.type, coverUrls: [],
   }));
-  // Karya utama hanya untuk peserta yang belum punya / Main work only for people who have none yet
-  const mainOps: Op[] = [];
-  for (const [uid, key] of Object.entries(plan.mainWork)) {
-    const id = idByKey.get(key);
-    if (!id || (existingMain.has(uid) && existingMain.get(uid) !== null)) continue;
-    mainOps.push((b) => b.set(db.collection('exhibitionPeople').doc(uid), { mainWorkId: id, updatedAt: now }, { merge: true }));
-  }
-  await commitChunks(db, [...peopleOps, ...colOps, ...workOps, ...mainOps]);
+  await commitChunks(db, [...peopleOps, ...colOps]);
 
-  console.log(`\nSelesai: ${workOps.length} karya, ${peopleOps.length} peserta, ${colOps.length} koleksi, ${mainOps.length} karya utama; ${failed} gagal.`);
-  console.log('Cache Next tidak disentuh; server dev mengambil perubahan dalam 300 detik. / Next cache untouched; the dev server picks changes up within 300 s.');
+  // Tiap karya langsung ditulis setelah medianya jadi; id dari sourceKey, jadi jalan ulang menimpa objek yang sama
+  // Each work is written right after its media is built; the id derives from sourceKey, so a re-run overwrites the same objects
+  let written = 0;
+  let failed = 0;
+  for (const w of plan.works) {
+    const id = crypto.createHash('sha1').update(w.sourceKey).digest('hex').slice(0, 20);
+    try {
+      const { media, cover } = await buildMedia(w, id);
+      await db.collection('exhibitionWorks').doc(id).set({
+        personUid: w.personUid, classId: w.classId, cohort: w.cohort, track: w.track, type: w.type, title: w.title,
+        description: '', tools: [], status: 'draft', aiAssisted: w.aiAssisted,
+        collectionId: w.collectionKey ? `${w.cohort}-${w.collectionKey}` : null,
+        cover, media, sourceKey: w.sourceKey, createdAt: now, updatedAt: now,
+      });
+      written += 1;
+      console.log(`ok   ${w.sourceKey}`);
+    } catch (err) {
+      failed += 1;
+      console.error(`GAGAL ${w.sourceKey}: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
+  // Karya utama dihitung dari semua karya yang tersimpan, hanya untuk peserta yang belum punya
+  // Main work is computed from every stored work, only for people who have none yet
+  const needsMain = new Set([...existingMain].filter(([, v]) => v === null).map(([k]) => k));
+  plan.newPeople.forEach((p) => needsMain.add(p.uid));
+  const all = await db.collection('exhibitionWorks').select('personUid', 'type', 'collectionId', 'sourceKey').get();
+  const best = new Map<string, { id: string; rank: number; key: string }>();
+  for (const d of all.docs) {
+    const uid = String(d.get('personUid'));
+    if (!needsMain.has(uid)) continue;
+    const cand = { id: d.id, rank: rankWork({ type: String(d.get('type') ?? ''), collectionId: (d.get('collectionId') as string | null) ?? null }), key: String(d.get('sourceKey') ?? '') };
+    const cur = best.get(uid);
+    if (!cur || cand.rank < cur.rank || (cand.rank === cur.rank && cand.key < cur.key)) best.set(uid, cand);
+  }
+  const mainOps: Op[] = [...best].map(([uid, w]) => (b) => b.set(db.collection('exhibitionPeople').doc(uid), { mainWorkId: w.id, updatedAt: now }, { merge: true }));
+  await commitChunks(db, mainOps);
+
+  console.log(`\nSelesai: ${written} karya, ${peopleOps.length} peserta, ${colOps.length} koleksi, ${mainOps.length} karya utama; ${failed} gagal.`);
 }
 
 main()
