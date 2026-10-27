@@ -3,12 +3,37 @@
 import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { COH, cohLabel } from '@/features/exhibition/content';
+import { COH, TRACKS, cohLabel } from '@/features/exhibition/content';
 import { safeExternalUrl } from '@/features/exhibition/model';
 import type { PublicPerson } from '@/features/exhibition/read';
 import { CohortHead, Field, Hv, css } from '@/features/exhibition/ui';
 
 const STEP = 30;
+
+/**
+ * Ubin potret ala halaman tim: foto memenuhi ubin, nama panggilan dan jurusan
+ * ditulis tegak di pita gelap tepi kiri. Peserta tanpa foto memakai warna
+ * kelasnya dengan huruf awal besar, supaya grid tetap rapat tanpa lubang.
+ *
+ * Team-page style portrait tile: the photo fills the tile, the nickname and
+ * track run vertically in a dark band on the left edge. Participants without a
+ * photo get their class colour with a large initial, so the grid stays solid.
+ */
+function PersonTile({ u }: { u: PublicPerson }) {
+  const c = COH[u.cohort], photo = safeExternalUrl(u.photoUrl);
+  return (
+    <Hv as={Link} href={'/peserta/' + u.uid} aria-label={`${u.nickname}, ${cohLabel(c)}`} s={`all:unset;cursor:pointer;position:relative;display:block;aspect-ratio:3/4;overflow:hidden;background:${c.tint}`} h="filter:brightness(1.04)">
+      {photo
+        // eslint-disable-next-line @next/next/no-img-element
+        ? <img src={photo} alt="" loading="lazy" style={css('position:absolute;inset:0;width:100%;height:100%;object-fit:cover')} />
+        : <span aria-hidden="true" style={css(`position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-left:32px;background:${c.color};color:${c.fg};font-family:var(--font-headline);font-weight:700;font-size:clamp(64px,9vw,112px);letter-spacing:-0.04em;opacity:.92`)}>{u.nickname[0]?.toUpperCase() ?? '?'}</span>}
+      <span style={css('position:absolute;left:0;bottom:0;max-height:86%;background:var(--dark-blue);color:#fff;writing-mode:vertical-rl;transform:rotate(180deg);padding:14px 7px;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden')}>
+        <span style={css('font-family:var(--font-caption);font-weight:700;font-size:clamp(14px,1.4vw,17px)')}>{u.nickname}</span>
+        <span style={css(`font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:${c.color === '#8AC208' ? '#C6E87A' : '#9FD0F5'}`)}>{TRACKS[c.track].name}</span>
+      </span>
+    </Hv>
+  );
+}
 
 export function PeopleView({ people }: { people: PublicPerson[] }) {
   return (
@@ -48,27 +73,8 @@ function People({ people, initialCohort }: { people: PublicPerson[]; initialCoho
       </div>
       <section style={css('padding:32px 22px clamp(72px,10vw,120px)')}>
         <div style={css('max-width:1180px;margin:0 auto')}>
-          <div style={css('display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px')}>
-            {filtered.slice(0, limit).map((u) => {
-              const c = COH[u.cohort], photo = safeExternalUrl(u.photoUrl);
-              const p = { name: u.nickname, initials: u.nickname[0]?.toUpperCase() ?? '?', cColor: c.color, cFg: c.fg, cTint: c.tint, cLabel: cohLabel(c), workLabel: u.workCount + ' karya' };
-              return (
-              <Hv key={u.uid} as={Link} href={'/peserta/' + u.uid} s="all:unset;cursor:pointer;display:flex;flex-direction:column;background:#fff;border-radius:24px;overflow:hidden;border:1px solid #ececea;transition:transform 240ms ease,box-shadow 240ms ease" h="transform:translateY(-6px);box-shadow:var(--shadow-lg)">
-                <div style={css(`position:relative;height:104px;background:${p.cColor};color:${p.cFg}`)}>
-                  <span style={css('position:absolute;top:14px;right:16px;font-size:12px;font-weight:700')}>{p.workLabel}</span>
-                  <span style={css(`position:absolute;left:18px;bottom:-38px;width:84px;height:84px;border-radius:50%;background:${p.cTint};border:4px solid #fff;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-weight:700;font-size:26px;color:var(--dark-blue);overflow:hidden`)}>{photo
-                    // eslint-disable-next-line @next/next/no-img-element
-                    ? <img src={photo} alt={p.name} loading="lazy" style={css('width:100%;height:100%;object-fit:cover')} />
-                    : p.initials}</span>
-                </div>
-                <div style={css('padding:50px 18px 20px;display:flex;flex-direction:column;gap:4px;flex:1')}>
-                  <span style={css('font-family:var(--font-headline);font-weight:700;font-size:19px;line-height:1.15;color:var(--dark-blue)')}>{p.name}</span>
-                  <span style={css('font-size:13px;color:var(--text-muted)')}>{p.cLabel}</span>
-                  <span style={css('margin-top:14px;font-size:14px;font-weight:700;color:var(--dark-blue)')}>Lihat profil →</span>
-                </div>
-              </Hv>
-              );
-            })}
+          <div style={css('display:grid;grid-template-columns:repeat(auto-fill,minmax(min(180px,46%),1fr));gap:0')}>
+            {filtered.slice(0, limit).map((u) => <PersonTile key={u.uid} u={u} />)}
           </div>
           {filtered.length === 0 && (
             <div style={css('padding:72px 22px;border-radius:24px;background:var(--surface-muted);text-align:center;font-family:var(--font-headline);font-weight:700;font-size:22px')}>Tidak ada peserta dengan nama itu.</div>

@@ -125,7 +125,8 @@ describe('daftar peserta', () => {
       { uid: 'b', nickname: 'Budi', cohort: 'da-jkt', track: 'da' as const, photoUrl: '', mainWorkId: null, workCount: 1 },
     ];
     render(<PeopleView people={people} />);
-    expect(screen.getByText('2 karya')).toBeTruthy();
+    // Ubin memuat nama panggilan dan jurusan / The tile carries the nickname and the track
+    expect(screen.getByRole('link', { name: 'Ani, Web Programming · Semarang' })).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Cari nama peserta'), { target: { value: 'bud' } });
     expect(screen.queryByText('Ani')).toBeNull();
     expect(screen.getByText('Budi')).toBeTruthy();
