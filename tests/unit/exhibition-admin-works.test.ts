@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const data: Record<string, Record<string, Record<string, unknown>>> = {};
 let commits = 0;
 let batchUpdates = 0;
+let failOnCommit = 0;
 const revalidateTag = vi.fn();
 const getSessionActor = vi.fn();
 
@@ -17,7 +18,7 @@ vi.mock('../../src/lib/firebase/admin', () => ({
         batchUpdates++;
         data[ref.col][ref.id] = { ...data[ref.col][ref.id], ...d };
       },
-      commit: async () => { commits++; },
+      commit: async () => { commits++; if (commits === failOnCommit) throw new Error('gagal tulis'); },
     }),
     collection: (col: string) => ({
       select: () => ({ get: async () => ({ docs: Object.entries(data[col] ?? {}).map(([id, d]) => ({ id, data: () => d })) }) }),
@@ -40,7 +41,7 @@ const input: WorkInput = {
 };
 
 beforeEach(() => {
-  commits = 0; batchUpdates = 0; revalidateTag.mockClear();
+  commits = 0; batchUpdates = 0; failOnCommit = 0; revalidateTag.mockClear();
   data.exhibitionPeople = { u1: { nickname: 'Ani', classId: 'k1', cohort: 'web-smg', track: 'web' } };
   data.exhibitionWorks = {};
   getSessionActor.mockResolvedValue({ role: 'admin' });
@@ -96,5 +97,29 @@ describe('API admin karya pameran', () => {
   it('rute bulk menolak kunci patch yang tidak dikenal', async () => {
     const res = await bulkPost(new Request('http://x', { method: 'POST', body: JSON.stringify({ ids: ['a'], patch: { title: 'x' } }) }));
     expect(res.status).toBe(400);
+  });
+
+  it('updateWork menolak kunci di luar daftar izin (sourceKey, track, personUid)', async () => {
+    data.exhibitionWorks.a = { track: 'web', status: 'draft' };
+    for (const k of ['sourceKey', 'track', 'personUid']) {
+      await expect(updateWork('a', { [k]: 'x' } as never)).rejects.toThrow('tidak boleh diubah');
+    }
+    expect(data.exhibitionWorks.a).toEqual({ track: 'web', status: 'draft' });
+  });
+
+  it('bulk menolak nilai tak valid dan patch kosong atau array dengan 400', async () => {
+    const post = (patch: unknown) => bulkPost(new Request('http://x', { method: 'POST', body: JSON.stringify({ ids: ['a'], patch }) }));
+    for (const patch of [{ aiAssisted: 'ya' }, { collectionId: 5 }, { status: 'x' }, {}, [{ status: 'published' }]]) {
+      expect((await post(patch)).status).toBe(400);
+    }
+    expect(commits).toBe(0);
+  });
+
+  it('commit kedua gagal: galat diteruskan dan cache tetap dibuang', async () => {
+    const ids = Array.from({ length: 600 }, (_, i) => 'w' + i);
+    ids.forEach((id) => { data.exhibitionWorks[id] = { status: 'draft' }; });
+    failOnCommit = 2;
+    await expect(bulkUpdateWorks(ids, { status: 'published' })).rejects.toThrow('gagal tulis');
+    expect(revalidateTag).toHaveBeenCalledWith('pameran');
   });
 });
