@@ -487,6 +487,7 @@ export async function getTaskSubmissionRoster(
         studentId: u.uid,
         studentName: u.name,
         submittedAt: sub.submittedAt,
+        firstSubmittedAt: sub.firstSubmittedAt || sub.submittedAt,
         late: isLateForStudent(sub.late, task.dueAt, joinMoment(u)),
         score: sub.score ?? null,
         url: sub.url,

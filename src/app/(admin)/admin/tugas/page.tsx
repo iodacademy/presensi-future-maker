@@ -117,7 +117,7 @@ export default function AdminTugasPage() {
           const data = await resp.json();
           if (!resp.ok) throw new Error(data.error || `Gagal memuat ${t.title}`);
           return data as {
-            submitted: { studentName: string; url: string | null; fileUrl: string | null; fileLost: boolean }[];
+            submitted: { studentName: string; firstSubmittedAt: string; url: string | null; fileUrl: string | null; fileLost: boolean }[];
             pending: { studentName: string }[];
           };
         })
@@ -126,16 +126,20 @@ export default function AdminTugasPage() {
       const wb = XLSX.utils.book_new();
       const dipakai = new Set<string>();
       daftar.forEach((t, i) => {
+        // Yang paling dulu mengumpulkan di atas; yang belum mengumpulkan di bawah, urut nama.
+        // Earliest submitters first; those yet to submit at the bottom, by name.
         const baris = [
-          ...rosters[i].submitted.map((r) => ({
+          ...[...rosters[i].submitted].sort((a, b) => a.firstSubmittedAt.localeCompare(b.firstSubmittedAt)).map((r) => ({
             nama: r.studentName,
             // Berkas unggahan dibuka lewat aplikasi, jadi tautannya harus lengkap dengan alamatnya.
             // Uploaded files open through the app, so the link needs its full address.
             link: r.url ?? (r.fileUrl ? `${window.location.origin}${r.fileUrl}` : null),
             ket: r.fileLost ? 'Berkas tidak tersimpan, perlu unggah ulang' : 'Terkumpul tanpa tautan',
           })),
-          ...rosters[i].pending.map((r) => ({ nama: r.studentName, link: null, ket: 'Belum mengumpulkan' })),
-        ].sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+          ...[...rosters[i].pending]
+            .sort((a, b) => a.studentName.localeCompare(b.studentName, 'id'))
+            .map((r) => ({ nama: r.studentName, link: null, ket: 'Belum mengumpulkan' })),
+        ];
 
         const label = kind === 'capstone' ? 'Link Capstone' : 'Link Tugas';
         const ws = XLSX.utils.aoa_to_sheet([['No', 'Nama', label], ...baris.map((b, j) => [j + 1, b.nama, b.link ?? b.ket])]);

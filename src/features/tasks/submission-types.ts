@@ -85,6 +85,8 @@ export interface RosterSubmission {
   studentId: string;
   studentName: string;
   submittedAt: string;
+  /** Pengumpulan pertama; tidak bergeser saat berkasnya diganti / The first submission; does not move when the file is replaced */
+  firstSubmittedAt: string;
   late: boolean;
   score: number | null;
   url: string | null;
