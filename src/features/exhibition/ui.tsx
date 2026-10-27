@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { toEmbedUrl } from '@/lib/embed-url';
 import { COHORTS, COH, PHOTOS, TRACKS, cohLabel } from './content';
+import type { CollectionCard as CollectionCardData } from './model';
 
 const cache = new Map<string, CSSProperties>();
 
@@ -137,7 +138,9 @@ export function Field({ placeholder, value, onChange }: { placeholder: string; v
   );
 }
 
-type WorkCardData = { href: string; cTint: string; cColor: string; cFg: string; cLabel: string; thumbLabel: string; type: string; title: string; initials: string; personName: string };
+type WorkCardData = { href: string; cTint: string; cColor: string; cFg: string; cLabel: string; thumbLabel: string; type: string; title: string; initials: string; personName: string;
+  // Opsional agar halaman contoh lama tetap jalan / Optional so the older sample pages keep working
+  thumb?: string; aiAssisted?: boolean };
 
 /** Kartu karya di galeri dan profil peserta / Work card in the gallery and participant profile */
 export function WorkCard({ w }: { w: WorkCardData }) {
@@ -145,7 +148,14 @@ export function WorkCard({ w }: { w: WorkCardData }) {
     <Hv as={Link} href={w.href} s="all:unset;cursor:pointer;display:flex;flex-direction:column;background:#fff;border-radius:22px;overflow:hidden;border:1px solid #ececea;transition:transform 240ms ease,box-shadow 240ms ease" h="transform:translateY(-6px);box-shadow:var(--shadow-lg)">
       <div style={css(`position:relative;aspect-ratio:4/3;background:${w.cTint};display:flex;align-items:center;justify-content:center;padding:16px`)}>
         <span style={css(`position:absolute;top:12px;left:12px;padding:5px 10px;border-radius:999px;background:${w.cColor};color:${w.cFg};font-size:12px;font-weight:700`)}>{w.cLabel}</span>
-        <span style={css('font-family:var(--font-caption);font-style:italic;font-size:14px;color:var(--text-muted);text-align:center')}>{w.thumbLabel}</span>
+        {w.thumb ? (
+          // <img> biasa: sampul sudah WebP di CDN / Plain <img>: the cover is already WebP on a CDN
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={w.thumb} alt={w.title} loading="lazy" decoding="async" style={css('position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top')} />
+        ) : (
+          <span style={css('font-family:var(--font-caption);font-style:italic;font-size:14px;color:var(--text-muted);text-align:center')}>{w.thumbLabel}</span>
+        )}
+        {w.aiAssisted && <span style={css('position:absolute;bottom:12px;left:12px;padding:5px 10px;border-radius:999px;background:var(--dark-blue);color:#fff;font-size:12px;font-weight:700')}>Dibuat dengan bantuan AI</span>}
         <span style={css('position:absolute;bottom:12px;right:12px;padding:5px 10px;border-radius:999px;background:#fff;color:var(--dark-blue);font-size:12px;font-weight:700')}>{w.type}</span>
       </div>
       <div style={css('padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px;flex:1')}>
@@ -153,6 +163,39 @@ export function WorkCard({ w }: { w: WorkCardData }) {
         <span style={css('margin-top:auto;display:flex;align-items:center;gap:10px')}>
           <span style={css(`width:30px;height:30px;flex:none;border-radius:50%;background:${w.cColor};color:${w.cFg};display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-weight:700;font-size:11px`)}>{w.initials}</span>
           <span style={css('flex:1;font-size:14px;font-weight:700;color:var(--dark-blue)')}>{w.personName}</span>
+          <span style={css('font-size:18px;font-weight:700;color:var(--dark-blue)')}>→</span>
+        </span>
+      </div>
+    </Hv>
+  );
+}
+
+/** Kartu koleksi di galeri: tumpukan sampul beberapa versi / Collection card in the gallery: a stack of covers from several versions */
+export function CollectionCard({ c }: { c: CollectionCardData }) {
+  const coh = COH[c.cohort];
+  const covers = c.coverUrls.slice(0, 3);
+  return (
+    <Hv as={Link} href={'/koleksi/' + c.id} s="all:unset;cursor:pointer;display:flex;flex-direction:column;background:#fff;border-radius:22px;overflow:hidden;border:1px solid #ececea;transition:transform 240ms ease,box-shadow 240ms ease" h="transform:translateY(-6px);box-shadow:var(--shadow-lg)">
+      <div style={css(`position:relative;aspect-ratio:4/3;background:${coh.tint};overflow:hidden`)}>
+        {[...covers].reverse().map((src, j) => {
+          const i = covers.length - 1 - j;
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={src} src={src} alt="" loading="lazy" style={css(`position:absolute;left:50%;top:54%;width:72%;aspect-ratio:16/10;object-fit:cover;object-position:top;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);border:3px solid #fff;transform:translate(-50%,-50%) translate(${(i - 1) * 34}px,${i * -8}px) rotate(${(i - 1) * 6}deg)`)} />
+          );
+        })}
+        <span style={css(`position:absolute;top:12px;left:12px;padding:5px 10px;border-radius:999px;background:${coh.color};color:${coh.fg};font-size:12px;font-weight:700`)}>{cohLabel(coh)}</span>
+        <span style={css('position:absolute;bottom:12px;right:12px;padding:5px 10px;border-radius:999px;background:var(--dark-blue);color:#fff;font-size:12px;font-weight:700')}>{'Koleksi · ' + c.count + ' versi'}</span>
+      </div>
+      <div style={css('padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px;flex:1')}>
+        <span style={css('font-family:var(--font-headline);font-weight:700;font-size:18px;line-height:1.25;color:var(--dark-blue)')}>{c.title + ': satu brief, ' + c.count + ' versi'}</span>
+        <span style={css('margin-top:auto;display:flex;align-items:center;gap:10px')}>
+          <span style={css('display:flex')}>
+            {c.nicknames.slice(0, 4).map((n, i) => (
+              <span key={n} style={css(`width:30px;height:30px;margin-left:${i ? -8 : 0}px;border-radius:50%;border:2px solid #fff;background:${coh.color};color:${coh.fg};display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-weight:700;font-size:11px`)}>{n[0]?.toUpperCase()}</span>
+            ))}
+          </span>
+          <span style={css('flex:1;font-size:14px;font-weight:700;color:var(--dark-blue)')}>{c.nicknames.slice(0, 2).join(', ') + (c.nicknames.length > 2 ? ' +' + (c.nicknames.length - 2) : '')}</span>
           <span style={css('font-size:18px;font-weight:700;color:var(--dark-blue)')}>→</span>
         </span>
       </div>
