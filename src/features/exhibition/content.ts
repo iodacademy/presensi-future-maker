@@ -1,19 +1,12 @@
 /**
- * Isi website pameran Bootcamp Future Innovators 2026.
+ * Teks dan konstanta desain website pameran Bootcamp Future Innovators 2026
+ * (jurusan, kelas, jenis karya, teks dokumentasi). Peserta, karya, dan foto
+ * berasal dari Firestore lewat read.ts, bukan dari berkas ini.
  *
- * Disalin apa adanya dari desain (docs/Website Pameran Future Makers 2026),
- * termasuk peserta dan karya contoh yang dibangkitkan dari benih tetap. Bila
- * data asli dari Firestore sudah siap, cukup berkas ini yang diganti; halaman
- * hanya membaca bentuk datanya.
- *
- * Content of the Bootcamp Future Innovators 2026 exhibition website.
- *
- * Copied as-is from the design (docs/Website Pameran Future Makers 2026),
- * including the sample people and works generated from a fixed seed. Once real
- * Firestore data is ready, only this file needs replacing; the pages read
- * nothing but its shape.
+ * Design text and constants of the Bootcamp Future Innovators 2026 exhibition
+ * website (tracks, classes, work types, documentation copy). People, works,
+ * and photos come from Firestore through read.ts, not from this file.
  */
-import photos from './photos.json';
 
 export type TrackKey = 'web' | 'da' | 'smm';
 
@@ -35,7 +28,6 @@ export interface WorkType {
   thumb: string;
   tools: string[];
   links: string[];
-  titles: string[];
   ratio?: string;
   slots?: number;
   slotLabel?: string;
@@ -46,42 +38,10 @@ export interface Cohort {
   key: string;
   track: TrackKey;
   city: string;
-  n: number;
   color: string;
   fg: string;
   tint: string;
 }
-
-export interface Person {
-  id: string;
-  track: TrackKey;
-  name: string;
-  initials: string;
-  city: string;
-  cohort: string;
-  works: string[];
-}
-
-export interface Work {
-  id: string;
-  track: TrackKey;
-  cohort: string;
-  type: string;
-  person: string;
-  title: string;
-  pdfPages: number;
-}
-
-/**
- * Alamat foto per slot, hasil `npm run upload-pameran-photos`.
- *
- * Slot yang belum punya foto menampilkan placeholder, sama seperti desainnya.
- *
- * Photo address per slot, produced by `npm run upload-pameran-photos`.
- *
- * Slots without a photo show a placeholder, the same as the design.
- */
-export const PHOTOS: Record<string, string> = photos;
 
 /**
  * Tautan video: YouTube (disarankan, unlisted), Google Drive, Vimeo, atau
@@ -119,41 +79,23 @@ export const TRACKS: Record<TrackKey, Track> = {
 };
 
 export const TYPE: Record<string, WorkType> = {
-  'Aplikasi Web': { kind: 'shot', thumb: 'Screenshot aplikasi', tools: ['React', 'Node.js', 'PostgreSQL'], links: ['Lihat demo', 'Kode di GitHub'],
-    titles: ['Sistem Antrean Puskesmas', 'Aplikasi Bank Sampah Warga', 'Platform Les Privat Mahasiswa', 'Pencatat Keuangan UMKM', 'Marketplace Kerajinan Lokal', 'Aplikasi Lapor Jalan Rusak', 'Pendaftaran Posyandu Online', 'Sistem Peminjaman Buku Desa'] },
-  'Landing Page': { kind: 'shot', thumb: 'Screenshot landing page', tools: ['HTML', 'CSS', 'JavaScript'], links: ['Lihat demo', 'Kode di GitHub'],
-    titles: ['Landing Page Kedai Kopi', 'Profil Komunitas Literasi', 'Halaman Donasi Bencana', 'Portofolio Fotografer', 'Landing Page Wisata Desa', 'Profil Karang Taruna'] },
-  'Data Cleaning': { kind: 'pdf', thumb: 'Dataset sebelum & sesudah', tools: ['Python', 'Pandas', 'Google Sheets'], links: ['Unduh laporan', 'Lihat notebook'],
-    titles: ['Pembersihan Data Penjualan Ritel', 'Data Survei Kepuasan Pelanggan', 'Data Transaksi E-commerce', 'Data Peserta Pelatihan Kerja', 'Data Harga Pangan Pasar'] },
-  'Dashboard': { kind: 'dash', thumb: 'Dashboard interaktif', tools: ['Python', 'HTML'], links: ['Buka dashboard', 'Unduh dataset'],
-    titles: ['Dashboard Penjualan Kopi Nusantara', 'Dashboard Kualitas Udara Kota', 'Dashboard Kinerja Toko Online', 'Dashboard Lowongan Kerja Muda', 'Dashboard Kunjungan Wisata', 'Dashboard Pengeluaran Rumah Tangga'] },
-  'Analisis Data': { kind: 'pdf', thumb: 'Laporan analisis', tools: ['Python', 'Tableau', 'Excel'], links: ['Unduh laporan', 'Lihat notebook'],
-    titles: ['Analisis Churn Pelanggan Telko', 'Pola Belanja Akhir Pekan', 'Analisis Ulasan Aplikasi Ojol', 'Faktor Keterlambatan Pengiriman'] },
-  'Konten Feed': { kind: 'social', ratio: '4/5', slots: 6, slotLabel: 'Post', socialW: '720px', thumb: 'Konten feed Instagram', tools: ['Canva', 'Instagram', 'Meta Business Suite'], links: ['Lihat di Instagram'],
-    titles: ['Seri Edukasi Kesehatan Mental', 'Konten Promo Produk Lokal', 'Kampanye Hemat Air', 'Seri Tips Wawancara Kerja', 'Konten Hari Anak Nasional'] },
-  'Reels': { kind: 'social', ratio: '9/16', slots: 3, slotLabel: 'Video', socialW: '640px', thumb: 'Video Reels', tools: ['CapCut', 'TikTok', 'Instagram Reels'], links: ['Lihat di TikTok', 'Lihat di Instagram'],
-    titles: ['Reels Sehari Jadi Barista', 'TikTok Mitos vs Fakta Gizi', 'Reels Behind the Scene UMKM', 'Seri Video Literasi Keuangan'] },
-  'Capstone': { kind: 'pdf', thumb: 'Dokumen capstone', tools: ['React', 'Node.js', 'PostgreSQL'], links: ['Unduh dokumen', 'Kode di GitHub'],
-    titles: ['Capstone Sistem Antrean Klinik', 'Capstone Platform Donasi Warga', 'Capstone Aplikasi Kasir UMKM'] },
-  'Brand Identity': { kind: 'pdf', thumb: 'Panduan identitas merek', tools: ['Canva', 'Figma'], links: ['Unduh panduan merek'],
-    titles: ['Identitas Merek Kedai Kopi Lokal', 'Panduan Merek Toko Kue Rumahan', 'Identitas Merek Brand Fesyen Daur Ulang'] },
-  'Laporan Campaign': { kind: 'pdf', thumb: 'Laporan performa', tools: ['Meta Ads', 'Google Sheets', 'Looker Studio'], links: ['Unduh laporan'],
-    titles: ['Laporan Campaign Ramadan Toko Kue', 'Performa Campaign Open Donasi', 'Laporan Iklan Kelas Bahasa', 'Evaluasi Campaign Brand Fesyen'] },
-};
-
-const FIRST = ['Aulia','Bima','Citra','Dimas','Eka','Fajar','Gita','Hana','Ilham','Intan','Joko','Kirana','Laras','Mega','Nanda','Oki','Putri','Rafi','Rani','Sari','Tegar','Utari','Vina','Wulan','Yoga','Zahra','Ayu','Bayu','Dewi','Farhan','Galih','Hesti','Indra','Nabila','Rizky','Salsa','Tiara','Wahyu','Yusuf','Anisa'];
-
-export const BIO: Record<TrackKey, string> = {
-  web: 'Tertarik membangun aplikasi yang membantu kegiatan warga sehari-hari. Selama bootcamp fokus pada front-end dan integrasi API.',
-  da: 'Suka menemukan pola dari data dan menyampaikannya lewat visual yang mudah dipahami. Selama bootcamp fokus pada SQL dan dashboard.',
-  smm: 'Senang membuat konten yang dekat dengan audiens muda. Selama bootcamp fokus pada perencanaan konten dan analisis performa.',
+  'Aplikasi Web': { kind: 'shot', thumb: 'Screenshot aplikasi', tools: ['React', 'Node.js', 'PostgreSQL'], links: ['Lihat demo', 'Kode di GitHub'], },
+  'Landing Page': { kind: 'shot', thumb: 'Screenshot landing page', tools: ['HTML', 'CSS', 'JavaScript'], links: ['Lihat demo', 'Kode di GitHub'], },
+  'Data Cleaning': { kind: 'pdf', thumb: 'Dataset sebelum & sesudah', tools: ['Python', 'Pandas', 'Google Sheets'], links: ['Unduh laporan', 'Lihat notebook'], },
+  'Dashboard': { kind: 'dash', thumb: 'Dashboard interaktif', tools: ['Python', 'HTML'], links: ['Buka dashboard', 'Unduh dataset'], },
+  'Analisis Data': { kind: 'pdf', thumb: 'Laporan analisis', tools: ['Python', 'Tableau', 'Excel'], links: ['Unduh laporan', 'Lihat notebook'], },
+  'Konten Feed': { kind: 'social', ratio: '4/5', slots: 6, slotLabel: 'Post', socialW: '720px', thumb: 'Konten feed Instagram', tools: ['Canva', 'Instagram', 'Meta Business Suite'], links: ['Lihat di Instagram'], },
+  'Reels': { kind: 'social', ratio: '9/16', slots: 3, slotLabel: 'Video', socialW: '640px', thumb: 'Video Reels', tools: ['CapCut', 'TikTok', 'Instagram Reels'], links: ['Lihat di TikTok', 'Lihat di Instagram'], },
+  'Capstone': { kind: 'pdf', thumb: 'Dokumen capstone', tools: ['React', 'Node.js', 'PostgreSQL'], links: ['Unduh dokumen', 'Kode di GitHub'], },
+  'Brand Identity': { kind: 'pdf', thumb: 'Panduan identitas merek', tools: ['Canva', 'Figma'], links: ['Unduh panduan merek'], },
+  'Laporan Campaign': { kind: 'pdf', thumb: 'Laporan performa', tools: ['Meta Ads', 'Google Sheets', 'Looker Studio'], links: ['Unduh laporan'], },
 };
 
 export const COHORTS: Cohort[] = [
-  { key: 'web-smg', track: 'web', city: 'Semarang', n: 44, color: '#0072CE', fg: '#FFFFFF', tint: '#E3EFF9' },
-  { key: 'da-jkt', track: 'da', city: 'DKI Jakarta', n: 42, color: '#8AC208', fg: '#243C4B', tint: '#EEF6DC' },
-  { key: 'smm-yk', track: 'smm', city: 'Yogyakarta', n: 20, color: '#DC0080', fg: '#FFFFFF', tint: '#FBE5F2' },
-  { key: 'smm-sby', track: 'smm', city: 'Surabaya', n: 20, color: '#ED632F', fg: '#FFFFFF', tint: '#FDE8DF' },
+  { key: 'web-smg', track: 'web', city: 'Semarang', color: '#0072CE', fg: '#FFFFFF', tint: '#E3EFF9' },
+  { key: 'da-jkt', track: 'da', city: 'DKI Jakarta', color: '#8AC208', fg: '#243C4B', tint: '#EEF6DC' },
+  { key: 'smm-yk', track: 'smm', city: 'Yogyakarta', color: '#DC0080', fg: '#FFFFFF', tint: '#FBE5F2' },
+  { key: 'smm-sby', track: 'smm', city: 'Surabaya', color: '#ED632F', fg: '#FFFFFF', tint: '#FDE8DF' },
 ];
 export const COH: Record<string, Cohort> = Object.fromEntries(COHORTS.map((c) => [c.key, c]));
 export const cohLabel = (c: Cohort) => TRACKS[c.track].name + ' · ' + c.city;
@@ -210,96 +152,3 @@ export const TESTI_T: { track: TrackKey; name: string; quote: string }[] = [
   { track: 'smm', name: 'Nama Trainer', quote: 'Banyak campaign peserta yang dijalankan untuk usaha nyata di sekitar mereka.' },
 ];
 export const TESTI_PLAN = { name: 'Nama Perwakilan', role: 'Yayasan Plan International Indonesia', quote: 'Bootcamp Future Innovators adalah bagian dari komitmen kami membuka kesempatan kerja yang setara bagi kaum muda. Karya di pameran ini menunjukkan apa yang mereka capai saat diberi ruang.' };
-export const SKILLS: Record<TrackKey, string[]> = { web: ['HTML & CSS','JavaScript','React','Git','REST API'], da: ['Excel','SQL','Python','Looker Studio','Data cleaning'], smm: ['Copywriting','Canva','Perencanaan konten','Meta Ads','Analisis performa'] };
-
-function rng(seed: number) { return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
-
-/**
- * Array.sort milik Chrome (151) untuk array pendek: binary insertion sort,
- * ditulis ulang apa adanya.
- *
- * Desain mengacak urutan jenis karya dengan sort(() => r() - 0.5). Hasil sort
- * dengan pembanding acak bergantung pada urutan pemanggilan pembanding, yang
- * berbeda antara Chrome, V8 di Node 24, Safari, dan Firefox. Akibatnya data
- * contoh di server berbeda dari peramban dan hydration gagal. Menulis ulang
- * algoritmanya membuat semua tempat menghasilkan data yang sama dengan desain
- * saat dibuka di Chrome.
- *
- * Chrome's (151) Array.sort for short arrays: binary insertion sort, rewritten
- * as-is.
- *
- * The design shuffles work types with sort(() => r() - 0.5). With a random
- * comparator the result depends on the order the comparator is called, which
- * differs between Chrome, V8 in Node 24, Safari, and Firefox, so the sample
- * data on the server differed from the browser and hydration failed. Rewriting
- * the algorithm makes every runtime produce the data the design shows in
- * Chrome.
- */
-function chromeSort<T>(input: T[], cmp: (a: T, b: T) => number): T[] {
-  const a = input.slice(), n = a.length;
-  for (let start = 1; start < n; start++) {
-    const pivot = a[start];
-    let left = 0, right = start;
-    while (left < right) {
-      const mid = left + ((right - left) >> 1);
-      if (cmp(pivot, a[mid]) < 0) right = mid; else left = mid + 1;
-    }
-    a.splice(start, 1);
-    a.splice(left, 0, pivot);
-  }
-  return a;
-}
-
-function build() {
-  const r = rng(2026), people: Person[] = [], works: Work[] = [];
-  let pid = 0, wid = 0;
-  COHORTS.forEach((c) => {
-    const tk = c.track;
-    for (let i = 0; i < c.n; i++) {
-      const first = FIRST[Math.floor(r() * FIRST.length)];
-      // Desain mengundi inisial nama belakang di sini. Undiannya tetap dijalankan agar
-      // karya contoh tidak bergeser, tetapi hasilnya dibuang: demi privasi, yang tampil
-      // hanya nama panggilan.
-      //
-      // The design draws a surname initial here. The draw still runs so the sample
-      // works do not shift, but its result is discarded: for privacy, only the
-      // nickname is shown.
-      r();
-      const p: Person = { id: 'p' + (pid++), track: tk, name: first, initials: first[0], city: c.city, cohort: c.key, works: [] };
-      const n = r() < 0.45 ? 2 : 1;
-      chromeSort(TRACKS[tk].types, () => r() - 0.5).slice(0, n).forEach((ty) => {
-        const T = TYPE[ty];
-        const w: Work = { id: 'w' + (wid++), track: tk, cohort: c.key, type: ty, person: p.id, title: T.titles[Math.floor(r() * T.titles.length)], pdfPages: 6 + Math.floor(r() * 18) };
-        works.push(w); p.works.push(w.id);
-      });
-      people.push(p);
-    }
-  });
-  return { people, works, P: Object.fromEntries(people.map((p) => [p.id, p])) as Record<string, Person>, W: Object.fromEntries(works.map((w) => [w.id, w])) as Record<string, Work> };
-}
-export const DATA = build();
-
-export function descFor(w: Work): string {
-  const k = TYPE[w.type].kind;
-  if (w.type === 'Data Cleaning') return 'Dataset mentah dirapikan dari duplikasi, nilai kosong, dan format yang tidak konsisten. Laporan berisi langkah pembersihan, perbandingan sebelum dan sesudah, serta dataset final.';
-  if (w.type === 'Dashboard') return 'Dashboard interaktif yang merangkum indikator utama dan bisa difilter per periode serta kategori. Data diolah dengan SQL sebelum divisualisasikan.';
-  if (w.type === 'Analisis Data') return 'Analisis eksploratif untuk menjawab pertanyaan bisnis, lengkap dengan temuan utama dan rekomendasi tindak lanjut.';
-  if (w.type === 'Laporan Campaign') return 'Laporan performa campaign selama empat minggu: jangkauan, engagement, klik, dan biaya per hasil, beserta evaluasi dan rekomendasi.';
-  if (w.type === 'Kalender Konten') return 'Rencana konten satu bulan berisi pilar konten, format, jadwal unggah, dan caption untuk setiap posting.';
-  if (k === 'social') return 'Rangkaian konten yang dirancang untuk audiens muda, dari riset ide, naskah, desain visual, sampai caption dan jadwal unggah.';
-  if (w.type === 'REST API') return 'Layanan backend dengan endpoint yang terdokumentasi, autentikasi pengguna, dan pengujian dasar.';
-  return 'Aplikasi web yang dirancang untuk menyelesaikan masalah nyata pengguna, mulai dari riset kebutuhan, desain antarmuka, sampai deployment.';
-}
-
-/** Data kartu karya yang dipakai galeri, profil, dan beranda / Work card data shared by gallery, profile, and home */
-export function card(w: Work) {
-  const t = TRACKS[w.track], p = DATA.P[w.person], c = COH[w.cohort];
-  return { id: w.id, title: w.title, type: w.type, trackShort: t.short, trackName: t.name, color: t.color, tint: t.tint, city: p.city,
-    cColor: c.color, cFg: c.fg, cTint: c.tint, cLabel: cohLabel(c), initials: p.initials, thumbLabel: TYPE[w.type].thumb, personName: p.name, href: '/karya/' + w.id };
-}
-
-export function personCard(p: Person) {
-  const c = COH[p.cohort];
-  return { ...p, trackShort: TRACKS[p.track].short, tint: TRACKS[p.track].tint, workCount: p.works.length, workLabel: p.works.length + ' karya',
-    cColor: c.color, cFg: c.fg, cTint: c.tint, cLabel: cohLabel(c), href: '/peserta/' + p.id };
-}

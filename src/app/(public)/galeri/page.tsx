@@ -2,6 +2,9 @@ import { getCatalog, todayWib } from '@/features/exhibition/read';
 import { orderGallery } from '@/features/exhibition/gallery-order';
 import { GalleryView } from './gallery-view';
 
+// Dibaca saat permintaan (ber-cache 5 menit), bukan saat build / Read at request time (cached for 5 minutes), not at build
+export const dynamic = 'force-dynamic';
+
 /**
  * Urutan galeri dihitung di server, berganti harian menurut tanggal WIB.
  * Hanya nickname yang dikirim ke peramban.

@@ -2,12 +2,20 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BENTO, COHORTS, DATA, SLIDES, SLIDE_INTERVAL_SECONDS, TESTI_P, TESTI_PLAN, TESTI_T, TRACKS, VIDEOS, card } from '@/features/exhibition/content';
+import { BENTO, COH, SLIDES, SLIDE_INTERVAL_SECONDS, TRACKS } from '@/features/exhibition/content';
+import { safeExternalUrl, type SiteContent } from '@/features/exhibition/model';
 import { Hv, Photo, css, media } from '@/features/exhibition/ui';
+
+export interface HomeBest { cohort: string; title: string; nickname: string; type: string; href: string; thumb: string }
+export interface HomeTesti { cohort: string; uid: string; nickname: string }
+interface Props { people: number; works: number; best: HomeBest[]; testi: HomeTesti[]; site: SiteContent }
+
+// Tautan video tersimpan hanya dipakai bila http(s) / A stored video link is used only when http(s)
+const safeVideo = (u: string | undefined) => (u && safeExternalUrl(u) ? u : '');
 
 const H2 = 'font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.4vw,52px);line-height:1.05;letter-spacing:-0.03em;margin:0';
 
-export default function HomePage() {
+export default function HomePage({ people, works, best, testi, site }: Props) {
   const [playing, setPlaying] = useState(false);
   const [slide, setSlide] = useState(0);
   const [testiIdx, setTestiIdx] = useState(0);
@@ -19,17 +27,17 @@ export default function HomePage() {
     return () => clearInterval(t);
   }, [modal]);
 
-  const hero = media(VIDEOS.afterMovie);
-  const nT = COHORTS.length;
-  const testiPeserta = COHORTS.map((c, i) => {
-    const p = DATA.people.filter((x) => x.cohort === c.key)[3], on = i === testiIdx;
-    return { key: c.key, name: p.name, initials: p.initials, cohort: TRACKS[c.track].name + ' · ' + c.city, cohortShort: c.city, quote: TESTI_P[c.key], bg: c.color, fg: c.fg, slotId: 'testi-' + c.key,
+  const hero = media(safeVideo(site.videos.afterMovie));
+  const nT = testi.length;
+  const testiPeserta = testi.map((p, i) => {
+    const c = COH[p.cohort], on = i === testiIdx;
+    return { key: c.key, name: p.nickname, initials: p.nickname[0]?.toUpperCase() ?? '?', cohort: TRACKS[c.track].name + ' · ' + c.city, cohortShort: c.city, quote: site.testiPeserta[c.key] ?? '', bg: c.color, fg: c.fg, slotId: 'testi-' + c.key,
       display: on ? 'block' : 'none', tabBg: on ? 'var(--dark-blue)' : 'var(--surface-muted)', tabFg: on ? '#fff' : 'var(--dark-blue)', tabHover: on ? 'var(--dark-blue)' : '#e9ecee',
-      play: () => setModal({ title: 'Testimoni ' + p.name, url: VIDEOS.peserta[c.key] ?? '' }), href: '/peserta/' + p.id };
+      play: () => setModal({ title: 'Testimoni ' + p.nickname, url: site.videos.peserta?.[c.key] ?? '' }), href: '/peserta/' + p.uid };
   });
   const tpA = testiPeserta[testiIdx];
-  const mm = modal ? media(modal.url) : null;
-  const stats = [{ value: DATA.people.length, label: 'peserta' }, { value: DATA.works.length, label: 'karya' }, { value: 3, label: 'jurusan' }, { value: 4, label: 'kota' }];
+  const mm = modal ? media(safeVideo(modal.url)) : null;
+  const stats = [{ value: people, label: 'peserta' }, { value: works, label: 'karya' }, { value: 3, label: 'jurusan' }, { value: 4, label: 'kota' }];
 
   return (
     <>
@@ -41,7 +49,7 @@ export default function HomePage() {
         <div style={css('max-width:1180px;margin:clamp(36px,5vw,56px) auto 0;position:relative;aspect-ratio:16/9;border-radius:24px;overflow:hidden;background:var(--dark-blue)')}>
           {!playing && (
             <>
-              <Photo id="hero-poster" placeholder="Poster / cuplikan after movie" />
+              <Photo src={site.photos['hero-poster']} placeholder="Poster / cuplikan after movie" />
               <div style={css('position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;pointer-events:none')}>
                 <Hv onClick={() => setPlaying(true)} aria-label="Putar after movie" s="all:unset;cursor:pointer;pointer-events:auto;width:96px;height:96px;border-radius:50%;background:var(--yellow);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md);transition:transform 160ms ease" h="transform:scale(1.06)" a="transform:scale(.96)"><span style={css('width:0;height:0;border-left:25px solid var(--dark-blue);border-top:15px solid transparent;border-bottom:15px solid transparent;margin-left:7px')} /></Hv>
                 <span style={css('font-weight:700;font-size:17px;color:#fff;background:var(--dark-blue);padding:6px 14px;border-radius:999px')}>Putar after movie</span>
@@ -88,7 +96,7 @@ export default function HomePage() {
             <div style={css(`display:flex;transform:translateX(${-100 * slide}%);transition:transform 600ms cubic-bezier(.2,.7,.2,1)`)}>
               {SLIDES.map((sl, i) => (
                 <div key={i} style={css('flex:0 0 100%;position:relative;aspect-ratio:16/8;min-height:260px;background:var(--surface-muted)')}>
-                  <Photo id={'doc-' + (i + 1)} placeholder="Foto dokumentasi" />
+                  <Photo src={site.photos['doc-' + (i + 1)]} placeholder="Foto dokumentasi" />
                   <div style={css('position:absolute;left:24px;bottom:24px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;pointer-events:none')}>
                     <span style={css(`font-family:var(--font-headline);font-weight:700;font-size:clamp(18px,2vw,24px);padding:6px 14px;background:${sl.color};color:${sl.fg}`)}>{sl.caption}</span>
                     <span style={css('font-size:14px;font-weight:700;padding:4px 10px;background:#fff;color:var(--dark-blue)')}>{sl.place}</span>
@@ -114,10 +122,10 @@ export default function HomePage() {
           <div style={css('margin-top:32px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:clamp(110px,16vw,210px);grid-auto-flow:dense;gap:12px')}>
             {BENTO.map((b, i) => (
               <div key={i} style={css(`grid-column:span ${b.cols};grid-row:span ${b.rows};position:relative;border-radius:20px;overflow:hidden;background:${b.bg || 'var(--surface-muted)'};color:${b.fg || 'var(--dark-blue)'}`)}>
-                {b.type === 'photo' && <Photo id={'bento-' + (i + 1)} placeholder={b.label} />}
+                {b.type === 'photo' && <Photo src={site.photos['bento-' + (i + 1)]} placeholder={b.label} />}
                 {b.type === 'stat' && (
                   <div style={css('position:absolute;inset:0;padding:clamp(14px,2vw,24px);display:flex;flex-direction:column;justify-content:flex-end;gap:2px')}>
-                    <span style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,5vw,64px);line-height:1;letter-spacing:-0.03em')}>{b.key === 'people' ? DATA.people.length : b.key === 'works' ? DATA.works.length : b.value}</span>
+                    <span style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,5vw,64px);line-height:1;letter-spacing:-0.03em')}>{b.key === 'people' ? people : b.key === 'works' ? works : b.value}</span>
                     <span style={css('font-weight:700;font-size:clamp(13px,1.3vw,16px)')}>{b.label}</span>
                   </div>
                 )}
@@ -133,20 +141,20 @@ export default function HomePage() {
             <h2 style={css(H2)}>Contoh Karya Setiap Kelas</h2>
           </div>
           <div style={css('margin-top:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:16px')}>
-            {COHORTS.map((c) => {
-              const bw = card(DATA.works.find((x) => x.cohort === c.key)!);
+            {best.map((bw) => {
+              const c = COH[bw.cohort], tk = TRACKS[c.track];
               return (
                 <div key={c.key} style={css(`background:${c.color};color:${c.fg};border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:16px`)}>
                   <div style={css('display:flex;flex-direction:column;gap:2px')}>
-                    <span style={css('font-size:14px;font-weight:700')}>{bw.trackName}</span>
-                    <span style={css('font-family:var(--font-headline);font-weight:700;font-size:26px;line-height:1.1;letter-spacing:-0.02em')}>{bw.city}</span>
+                    <span style={css('font-size:14px;font-weight:700')}>{tk.name}</span>
+                    <span style={css('font-family:var(--font-headline);font-weight:700;font-size:26px;line-height:1.1;letter-spacing:-0.02em')}>{c.city}</span>
                   </div>
                   <div style={css('position:relative;aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:#fff;color:var(--dark-blue)')}>
-                    <Photo id={'best-' + c.key} placeholder={bw.thumbLabel} />
+                    <Photo src={site.photos['best-' + c.key] || bw.thumb} placeholder={bw.type} />
                   </div>
                   <div style={css('display:flex;flex-direction:column;gap:4px')}>
                     <span style={css('font-family:var(--font-headline);font-weight:700;font-size:19px;line-height:1.2')}>{bw.title}</span>
-                    <span style={css('font-size:14px;font-weight:700')}>{bw.personName} · {bw.type}</span>
+                    <span style={css('font-size:14px;font-weight:700')}>{bw.nickname} · {bw.type}</span>
                   </div>
                   <Hv as={Link} href={bw.href} s="all:unset;cursor:pointer;margin-top:auto;align-self:flex-start;padding:9px 16px;border-radius:999px;background:#fff;color:var(--dark-blue);font-weight:700;font-size:14px" h="transform:translateY(-1px)">Lihat karya ›</Hv>
                 </div>
@@ -156,6 +164,7 @@ export default function HomePage() {
         </div>
       </section>
 
+      {tpA && (
       <section style={css('padding:clamp(64px,9vw,112px) 22px')}>
         <div style={css('max-width:1180px;margin:0 auto')}>
           <div style={css('display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;justify-content:space-between')}>
@@ -174,7 +183,7 @@ export default function HomePage() {
               <div style={css('position:relative;width:100%;height:100%;border-radius:18px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue)')}>
                 {testiPeserta.map((tp) => (
                   <div key={tp.key} style={css(`position:absolute;inset:0;display:${tp.display}`)}>
-                    <Photo id={tp.slotId} placeholder="Cuplikan video testimoni" />
+                    <Photo src={site.photos[tp.slotId]} placeholder="Cuplikan video testimoni" />
                   </div>
                 ))}
                 <Hv onClick={tpA.play} aria-label="Putar video" s="all:unset;cursor:pointer;position:absolute;left:16px;bottom:16px;display:flex;align-items:center;gap:10px;padding:6px 18px 6px 6px;border-radius:999px;background:#fff;color:var(--dark-blue);font-weight:700;font-size:14px;box-shadow:var(--shadow-md)" h="transform:scale(1.04)"><span style={css('width:44px;height:44px;border-radius:50%;background:var(--yellow);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md)')}><span style={css('width:0;height:0;border-left:12px solid var(--dark-blue);border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:4px')} /></span>Putar video</Hv>
@@ -202,6 +211,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      )}
 
       <section style={css('padding:clamp(64px,9vw,112px) 22px;background:var(--dark-blue);color:#fff')}>
         <div style={css('max-width:1180px;margin:0 auto')}>
@@ -210,12 +220,12 @@ export default function HomePage() {
             <h2 style={css(H2)}>Apa Kata Trainer?</h2>
           </div>
           <div style={css('margin-top:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:clamp(20px,3vw,32px)')}>
-            {TESTI_T.map((t) => {
+            {site.testiTrainer.map((t) => {
               const tk = TRACKS[t.track];
               return (
                 <div key={t.track} style={css('display:flex;flex-direction:column;gap:22px')}>
-                  <Hv onClick={() => setModal({ title: t.name + ' · Trainer ' + tk.name, url: VIDEOS.trainer[t.track] })} aria-label="Putar video" s="all:unset;cursor:pointer;position:relative;display:block;aspect-ratio:4/5;border-radius:24px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue);transition:transform 260ms ease" h="transform:translateY(-4px)">
-                    <Photo id={'trainer-' + t.track} placeholder="Cuplikan video trainer" />
+                  <Hv onClick={() => setModal({ title: t.name + ' · Trainer ' + tk.name, url: site.videos.trainer?.[t.track] ?? '' })} aria-label="Putar video" s="all:unset;cursor:pointer;position:relative;display:block;aspect-ratio:4/5;border-radius:24px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue);transition:transform 260ms ease" h="transform:translateY(-4px)">
+                    <Photo src={site.photos['trainer-' + t.track]} placeholder="Cuplikan video trainer" />
                     <span style={css(`position:absolute;top:16px;left:16px;padding:6px 12px;border-radius:999px;background:${tk.color};color:${tk.fg};font-size:12px;font-weight:700;pointer-events:none`)}>{tk.name}</span>
                     <span style={css('position:absolute;right:16px;bottom:16px;pointer-events:none')}><span style={css('width:56px;height:56px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md)')}><span style={css('width:0;height:0;border-left:15px solid var(--dark-blue);border-top:9px solid transparent;border-bottom:9px solid transparent;margin-left:4px')} /></span></span>
                   </Hv>
@@ -237,14 +247,14 @@ export default function HomePage() {
         <div style={css('max-width:1180px;margin:0 auto;display:flex;flex-direction:column;align-items:center;text-align:center;gap:28px')}>
           <span style={css('font-size:15px;font-weight:700')}>Dari Plan Indonesia</span>
           <span style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(96px,10vw,140px);line-height:0.6;height:0.4em;color:var(--plan-blue)')}>“</span>
-          <p style={css('margin:0;max-width:900px;font-family:var(--font-headline);font-weight:700;font-size:clamp(28px,3.6vw,48px);line-height:1.18;letter-spacing:-0.025em;text-wrap:balance')}>{TESTI_PLAN.quote}</p>
+          <p style={css('margin:0;max-width:900px;font-family:var(--font-headline);font-weight:700;font-size:clamp(28px,3.6vw,48px);line-height:1.18;letter-spacing:-0.025em;text-wrap:balance')}>{site.testiPlan.quote}</p>
           <div style={css('display:flex;flex-direction:column;gap:2px')}>
-            <span style={css('font-weight:700;font-size:17px')}>{TESTI_PLAN.name}</span>
-            <span style={css('font-family:var(--font-caption);font-style:italic;font-size:15px')}>{TESTI_PLAN.role}</span>
+            <span style={css('font-weight:700;font-size:17px')}>{site.testiPlan.name}</span>
+            <span style={css('font-family:var(--font-caption);font-style:italic;font-size:15px')}>{site.testiPlan.role}</span>
           </div>
           <div style={css('width:100%;max-width:960px;margin-top:20px;position:relative;aspect-ratio:16/9;border-radius:28px;overflow:hidden;background:#fff;color:var(--dark-blue);box-shadow:var(--shadow-lg)')}>
-            <Photo id="testi-plan" placeholder="Cuplikan video Plan Indonesia" />
-            <Hv onClick={() => setModal({ title: 'Testimoni Plan Indonesia', url: VIDEOS.plan })} aria-label="Putar video" s="all:unset;cursor:pointer;position:absolute;left:20px;bottom:20px;display:flex;align-items:center;gap:12px;padding:8px 22px 8px 8px;border-radius:999px;background:var(--plan-blue);color:#fff;font-weight:700;font-size:15px;box-shadow:var(--shadow-md)" h="transform:scale(1.04)"><span style={css('width:48px;height:48px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md)')}><span style={css('width:0;height:0;border-left:13px solid var(--plan-blue);border-top:8px solid transparent;border-bottom:8px solid transparent;margin-left:4px')} /></span>Tonton pesan Plan Indonesia</Hv>
+            <Photo src={site.photos['testi-plan']} placeholder="Cuplikan video Plan Indonesia" />
+            <Hv onClick={() => setModal({ title: 'Testimoni Plan Indonesia', url: site.videos.plan })} aria-label="Putar video" s="all:unset;cursor:pointer;position:absolute;left:20px;bottom:20px;display:flex;align-items:center;gap:12px;padding:8px 22px 8px 8px;border-radius:999px;background:var(--plan-blue);color:#fff;font-weight:700;font-size:15px;box-shadow:var(--shadow-md)" h="transform:scale(1.04)"><span style={css('width:48px;height:48px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md)')}><span style={css('width:0;height:0;border-left:13px solid var(--plan-blue);border-top:8px solid transparent;border-bottom:8px solid transparent;margin-left:4px')} /></span>Tonton pesan Plan Indonesia</Hv>
           </div>
         </div>
       </section>
@@ -255,7 +265,7 @@ export default function HomePage() {
             {['yellow', 'magenta', 'green', 'orange'].map((c) => <span key={c} style={css(`width:14px;height:14px;border-radius:50%;background:var(--${c})`)} />)}
           </div>
           <h2 style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(36px,5.6vw,68px);line-height:1.04;letter-spacing:-0.035em;margin:0;text-wrap:balance')}>Jelajahi semua karya.</h2>
-          <p style={css('font-family:var(--font-headline);font-weight:500;font-size:clamp(18px,2vw,22px);margin:0')}>{DATA.works.length + ' karya dari ' + DATA.people.length + ' peserta di empat kota.'}</p>
+          <p style={css('font-family:var(--font-headline);font-weight:500;font-size:clamp(18px,2vw,22px);margin:0')}>{works + ' karya dari ' + people + ' peserta di empat kota.'}</p>
           <div style={css('display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:center;margin-top:12px')}>
             <Hv as={Link} href="/galeri" s="all:unset;cursor:pointer;padding:14px 28px;border-radius:999px;background:var(--yellow);color:var(--dark-blue);font-weight:700;font-size:17px" h="transform:translateY(-2px)" a="transform:scale(.97)">Buka galeri</Hv>
             <Hv as={Link} href="/peserta" s="all:unset;cursor:pointer;font-size:17px;font-weight:700;color:#fff" h="text-decoration:underline">Kenali para peserta ›</Hv>

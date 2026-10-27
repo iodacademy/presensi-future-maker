@@ -9,6 +9,11 @@ vi.mock('next/navigation', () => ({
   redirect: (url: string) => { throw new Error('REDIRECT ' + url); },
 }));
 vi.mock('../../src/app/(public)/home-page', () => ({ default: () => null }));
+vi.mock('../../src/features/exhibition/read', () => ({
+  getCatalog: async () => ({ people: [], cards: [], collections: [] }),
+  getSiteContent: async () => ({ photos: {} }),
+  todayWib: () => '2026-10-28',
+}));
 
 import IndexPage from '../../src/app/(public)/page';
 
