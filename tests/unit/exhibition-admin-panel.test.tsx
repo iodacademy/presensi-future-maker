@@ -135,3 +135,15 @@ describe('panel admin Pameran, tab Peserta, Koleksi, Konten Situs', () => {
     expect((screen.getByLabelText(/^Keahlian/) as HTMLInputElement).value).toBe('HTML, CSS');
   });
 });
+
+describe('slot foto admin', () => {
+  it('memuat slot kenangan, momen, dan kelas yang dirender halaman dokumentasi', async () => {
+    const { buildSlots } = await import('../../src/app/(admin)/admin/pameran/site-tab');
+    const ids = new Set(buildSlots().map((s) => s.id));
+    for (const k of ['web-smg', 'da-jkt', 'smm-yk', 'smm-sby']) {
+      for (const sec of ['kenangan', 'momen', 'hero', 'film', 'bento']) expect(ids.has(`doc-${k}-${sec}-0`), `${k}-${sec}`).toBe(true);
+      expect(ids.has(`doc-${k}-kelas-2`)).toBe(true);
+    }
+    expect(ids.has('doc-web-smg-kenangan-5')).toBe(true);
+  });
+});

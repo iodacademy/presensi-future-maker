@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { BENTO, COH, COHORTS, DOC_BENTO, DOC_HERO, DOC_MASONRY, DOC_WEEKS, SLIDES, TRACKS } from '@/features/exhibition/content';
+import { BENTO, COH, COHORTS, DOC_BENTO, DOC_HERO, DOC_MASONRY, DOC_POLAROID, DOC_WEEKS, SLIDES, TRACKS } from '@/features/exhibition/content';
 import type { TrackKey } from '@/features/exhibition/content';
 import type { SiteContent } from '@/features/exhibition/model';
 import { alertBox, api, btnSolid, card, field, label, send, uploadImage } from './admin-ui';
@@ -13,7 +13,7 @@ import { alertBox, api, btnSolid, card, field, label, send, uploadImage } from '
  * Photo slot ids used by the public pages. The doc-<cohort>-... slots mirror how
  * dokumentasi/page.tsx builds ids for the "all cohorts" view and each single cohort.
  */
-function buildSlots(): { id: string; name: string }[] {
+export function buildSlots(): { id: string; name: string }[] {
   const out: { id: string; name: string }[] = [{ id: 'hero-poster', name: 'Poster after movie' }];
   SLIDES.forEach((s, i) => out.push({ id: 'doc-' + (i + 1), name: `Slide dokumentasi ${i + 1}: ${s.caption}` }));
   BENTO.forEach((b, i) => { if (b.type === 'photo') out.push({ id: 'bento-' + (i + 1), name: b.label }); });
@@ -33,6 +33,7 @@ function buildSlots(): { id: string; name: string }[] {
     DOC_BENTO.forEach((b) => { if (!b.word) put('bento', pi++, b.cap ?? ''); });
     (dc === 'all' ? COHORTS : [COH[dc]]).forEach((co) => [0, 1, 2].forEach((n) => add(`doc-${co.key}-kelas-${n}`, `Dokumentasi ${co.city}, kelas ${n + 1}`)));
     DOC_MASONRY.forEach((cap, i) => put('momen', i, cap));
+    DOC_POLAROID.forEach((cap, i) => put('kenangan', i, cap));
   }
   return [...out, ...docs];
 }
