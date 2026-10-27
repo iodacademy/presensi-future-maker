@@ -179,6 +179,11 @@ async function main() {
   plan.unmatchedFolders.forEach((f) => console.log(`  ${f}`));
   console.log(`\nFolder kelas tanpa kelas cocok (${unmatchedClassFolders.length}):`);
   unmatchedClassFolders.forEach((f) => console.log(`  ${f}`));
+  // Judul yang masih memuat kata nama lengkap (selain panggilan) / Titles still containing a non-first full-name word
+  const nameOf = new Map(students.map((x) => [x.uid, x.name]));
+  const leaks = plan.works.filter((w) => (nameOf.get(w.personUid) ?? '').split(/\s+/).slice(1).some((n) => n.length >= 3 && w.title.toLowerCase().includes(n.toLowerCase())));
+  console.log(`\nPERINGATAN judul memuat nama lengkap / WARNING titles with full name (${leaks.length}):`);
+  leaks.forEach((w) => console.log(`  ${w.sourceKey} | ${w.title}`));
   console.log('\n20 karya pertama:');
   plan.works.slice(0, 20).forEach((w) => console.log(`  [${w.cohort}] ${w.type} | ${w.title} | ${w.media.kind} | ${w.sourceKey}`));
 

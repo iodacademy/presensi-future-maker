@@ -123,3 +123,43 @@ describe('rankWork', () => {
     expect(r('Brand Identity')).toBeLessThan(r('Aplikasi Web', 'c1'));
   });
 });
+
+describe('judul tanpa nama lengkap', () => {
+  const CAP = (person: string, files: string[]): SourceTask => ({
+    classFolder: WEB, personFolder: person, taskFolder: 'CP 1. Capstone Project',
+    files: files.map((n) => f(`${WEB}/${person}/CP 1. Capstone Project/${n}`)), siteUrl: null, screenshot: null,
+  });
+  const withStudent = (name: string) => ({ ...base(), students: [student('u1', name, 'c-web')] });
+  const noNameWords = (title: string, words: string[]) =>
+    words.forEach((w) => expect(title.toLowerCase()).not.toContain(w.toLowerCase()));
+
+  it('mode pdf: kata nama selain panggilan dibuang', () => {
+    const p = planImport({ ...withStudent('Afita Haniy Phitaloka'), tasks: [CAP('Afita Haniy Phitaloka', ['Afita_Haniy_Phitaloka_Visual_Identity_&_Moodboard_Cemilan_Kriuk.pdf'])] });
+    noNameWords(p.works[0].title, ['Haniy', 'Phitaloka']);
+    expect(p.works[0].title).toContain('Cemilan Kriuk');
+  });
+
+  it('mode video: nama di ujung dan di tengah dibuang', () => {
+    const t = visual(['Video Kriuk Sore-Devinka Nursiva Rizantti.mp4', 'Mariska Emiliana_Konten Video_Nuvia Barrier Lab.mp4'], 'HP 3. Konten', 'Devinka Nursiva Rizantti');
+    const input = { ...base(), students: [student('u2', 'Devinka Nursiva Rizantti', 'c-smm')], tasks: [t],
+      videoLinks: Object.fromEntries(t.files.map((x, i) => [x.rel, 'https://d/' + i])) };
+    const p = planImport(input);
+    expect(p.works).toHaveLength(2);
+    noNameWords(p.works[0].title, ['Nursiva', 'Rizantti']);
+    const q = planImport({ ...input, students: [student('u2', 'Mariska Emiliana', 'c-smm')], tasks: [{ ...t, personFolder: 'Mariska Emiliana' }] });
+    noNameWords(q.works.map((w) => w.title).join(' '), ['Emiliana']);
+  });
+
+  it('mode carousel: judul dari folder tidak memuat nama', () => {
+    const t = visual(['TPM 2_Salsabila Zahra Nur Aulia/1.png'], 'HP 3. Konten', 'Salsabila Zahra Nur Aulia');
+    const p = planImport({ ...base(), students: [student('u2', 'Salsabila Zahra Nur Aulia', 'c-smm')], tasks: [t] });
+    noNameWords(p.works[0].title, ['Zahra', 'Nur', 'Aulia']);
+    expect(p.works[0].title).toBe('TPM 2 Salsabila');
+  });
+
+  it('bentuk tanpa spasi dibuang; judul kosong jadi nama jenis', () => {
+    const p = planImport({ ...withStudent('Adinda Puan Maharani'), tasks: [CAP('Adinda Puan Maharani', ['AdindaPuanMaharani_Cemilan.pdf', 'Puan_Maharani.pdf'])] });
+    noNameWords(p.works.map((w) => w.title).join(' '), ['Puan', 'Maharani']);
+    expect(p.works.map((w) => w.title)).toContain('Capstone');
+  });
+});

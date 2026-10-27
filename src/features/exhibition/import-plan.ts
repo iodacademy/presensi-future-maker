@@ -81,6 +81,24 @@ function siteTitle(url: string): string {
   return host.split('.')[0].replace(/-/g, ' ').replace(/(^|\s)\S/g, (c) => c.toUpperCase());
 }
 
+/**
+ * Buang kata nama lengkap selain nama panggilan dari judul, juga bentuk tanpa spasi.
+ * Judul kosong jatuh ke nama jenis karya.
+ *
+ * Strip every full-name word except the nickname from a title, including the
+ * no-space joined forms. An empty title falls back to the work type name.
+ */
+export function scrubTitle(title: string, fullName: string, fallback: string): string {
+  const words = fullName.trim().split(/\s+/).slice(1).filter(Boolean);
+  const esc = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const all = fullName.trim().split(/\s+/).filter(Boolean);
+  const forms = [all.join(''), words.join(''), ...words].filter((w) => w.length > 1).sort((a, b) => b.length - a.length);
+  let out = title;
+  for (const w of forms) out = out.replace(new RegExp(esc(w), 'gi'), ' ');
+  out = out.replace(/[_\-()[\].]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return out || fallback;
+}
+
 function matchPerson(folder: string, cands: ImportInput['students']) {
   const n = norm(folder);
   const exact = cands.filter((s) => norm(s.name) === n);
@@ -128,9 +146,10 @@ export function planImport(input: ImportInput): ImportPlan {
       if (seen.has(sourceKey) || input.existingSourceKeys.has(sourceKey)) return;
       seen.add(sourceKey);
       if (rule.collection) usedCollections.add(rule.collection);
+      const type = w.type ?? rule.type ?? '';
       plan.works.push({
-        ...w, sourceKey, personUid: person.uid, classId: cls.id, cohort: cohort.key, track: cohort.track,
-        type: w.type ?? rule.type ?? '', collectionKey: rule.collection ?? null,
+        ...w, title: scrubTitle(w.title, person.name, type), sourceKey, personUid: person.uid, classId: cls.id, cohort: cohort.key, track: cohort.track,
+        type, collectionKey: rule.collection ?? null,
       });
     };
     const fileWork = (file: SourceFile, kind: MediaKind) => add(file.rel, {
