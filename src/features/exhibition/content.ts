@@ -146,9 +146,8 @@ export const TESTI_P: Record<string, string> = {
   'smm-yk': 'Bikin kalender konten sebulan penuh bikin aku sadar konten yang bagus itu direncanakan, bukan kebetulan.',
   'smm-sby': 'Awalnya angka di laporan iklan bikin bingung. Di akhir bootcamp aku bisa membaca dan menjelaskannya sendiri.',
 };
-export const TESTI_T: { track: TrackKey; name: string; quote: string }[] = [
-  { track: 'web', name: 'Nama Trainer', quote: 'Latar belakang peserta beragam, tapi semuanya menyelesaikan proyek yang bisa didemokan.' },
-  { track: 'da', name: 'Nama Trainer', quote: 'Mereka terbiasa bertanya “datanya bilang apa?” sebelum membuat grafik. Itu kebiasaan analis yang baik.' },
-  { track: 'smm', name: 'Nama Trainer', quote: 'Banyak campaign peserta yang dijalankan untuk usaha nyata di sekitar mereka.' },
+export const TESTI_T: { track: TrackKey; cohort?: string; role?: string; name: string; quote: string }[] = [
+  { track: 'web', cohort: 'web-smg', role: 'Fasilitator', name: 'Rifka Aisyah Rokhmah', quote: 'Pengalaman menjadi fasilitator Future Makers sangat berkesan. Melihat antusiasme peserta, terutama saat berkolaborasi dan menyelesaikan proyek dalam waktu singkat, menjadi pengalaman yang seru dan luar biasa. Untuk teman-teman Future Makers, teruslah mencoba, tetap semangat, dan percaya bahwa masa depan yang cerah menanti kalian!' },
+  { track: 'web', cohort: 'web-smg', role: 'Trainer', name: 'Wahyu Candra Tama', quote: 'Mengajar selama 12 sesi Future Makers menjadi pengalaman yang sangat berkesan. Antusiasme peserta yang tinggi memberikan kesempatan bagi saya untuk berbagi pengalaman industri dan membekali mereka dengan keterampilan dasar sebelum memasuki dunia kerja. Saya berharap seluruh peserta tetap optimis, percaya diri, dan memiliki semangat untuk terus belajar serta mengembangkan keterampilan agar siap menghadapi perkembangan teknologi dan tantangan dunia profesional.' },
 ];
 export const TESTI_PLAN = { name: 'Nama Perwakilan', role: 'Yayasan Plan International Indonesia', quote: 'Bootcamp Future Innovators adalah bagian dari komitmen kami membuka kesempatan kerja yang setara bagi kaum muda. Karya di pameran ini menunjukkan apa yang mereka capai saat diberi ruang.' };

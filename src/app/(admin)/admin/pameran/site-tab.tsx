@@ -18,8 +18,7 @@ export function buildSlots(): { id: string; name: string }[] {
   SLIDES.forEach((s, i) => out.push({ id: 'doc-' + (i + 1), name: `Slide dokumentasi ${i + 1}: ${s.caption}` }));
   BENTO.forEach((b, i) => { if (b.type === 'photo') out.push({ id: 'bento-' + (i + 1), name: b.label }); });
   COHORTS.forEach((c) => out.push({ id: 'testi-' + c.key, name: `Testimoni ${c.city}` }));
-  (Object.keys(TRACKS) as TrackKey[]).forEach((t) => out.push({ id: 'trainer-' + t, name: `Trainer ${TRACKS[t].name}` }));
-  out.push({ id: 'testi-plan', name: 'Testimoni Plan Indonesia' });
+  [1, 2, 3, 4, 5, 6].forEach((n) => out.push({ id: 'trainer-' + n, name: `Testimoni trainer/fasilitator ${n}` }));
 
   const seen = new Set<string>();
   const docs: { id: string; name: string }[] = [];
@@ -117,19 +116,19 @@ export function SiteTab() {
           </label>
         ))}
         {content.testiTrainer.map((t, i) => (
-          <div key={t.track} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={label}>Nama trainer {TRACKS[t.track].name}
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={label}>{`Testimoni ${i + 1}: nama (${TRACKS[t.track].name})`}
               <input value={t.name} onChange={(e) => setTrainer(i, { name: e.target.value })} style={field} />
             </label>
-            <label style={label}>Kutipan trainer {TRACKS[t.track].name}
+            <label style={label}>{`Testimoni ${i + 1}: peran`}
+              <select value={t.role ?? 'Trainer'} onChange={(e) => setTrainer(i, { role: e.target.value })} style={field}>
+                <option>Trainer</option><option>Fasilitator</option>
+              </select>
+            </label>
+            <label style={label}>{`Testimoni ${i + 1}: kutipan`}
               <textarea rows={2} value={t.quote} onChange={(e) => setTrainer(i, { quote: e.target.value })} style={field} />
             </label>
           </div>
-        ))}
-        {([['name', 'nama'], ['role', 'jabatan'], ['quote', 'kutipan']] as const).map(([k, name]) => (
-          <label key={k} style={label}>Plan Indonesia: {name}
-            <input value={content.testiPlan[k]} onChange={(e) => edit((s) => ({ ...s, testiPlan: { ...s.testiPlan, [k]: e.target.value } }))} style={field} />
-          </label>
         ))}
       </section>
 

@@ -42,7 +42,8 @@ export interface SiteContent {
   testiPeserta: Record<string, string>;
   // Kunci kohor -> uid peserta yang diberi kutipan / Cohort key -> uid of the participant credited with the quote
   testiAuthors: Record<string, string>;
-  testiTrainer: { track: TrackKey; name: string; quote: string }[];
+  // Testimoni trainer dan fasilitator; role berisi "Trainer" atau "Fasilitator" / Trainer and facilitator testimonials; role holds "Trainer" or "Fasilitator"
+  testiTrainer: { track: TrackKey; cohort?: string; role?: string; name: string; quote: string }[];
   testiPlan: { name: string; role: string; quote: string };
 }
 

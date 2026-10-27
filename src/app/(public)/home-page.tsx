@@ -216,45 +216,35 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
       <section style={css('padding:clamp(64px,9vw,112px) 22px;background:var(--dark-blue);color:#fff')}>
         <div style={css('max-width:1180px;margin:0 auto')}>
           <div style={css('display:flex;flex-direction:column;gap:8px')}>
-            <span style={css('font-size:15px;font-weight:700;color:var(--light-blue)')}>Testimoni trainer</span>
-            <h2 style={css(H2)}>Apa Kata Trainer?</h2>
+            <span style={css('font-size:15px;font-weight:700;color:var(--light-blue)')}>Testimoni trainer &amp; fasilitator</span>
+            <h2 style={css(H2)}>Kata Trainer dan Fasilitator</h2>
           </div>
           <div style={css('margin-top:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:clamp(20px,3vw,32px)')}>
-            {site.testiTrainer.map((t) => {
+            {site.testiTrainer.map((t, i) => {
               const tk = TRACKS[t.track];
+              // Peran dan kota tampil di bawah nama; kotak video hanya bila foto cuplikannya ada
+              // Role and city show under the name; the video card only when its preview photo exists
+              const who = (t.role || 'Trainer') + ' ' + tk.name + (t.cohort && COH[t.cohort] ? ' · ' + COH[t.cohort].city : '');
+              const slot = 'trainer-' + (i + 1);
               return (
-                <div key={t.track} style={css('display:flex;flex-direction:column;gap:22px')}>
-                  <Hv onClick={() => setModal({ title: t.name + ' · Trainer ' + tk.name, url: site.videos.trainer?.[t.track] ?? '' })} aria-label="Putar video" s="all:unset;cursor:pointer;position:relative;display:block;aspect-ratio:4/5;border-radius:24px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue);transition:transform 260ms ease" h="transform:translateY(-4px)">
-                    <Photo src={site.photos['trainer-' + t.track]} placeholder="Cuplikan video trainer" />
+                <div key={i} style={css('display:flex;flex-direction:column;gap:22px')}>
+                  {site.photos[slot] && (
+                  <Hv onClick={() => setModal({ title: t.name + ' · ' + who, url: site.videos.trainer?.[t.track] ?? '' })} aria-label="Putar video" s="all:unset;cursor:pointer;position:relative;display:block;aspect-ratio:4/5;border-radius:24px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue);transition:transform 260ms ease" h="transform:translateY(-4px)">
+                    <Photo src={site.photos[slot]} placeholder="Cuplikan video" />
                     <span style={css(`position:absolute;top:16px;left:16px;padding:6px 12px;border-radius:999px;background:${tk.color};color:${tk.fg};font-size:12px;font-weight:700;pointer-events:none`)}>{tk.name}</span>
                     <span style={css('position:absolute;right:16px;bottom:16px;pointer-events:none')}><span style={css('width:56px;height:56px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md)')}><span style={css('width:0;height:0;border-left:15px solid var(--dark-blue);border-top:9px solid transparent;border-bottom:9px solid transparent;margin-left:4px')} /></span></span>
                   </Hv>
+                  )}
                   <div style={css('display:flex;flex-direction:column;gap:14px;padding:0 4px')}>
-                    <p style={css('margin:0;font-family:var(--font-headline);font-weight:600;font-size:19px;line-height:1.4;text-wrap:pretty')}><span style={{ color: tk.color }}>“</span>{t.quote}<span style={{ color: tk.color }}>”</span></p>
+                    <p style={css('margin:0;font-family:var(--font-headline);font-weight:600;font-size:19px;line-height:1.5;text-wrap:pretty')}><span style={{ color: tk.color }}>“</span>{t.quote}<span style={{ color: tk.color }}>”</span></p>
                     <div style={css('display:flex;flex-direction:column;gap:2px;padding-top:14px;border-top:1px solid rgba(255,255,255,.25)')}>
                       <span style={css('font-weight:700;font-size:15px')}>{t.name}</span>
-                      <span style={css('font-size:13px')}>{'Trainer ' + tk.name}</span>
+                      <span style={css('font-size:13px')}>{who}</span>
                     </div>
                   </div>
                 </div>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      <section style={css('padding:clamp(64px,9vw,112px) 22px;background:var(--yellow);color:var(--dark-blue)')}>
-        <div style={css('max-width:1180px;margin:0 auto;display:flex;flex-direction:column;align-items:center;text-align:center;gap:28px')}>
-          <span style={css('font-size:15px;font-weight:700')}>Dari Plan Indonesia</span>
-          <span style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(96px,10vw,140px);line-height:0.6;height:0.4em;color:var(--plan-blue)')}>“</span>
-          <p style={css('margin:0;max-width:900px;font-family:var(--font-headline);font-weight:700;font-size:clamp(28px,3.6vw,48px);line-height:1.18;letter-spacing:-0.025em;text-wrap:balance')}>{site.testiPlan.quote}</p>
-          <div style={css('display:flex;flex-direction:column;gap:2px')}>
-            <span style={css('font-weight:700;font-size:17px')}>{site.testiPlan.name}</span>
-            <span style={css('font-family:var(--font-caption);font-style:italic;font-size:15px')}>{site.testiPlan.role}</span>
-          </div>
-          <div style={css('width:100%;max-width:960px;margin-top:20px;position:relative;aspect-ratio:16/9;border-radius:28px;overflow:hidden;background:#fff;color:var(--dark-blue);box-shadow:var(--shadow-lg)')}>
-            <Photo src={site.photos['testi-plan']} placeholder="Cuplikan video Plan Indonesia" />
-            <Hv onClick={() => setModal({ title: 'Testimoni Plan Indonesia', url: site.videos.plan })} aria-label="Putar video" s="all:unset;cursor:pointer;position:absolute;left:20px;bottom:20px;display:flex;align-items:center;gap:12px;padding:8px 22px 8px 8px;border-radius:999px;background:var(--plan-blue);color:#fff;font-weight:700;font-size:15px;box-shadow:var(--shadow-md)" h="transform:scale(1.04)"><span style={css('width:48px;height:48px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md)')}><span style={css('width:0;height:0;border-left:13px solid var(--plan-blue);border-top:8px solid transparent;border-bottom:8px solid transparent;margin-left:4px')} /></span>Tonton pesan Plan Indonesia</Hv>
           </div>
         </div>
       </section>
