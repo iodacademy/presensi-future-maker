@@ -236,35 +236,39 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
             <span style={css('font-size:15px;font-weight:700;color:var(--light-blue)')}>Testimoni trainer &amp; fasilitator</span>
             <h2 style={css(H2)}>Kata Trainer dan Fasilitator</h2>
           </div>
-          <div style={css('margin-top:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:clamp(20px,3vw,32px)')}>
+          <div style={css('margin-top:40px;display:grid;grid-template-columns:1fr;gap:clamp(16px,2.4vw,28px)')}>
             {site.testiTrainer.map((t, i) => {
               const tk = TRACKS[t.track];
-              // Peran dan kota tampil di bawah nama; foto hanya bila ada, tombol putar hanya bila videonya ada
-              // Role and city show under the name; the photo only when present, the play button only when its video is
-              const who = (t.role || 'Trainer') + ' ' + tk.name + (t.cohort && COH[t.cohort] ? ' · ' + COH[t.cohort].city : '');
+              const role = t.role || 'Trainer';
+              const where = tk.name + (t.cohort && COH[t.cohort] ? ' · ' + COH[t.cohort].city : '');
               const slot = 'trainer-' + (i + 1);
+              // Foto kecil di kiri dengan nama di atasnya seperti ubin peserta; tombol putar hanya bila videonya ada
+              // A small photo on the left with the name over it like the participant tiles; the play button only when its video exists
+              const tile = (
+                <>
+                  {site.photos[slot]
+                    ? <Photo src={site.photos[slot]} placeholder={t.name} />
+                    : <span aria-hidden="true" style={css(`position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-bottom:28px;background:${tk.color};color:${tk.fg};font-family:var(--font-headline);font-weight:700;font-size:56px`)}>{t.name[0]?.toUpperCase()}</span>}
+                  <span style={css('position:absolute;left:0;right:0;bottom:0;padding:40px 12px 12px;background:linear-gradient(to top,rgba(36,60,75,.92) 0%,rgba(36,60,75,.55) 55%,rgba(36,60,75,0) 100%);color:#fff;display:flex;flex-direction:column;gap:2px;pointer-events:none')}>
+                    <span style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(14px,1.4vw,17px);line-height:1.15')}>{t.name}</span>
+                    <span style={css(`font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${tk.color === '#8AC208' ? '#C6E87A' : '#BFE0F8'}`)}>{role}</span>
+                  </span>
+                  {t.video && <span style={css('position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md);pointer-events:none')}><span style={css('width:0;height:0;border-left:11px solid var(--dark-blue);border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:3px')} /></span>}
+                </>
+              );
+              const tileCss = 'position:relative;display:block;aspect-ratio:3/4;border-radius:18px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue)';
               return (
-                <div key={i} style={css('display:flex;flex-direction:column;gap:22px')}>
-                  {site.photos[slot] && (t.video ? (
-                  <Hv onClick={() => setModal({ title: t.name + ' · ' + who, url: t.video ?? '' })} aria-label={'Putar video ' + t.name} s="all:unset;cursor:pointer;position:relative;display:block;aspect-ratio:4/5;border-radius:24px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue);transition:transform 260ms ease" h="transform:translateY(-4px)">
-                    <Photo src={site.photos[slot]} placeholder={t.name} />
-                    <span style={css(`position:absolute;top:16px;left:16px;padding:6px 12px;border-radius:999px;background:${tk.color};color:${tk.fg};font-size:12px;font-weight:700;pointer-events:none`)}>{t.role || 'Trainer'}</span>
-                    <span style={css('position:absolute;right:16px;bottom:16px;pointer-events:none')}><span style={css('width:56px;height:56px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md)')}><span style={css('width:0;height:0;border-left:15px solid var(--dark-blue);border-top:9px solid transparent;border-bottom:9px solid transparent;margin-left:4px')} /></span></span>
-                  </Hv>
-                  ) : (
-                  <div style={css('position:relative;aspect-ratio:4/5;border-radius:24px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue)')}>
-                    <Photo src={site.photos[slot]} placeholder={t.name} />
-                    <span style={css(`position:absolute;top:16px;left:16px;padding:6px 12px;border-radius:999px;background:${tk.color};color:${tk.fg};font-size:12px;font-weight:700`)}>{t.role || 'Trainer'}</span>
-                  </div>
-                  ))}
-                  <div style={css('display:flex;flex-direction:column;gap:14px;padding:0 4px')}>
-                    <p style={css('margin:0;font-family:var(--font-headline);font-weight:600;font-size:19px;line-height:1.5;text-wrap:pretty')}><span style={{ color: tk.color }}>“</span>{t.quote}<span style={{ color: tk.color }}>”</span></p>
-                    <div style={css('display:flex;flex-direction:column;gap:2px;padding-top:14px;border-top:1px solid rgba(255,255,255,.25)')}>
-                      <span style={css('font-weight:700;font-size:15px')}>{t.name}</span>
-                      <span style={css('font-size:13px')}>{who}</span>
-                    </div>
-                  </div>
-                </div>
+                <figure key={i} className={i % 2 ? 'tr-card flip' : 'tr-card'} style={css('margin:0;padding:clamp(14px,2vw,24px);border-radius:28px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)')}>
+                  {t.video
+                    ? <Hv onClick={() => setModal({ title: t.name + ' · ' + role + ' ' + where, url: t.video ?? '' })} aria-label={'Putar video ' + t.name} s={'all:unset;cursor:pointer;grid-area:foto;' + tileCss + ';transition:transform 260ms ease'} h="transform:translateY(-3px)">{tile}</Hv>
+                    : <div style={css('grid-area:foto;' + tileCss)}>{tile}</div>}
+                  <span aria-hidden="true" style={css(`grid-area:mark;font-family:var(--font-headline);font-weight:700;font-size:64px;line-height:1;height:34px;overflow:hidden;color:${tk.color}`)}>“</span>
+                  <p style={css('grid-area:teks;margin:0;font-family:var(--font-headline);font-weight:500;font-size:clamp(15px,1.5vw,19px);line-height:1.65;max-width:62ch;text-wrap:pretty')}>{t.quote}</p>
+                  <figcaption style={css('grid-area:info;display:flex;flex-direction:column;gap:2px;font-size:13px')}>
+                    <span style={css(`font-weight:700;color:${tk.color === '#8AC208' ? '#C6E87A' : '#BFE0F8'}`)}>{role}</span>
+                    <span style={css('opacity:.75')}>{where}</span>
+                  </figcaption>
+                </figure>
               );
             })}
           </div>

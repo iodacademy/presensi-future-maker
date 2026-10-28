@@ -58,3 +58,34 @@ body:has(.pameran) { background: #fff; }
 
 html:has(.pameran)::-webkit-scrollbar,
 html:has(.pameran) *::-webkit-scrollbar { display: none; }
+
+/* Kartu testimoni trainer: satu per baris, foto dan testimoni bergantian sisi
+   (.flip memindahkan foto ke kanan). Di HP testimoni turun ke bawah foto agar
+   kolom teksnya tidak terlalu sempit.
+   Trainer testimonial card: one per row, photo and quote alternate sides (.flip
+   moves the photo to the right). On phones the quote drops below the photo so
+   its column is not too narrow. */
+.pameran .tr-card {
+  display: grid;
+  grid-template-columns: clamp(150px, 20%, 210px) 1fr;
+  grid-template-areas: "foto ." "foto mark" "foto teks" "foto info" "foto .";
+  grid-template-rows: 1fr auto auto auto 1fr;
+  column-gap: clamp(20px, 4vw, 56px);
+  row-gap: 12px;
+}
+.pameran .tr-card.flip {
+  grid-template-columns: 1fr clamp(150px, 20%, 210px);
+  grid-template-areas: ". foto" "mark foto" "teks foto" "info foto" ". foto";
+}
+@media (max-width: 560px) {
+  .pameran .tr-card {
+    grid-template-columns: 112px 1fr;
+    grid-template-areas: "foto mark" "foto info" "teks teks";
+    grid-template-rows: auto 1fr auto;
+    row-gap: 18px;
+  }
+  .pameran .tr-card.flip {
+    grid-template-columns: 1fr 112px;
+    grid-template-areas: "mark foto" "info foto" "teks teks";
+  }
+}
