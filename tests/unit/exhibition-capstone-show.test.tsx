@@ -16,9 +16,9 @@ describe('layar Karya Capstone', () => {
     vi.useFakeTimers();
     render(<CapstoneShow slides={[slide('a', 'Griya Kenanga'), slide('b', 'Lumbung POS')]} />);
     expect(screen.getByText('01 / 02')).toBeTruthy();
-    act(() => { vi.advanceTimersByTime(12000); });
+    act(() => { vi.advanceTimersByTime(7000); });
     expect(screen.getByText('02 / 02')).toBeTruthy();
-    act(() => { vi.advanceTimersByTime(12000); });
+    act(() => { vi.advanceTimersByTime(7000); });
     expect(screen.getByText('01 / 02')).toBeTruthy();
     fireEvent.keyDown(window, { key: ' ' });
     act(() => { vi.advanceTimersByTime(60000); });

@@ -9,7 +9,7 @@ export interface CapstoneSlide {
 }
 
 // Lama satu karya tampil / How long one work shows
-const SLIDE_MS = 12000;
+const SLIDE_MS = 7000;
 // Data diambil ulang berkala agar capstone yang baru terbit ikut tampil tanpa memuat ulang layar
 // Data is refetched periodically so newly published capstones appear without reloading the screen
 const REFRESH_MS = 30 * 60 * 1000;
