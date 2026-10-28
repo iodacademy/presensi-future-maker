@@ -48,12 +48,23 @@ describe('orderGallery', () => {
     expect(items.findIndex((i) => i.kind === 'collection')).toBe(people.length);
     expect(items.filter((i) => i.kind === 'collection').map((i) => i.kind === 'collection' && i.collection.id)).toEqual(['k1', 'k2']);
   });
-  it('karya utama pilihan admin dipakai lebih dulu', () => {
+  it('karya utama pilihan admin dipakai lebih dulu di antara karya selain capstone', () => {
     const input = {
       people: [{ uid: 'A', mainWorkId: 'reels' }],
-      cards: [card('cap', 'A', 'Capstone', 'c'), card('reels', 'A', 'Reels', 'c')],
+      cards: [card('cap', 'A', 'Capstone', 'c'), card('feed', 'A', 'Konten Feed', 'c'), card('reels', 'A', 'Reels', 'c')],
       collections: [],
     };
-    expect(orderGallery(input, '2026-10-27').map((i) => i.kind === 'work' && i.card.id)).toEqual(['reels', 'cap']);
+    expect(orderGallery(input, '2026-10-27').map((i) => i.kind === 'work' && i.card.id)).toEqual(['cap', 'reels', 'feed']);
+  });
+  it('seluruh capstone tampil sebelum karya lain dan koleksi', () => {
+    const input = {
+      people: [{ uid: 'A', mainWorkId: null }, { uid: 'B', mainWorkId: null }, { uid: 'C', mainWorkId: null }],
+      cards: [card('a1', 'A', 'Landing Page', 'c1'), card('a2', 'A', 'Capstone', 'c1'), card('b1', 'B', 'Dashboard', 'c2'), card('c1', 'C', 'Capstone', 'c3')],
+      collections: [col('k1')],
+    };
+    const items = orderGallery(input, '2026-10-27');
+    const types = items.map((i) => (i.kind === 'work' ? i.card.type : 'koleksi'));
+    expect(types.slice(0, 2)).toEqual(['Capstone', 'Capstone']);
+    expect(types.slice(2)).not.toContain('Capstone');
   });
 });

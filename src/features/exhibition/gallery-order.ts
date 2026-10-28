@@ -25,11 +25,13 @@ const rank = (type: string) => {
 /**
  * Urutan galeri publik: putaran ke-r memuat kartu ke-r setiap peserta, diacak
  * dengan benih tanggal WIB agar berganti harian tetapi stabil dalam sehari.
- * Kartu koleksi disisipkan di awal putaran kedua.
+ * Kartu koleksi disisipkan di awal putaran kedua. Seluruh capstone project
+ * didahulukan sebelum karya lain, karena itulah karya puncak tiap peserta.
  *
  * Public gallery order: round r holds every person's r-th card, shuffled with a
  * WIB-date seed so it changes daily yet stays stable within a day.
- * Collection cards are inserted at the start of round 2.
+ * Collection cards are inserted at the start of round 2. Every capstone project
+ * comes before other works, since it is each participant's culminating work.
  */
 export function orderGallery(
   input: { people: { uid: string; mainWorkId: string | null }[]; cards: GalleryCard[]; collections: CollectionCard[] },
@@ -41,6 +43,7 @@ export function orderGallery(
     const sorted = input.cards
       .filter((c) => c.personUid === p.uid)
       .sort((a, b) =>
+        Number(b.type === 'Capstone') - Number(a.type === 'Capstone') ||
         Number(b.id === p.mainWorkId) - Number(a.id === p.mainWorkId) ||
         Number(a.collectionId !== null) - Number(b.collectionId !== null) ||
         rank(a.type) - rank(b.type) ||
@@ -69,6 +72,8 @@ export function orderGallery(
   const collections: GalleryItem[] = [...input.collections]
     .sort((a, b) => a.id.localeCompare(b.id))
     .map((collection) => ({ kind: 'collection', collection }));
-  return rounds.flatMap((round, r) => (r === 1 ? [...collections, ...round.map(toItem)] : round.map(toItem)))
+  const items = rounds.flatMap((round, r) => (r === 1 ? [...collections, ...round.map(toItem)] : round.map(toItem)))
     .concat(rounds.length < 2 ? collections : []);
+  const isCapstone = (i: GalleryItem) => i.kind === 'work' && i.card.type === 'Capstone';
+  return [...items.filter(isCapstone), ...items.filter((i) => !isCapstone(i))];
 }
