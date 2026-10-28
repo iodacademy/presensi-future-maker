@@ -72,8 +72,7 @@ html:has(.pameran) *::-webkit-scrollbar { display: none; }
   min-height: 360px;
   border-radius: 32px;
   overflow: hidden;
-  background: linear-gradient(135deg, rgba(255,255,255,.09) 0%, rgba(255,255,255,.03) 100%);
-  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: var(--shadow-lg);
 }
 .pameran .tr-card.flip { grid-template-columns: 1fr clamp(220px, 30%, 340px); }
 .pameran .tr-card.flip .tr-foto { order: 2; }
@@ -98,7 +97,7 @@ html:has(.pameran) *::-webkit-scrollbar { display: none; }
   font-weight: 700;
   font-size: clamp(140px, 16vw, 220px);
   line-height: 1;
-  opacity: .14;
+  opacity: .22;
   pointer-events: none;
 }
 @media (max-width: 640px) {

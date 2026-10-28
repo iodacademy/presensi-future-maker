@@ -14,6 +14,16 @@ interface Props { people: number; works: number; best: HomeBest[]; testi: HomeTe
 const safeVideo = (u: string | undefined) => (u && safeExternalUrl(u) ? u : '');
 
 // Lama satu testimoni tampil sebelum berganti / How long one testimonial shows before advancing
+// Warna kartu testimoni trainer bergiliran; teks gelap di warna terang agar tetap terbaca
+// Trainer testimonial card colours rotate; dark text on light colours so it stays readable
+const TRAINER_PALETTE = [
+  { bg: 'var(--magenta)', fg: '#fff' },
+  { bg: 'var(--plan-blue)', fg: '#fff' },
+  { bg: 'var(--yellow)', fg: 'var(--dark-blue)' },
+  { bg: 'var(--green)', fg: 'var(--dark-blue)' },
+  { bg: 'var(--purple)', fg: '#fff' },
+  { bg: 'var(--light-blue)', fg: 'var(--dark-blue)' },
+];
 const TESTI_INTERVAL_MS = 7000;
 const H2 = 'font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.4vw,52px);line-height:1.05;letter-spacing:-0.03em;margin:0';
 
@@ -230,10 +240,10 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
       </section>
       )}
 
-      <section style={css('padding:clamp(64px,9vw,112px) 22px;background:var(--dark-blue);color:#fff')}>
+      <section style={css('padding:clamp(64px,9vw,112px) 22px')}>
         <div style={css('max-width:1180px;margin:0 auto')}>
           <div style={css('display:flex;flex-direction:column;gap:8px')}>
-            <span style={css('font-size:15px;font-weight:700;color:var(--light-blue)')}>Testimoni trainer &amp; fasilitator</span>
+            <span style={css('font-size:15px;font-weight:700;color:var(--plan-blue)')}>Testimoni trainer &amp; fasilitator</span>
             <h2 style={css(H2)}>Kata Trainer dan Fasilitator</h2>
           </div>
           <div style={css('margin-top:40px;display:grid;grid-template-columns:1fr;gap:clamp(16px,2.4vw,28px)')}>
@@ -242,7 +252,7 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
               const role = t.role || 'Trainer';
               const where = tk.name + (t.cohort && COH[t.cohort] ? ' · ' + COH[t.cohort].city : '');
               const slot = 'trainer-' + (i + 1);
-              const accent = tk.color === '#8AC208' ? '#C6E87A' : '#BFE0F8';
+              const pal = TRAINER_PALETTE[i % TRAINER_PALETTE.length];
               // Nama dan peran menempel di bawah foto seperti ubin peserta; tombol putar hanya bila videonya ada
               // Name and role sit at the bottom of the photo like the participant tiles; the play button only when its video exists
               const photo = (
@@ -252,22 +262,22 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
                     : <span aria-hidden="true" style={css(`position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:${tk.color};color:${tk.fg};font-family:var(--font-headline);font-weight:700;font-size:96px`)}>{t.name[0]?.toUpperCase()}</span>}
                   <span style={css('position:absolute;left:0;right:0;bottom:0;padding:72px 22px 20px;background:linear-gradient(to top,rgba(36,60,75,.95) 0%,rgba(36,60,75,.6) 50%,rgba(36,60,75,0) 100%);color:#fff;display:flex;flex-direction:column;gap:4px;pointer-events:none')}>
                     <span style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(18px,1.7vw,22px);line-height:1.15;letter-spacing:-0.01em')}>{t.name}</span>
-                    <span style={css(`font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:${accent}`)}>{role}</span>
+                    <span style={css(`font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#BFE0F8`)}>{role}</span>
                   </span>
                   {t.video && <span style={css('position:absolute;top:16px;right:16px;width:48px;height:48px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md);pointer-events:none')}><span style={css('width:0;height:0;border-left:13px solid var(--dark-blue);border-top:8px solid transparent;border-bottom:8px solid transparent;margin-left:4px')} /></span>}
                 </>
               );
               return (
-                <figure key={i} className={i % 2 ? 'tr-card flip' : 'tr-card'} style={css('margin:0')}>
+                <figure key={i} className={i % 2 ? 'tr-card flip' : 'tr-card'} style={css(`margin:0;background:${pal.bg};color:${pal.fg}`)}>
                   {t.video
                     ? <button type="button" className="tr-foto" onClick={() => setModal({ title: t.name + ' · ' + role + ' ' + where, url: t.video ?? '' })} aria-label={'Putar video ' + t.name}>{photo}</button>
                     : <div className="tr-foto">{photo}</div>}
                   <div className="tr-body">
-                    <span aria-hidden="true" className="tr-mark" style={{ color: tk.color }}>“</span>
+                    <span aria-hidden="true" className="tr-mark">“</span>
                     <p style={css('position:relative;margin:0;font-family:var(--font-headline);font-weight:500;font-size:clamp(16px,1.6vw,20px);line-height:1.65;max-width:60ch;text-wrap:pretty')}>{t.quote}</p>
                     <figcaption style={css('position:relative;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px')}>
-                      <span style={css(`width:28px;height:3px;border-radius:2px;background:${tk.color}`)} />
-                      <span style={css(`font-weight:700;color:${accent}`)}>{role} {tk.name}</span>
+                      <span style={css('width:28px;height:3px;border-radius:2px;background:currentColor')} />
+                      <span style={css('font-weight:700')}>{role} {tk.name}</span>
                       {t.cohort && COH[t.cohort] && <span style={css('opacity:.7')}>{COH[t.cohort].city}</span>}
                     </figcaption>
                   </div>
