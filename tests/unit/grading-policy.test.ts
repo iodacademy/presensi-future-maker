@@ -234,6 +234,7 @@ describe('nilai akhir satu peserta', () => {
     recorded: () => true,
     taskIds: ['t1', 't2'],
     examIds: ['k1', 'k2'],
+    capstoneTaskIds: [] as string[],
     capstone: 80,
   };
 
@@ -267,5 +268,12 @@ describe('nilai akhir satu peserta', () => {
     const hasil = gradeParticipant({ ...dasar, present: () => true, taskScore: () => 100, quizScore: () => 100 });
     // 80x0,45 + 100x0,30 + 100x0,15 + 100x0,10 = 36+30+15+10 = 91
     expect(hasil.score).toBe(91);
+  });
+
+  it('memakai nilai tugas capstone di LMS, impor hanya bila tugasnya belum dinilai', () => {
+    const dinilai = gradeParticipant({ ...dasar, capstoneTaskIds: ['cap'], present: () => true, taskScore: (id) => (id === 'cap' ? 70 : 100), quizScore: () => 100 });
+    expect(dinilai.breakdown.find((b) => b.component === 'capstone')!.score).toBe(70);
+    const belum = gradeParticipant({ ...dasar, capstoneTaskIds: ['cap'], present: () => true, taskScore: (id) => (id === 'cap' ? null : 100), quizScore: () => 100 });
+    expect(belum.breakdown.find((b) => b.component === 'capstone')!.score).toBe(80);
   });
 });

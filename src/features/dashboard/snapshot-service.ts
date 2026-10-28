@@ -94,8 +94,9 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  *     attendance, quizzes with untaken ones as zero) instead of the plain
  *     average of attendance, task submission and quizzes taken.
  * 11: the ranking's attendance counts only "Pertemuan N" sessions.
+ * 12: the capstone is read from the graded capstone task, not only the import.
  */
-export const SNAPSHOT_VERSION = 11;
+export const SNAPSHOT_VERSION = 12;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -672,6 +673,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
           taskScore: (id) => nilaiTugas?.get(id) ?? null,
           examIds: exams.filter((e) => e.classId === cid && e.kind !== 'pretest').map((e) => e.id),
           quizScore: (id) => nilaiTertinggi.get(id)?.get(st.uid) ?? null,
+          capstoneTaskIds: (capstonePerKelasId.get(cid) ?? []).map((t) => t.id),
           capstone: nilaiCapstone.get(st.uid) ?? null,
         }).score,
       };

@@ -155,6 +155,8 @@ export function gradeParticipant(input: {
   taskScore: (taskId: string) => number | null;
   examIds: string[];
   quizScore: (examId: string) => number | null;
+  capstoneTaskIds: string[];
+  /** Nilai capstone dari impor Excel / The capstone score from the Excel import */
   capstone: number | null;
 }): { score: number; breakdown: ComponentBreakdown[]; pending: GradeComponent[] } {
   // Pertemuan yang berakhir sebelum peserta bergabung tidak dihitung kecuali
@@ -178,12 +180,23 @@ export function gradeParticipant(input: {
   const tugas = input.taskIds.map(input.taskScore);
   const kuis = input.examIds.map(input.quizScore);
 
+  // Capstone dinilai seperti tugas di LMS. Impor Excel hanya dipakai bila tugas
+  // capstone-nya belum dinilai sama sekali, supaya nilai lama hasil impor tidak
+  // menimpa penilaian yang dilakukan sesudahnya.
+  //
+  // The capstone is graded like a task in the LMS. The Excel import is used only
+  // when the capstone task has no grade at all, so an older imported score never
+  // overrides grading done afterwards.
+  const cap = input.capstoneTaskIds.map(input.taskScore);
+  const capDinilai = cap.some((n) => n !== null);
+
   return calculateFinalGrade({
-    capstone: input.capstone,
+    capstone: capDinilai ? averageWithZeros(cap, cap.length) : input.capstone,
     attendance: sesi.length > 0 ? Math.round((hadir / sesi.length) * 100) : null,
     tasks: tugas.length > 0 ? averageWithZeros(tugas, tugas.length) : null,
     quiz: kuis.length > 0 ? averageWithZeros(kuis, kuis.length) : null,
     details: {
+      capstone: capDinilai ? 'Dari penilaian tugas capstone' : input.capstone !== null ? 'Dari impor nilai' : 'Belum dinilai',
       attendance: sesi.length > 0 ? `${hadir} dari ${sesi.length} pertemuan` : 'Belum ada pertemuan',
       tasks: tugas.length > 0 ? `${tugas.filter((n) => n !== null).length} dari ${tugas.length} tugas dinilai` : 'Belum ada tugas',
       quiz: kuis.length > 0 ? `${kuis.filter((n) => n !== null).length} dari ${kuis.length} ujian dikerjakan` : 'Belum ada ujian',

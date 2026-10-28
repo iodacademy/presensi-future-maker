@@ -167,9 +167,9 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
   // dinilai, dan capstone punya komponennya sendiri.
   // The task score comes only from Tugas Praktik Mandiri: in-class practice
   // results are not graded, and capstones have their own component.
-  const tasks = tasksSnap.docs
-    .map((d) => d.data() as { id: string; kind: string; dueAt?: string | null })
-    .filter((t) => t.kind === 'daily');
+  const semuaTugas = tasksSnap.docs.map((d) => d.data() as { id: string; kind: string; dueAt?: string | null });
+  const tasks = semuaTugas.filter((t) => t.kind === 'daily');
+  const capstoneTaskIds = semuaTugas.filter((t) => t.kind === 'capstone').map((t) => t.id);
   // Pretest dikecualikan: ia mengukur titik awal sebelum diajar, dan
   // memasukkannya ke nilai akhir menghukum peserta karena belum tahu materi
   // yang memang belum diajarkan.
@@ -239,6 +239,7 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
         taskScore: (id) => tugasSiswa?.get(id) ?? null,
         examIds: exams.map((e) => e.id),
         quizScore: (id) => kuisSiswa?.get(id) ?? null,
+        capstoneTaskIds,
         capstone: penilaian.get(u.uid)?.get('capstone') ?? null,
       });
 
