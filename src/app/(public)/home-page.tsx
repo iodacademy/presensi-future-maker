@@ -242,32 +242,35 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
               const role = t.role || 'Trainer';
               const where = tk.name + (t.cohort && COH[t.cohort] ? ' · ' + COH[t.cohort].city : '');
               const slot = 'trainer-' + (i + 1);
-              // Foto kecil di kiri dengan nama di atasnya seperti ubin peserta; tombol putar hanya bila videonya ada
-              // A small photo on the left with the name over it like the participant tiles; the play button only when its video exists
-              const tile = (
+              const accent = tk.color === '#8AC208' ? '#C6E87A' : '#BFE0F8';
+              // Nama dan peran menempel di bawah foto seperti ubin peserta; tombol putar hanya bila videonya ada
+              // Name and role sit at the bottom of the photo like the participant tiles; the play button only when its video exists
+              const photo = (
                 <>
                   {site.photos[slot]
                     ? <Photo src={site.photos[slot]} placeholder={t.name} />
-                    : <span aria-hidden="true" style={css(`position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-bottom:28px;background:${tk.color};color:${tk.fg};font-family:var(--font-headline);font-weight:700;font-size:56px`)}>{t.name[0]?.toUpperCase()}</span>}
-                  <span style={css('position:absolute;left:0;right:0;bottom:0;padding:40px 12px 12px;background:linear-gradient(to top,rgba(36,60,75,.92) 0%,rgba(36,60,75,.55) 55%,rgba(36,60,75,0) 100%);color:#fff;display:flex;flex-direction:column;gap:2px;pointer-events:none')}>
-                    <span style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(14px,1.4vw,17px);line-height:1.15')}>{t.name}</span>
-                    <span style={css(`font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${tk.color === '#8AC208' ? '#C6E87A' : '#BFE0F8'}`)}>{role}</span>
+                    : <span aria-hidden="true" style={css(`position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:${tk.color};color:${tk.fg};font-family:var(--font-headline);font-weight:700;font-size:96px`)}>{t.name[0]?.toUpperCase()}</span>}
+                  <span style={css('position:absolute;left:0;right:0;bottom:0;padding:72px 22px 20px;background:linear-gradient(to top,rgba(36,60,75,.95) 0%,rgba(36,60,75,.6) 50%,rgba(36,60,75,0) 100%);color:#fff;display:flex;flex-direction:column;gap:4px;pointer-events:none')}>
+                    <span style={css('font-family:var(--font-headline);font-weight:700;font-size:clamp(18px,1.7vw,22px);line-height:1.15;letter-spacing:-0.01em')}>{t.name}</span>
+                    <span style={css(`font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:${accent}`)}>{role}</span>
                   </span>
-                  {t.video && <span style={css('position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md);pointer-events:none')}><span style={css('width:0;height:0;border-left:11px solid var(--dark-blue);border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:3px')} /></span>}
+                  {t.video && <span style={css('position:absolute;top:16px;right:16px;width:48px;height:48px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md);pointer-events:none')}><span style={css('width:0;height:0;border-left:13px solid var(--dark-blue);border-top:8px solid transparent;border-bottom:8px solid transparent;margin-left:4px')} /></span>}
                 </>
               );
-              const tileCss = 'position:relative;display:block;aspect-ratio:3/4;border-radius:18px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue)';
               return (
-                <figure key={i} className={i % 2 ? 'tr-card flip' : 'tr-card'} style={css('margin:0;padding:clamp(14px,2vw,24px);border-radius:28px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)')}>
+                <figure key={i} className={i % 2 ? 'tr-card flip' : 'tr-card'} style={css('margin:0')}>
                   {t.video
-                    ? <Hv onClick={() => setModal({ title: t.name + ' · ' + role + ' ' + where, url: t.video ?? '' })} aria-label={'Putar video ' + t.name} s={'all:unset;cursor:pointer;grid-area:foto;' + tileCss + ';transition:transform 260ms ease'} h="transform:translateY(-3px)">{tile}</Hv>
-                    : <div style={css('grid-area:foto;' + tileCss)}>{tile}</div>}
-                  <span aria-hidden="true" style={css(`grid-area:mark;font-family:var(--font-headline);font-weight:700;font-size:64px;line-height:1;height:34px;overflow:hidden;color:${tk.color}`)}>“</span>
-                  <p style={css('grid-area:teks;margin:0;font-family:var(--font-headline);font-weight:500;font-size:clamp(15px,1.5vw,19px);line-height:1.65;max-width:62ch;text-wrap:pretty')}>{t.quote}</p>
-                  <figcaption style={css('grid-area:info;display:flex;flex-direction:column;gap:2px;font-size:13px')}>
-                    <span style={css(`font-weight:700;color:${tk.color === '#8AC208' ? '#C6E87A' : '#BFE0F8'}`)}>{role}</span>
-                    <span style={css('opacity:.75')}>{where}</span>
-                  </figcaption>
+                    ? <button type="button" className="tr-foto" onClick={() => setModal({ title: t.name + ' · ' + role + ' ' + where, url: t.video ?? '' })} aria-label={'Putar video ' + t.name}>{photo}</button>
+                    : <div className="tr-foto">{photo}</div>}
+                  <div className="tr-body">
+                    <span aria-hidden="true" className="tr-mark" style={{ color: tk.color }}>“</span>
+                    <p style={css('position:relative;margin:0;font-family:var(--font-headline);font-weight:500;font-size:clamp(16px,1.6vw,20px);line-height:1.65;max-width:60ch;text-wrap:pretty')}>{t.quote}</p>
+                    <figcaption style={css('position:relative;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px')}>
+                      <span style={css(`width:28px;height:3px;border-radius:2px;background:${tk.color}`)} />
+                      <span style={css(`font-weight:700;color:${accent}`)}>{role} {tk.name}</span>
+                      {t.cohort && COH[t.cohort] && <span style={css('opacity:.7')}>{COH[t.cohort].city}</span>}
+                    </figcaption>
+                  </div>
                 </figure>
               );
             })}

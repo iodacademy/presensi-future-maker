@@ -59,33 +59,50 @@ body:has(.pameran) { background: #fff; }
 html:has(.pameran)::-webkit-scrollbar,
 html:has(.pameran) *::-webkit-scrollbar { display: none; }
 
-/* Kartu testimoni trainer: satu per baris, foto dan testimoni bergantian sisi
-   (.flip memindahkan foto ke kanan). Di HP testimoni turun ke bawah foto agar
-   kolom teksnya tidak terlalu sempit.
-   Trainer testimonial card: one per row, photo and quote alternate sides (.flip
-   moves the photo to the right). On phones the quote drops below the photo so
-   its column is not too narrow. */
+/* Kartu testimoni trainer gaya editorial: foto mengisi penuh satu sisi kartu
+   setinggi kartu, testimoni di sisi lain di tengah secara vertikal. .flip
+   memindahkan foto ke kanan. Di HP foto naik ke atas selebar kartu.
+   Editorial trainer testimonial card: the photo fills one whole side at the
+   card's height, the quote sits vertically centred on the other side. .flip
+   moves the photo right. On phones the photo moves on top, full width. */
 .pameran .tr-card {
+  position: relative;
   display: grid;
-  grid-template-columns: clamp(150px, 20%, 210px) 1fr;
-  grid-template-areas: "foto ." "foto mark" "foto teks" "foto info" "foto .";
-  grid-template-rows: 1fr auto auto auto 1fr;
-  column-gap: clamp(20px, 4vw, 56px);
-  row-gap: 12px;
+  grid-template-columns: clamp(220px, 30%, 340px) 1fr;
+  min-height: 360px;
+  border-radius: 32px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255,255,255,.09) 0%, rgba(255,255,255,.03) 100%);
+  border: 1px solid rgba(255,255,255,.12);
 }
-.pameran .tr-card.flip {
-  grid-template-columns: 1fr clamp(150px, 20%, 210px);
-  grid-template-areas: ". foto" "mark foto" "teks foto" "info foto" ". foto";
+.pameran .tr-card.flip { grid-template-columns: 1fr clamp(220px, 30%, 340px); }
+.pameran .tr-card.flip .tr-foto { order: 2; }
+.pameran .tr-foto { all: unset; position: relative; display: block; overflow: hidden; background: var(--surface-muted); color: var(--dark-blue); }
+.pameran .tr-foto img { object-position: 50% 22%; transition: transform 600ms var(--ease-standard); }
+.pameran button.tr-foto { cursor: pointer; }
+.pameran button.tr-foto:hover img, .pameran button.tr-foto:focus-visible img { transform: scale(1.04); }
+.pameran .tr-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 22px;
+  padding: clamp(28px, 4.5vw, 64px);
 }
-@media (max-width: 560px) {
-  .pameran .tr-card {
-    grid-template-columns: 112px 1fr;
-    grid-template-areas: "foto mark" "foto info" "teks teks";
-    grid-template-rows: auto 1fr auto;
-    row-gap: 18px;
-  }
-  .pameran .tr-card.flip {
-    grid-template-columns: 1fr 112px;
-    grid-template-areas: "mark foto" "info foto" "teks teks";
-  }
+/* Tanda kutip besar samar sebagai hiasan latar / A large faint quote mark as a background ornament */
+.pameran .tr-mark {
+  position: absolute;
+  top: clamp(4px, 1vw, 16px);
+  right: clamp(20px, 3vw, 44px);
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: clamp(140px, 16vw, 220px);
+  line-height: 1;
+  opacity: .14;
+  pointer-events: none;
+}
+@media (max-width: 640px) {
+  .pameran .tr-card, .pameran .tr-card.flip { grid-template-columns: 1fr; min-height: 0; }
+  .pameran .tr-card.flip .tr-foto { order: 0; }
+  .pameran .tr-foto { aspect-ratio: 4 / 3; }
 }
