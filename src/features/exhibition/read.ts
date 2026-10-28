@@ -146,6 +146,28 @@ export async function readSiteContent(): Promise<SiteContent> {
   return { photos: {}, captions: {}, videos: VIDEOS, testiTrainer: TESTI_T, testiPlan: TESTI_PLAN, ...stored, testiPeserta };
 }
 
+/**
+ * Capstone yang terbit untuk halaman layar Karya Capstone. Hanya kolom yang
+ * ditampilkan; nama panggilan dan foto diambil dari katalog oleh pemanggil,
+ * sehingga peserta yang disembunyikan ikut tersaring di sana.
+ *
+ * Published capstones for the Karya Capstone screen page. Only the displayed
+ * fields; nickname and photo come from the catalog in the caller, so hidden
+ * participants are filtered out there.
+ */
+async function readCapstones() {
+  const snap = await getAdminDb().collection('exhibitionWorks')
+    .where('status', '==', 'published').where('type', '==', 'Capstone')
+    .select('personUid', 'title', 'cohort', 'track', 'cover.full', 'cover.thumb', 'tools').get();
+  return snap.docs.map((d) => {
+    const w = d.data() as Doc;
+    return {
+      id: d.id, personUid: w.personUid as string, title: (w.title as string) ?? '', cohort: (w.cohort as string) ?? '',
+      track: w.track as TrackKey, cover: (w.cover?.full || w.cover?.thumb || '') as string, tools: (w.tools ?? []) as string[],
+    };
+  });
+}
+
 export type WorkDetail = NonNullable<Awaited<ReturnType<typeof readWorkDetail>>>;
 export type PersonDetail = NonNullable<Awaited<ReturnType<typeof readPersonDetail>>>;
 
@@ -154,6 +176,7 @@ export const getWorkDetail = cache('work', readWorkDetail);
 export const getPersonDetail = cache('person', readPersonDetail);
 export const getCollectionDetail = cache('collection', readCollectionDetail);
 export const getSiteContent = cache('site', readSiteContent);
+export const getCapstones = cache('capstones', readCapstones);
 
 export function todayWib(): string {
   return wibDate();
