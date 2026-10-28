@@ -13,12 +13,15 @@ interface Props { people: number; works: number; best: HomeBest[]; testi: HomeTe
 // Tautan video tersimpan hanya dipakai bila http(s) / A stored video link is used only when http(s)
 const safeVideo = (u: string | undefined) => (u && safeExternalUrl(u) ? u : '');
 
+// Lama satu testimoni tampil sebelum berganti / How long one testimonial shows before advancing
+const TESTI_INTERVAL_MS = 7000;
 const H2 = 'font-family:var(--font-headline);font-weight:700;font-size:clamp(32px,4.4vw,52px);line-height:1.05;letter-spacing:-0.03em;margin:0';
 
 export default function HomePage({ people, works, best, testi, site }: Props) {
   const [playing, setPlaying] = useState(false);
   const [slide, setSlide] = useState(0);
   const [testiIdx, setTestiIdx] = useState(0);
+  const [testiHold, setTestiHold] = useState(false);
   const [modal, setModal] = useState<{ title: string; url: string } | null>(null);
 
   useEffect(() => {
@@ -31,11 +34,21 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
   const nT = testi.length;
   const testiPeserta = testi.map((p, i) => {
     const c = COH[p.cohort], on = i === testiIdx;
-    return { key: p.uid, name: p.nickname, initials: p.nickname[0]?.toUpperCase() ?? '?', cohort: TRACKS[c.track].name + ' · ' + c.city, cohortShort: c.city, headline: p.headline, quote: p.quote, photo: p.photoUrl, bg: c.color, fg: c.fg,
-      display: on ? 'block' : 'none', tabBg: on ? 'var(--dark-blue)' : 'var(--surface-muted)', tabFg: on ? '#fff' : 'var(--dark-blue)', tabHover: on ? 'var(--dark-blue)' : '#e9ecee',
+    return { key: p.uid, name: p.nickname, initials: p.nickname[0]?.toUpperCase() ?? '?', cohort: TRACKS[c.track].name + ' · ' + c.city, headline: p.headline, quote: p.quote, photo: p.photoUrl, bg: c.color, fg: c.fg,
+      on,
       play: p.video ? () => setModal({ title: 'Testimoni ' + p.nickname, url: p.video ?? '' }) : null, href: '/peserta/' + p.uid };
   });
   const tpA = testiPeserta[testiIdx];
+
+  // Testimoni berganti sendiri dan berulang; berhenti saat kursor atau fokus ada di
+  // bagiannya, supaya cerita yang panjang sempat dibaca sampai habis.
+  // Testimonials advance on their own and loop; they pause while the pointer or focus
+  // is on the section, so a long story can be read to the end.
+  useEffect(() => {
+    if (nT < 2 || modal || testiHold) return;
+    const t = setTimeout(() => setTestiIdx((i) => (i + 1) % nT), TESTI_INTERVAL_MS);
+    return () => clearTimeout(t);
+  }, [testiIdx, nT, modal, testiHold]);
   const mm = modal ? media(safeVideo(modal.url)) : null;
   const stats = [{ value: people, label: 'peserta' }, { value: works, label: 'karya' }, { value: 3, label: 'jurusan' }, { value: 4, label: 'kota' }];
 
@@ -168,7 +181,7 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
       )}
 
       {tpA && (
-      <section style={css('padding:clamp(64px,9vw,112px) 22px')}>
+      <section style={css('padding:clamp(64px,9vw,112px) 22px')} onMouseEnter={() => setTestiHold(true)} onMouseLeave={() => setTestiHold(false)} onFocus={() => setTestiHold(true)} onBlur={() => setTestiHold(false)}>
         <div style={css('max-width:1180px;margin:0 auto')}>
           <div style={css('display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;justify-content:space-between')}>
             <div style={css('display:flex;flex-direction:column;gap:8px')}>
@@ -185,7 +198,7 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
             <div style={css(`flex:0 1 380px;min-width:260px;position:relative;aspect-ratio:4/5;border-radius:28px;overflow:hidden;background:${tpA.bg};padding:14px;transition:background 300ms ease`)}>
               <div style={css('position:relative;width:100%;height:100%;border-radius:18px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue)')}>
                 {testiPeserta.map((tp) => (
-                  <div key={tp.key} style={css(`position:absolute;inset:0;display:${tp.display}`)}>
+                  <div key={tp.key} aria-hidden={!tp.on} style={css(`position:absolute;inset:0;opacity:${tp.on ? 1 : 0};transition:opacity 600ms ease`)}>
                     <Photo src={tp.photo} placeholder={tp.name} />
                   </div>
                 ))}
@@ -194,21 +207,21 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
             </div>
             <div style={css('flex:1 1 420px;min-width:0;display:flex;flex-direction:column;gap:28px;padding:clamp(8px,2vw,24px) 0')}>
               <span style={css(`font-family:var(--font-headline);font-weight:700;font-size:clamp(96px,10vw,140px);line-height:0.6;height:0.45em;color:${tpA.bg};transition:color 300ms ease`)}>“</span>
-              <p style={css('margin:0;font-family:var(--font-headline);font-weight:700;font-size:clamp(26px,3.2vw,40px);line-height:1.2;letter-spacing:-0.02em;text-wrap:pretty')}>{tpA.headline}</p>
-              <p style={css('margin:0;font-size:17px;line-height:1.65;color:var(--text-muted);max-width:60ch;text-wrap:pretty')}>{tpA.quote}</p>
-              <Link href={tpA.href} style={css('all:unset;cursor:pointer;display:flex;align-items:center;gap:14px')}>
-                <span style={css(`width:52px;height:52px;border-radius:50%;background:${tpA.bg};color:${tpA.fg};display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-weight:700;font-size:17px`)}>{tpA.initials}</span>
-                <span style={css('display:flex;flex-direction:column;gap:2px')}>
-                  <span style={css('font-weight:700;font-size:17px')}>{tpA.name}</span>
-                  <span style={css('font-size:14px;color:var(--text-muted)')}>{tpA.cohort} · Lihat profil ›</span>
-                </span>
-              </Link>
-              <div style={css('margin-top:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;padding-top:12px')}>
-                {testiPeserta.map((tp, i) => (
-                  <Hv key={tp.key} onClick={() => setTestiIdx(i)} s={`all:unset;cursor:pointer;display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:14px;background:${tp.tabBg};color:${tp.tabFg};border-top:4px solid ${tp.bg};transition:background 200ms ease`} h={`background:${tp.tabHover}`}>
-                    <span style={css('font-weight:700;font-size:14px')}>{tp.name}</span>
-                    <span style={css('font-size:12px')}>{tp.cohortShort}</span>
-                  </Hv>
+              {/* Semua slide ditumpuk di satu sel grid: tingginya mengikuti cerita terpanjang, jadi halaman tidak melompat saat berganti */}
+              {/* Every slide is stacked in one grid cell: its height follows the longest story, so the page does not jump on change */}
+              <div style={css('display:grid')}>
+                {testiPeserta.map((tp) => (
+                  <div key={tp.key} aria-hidden={!tp.on} style={css(`grid-area:1/1;display:flex;flex-direction:column;gap:28px;opacity:${tp.on ? 1 : 0};visibility:${tp.on ? 'visible' : 'hidden'};transition:opacity 600ms ease,visibility 600ms`)}>
+                    <p style={css('margin:0;font-family:var(--font-headline);font-weight:700;font-size:clamp(26px,3.2vw,40px);line-height:1.2;letter-spacing:-0.02em;text-wrap:pretty')}>{tp.headline}</p>
+                    <p style={css('margin:0;font-size:17px;line-height:1.65;color:var(--text-muted);max-width:60ch;text-wrap:pretty')}>{tp.quote}</p>
+                    <Link href={tp.href} tabIndex={tp.on ? 0 : -1} style={css('all:unset;cursor:pointer;display:flex;align-items:center;gap:14px')}>
+                      <span style={css(`width:52px;height:52px;border-radius:50%;background:${tp.bg};color:${tp.fg};display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-weight:700;font-size:17px`)}>{tp.initials}</span>
+                      <span style={css('display:flex;flex-direction:column;gap:2px')}>
+                        <span style={css('font-weight:700;font-size:17px')}>{tp.name}</span>
+                        <span style={css('font-size:14px;color:var(--text-muted)')}>{tp.cohort} · Lihat profil ›</span>
+                      </span>
+                    </Link>
+                  </div>
                 ))}
               </div>
             </div>

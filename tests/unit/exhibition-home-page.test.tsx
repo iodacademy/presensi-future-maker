@@ -1,6 +1,6 @@
 import React from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import HomePage from '../../src/app/(public)/home-page';
 import { TESTI_PLAN, TESTI_T, VIDEOS } from '../../src/features/exhibition/content';
 import { homeTesti, type SiteContent } from '../../src/features/exhibition/model';
@@ -31,6 +31,23 @@ describe('beranda pameran', () => {
     expect(screen.getByText('Cerita Bayu.')).toBeTruthy();
     // Tanpa tautan video, tombol putar tidak muncul / Without a video link, no play button
     expect(screen.queryByLabelText('Putar video')).toBeNull();
+  });
+  it('testimoni berganti sendiri, berulang, dan berhenti saat kursor di atasnya', () => {
+    vi.useFakeTimers();
+    try {
+      const testi = homeTesti(people, [{ uid: 'u1', headline: 'Satu', quote: 'a' }, { uid: 'u2', headline: 'Dua', quote: 'b' }]);
+      render(<HomePage people={2} works={3} best={[]} testi={testi} site={site()} />);
+      expect(screen.getByText('01 / 02')).toBeTruthy();
+      act(() => { vi.advanceTimersByTime(7000); });
+      expect(screen.getByText('02 / 02')).toBeTruthy();
+      act(() => { vi.advanceTimersByTime(7000); });
+      expect(screen.getByText('01 / 02')).toBeTruthy();
+      fireEvent.mouseEnter(screen.getByText('Apa kata mereka?').closest('section')!);
+      act(() => { vi.advanceTimersByTime(20000); });
+      expect(screen.getByText('01 / 02')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it('keterangan slide dokumentasi tersimpan menggantikan bawaan', () => {
     render(<HomePage people={2} works={3} best={[]} testi={[]} site={site({ captions: { 'doc-1': 'Keterangan khusus slide' } })} />);
