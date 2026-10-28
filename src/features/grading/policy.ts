@@ -1,14 +1,15 @@
 // Aturan perhitungan nilai akhir / Final score calculation rules
+import { countsAfterJoin } from '../users/join-policy';
 import { GRADE_WEIGHTS, type ComponentBreakdown, type GradeComponent } from './types';
 
 /**
- * Memvalidasi nilai capstone atau showcase yang diimpor.
+ * Memvalidasi nilai capstone yang diimpor.
  *
  * Diperiksa di sini meski berkasnya sudah diurai di peramban: muatan yang
  * dikirim ke endpoint dapat diubah sebelum tiba, dan nilai di luar nol sampai
  * seratus membuat nilai akhirnya melampaui batas atau jatuh di bawah nol.
  *
- * Validates an imported capstone or showcase score.
+ * Validates an imported capstone score.
  *
  * Checked here although the file is parsed in the browser: the payload sent to
  * the endpoint can be altered before it arrives, and a score outside zero to a
@@ -94,7 +95,6 @@ export function averageWithZeros(scores: (number | null)[], expectedCount: numbe
  */
 export function calculateFinalGrade(input: {
   capstone: number | null;
-  showcase: number | null;
   tasks: number | null;
   attendance: number | null;
   quiz: number | null;
@@ -103,7 +103,6 @@ export function calculateFinalGrade(input: {
   const nilai: Record<GradeComponent, number | null> = {
     capstone: input.capstone,
     tasks: input.tasks,
-    showcase: input.showcase,
     attendance: input.attendance,
     quiz: input.quiz,
   };
@@ -132,4 +131,52 @@ export function calculateFinalGrade(input: {
   }
 
   return { score: Math.round(total), breakdown, pending };
+}
+
+/**
+ * Nilai akhir satu peserta dari data mentahnya.
+ *
+ * Dipakai halaman Nilai Akhir dan peringkat dashboard. Keduanya membaca data
+ * dengan bentuk berbeda, tetapi aturannya harus satu: peringkat yang dihitung
+ * terpisah lambat laun menunjukkan angka yang berbeda dari nilai resminya.
+ *
+ * One participant's final score from their raw data.
+ *
+ * Used by the Final Score page and the dashboard ranking. Each reads its data
+ * in a different shape, but the rules must be one: a ranking computed
+ * separately drifts into showing figures that differ from the official score.
+ */
+export function gradeParticipant(input: {
+  sessions: { id: string; endsAt: string }[];
+  joinIso: string;
+  recorded: (sessionId: string) => boolean;
+  present: (sessionId: string) => boolean;
+  taskIds: string[];
+  taskScore: (taskId: string) => number | null;
+  examIds: string[];
+  quizScore: (examId: string) => number | null;
+  capstone: number | null;
+}): { score: number; breakdown: ComponentBreakdown[]; pending: GradeComponent[] } {
+  // Pertemuan yang berakhir sebelum peserta bergabung tidak dihitung kecuali
+  // ia tercatat di sana. / Meetings that ended before the participant joined
+  // do not count unless they are recorded there.
+  const sesi = input.sessions.filter((s) => countsAfterJoin(s.endsAt, input.joinIso, input.recorded(s.id)));
+  const hadir = sesi.filter((s) => input.present(s.id)).length;
+
+  // Tugas dan kuis tetap wajib bagi peserta yang bergabung belakangan.
+  // Tasks and quizzes stay required for late joiners.
+  const tugas = input.taskIds.map(input.taskScore);
+  const kuis = input.examIds.map(input.quizScore);
+
+  return calculateFinalGrade({
+    capstone: input.capstone,
+    attendance: sesi.length > 0 ? Math.round((hadir / sesi.length) * 100) : null,
+    tasks: tugas.length > 0 ? averageWithZeros(tugas, tugas.length) : null,
+    quiz: kuis.length > 0 ? averageWithZeros(kuis, kuis.length) : null,
+    details: {
+      attendance: sesi.length > 0 ? `${hadir} dari ${sesi.length} pertemuan` : 'Belum ada pertemuan',
+      tasks: tugas.length > 0 ? `${tugas.filter((n) => n !== null).length} dari ${tugas.length} tugas dinilai` : 'Belum ada tugas',
+      quiz: kuis.length > 0 ? `${kuis.filter((n) => n !== null).length} dari ${kuis.length} ujian dikerjakan` : 'Belum ada ujian',
+    },
+  });
 }

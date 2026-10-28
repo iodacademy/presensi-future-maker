@@ -10,6 +10,7 @@ import { ageFrom } from '../users/profile-service';
 import { countsAfterJoin, effectiveDueAt, joinMoment } from '../users/join-policy';
 import { hitungFase, keteranganFase } from './phases';
 import { buildFeedbackReport } from './feedback';
+import { gradeParticipant } from '../grading/policy';
 import { wibDate } from '@/lib/time';
 import {
   DISABILITY_LABELS,
@@ -89,8 +90,11 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  *    longer do, and capstones get their own submission columns.
  * 9: per-class task counts, so the per-task submission figure divides by every
  *    participant of the class rather than only those submitted or overdue.
+ * 10: the ranking uses the weighted final score (capstone, task scores,
+ *     attendance, quizzes with untaken ones as zero) instead of the plain
+ *     average of attendance, task submission and quizzes taken.
  */
-export const SNAPSHOT_VERSION = 9;
+export const SNAPSHOT_VERSION = 10;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -634,21 +638,43 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     };
   });
 
-  const ranking = terukur
-    .map((t) => ({
-      studentId: t.studentId,
-      studentName: t.studentName,
-      className: t.className,
-      city: t.city,
-      // Rata-rata tiga angka, sejalan dengan yang ditampilkan daftar siaga.
-      // Nilai akhir berbobot ada pada halaman Nilai Akhir; dua angka yang
-      // berbeda pada satu layar akan terbaca sebagai kesalahan hitung.
-      //
-      // The average of three figures, matching what the alert list shows. The
-      // weighted final score lives on the Final Score page; two different
-      // numbers on one screen would read as a miscalculation.
-      score: Math.round((t.attendanceRate + t.taskRate + t.quizAverage) / 3),
-    }))
+  // Peringkat memakai nilai akhir berbobot yang sama dengan halaman Nilai
+  // Akhir, lewat fungsi yang sama, sehingga "peserta terbaik" di dashboard
+  // tidak pernah berbeda dari nilai resminya.
+  //
+  // The ranking uses the same weighted final score as the Final Score page,
+  // through the same function, so the dashboard's "best participant" never
+  // differs from the official score.
+  const sesiPerKelas = new Map<string, { id: string; endsAt: string }[]>();
+  for (const x of sessions) {
+    for (const cid of new Set([x.classId, ...(x.classIds ?? [])])) {
+      if (!sesiPerKelas.has(cid)) sesiPerKelas.set(cid, []);
+      sesiPerKelas.get(cid)!.push({ id: x.id, endsAt: x.endsAt });
+    }
+  }
+  const ranking = aktif
+    .filter((st) => st.classId && classNames.has(st.classId))
+    .map((st) => {
+      const cid = st.classId ?? '';
+      const nilaiTugas = nilaiTugasPerSiswa.get(st.uid);
+      return {
+        studentId: st.uid,
+        studentName: st.name,
+        className: classNames.get(cid) ?? '',
+        city: classCities.get(cid) ?? '',
+        score: gradeParticipant({
+          sessions: sesiPerKelas.get(cid) ?? [],
+          joinIso: joinPerSiswa.get(st.uid) ?? '',
+          recorded: (id) => statusPerSesi.get(id)?.has(st.uid) ?? false,
+          present: (id) => hadirPerSesi.get(id)?.has(st.uid) ?? false,
+          taskIds: (tugasPerKelasId.get(cid) ?? []).map((t) => t.id),
+          taskScore: (id) => nilaiTugas?.get(id) ?? null,
+          examIds: exams.filter((e) => e.classId === cid && e.kind !== 'pretest').map((e) => e.id),
+          quizScore: (id) => nilaiTertinggi.get(id)?.get(st.uid) ?? null,
+          capstone: nilaiCapstone.get(st.uid) ?? null,
+        }).score,
+      };
+    })
     .sort((a, b) => b.score - a.score);
 
   const alerts: AlertStudent[] = terukur

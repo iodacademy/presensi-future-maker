@@ -177,13 +177,10 @@ describe('perhitungan angkanya', () => {
     expect(compute).toMatch(/t\.kind === 'daily' \? tugasPerKelasId : t\.kind === 'capstone' \? capstonePerKelasId : null/);
   });
 
-  it('menghitung peringkat dari rata-rata tiga angka yang sama dengan daftar siaga', () => {
-    // Nilai akhir berbobot ada pada halaman Nilai Akhir; dua angka berbeda
-    // pada satu layar akan terbaca sebagai kesalahan hitung.
-    //
-    // The weighted final score lives on the Final Score page; two different
-    // numbers on one screen would read as a miscalculation.
-    expect(compute).toMatch(/t\.attendanceRate \+ t\.taskRate \+ t\.quizAverage\) \/ 3/);
+  it('menghitung peringkat dengan fungsi nilai akhir yang sama', () => {
+    // Peringkat yang dihitung terpisah lambat laun berbeda dari nilai resminya.
+    // A ranking computed separately drifts from the official score.
+    expect(compute).toMatch(/score: gradeParticipant\(/);
   });
 });
 
@@ -493,12 +490,7 @@ describe('halaman dashboard', () => {
     expect(table).toMatch(/title=\{`\$\{snapshot\.sessionLabels\[j\]/);
   });
 
-  it('menyebut tempat nilai akhir berbobot berada', () => {
-    // Peringkat di sini rata-rata tiga angka; dua angka berbeda pada satu
-    // aplikasi akan terbaca sebagai kesalahan hitung bila tidak dijelaskan.
-    //
-    // The ranking here averages three figures; two different numbers in one app
-    // would read as a miscalculation if left unexplained.
-    expect(page).toContain('Nilai akhir berbobot ada di menu Nilai Akhir');
+  it('menyebut bobot nilai akhir yang dipakai peringkat', () => {
+    expect(page).toContain('capstone 45%, nilai tugas 30%, kehadiran 15%, kuis 10%');
   });
 });

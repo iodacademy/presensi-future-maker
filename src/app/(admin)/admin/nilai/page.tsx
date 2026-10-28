@@ -79,12 +79,12 @@ export default function AdminNilaiPage() {
         </div>
 
         {/* Impor berada di layar daftar kelas sebab berkasnya memuat seluruh
-            kelas sekaligus: penilaian showcase satu angkatan dikerjakan dalam
+            kelas sekaligus: penilaian capstone satu angkatan dikerjakan dalam
             satu rapat, bukan per kelas. Tidak ada daftar yang perlu disegarkan
             di sini; nilainya terbaca saat sebuah kelas dibuka.
 
             The import sits on the class list because the file covers every
-            class at once: a cohort's showcase assessment happens in one
+            class at once: a cohort's capstone assessment happens in one
             meeting, not per class. There is no list to refresh here; the scores
             are read when a class is opened. */}
         <ImportScores onImported={() => setGrades([])} />

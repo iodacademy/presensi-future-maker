@@ -3,14 +3,14 @@ import { getSessionActor } from '@/features/auth/session';
 import { importAssessmentScores } from '@/features/grading/service';
 
 /**
- * Impor nilai capstone dan showcase dari berkas yang sudah dibaca peramban.
+ * Impor nilai capstone dari berkas yang sudah dibaca peramban.
  *
  * Berkasnya diurai di peramban, bukan dikirim mentah: mengurai di server
  * berarti menerima dan menyimpan berkas unggahan, sedangkan yang dibutuhkan
  * hanya barisnya. Layanannya tetap memvalidasi ulang tiap nilai, sebab muatan
  * yang dikirim ke sini dapat diubah sebelum tiba.
  *
- * Imports capstone and showcase scores from a sheet the browser has parsed.
+ * Imports capstone scores from a sheet the browser has parsed.
  *
  * The file is parsed in the browser rather than sent raw: parsing on the server
  * would mean accepting and storing an upload, when all that is needed are its

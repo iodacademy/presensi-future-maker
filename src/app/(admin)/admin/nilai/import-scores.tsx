@@ -24,21 +24,21 @@ export function downloadScoreTemplate(): void {
   //
   // Column widths are set so the email and note read without widening them by
   // hand; a template with cramped columns looks like a broken file.
-  sheet['!cols'] = [{ wch: 30 }, { wch: 16 }, { wch: 16 }, { wch: 45 }];
+  sheet['!cols'] = [{ wch: 30 }, { wch: 16 }, { wch: 45 }];
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, sheet, 'Nilai');
-  XLSX.writeFile(wb, 'contoh-nilai-capstone-showcase.xlsx');
+  XLSX.writeFile(wb, 'contoh-nilai-capstone.xlsx');
 }
 
 /**
- * Impor nilai capstone dan showcase dari berkas Excel.
+ * Impor nilai capstone dari berkas Excel.
  *
  * Berkasnya diurai di peramban lalu barisnya yang dikirim, bukan berkasnya:
  * mengurai di server berarti menerima dan menyimpan unggahan, sedangkan yang
  * dibutuhkan hanya barisnya.
  *
- * Imports capstone and showcase scores from an Excel file.
+ * Imports capstone scores from an Excel file.
  *
  * The file is parsed in the browser and its rows are sent rather than the file:
  * parsing on the server would mean accepting and storing an upload, when all
@@ -121,11 +121,10 @@ export function ImportScores({ onImported }: { onImported: () => void }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '16px', borderRadius: '12px', border: '1px solid var(--color-border)', backgroundColor: '#ffffff' }}>
       <div>
         <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)' }}>
-          Impor Nilai Capstone dan Showcase
+          Impor Nilai Capstone
         </div>
         <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '2px', lineHeight: 1.5 }}>
-          Kolomnya: {SCORE_HEADERS.join(', ')}. Kolom nilai yang masih kosong dilewatkan, jadi berkas yang sama
-          dapat diunggah lagi setelah showcase dinilai.
+          Kolomnya: {SCORE_HEADERS.join(', ')}. Mengunggah ulang menimpa nilai sebelumnya.
         </div>
       </div>
 
@@ -206,11 +205,8 @@ export function ImportScores({ onImported }: { onImported: () => void }) {
                 <span style={{ flex: 1, minWidth: 0, fontSize: '10px', color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {r.email}
                 </span>
-                <span style={{ fontSize: '10px', fontWeight: 600, color: r.capstone === null ? 'var(--color-text-faint)' : 'var(--color-text-main)', width: '78px', textAlign: 'right', flexShrink: 0 }}>
-                  {r.capstone === null ? 'capstone -' : `capstone ${r.capstone}`}
-                </span>
-                <span style={{ fontSize: '10px', fontWeight: 600, color: r.showcase === null ? 'var(--color-text-faint)' : 'var(--color-text-main)', width: '78px', textAlign: 'right', flexShrink: 0 }}>
-                  {r.showcase === null ? 'showcase -' : `showcase ${r.showcase}`}
+                <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-text-main)', width: '78px', textAlign: 'right', flexShrink: 0 }}>
+                  capstone {r.capstone}
                 </span>
               </div>
             ))}

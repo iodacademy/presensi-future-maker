@@ -15,10 +15,13 @@
  * overshoot push it past -- either surfaces only once a participant compares
  * their score against their own arithmetic.
  */
+// Showcase dihapus: tidak semua peserta mempresentasikannya, jadi bobotnya
+// dipindah ke capstone (+10) dan tugas (+5).
+// Showcase was dropped: not every participant presents one, so its weight moved
+// to the capstone (+10) and tasks (+5).
 export const GRADE_WEIGHTS = {
-  capstone: 35,
-  tasks: 25,
-  showcase: 15,
+  capstone: 45,
+  tasks: 30,
   attendance: 15,
   quiz: 10,
 } as const;
@@ -28,13 +31,12 @@ export type GradeComponent = keyof typeof GRADE_WEIGHTS;
 export const COMPONENT_LABELS: Record<GradeComponent, string> = {
   capstone: 'Capstone',
   tasks: 'Nilai Tugas',
-  showcase: 'Showcase',
   attendance: 'Kehadiran',
   quiz: 'Nilai Kuis',
 };
 
 /**
- * Nilai capstone atau showcase seorang peserta.
+ * Nilai capstone seorang peserta.
  *
  * Diimpor sudah berupa angka 0-100, bukan dihitung dari rubrik di dalam
  * aplikasi: penilaiannya terjadi sekali, di ruangan, oleh mentor dan juri yang
@@ -45,7 +47,7 @@ export const COMPONENT_LABELS: Record<GradeComponent, string> = {
  * bertanya "kenapa nilai saya 85" dijawab dari lembar penilaian di luar
  * aplikasi, bukan dari layar ini.
  *
- * One participant's capstone or showcase score.
+ * One participant's capstone score.
  *
  * Imported as a finished 0-100 figure rather than computed from a rubric in the
  * app: the assessment happens once, in a room, by mentors and judges holding
@@ -56,12 +58,7 @@ export const COMPONENT_LABELS: Record<GradeComponent, string> = {
  * participant asking "why is my score 85" is answered from the score sheet
  * outside the app, not from this screen.
  */
-export type AssessmentKind = 'capstone' | 'showcase';
-
-export const ASSESSMENT_LABELS: Record<AssessmentKind, string> = {
-  capstone: 'Capstone',
-  showcase: 'Showcase',
-};
+export type AssessmentKind = 'capstone';
 
 export interface AssessmentScoreDocument {
   id: string; // ${kind}_${studentId}

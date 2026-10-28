@@ -4,6 +4,7 @@ import {
   validateAssessmentScore,
   averageWithZeros,
   calculateFinalGrade,
+  gradeParticipant,
 } from '@/features/grading/policy';
 import { GRADE_WEIGHTS } from '@/features/grading/types';
 
@@ -28,27 +29,27 @@ describe('bobot komponen', () => {
 
   it('memberi nilai seratus bila seluruh komponennya sempurna', () => {
     const hasil = calculateFinalGrade({
-      capstone: 100, showcase: 100, tasks: 100, attendance: 100, quiz: 100,
+      capstone: 100, tasks: 100, attendance: 100, quiz: 100,
     });
     expect(hasil.score).toBe(100);
   });
 
   it('memberi nilai nol bila seluruh komponennya nol', () => {
     const hasil = calculateFinalGrade({
-      capstone: 0, showcase: 0, tasks: 0, attendance: 0, quiz: 0,
+      capstone: 0, tasks: 0, attendance: 0, quiz: 0,
     });
     expect(hasil.score).toBe(0);
   });
 });
 
 /**
- * Nilai capstone dan showcase diimpor sudah berupa angka 0-100.
+ * Nilai capstone diimpor sudah berupa angka 0-100.
  *
  * Penilaiannya terjadi sekali, di ruangan, oleh mentor dan juri yang memegang
  * lembar penilaian sendiri. Yang diperiksa aplikasi tinggal kewarasan
  * angkanya.
  *
- * Capstone and showcase scores are imported as finished 0-100 figures.
+ * Capstone scores are imported as finished 0-100 figures.
  *
  * The assessment happens once, in a room, by mentors and judges holding their
  * own score sheets. All the app checks is whether the number is sane.
@@ -108,12 +109,9 @@ describe('validasi nilai yang diimpor', () => {
   });
 
   it('menyebut komponen yang bermasalah pada pesannya', () => {
-    // "Nilai harus antara 0 dan 100" tidak memberi tahu kolom mana yang salah
-    // saat dua kolom diimpor sekaligus.
-    //
-    // "Score must be between 0 and 100" does not say which column is wrong when
-    // two are imported at once.
-    expect(() => validateAssessmentScore(200, 'showcase')).toThrow(/showcase/);
+    // "Nilai harus antara 0 dan 100" tidak menyebut kolom mana yang salah.
+    // "Score must be between 0 and 100" does not name the wrong column.
+    expect(() => validateAssessmentScore(200, 'capstone')).toThrow(/capstone/);
   });
 });
 
@@ -165,17 +163,17 @@ describe('rata-rata dengan nilai nol', () => {
 describe('nilai akhir', () => {
   it('membobot tiap komponen menurut bobotnya', () => {
     const hasil = calculateFinalGrade({
-      capstone: 80, showcase: 60, tasks: 90, attendance: 100, quiz: 70,
+      capstone: 80, tasks: 90, attendance: 100, quiz: 70,
     });
-    // 80x0,35 + 90x0,25 + 60x0,15 + 100x0,15 + 70x0,10 = 28+22,5+9+15+7 = 81,5
-    expect(hasil.score).toBe(82);
+    // 80x0,45 + 90x0,30 + 100x0,15 + 70x0,10 = 36+27+15+7 = 85
+    expect(hasil.score).toBe(85);
   });
 
   it('mencatat komponen yang belum dinilai', () => {
     const hasil = calculateFinalGrade({
-      capstone: null, showcase: null, tasks: 90, attendance: 100, quiz: 70,
+      capstone: null, tasks: 90, attendance: 100, quiz: 70,
     });
-    expect(hasil.pending.sort()).toEqual(['capstone', 'showcase']);
+    expect(hasil.pending.sort()).toEqual(['capstone']);
   });
 
   it('tidak menaikkan nilai dengan mengecualikan yang belum dinilai', () => {
@@ -185,21 +183,21 @@ describe('nilai akhir', () => {
     // A high provisional score that then falls makes a participant think being
     // assessed hurt them.
     const belum = calculateFinalGrade({
-      capstone: null, showcase: null, tasks: 100, attendance: 100, quiz: 100,
+      capstone: null, tasks: 100, attendance: 100, quiz: 100,
     });
     const sudah = calculateFinalGrade({
-      capstone: 50, showcase: 50, tasks: 100, attendance: 100, quiz: 100,
+      capstone: 50, tasks: 100, attendance: 100, quiz: 100,
     });
     expect(sudah.score).toBeGreaterThan(belum.score);
   });
 
   it('merinci sumbangan tiap komponen', () => {
     const hasil = calculateFinalGrade({
-      capstone: 100, showcase: 0, tasks: 0, attendance: 0, quiz: 0,
+      capstone: 100, tasks: 0, attendance: 0, quiz: 0,
     });
     const capstone = hasil.breakdown.find((b) => b.component === 'capstone')!;
-    expect(capstone.weighted).toBe(35);
-    expect(hasil.score).toBe(35);
+    expect(capstone.weighted).toBe(45);
+    expect(hasil.score).toBe(45);
   });
 
   it('membatasi nilai komponen pada nol sampai seratus', () => {
@@ -209,16 +207,48 @@ describe('nilai akhir', () => {
     // A score outside the range would push the final past a hundred or below
     // zero.
     const hasil = calculateFinalGrade({
-      capstone: 150, showcase: -20, tasks: 100, attendance: 100, quiz: 100,
+      capstone: 150, tasks: -20, attendance: 100, quiz: 100,
     });
     expect(hasil.score).toBeLessThanOrEqual(100);
-    expect(hasil.breakdown.find((b) => b.component === 'showcase')!.score).toBe(0);
+    expect(hasil.breakdown.find((b) => b.component === 'tasks')!.score).toBe(0);
   });
 
   it('merinci seluruh komponen yang berbobot', () => {
     const hasil = calculateFinalGrade({
-      capstone: 0, showcase: 0, tasks: 0, attendance: 0, quiz: 0,
+      capstone: 0, tasks: 0, attendance: 0, quiz: 0,
     });
     expect(hasil.breakdown).toHaveLength(Object.keys(GRADE_WEIGHTS).length);
+  });
+});
+
+describe('nilai akhir satu peserta', () => {
+  const dasar = {
+    sessions: [{ id: 's1', endsAt: '2026-10-01T10:00:00Z' }, { id: 's2', endsAt: '2026-10-08T10:00:00Z' }],
+    joinIso: '2026-09-01T00:00:00Z',
+    recorded: () => true,
+    taskIds: ['t1', 't2'],
+    examIds: ['k1', 'k2'],
+    capstone: 80,
+  };
+
+  it('hanya menghitung hadir, bukan izin atau sakit', () => {
+    const hasil = gradeParticipant({ ...dasar, present: (id) => id === 's1', taskScore: () => 100, quizScore: () => 100 });
+    expect(hasil.breakdown.find((b) => b.component === 'attendance')!.score).toBe(50);
+  });
+
+  it('memakai nilai tugas dan menghitung yang belum dinilai sebagai nol', () => {
+    const hasil = gradeParticipant({ ...dasar, present: () => true, taskScore: (id) => (id === 't1' ? 90 : null), quizScore: () => 100 });
+    expect(hasil.breakdown.find((b) => b.component === 'tasks')!.score).toBe(45);
+  });
+
+  it('menghitung kuis yang tidak dikerjakan sebagai nol', () => {
+    const hasil = gradeParticipant({ ...dasar, present: () => true, taskScore: () => 100, quizScore: (id) => (id === 'k1' ? 100 : null) });
+    expect(hasil.breakdown.find((b) => b.component === 'quiz')!.score).toBe(50);
+  });
+
+  it('menjumlahkan capstone 45, tugas 30, kehadiran 15, kuis 10', () => {
+    const hasil = gradeParticipant({ ...dasar, present: () => true, taskScore: () => 100, quizScore: () => 100 });
+    // 80x0,45 + 100x0,30 + 100x0,15 + 100x0,10 = 36+30+15+10 = 91
+    expect(hasil.score).toBe(91);
   });
 });

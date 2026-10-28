@@ -587,7 +587,7 @@ function DashboardBody({
           <div className={s.panelHead}>
             <h2 id="h-rank">Performance ranking</h2>
             <p className={s.hint}>
-              Rata-rata kehadiran, tugas, dan kuis. Nilai akhir berbobot ada di menu Nilai Akhir
+              Nilai akhir: capstone 45%, nilai tugas 30%, kehadiran 15%, kuis 10%. Rinciannya di menu Nilai Akhir
             </p>
           </div>
           <RankingGroups

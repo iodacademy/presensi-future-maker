@@ -103,7 +103,7 @@ function RankModal({ title, subtitle, rows, onClose }: { title: string; subtitle
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px 18px', borderBottom: '1px solid var(--color-border)' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2 id="rank-modal-title" style={{ fontSize: '16px', margin: 0 }}>Peringkat {title}</h2>
-            <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', margin: '2px 0 0' }}>{subtitle} · {rows.length} peserta · rata-rata kehadiran, tugas, dan kuis</p>
+            <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', margin: '2px 0 0' }}>{subtitle} · {rows.length} peserta · nilai akhir</p>
           </div>
           <button
             ref={closeRef}

@@ -1,10 +1,10 @@
-// Layanan nilai capstone, showcase, dan nilai akhir / Capstone, showcase, and final score service
+// Layanan nilai capstone dan nilai akhir / Capstone and final score service
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
 import type { UserDocument } from '../auth/types';
 import { getEmailHash } from '../auth/policy';
-import { calculateFinalGrade, averageWithZeros } from './policy';
-import { countsAfterJoin, joinMoment } from '../users/join-policy';
+import { gradeParticipant, validateAssessmentScore } from './policy';
+import { joinMoment } from '../users/join-policy';
 import type { AssessmentKind, AssessmentScoreDocument, FinalGrade } from './types';
 import type { ParsedScoreRow } from './import-policy';
 
@@ -15,13 +15,13 @@ function requireAdmin(actor: Actor): void {
 }
 
 /**
- * Menyimpan nilai capstone dan showcase dari berkas yang sudah dibaca.
+ * Menyimpan nilai capstone dari berkas yang sudah dibaca.
  *
  * Surel dicocokkan lewat emailIndex, bukan dengan memindai seluruh pengguna:
  * indeks itu sudah ada dan dikunci pada hash surelnya, sehingga seratus baris
  * menjadi seratus pembacaan berkunci alih-alih seratus pemindaian penuh.
  *
- * Stores capstone and showcase scores from a sheet already parsed.
+ * Stores capstone scores from a sheet already parsed.
  *
  * Emails are matched through emailIndex rather than by scanning every user:
  * that index already exists and is keyed on the email's hash, so a hundred rows
@@ -80,7 +80,13 @@ export async function importAssessmentScores(
       skipped.push({ email: row.email, reason: 'Bukan akun peserta' });
       continue;
     }
-    perlu.push({ row, user });
+    // Diperiksa ulang di sini: muatannya dapat diubah setelah diurai peramban.
+    // Revalidated here: the payload can be altered after the browser parsed it.
+    try {
+      perlu.push({ row: { ...row, capstone: validateAssessmentScore(row.capstone, 'capstone') }, user });
+    } catch (e) {
+      skipped.push({ email: row.email, reason: (e as Error).message });
+    }
   }
 
   const classNames = new Map<string, string>();
@@ -92,39 +98,27 @@ export async function importAssessmentScores(
   let imported = 0;
 
   for (const { row, user } of perlu) {
-    for (const kind of ['capstone', 'showcase'] as AssessmentKind[]) {
-      const score = kind === 'capstone' ? row.capstone : row.showcase;
-      // Kolom yang kosong dilewatkan, bukan ditulis nol: showcase dinilai dua
-      // pekan setelah capstone, dan menulis nol pada impor pertama memberi
-      // peserta nilai showcase nol selama dua pekan.
-      //
-      // An empty column is skipped rather than written as zero: showcase is
-      // assessed two weeks after the capstone, and writing zero on the first
-      // import would give participants a showcase score of zero for two weeks.
-      if (score === null) continue;
+    const id = `capstone_${user.uid}`;
+    const doc: AssessmentScoreDocument = {
+      id,
+      kind: 'capstone',
+      studentId: user.uid,
+      studentName: user.name,
+      classId: user.classId ?? '',
+      className: user.classId ? (classNames.get(user.classId) ?? '') : '',
+      score: row.capstone,
+      note: row.note,
+      importedBy: actor.name,
+      importedAt: now,
+    };
 
-      const id = `${kind}_${user.uid}`;
-      const doc: AssessmentScoreDocument = {
-        id,
-        kind,
-        studentId: user.uid,
-        studentName: user.name,
-        classId: user.classId ?? '',
-        className: user.classId ? (classNames.get(user.classId) ?? '') : '',
-        score,
-        note: row.note,
-        importedBy: actor.name,
-        importedAt: now,
-      };
-
-      // set, bukan create: impor ulang menimpa nilai sebelumnya, sehingga satu
-      // salah ketik diperbaiki dengan mengunggah berkasnya lagi.
-      //
-      // set, not create: a re-import overwrites the previous score, so one typo
-      // is fixed by uploading the file again.
-      batch.set(db.collection('assessmentScores').doc(id), doc);
-      imported += 1;
-    }
+    // set, bukan create: impor ulang menimpa nilai sebelumnya, sehingga satu
+    // salah ketik diperbaiki dengan mengunggah berkasnya lagi.
+    //
+    // set, not create: a re-import overwrites the previous score, so one typo
+    // is fixed by uploading the file again.
+    batch.set(db.collection('assessmentScores').doc(id), doc);
+    imported += 1;
   }
 
   await batch.commit();
@@ -135,14 +129,14 @@ export async function importAssessmentScores(
  * Menghitung nilai akhir seluruh peserta sebuah kelas.
  *
  * Seluruh koleksinya dibaca sekali lalu dikelompokkan di memori, bukan satu
- * kueri per peserta: dua puluh satu peserta dikali lima komponen menjadi
- * seratus lima kueri untuk satu halaman.
+ * kueri per peserta: dua puluh satu peserta dikali empat komponen menjadi
+ * delapan puluh empat kueri untuk satu halaman.
  *
  * Computes every participant's final score for one class.
  *
  * Each collection is read once and grouped in memory rather than one query per
- * participant: twenty-one participants times five components would be a hundred
- * and five queries for one page.
+ * participant: twenty-one participants times four components would be
+ * eighty-four queries for one page.
  */
 export async function getFinalGrades(actor: Actor, classId: string): Promise<FinalGrade[]> {
   requireAdmin(actor);
@@ -232,43 +226,18 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
   return studentsSnap.docs
     .map((doc) => {
       const u = doc.data() as UserDocument;
-      // Pertemuan yang berakhir sebelum peserta bergabung tidak dihitung kecuali
-      // ia tercatat di sana. / Meetings that ended before the participant joined
-      // do not count unless they are recorded there.
-      const join = joinMoment(u);
-      const tercatat = tercatatPerSiswa.get(u.uid);
-      const sesiSiswa = [...sessionEnd].filter(([id, end]) => countsAfterJoin(end, join, tercatat?.has(id) ?? false));
-      const totalSessions = sesiSiswa.length;
-
-      const hadir = sesiSiswa.filter(([id]) => hadirPerSiswa.get(u.uid)?.has(id)).length;
-      const attendance = totalSessions > 0 ? Math.round((hadir / totalSessions) * 100) : null;
-
-      // Tugas dan kuis tetap wajib bagi peserta yang bergabung belakangan.
-      // Tasks and quizzes stay required for late joiners.
       const tugasSiswa = nilaiTugas.get(u.uid);
-      const tasksSiswa = tasks;
-      const tasksScore = tasksSiswa.length > 0
-        ? averageWithZeros(tasksSiswa.map((t) => tugasSiswa?.get(t.id) ?? null), tasksSiswa.length)
-        : null;
-
       const kuisSiswa = nilaiKuis.get(u.uid);
-      const examsSiswa = exams;
-      const quiz = examsSiswa.length > 0
-        ? averageWithZeros(examsSiswa.map((e) => kuisSiswa?.get(e.id) ?? null), examsSiswa.length)
-        : null;
-
-      const nilai = penilaian.get(u.uid);
-      const { score, breakdown, pending } = calculateFinalGrade({
-        capstone: nilai?.get('capstone') ?? null,
-        showcase: nilai?.get('showcase') ?? null,
-        tasks: tasksScore,
-        attendance,
-        quiz,
-        details: {
-          attendance: totalSessions > 0 ? `${hadir} dari ${totalSessions} pertemuan` : 'Belum ada pertemuan',
-          tasks: tasksSiswa.length > 0 ? `${tasksSiswa.filter((t) => tugasSiswa?.has(t.id)).length} dari ${tasksSiswa.length} tugas dinilai` : 'Belum ada tugas',
-          quiz: examsSiswa.length > 0 ? `${examsSiswa.filter((e) => kuisSiswa?.has(e.id)).length} dari ${examsSiswa.length} ujian dikerjakan` : 'Belum ada ujian',
-        },
+      const { score, breakdown, pending } = gradeParticipant({
+        sessions: [...sessionEnd].map(([id, endsAt]) => ({ id, endsAt })),
+        joinIso: joinMoment(u),
+        recorded: (id) => tercatatPerSiswa.get(u.uid)?.has(id) ?? false,
+        present: (id) => hadirPerSiswa.get(u.uid)?.has(id) ?? false,
+        taskIds: tasks.map((t) => t.id),
+        taskScore: (id) => tugasSiswa?.get(id) ?? null,
+        examIds: exams.map((e) => e.id),
+        quizScore: (id) => kuisSiswa?.get(id) ?? null,
+        capstone: penilaian.get(u.uid)?.get('capstone') ?? null,
       });
 
       return { studentId: u.uid, studentName: u.name, classId, className, score, breakdown, pending };

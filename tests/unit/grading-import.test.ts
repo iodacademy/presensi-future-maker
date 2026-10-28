@@ -10,7 +10,6 @@ const service = read('src/features/grading/service.ts');
 const baris = (over: Record<string, string> = {}) => ({
   Email: 'budi@contoh.id',
   'Nilai Capstone': '85',
-  'Nilai Showcase': '78',
   Catatan: 'Demo lancar.',
   ...over,
 });
@@ -33,31 +32,27 @@ describe('pembacaan berkas nilai', () => {
     expect(rows[0]).toEqual({
       email: 'budi@contoh.id',
       capstone: 85,
-      showcase: 78,
       note: 'Demo lancar.',
     });
   });
 
-  it('menerima satu kolom nilai yang kosong', () => {
-    // Showcase dinilai dua pekan setelah capstone, sehingga berkas yang sama
-    // diunggah dua kali -- mula-mula tanpa showcase, lalu diisi.
-    //
-    // Showcase is assessed two weeks after the capstone, so the same sheet is
-    // uploaded twice -- first without showcase, then filled.
-    const { rows, errors } = parseScoreRows([baris({ 'Nilai Showcase': '' })]);
+  it('mengabaikan kolom showcase dari berkas lama', () => {
+    // Showcase tidak lagi dinilai; berkas lama yang masih membawa kolomnya
+    // tetap terbaca. / Showcase is no longer scored; an old sheet still
+    // carrying its column still reads.
+    const { rows, errors } = parseScoreRows([baris({ 'Nilai Showcase': '78' })]);
     expect(errors).toEqual([]);
-    expect(rows[0].capstone).toBe(85);
-    expect(rows[0].showcase).toBe(null);
+    expect(rows[0]).toEqual({ email: 'budi@contoh.id', capstone: 85, note: 'Demo lancar.' });
   });
 
-  it('menolak baris yang kedua nilainya kosong', () => {
-    // Baris tanpa nilai apa pun tidak menyimpan apa-apa, dan membiarkannya
-    // lolos membuat laporan impor menghitungnya sebagai berhasil.
+  it('menolak baris yang nilai capstone-nya kosong', () => {
+    // Baris tanpa nilai tidak menyimpan apa-apa, dan membiarkannya lolos membuat
+    // laporan impor menghitungnya sebagai berhasil.
     //
     // A row with no score stores nothing, and letting it pass makes the import
     // report count it as a success.
-    const { errors } = parseScoreRows([baris({ 'Nilai Capstone': '', 'Nilai Showcase': '' })]);
-    expect(errors[0]).toContain('tidak ada nilai');
+    const { errors } = parseScoreRows([baris({ 'Nilai Capstone': '' })]);
+    expect(errors[0]).toContain('masih kosong');
   });
 
   it('mengabaikan huruf besar-kecil dan spasi pada judul kolom', () => {
@@ -99,16 +94,11 @@ describe('pembacaan berkas nilai', () => {
 
   it('menolak nilai di luar nol sampai seratus', () => {
     expect(parseScoreRows([baris({ 'Nilai Capstone': '150' })]).errors[0]).toContain('antara 0 dan 100');
-    expect(parseScoreRows([baris({ 'Nilai Showcase': '-5' })]).errors[0]).toContain('antara 0 dan 100');
+    expect(parseScoreRows([baris({ 'Nilai Capstone': '-5' })]).errors[0]).toContain('antara 0 dan 100');
   });
 
   it('menyebut komponen yang bermasalah pada pesannya', () => {
-    // Dua kolom nilai diimpor sekaligus; pesan tanpa nama kolom menuntut admin
-    // memeriksa keduanya.
-    //
-    // Two score columns are imported at once; a message without the column name
-    // makes the admin check both.
-    expect(parseScoreRows([baris({ 'Nilai Showcase': '200' })]).errors[0]).toContain('showcase');
+    expect(parseScoreRows([baris({ 'Nilai Capstone': '200' })]).errors[0]).toContain('capstone');
   });
 
   it('tetap membaca baris yang sah meski ada baris salah', () => {
@@ -139,11 +129,6 @@ describe('berkas contoh', () => {
     const { rows, errors } = parseScoreRows(scoreTemplateRows());
     expect(errors).toEqual([]);
     expect(rows).toHaveLength(2);
-  });
-
-  it('memperlihatkan baris yang showcase-nya belum diisi', () => {
-    const { rows } = parseScoreRows(scoreTemplateRows());
-    expect(rows.some((r) => r.showcase === null)).toBe(true);
   });
 
   it('memakai kolom yang sama dengan yang dibaca', () => {
@@ -189,13 +174,10 @@ describe('penyimpanan nilai yang diimpor', () => {
     expect(blok).toMatch(/skipped\.push/);
   });
 
-  it('melewatkan kolom nilai yang kosong, tidak menulisnya nol', () => {
-    // Menulis nol pada impor pertama memberi peserta nilai showcase nol
-    // selama dua pekan.
-    //
-    // Writing zero on the first import would give participants a showcase score
-    // of zero for two weeks.
-    expect(blok).toMatch(/if \(score === null\) continue;/);
+  it('memeriksa ulang nilainya di server', () => {
+    // Muatannya dapat diubah setelah diurai peramban.
+    // The payload can be altered after the browser parsed it.
+    expect(blok).toMatch(/validateAssessmentScore\(row\.capstone/);
   });
 
   it('menimpa nilai sebelumnya saat diimpor ulang', () => {
@@ -313,12 +295,6 @@ describe('halaman nilai akhir', () => {
     // "false &&".
     expect(panel).toMatch(/\{preview && preview\.length > 0 && \(/);
     expect(panel).toContain('siap disimpan');
-  });
-
-  it('membedakan kolom nilai yang kosong pada pratinjaunya', () => {
-    // Kolom kosong dan nilai nol terlihat sama bila keduanya ditulis angka.
-    // An empty column and a zero look alike if both are written as a number.
-    expect(panel).toMatch(/r\.capstone === null \? 'capstone -'/);
   });
 
   it('menyebut surel yang dilewatkan setelah impor', () => {
