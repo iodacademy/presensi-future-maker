@@ -41,10 +41,10 @@ export interface SiteContent {
   photos: Record<string, string>;
   // Id slot foto -> keterangan / Photo slot id -> caption
   captions: Record<string, string>;
-  videos: { afterMovie: string; trainer: Record<TrackKey, string>; plan: string };
+  videos: { afterMovie: string; plan: string };
   testiPeserta: PesertaTesti[];
-  // Testimoni trainer dan fasilitator; role berisi "Trainer" atau "Fasilitator" / Trainer and facilitator testimonials; role holds "Trainer" or "Fasilitator"
-  testiTrainer: { track: TrackKey; cohort?: string; role?: string; name: string; quote: string }[];
+  // Testimoni trainer dan fasilitator; role berisi "Trainer" atau "Fasilitator", video per orang / Trainer and facilitator testimonials; role holds "Trainer" or "Fasilitator", one video each
+  testiTrainer: { track: TrackKey; cohort?: string; role?: string; name: string; quote: string; video?: string }[];
   testiPlan: { name: string; role: string; quote: string };
 }
 

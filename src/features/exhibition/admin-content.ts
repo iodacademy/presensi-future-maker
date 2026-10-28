@@ -131,6 +131,11 @@ export async function updateSiteContent(patch: Partial<SiteContent>): Promise<vo
     const isObj = !!v && typeof v === 'object' && !Array.isArray(v);
     if (SITE_ARRAYS.includes(k) ? !Array.isArray(v) : !isObj) throw new Error(`Isi "${k}" bentuknya tidak sesuai`);
   }
+  if (p.testiTrainer) {
+    for (const t of p.testiTrainer as { video?: unknown }[]) {
+      if (t?.video && (typeof t.video !== 'string' || !safeExternalUrl(t.video))) throw new Error('Tautan video testimoni harus http(s)');
+    }
+  }
   // Tiap testimoni peserta disimpan dengan kolom yang disebut saja / Each participant testimonial is stored with the named fields only
   if (p.testiPeserta) {
     p.testiPeserta = (p.testiPeserta as unknown[]).map((t) => {

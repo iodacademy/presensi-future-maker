@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { BENTO, COH, COHORTS, DOC_BENTO, DOC_HERO, DOC_MASONRY, DOC_POLAROID, DOC_WEEKS, SLIDES, TRACKS } from '@/features/exhibition/content';
-import type { TrackKey } from '@/features/exhibition/content';
 import type { SiteContent } from '@/features/exhibition/model';
 import { alertBox, api, btnSolid, card, field, label, send, uploadImage } from './admin-ui';
 
@@ -85,11 +84,6 @@ export function SiteTab() {
         <label style={label}>Video after movie
           <input aria-label="Video after movie" placeholder="https://" value={content.videos.afterMovie} onChange={(e) => setVideo({ afterMovie: e.target.value })} style={field} />
         </label>
-        {(Object.keys(TRACKS) as TrackKey[]).map((t) => (
-          <label key={t} style={label}>Video trainer {TRACKS[t].name}
-            <input value={content.videos.trainer[t] ?? ''} placeholder="https://" onChange={(e) => setVideo({ trainer: { ...content.videos.trainer, [t]: e.target.value } })} style={field} />
-          </label>
-        ))}
         <label style={label}>Video Plan Indonesia
           <input value={content.videos.plan} placeholder="https://" onChange={(e) => setVideo({ plan: e.target.value })} style={field} />
         </label>
@@ -130,6 +124,9 @@ export function SiteTab() {
             </label>
             <label style={label}>{`Testimoni ${i + 1}: kutipan`}
               <textarea rows={2} value={t.quote} onChange={(e) => setTrainer(i, { quote: e.target.value })} style={field} />
+            </label>
+            <label style={label}>{`Testimoni ${i + 1}: video`}
+              <input value={t.video ?? ''} placeholder="https://" onChange={(e) => setTrainer(i, { video: e.target.value })} style={field} />
             </label>
           </div>
         ))}

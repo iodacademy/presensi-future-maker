@@ -86,7 +86,7 @@ function mockContent(patch: (url: string, body: unknown) => void, collections: u
       : url === '/api/pameran/people' ? { people: [person] }
       : url === '/api/pameran/works' ? { works: [w('w1', 'web-smg'), w('x1', 'web-smg', { personUid: 'u2' })] }
       : url === '/api/pameran/collections' ? { collections }
-      : url === '/api/pameran/site' ? { content: { photos: {}, videos: { afterMovie: '', trainer: {}, plan: '' }, testiPeserta: [], testiTrainer: [], testiPlan: { name: '', role: '', quote: '' } } } : {};
+      : url === '/api/pameran/site' ? { content: { photos: {}, videos: { afterMovie: '', plan: '' }, testiPeserta: [], testiTrainer: [], testiPlan: { name: '', role: '', quote: '' } } } : {};
     return new Response(JSON.stringify(body));
   }));
 }

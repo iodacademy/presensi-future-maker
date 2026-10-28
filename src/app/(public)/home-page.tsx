@@ -239,19 +239,24 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
           <div style={css('margin-top:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:clamp(20px,3vw,32px)')}>
             {site.testiTrainer.map((t, i) => {
               const tk = TRACKS[t.track];
-              // Peran dan kota tampil di bawah nama; kotak video hanya bila foto cuplikannya ada
-              // Role and city show under the name; the video card only when its preview photo exists
+              // Peran dan kota tampil di bawah nama; foto hanya bila ada, tombol putar hanya bila videonya ada
+              // Role and city show under the name; the photo only when present, the play button only when its video is
               const who = (t.role || 'Trainer') + ' ' + tk.name + (t.cohort && COH[t.cohort] ? ' · ' + COH[t.cohort].city : '');
               const slot = 'trainer-' + (i + 1);
               return (
                 <div key={i} style={css('display:flex;flex-direction:column;gap:22px')}>
-                  {site.photos[slot] && (
-                  <Hv onClick={() => setModal({ title: t.name + ' · ' + who, url: site.videos.trainer?.[t.track] ?? '' })} aria-label="Putar video" s="all:unset;cursor:pointer;position:relative;display:block;aspect-ratio:4/5;border-radius:24px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue);transition:transform 260ms ease" h="transform:translateY(-4px)">
-                    <Photo src={site.photos[slot]} placeholder="Cuplikan video" />
-                    <span style={css(`position:absolute;top:16px;left:16px;padding:6px 12px;border-radius:999px;background:${tk.color};color:${tk.fg};font-size:12px;font-weight:700;pointer-events:none`)}>{tk.name}</span>
+                  {site.photos[slot] && (t.video ? (
+                  <Hv onClick={() => setModal({ title: t.name + ' · ' + who, url: t.video ?? '' })} aria-label={'Putar video ' + t.name} s="all:unset;cursor:pointer;position:relative;display:block;aspect-ratio:4/5;border-radius:24px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue);transition:transform 260ms ease" h="transform:translateY(-4px)">
+                    <Photo src={site.photos[slot]} placeholder={t.name} />
+                    <span style={css(`position:absolute;top:16px;left:16px;padding:6px 12px;border-radius:999px;background:${tk.color};color:${tk.fg};font-size:12px;font-weight:700;pointer-events:none`)}>{t.role || 'Trainer'}</span>
                     <span style={css('position:absolute;right:16px;bottom:16px;pointer-events:none')}><span style={css('width:56px;height:56px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md)')}><span style={css('width:0;height:0;border-left:15px solid var(--dark-blue);border-top:9px solid transparent;border-bottom:9px solid transparent;margin-left:4px')} /></span></span>
                   </Hv>
-                  )}
+                  ) : (
+                  <div style={css('position:relative;aspect-ratio:4/5;border-radius:24px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue)')}>
+                    <Photo src={site.photos[slot]} placeholder={t.name} />
+                    <span style={css(`position:absolute;top:16px;left:16px;padding:6px 12px;border-radius:999px;background:${tk.color};color:${tk.fg};font-size:12px;font-weight:700`)}>{t.role || 'Trainer'}</span>
+                  </div>
+                  ))}
                   <div style={css('display:flex;flex-direction:column;gap:14px;padding:0 4px')}>
                     <p style={css('margin:0;font-family:var(--font-headline);font-weight:600;font-size:19px;line-height:1.5;text-wrap:pretty')}><span style={{ color: tk.color }}>“</span>{t.quote}<span style={{ color: tk.color }}>”</span></p>
                     <div style={css('display:flex;flex-direction:column;gap:2px;padding-top:14px;border-top:1px solid rgba(255,255,255,.25)')}>
