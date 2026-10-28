@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export interface CapstoneSlide {
   id: string; title: string; cover: string; tools: string[]; nickname: string; photo: string;
-  cohortLabel: string; color: string; fg: string; qr: string;
+  cohortLabel: string; color: string; fg: string; qr: string; isApp: boolean;
 }
 
 // Lama satu karya tampil / How long one work shows
@@ -21,7 +22,7 @@ const STYLE = `
 .cap.idle{cursor:none}
 .cap-glow{position:absolute;inset:-20%;transition:background 1.2s ease;pointer-events:none}
 .cap-frame{position:absolute;inset:0;display:grid;grid-template-rows:auto 1fr auto;gap:3.2vh;padding:4.2vh 4vw}
-.cap-top{display:flex;align-items:center;justify-content:space-between;gap:2vw}
+.cap-top{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:2vw}
 .cap-brand{display:flex;align-items:center;gap:1.4vw}
 .cap-logo{background:#fff;border-radius:999px;padding:.9vh 1.4vw;display:flex}
 .cap-logo img{height:4.2vmin;width:auto;display:block}
@@ -31,7 +32,8 @@ const STYLE = `
 .cap-count{font-family:var(--font-headline);font-weight:700;font-size:clamp(16px,1.5vmax,32px);letter-spacing:.02em;opacity:.85}
 .cap-stage{position:relative;min-height:0}
 .cap-slide{position:absolute;inset:0;display:grid;grid-template-columns:1.55fr 1fr;gap:4vw;align-items:center}
-.cap-slide.in{animation:capFade 900ms ease both}
+.cap-slide.in{animation:capIn 700ms ease 350ms both}
+.cap-slide.out{animation:capOut 350ms ease both;pointer-events:none}
 .cap-shot{position:relative;border-radius:1.1vw;overflow:hidden;background:#0f1d26;box-shadow:0 3vh 8vh rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.08)}
 .cap-bar{height:3.6vh;display:flex;align-items:center;gap:.5vw;padding:0 1vw;background:#0f1d26}
 .cap-bar i{width:.75vh;height:.75vh;min-width:6px;min-height:6px;border-radius:50%;background:rgba(255,255,255,.25)}
@@ -65,11 +67,12 @@ const STYLE = `
 .cap-ctl button{all:unset;cursor:pointer;padding:10px 16px;border-radius:999px;background:rgba(255,255,255,.14);font-weight:700;font-size:14px}
 .cap-ctl button:hover,.cap-ctl button:focus-visible{background:rgba(255,255,255,.28)}
 .cap-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-size:2vmax;opacity:.8}
-@keyframes capFade{from{opacity:0}to{opacity:1}}
+@keyframes capIn{from{opacity:0;transform:translateY(1.5vh)}to{opacity:1;transform:none}}
+@keyframes capOut{from{opacity:1}to{opacity:0}}
 @keyframes capZoom{from{transform:scale(1)}to{transform:scale(1.07)}}
 @keyframes capBar{from{width:0}to{width:100%}}
 @media (max-aspect-ratio:1/1){.cap-slide{grid-template-columns:1fr;align-content:center;gap:4vh}}
-@media (prefers-reduced-motion:reduce){.cap-slide.in .cap-img img{animation:none}.cap-slide.in{animation:none}}
+@media (prefers-reduced-motion:reduce){.cap-slide.in .cap-img img{animation:none}.cap-slide.in{animation:none}.cap-slide.out{display:none}}
 `;
 
 /**
@@ -104,8 +107,8 @@ export function CapstoneShow({ slides }: { slides: CapstoneSlide[] }) {
     return () => clearTimeout(t);
   }, [cur, run, paused, n, go]);
 
-  // Lapisan lama dilepas setelah lapisan baru selesai memudar masuk
-  // The old layer is dropped once the new one has faded in
+  // Slide lama memudar keluar lebih dulu lalu dilepas; slide baru baru masuk setelahnya agar teks tidak bertumpuk
+  // The old slide fades out first and is then dropped; the new one enters afterwards so text never overlaps
   useEffect(() => {
     if (prev === null) return;
     const t = setTimeout(() => setPrev(null), 1000);
@@ -166,8 +169,9 @@ export function CapstoneShow({ slides }: { slides: CapstoneSlide[] }) {
       <div className="cap-frame">
         <div className="cap-top">
           <div className="cap-brand">
+            {/* Halaman ini tanpa menu, jadi logo menjadi jalan kembali ke beranda / This page has no menu, so the logo is the way back home */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <span className="cap-logo"><img src="/pameran/logo-plan-indonesia.png" alt="Plan International Indonesia" /></span>
+            <Link href="/" className="cap-logo"><img src="/pameran/logo-plan-indonesia.png" alt="Plan International Indonesia · Beranda" /></Link>
             <div className="cap-name"><b>Karya Capstone</b><span>Bootcamp Future Innovators 2026</span></div>
           </div>
           {n > 0 && <div className="cap-count" aria-live="polite">{String(cur + 1).padStart(2, '0')} / {String(n).padStart(2, '0')}</div>}
@@ -175,7 +179,7 @@ export function CapstoneShow({ slides }: { slides: CapstoneSlide[] }) {
 
         <div className="cap-stage">
           {n === 0 && <div className="cap-empty">Belum ada karya capstone yang terbit.</div>}
-          {prev !== null && slides[prev] && <Slide s={slides[prev]} />}
+          {prev !== null && slides[prev] && <Slide key={'out-' + slides[prev].id + '-' + run} s={slides[prev]} />}
           {s && <Slide key={s.id + '-' + run} s={s} enter />}
         </div>
 
@@ -200,7 +204,7 @@ export function CapstoneShow({ slides }: { slides: CapstoneSlide[] }) {
 
 function Slide({ s, enter }: { s: CapstoneSlide; enter?: boolean }) {
   return (
-    <div className={`cap-slide${enter ? ' in' : ''}`} aria-hidden={!enter}>
+    <div className={`cap-slide ${enter ? 'in' : 'out'}`} aria-hidden={!enter}>
       <div className="cap-shot">
         <div className="cap-bar"><i /><i /><i /></div>
         <div className="cap-img">
@@ -228,7 +232,7 @@ function Slide({ s, enter }: { s: CapstoneSlide; enter?: boolean }) {
         )}
         <div className="cap-qr">
           <div dangerouslySetInnerHTML={{ __html: s.qr }} />
-          <div style={{ width: 'auto', height: 'auto' }}><b>Pindai untuk melihat karya</b><span>dan mencoba aplikasinya</span></div>
+          <div style={{ width: 'auto', height: 'auto' }}>{s.isApp ? <><b>Pindai untuk mencoba aplikasinya</b><span>langsung dari ponselmu</span></> : <><b>Pindai untuk melihat karya</b><span>di situs pameran</span></>}</div>
         </div>
       </div>
     </div>

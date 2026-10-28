@@ -5,8 +5,8 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import { CapstoneShow, type CapstoneSlide } from '../../src/app/(layar)/capstone/capstone-show';
 
-const slide = (id: string, title: string): CapstoneSlide => ({
-  id, title, cover: '', tools: ['Next.js'], nickname: 'Vanya', photo: '', cohortLabel: 'Web Programming · Semarang', color: '#0072CE', fg: '#fff', qr: '<svg></svg>',
+const slide = (id: string, title: string, isApp = true): CapstoneSlide => ({
+  id, title, isApp, cover: '', tools: ['Next.js'], nickname: 'Vanya', photo: '', cohortLabel: 'Web Programming · Semarang', color: '#0072CE', fg: '#fff', qr: '<svg></svg>',
 });
 
 afterEach(() => { cleanup(); vi.useRealTimers(); });
@@ -23,6 +23,13 @@ describe('layar Karya Capstone', () => {
     fireEvent.keyDown(window, { key: ' ' });
     act(() => { vi.advanceTimersByTime(60000); });
     expect(screen.getByText('01 / 02')).toBeTruthy();
+  });
+  it('QR mengajak mencoba aplikasi, atau melihat karya bila alamat aplikasi kosong', () => {
+    render(<CapstoneShow slides={[slide('a', 'Griya Kenanga')]} />);
+    expect(screen.getByText('Pindai untuk mencoba aplikasinya')).toBeTruthy();
+    cleanup();
+    render(<CapstoneShow slides={[slide('b', 'Lumbung POS', false)]} />);
+    expect(screen.getByText('Pindai untuk melihat karya')).toBeTruthy();
   });
   it('tanpa capstone menampilkan pesan kosong', () => {
     render(<CapstoneShow slides={[]} />);

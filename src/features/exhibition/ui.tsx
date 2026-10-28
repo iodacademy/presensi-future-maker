@@ -252,7 +252,7 @@ export function CohortHead({ cohort, track, allColor, allFg, eyebrowAll, title, 
   );
 }
 
-const NAV: [string, string][] = [['/', 'Beranda'], ['/galeri', 'Galeri'], ['/peserta', 'Peserta'], ['/dokumentasi', 'Dokumentasi'], ['/tentang', 'Tentang'], ['/login', 'Masuk']];
+const NAV: [string, string][] = [['/', 'Beranda'], ['/galeri', 'Galeri'], ['/capstone', 'Karya Capstone'], ['/peserta', 'Peserta'], ['/dokumentasi', 'Dokumentasi'], ['/tentang', 'Tentang'], ['/login', 'Masuk']];
 
 function activeNav(path: string): string {
   if (path.startsWith('/karya')) return '/galeri';

@@ -158,12 +158,13 @@ export async function readSiteContent(): Promise<SiteContent> {
 async function readCapstones() {
   const snap = await getAdminDb().collection('exhibitionWorks')
     .where('status', '==', 'published').where('type', '==', 'Capstone')
-    .select('personUid', 'title', 'cohort', 'track', 'cover.full', 'cover.thumb', 'tools').get();
+    .select('personUid', 'title', 'cohort', 'track', 'cover.full', 'cover.thumb', 'tools', 'media.kind', 'media.url').get();
   return snap.docs.map((d) => {
     const w = d.data() as Doc;
     return {
       id: d.id, personUid: w.personUid as string, title: (w.title as string) ?? '', cohort: (w.cohort as string) ?? '',
       track: w.track as TrackKey, cover: (w.cover?.full || w.cover?.thumb || '') as string, tools: (w.tools ?? []) as string[],
+      appUrl: (w.media?.kind === 'site' && /^https?:\/\//.test(w.media?.url ?? '') ? w.media.url : '') as string,
     };
   });
 }

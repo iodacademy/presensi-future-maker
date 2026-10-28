@@ -28,9 +28,12 @@ export default async function CapstonePage() {
     const p = people.get(c.personUid);
     const coh = COH[c.cohort];
     if (!p || !coh) return [];
-    return [QRCode.toString(`${origin}/karya/${c.id}`, { type: 'svg', margin: 0, color: { dark: '#243C4B', light: '#FFFFFF' } }).then((qr) => ({
+    // QR membuka aplikasinya langsung; halaman karya hanya bila alamat aplikasi kosong
+    // The QR opens the app itself; the work page only when there is no app address
+    const target = c.appUrl || `${origin}/karya/${c.id}`;
+    return [QRCode.toString(target, { type: 'svg', margin: 0, color: { dark: '#243C4B', light: '#FFFFFF' } }).then((qr) => ({
       id: c.id, title: c.title, cover: c.cover, tools: c.tools, nickname: p.nickname, photo: p.photoUrl,
-      cohortLabel: cohLabel(coh), color: TRACKS[coh.track].color, fg: TRACKS[coh.track].fg, qr,
+      cohortLabel: cohLabel(coh), color: TRACKS[coh.track].color, fg: TRACKS[coh.track].fg, qr, isApp: !!c.appUrl,
     }))];
   }));
 
