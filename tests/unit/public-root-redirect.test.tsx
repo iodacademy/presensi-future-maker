@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('../../src/app/(public)/home-page', () => ({ default: () => null }));
 vi.mock('../../src/features/exhibition/read', () => ({
   getCatalog: async () => ({ people: [], cards: [], collections: [] }),
-  getSiteContent: async () => ({ photos: {} }),
+  getSiteContent: async () => ({ photos: {}, testiPeserta: [] }),
   todayWib: () => '2026-10-28',
 }));
 

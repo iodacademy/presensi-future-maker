@@ -52,7 +52,6 @@ export interface Cohort {
  */
 export const VIDEOS = {
   afterMovie: '',
-  peserta: { 'web-smg': '', 'da-jkt': '', 'smm-yk': '', 'smm-sby': '' } as Record<string, string>,
   trainer: { web: '', da: '', smm: '' } as Record<TrackKey, string>,
   plan: '',
 };
@@ -140,12 +139,6 @@ export const BENTO: { type: 'photo' | 'stat'; cols: number; rows: number; label:
   { type: 'photo', cols: 2, rows: 1, label: 'Foto demo day' },
   { type: 'stat', cols: 1, rows: 1, key: 'works', label: 'karya', bg: '#FFD500', fg: '#243C4B' },
 ];
-export const TESTI_P: Record<string, string> = {
-  'web-smg': 'Dulu aku cuma bisa ikut tutorial. Sekarang aku punya aplikasi sendiri yang bisa dipakai orang lain.',
-  'da-jkt': 'Aku belajar bahwa data berantakan itu biasa. Yang penting tahu cara merapikannya dan pertanyaan apa yang mau dijawab.',
-  'smm-yk': 'Bikin kalender konten sebulan penuh bikin aku sadar konten yang bagus itu direncanakan, bukan kebetulan.',
-  'smm-sby': 'Awalnya angka di laporan iklan bikin bingung. Di akhir bootcamp aku bisa membaca dan menjelaskannya sendiri.',
-};
 export const TESTI_T: { track: TrackKey; cohort?: string; role?: string; name: string; quote: string }[] = [
   { track: 'web', cohort: 'web-smg', role: 'Fasilitator', name: 'Rifka Aisyah Rokhmah', quote: 'Pengalaman menjadi fasilitator Future Makers sangat berkesan. Melihat antusiasme peserta, terutama saat berkolaborasi dan menyelesaikan proyek dalam waktu singkat, menjadi pengalaman yang seru dan luar biasa. Untuk teman-teman Future Makers, teruslah mencoba, tetap semangat, dan percaya bahwa masa depan yang cerah menanti kalian!' },
   { track: 'web', cohort: 'web-smg', role: 'Trainer', name: 'Wahyu Candra Tama', quote: 'Mengajar selama 12 sesi Future Makers menjadi pengalaman yang sangat berkesan. Antusiasme peserta yang tinggi memberikan kesempatan bagi saya untuk berbagi pengalaman industri dan membekali mereka dengan keterampilan dasar sebelum memasuki dunia kerja. Saya berharap seluruh peserta tetap optimis, percaya diri, dan memiliki semangat untuk terus belajar serta mengembangkan keterampilan agar siap menghadapi perkembangan teknologi dan tantangan dunia profesional.' },

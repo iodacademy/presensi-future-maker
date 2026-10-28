@@ -21,7 +21,6 @@ export default async function IndexPage() {
   for (let r = 0; best.length < 4 && byCohort.some((l) => l[r]); r++) {
     for (const l of byCohort) if (l[r] && best.length < 4) best.push({ cohort: l[r].cohort, title: l[r].title, nickname: l[r].nickname, type: l[r].type, href: '/karya/' + l[r].id, thumb: l[r].thumb });
   }
-  // Kutipan hanya untuk peserta yang dipilih admin dan tampil / Quotes only for the participant an admin picked who is visible
-  const testi: HomeTesti[] = homeTesti(catalog.people, site.testiAuthors ?? {});
+  const testi: HomeTesti[] = homeTesti(catalog.people, site.testiPeserta);
   return <HomePage people={catalog.people.length} works={catalog.cards.length} best={best} testi={testi} site={site} />;
 }

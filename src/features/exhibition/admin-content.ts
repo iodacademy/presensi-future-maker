@@ -119,8 +119,8 @@ export async function updateCollection(id: string, patch: Partial<Pick<Exhibitio
   revalidateTag('pameran');
 }
 
-const SITE_ARRAYS = ['testiTrainer'];
-const SITE_OBJECTS = ['photos', 'captions', 'videos', 'testiPeserta', 'testiAuthors', 'testiPlan'];
+const SITE_ARRAYS = ['testiTrainer', 'testiPeserta'];
+const SITE_OBJECTS = ['photos', 'captions', 'videos', 'testiPlan'];
 
 // Isi situs untuk admin: sama dengan jalur publik tapi tanpa cache / Site content for admin: same as the public path but uncached
 export const getSiteContentAdmin = readSiteContent;
@@ -130,6 +130,18 @@ export async function updateSiteContent(patch: Partial<SiteContent>): Promise<vo
   for (const [k, v] of Object.entries(p)) {
     const isObj = !!v && typeof v === 'object' && !Array.isArray(v);
     if (SITE_ARRAYS.includes(k) ? !Array.isArray(v) : !isObj) throw new Error(`Isi "${k}" bentuknya tidak sesuai`);
+  }
+  // Tiap testimoni peserta disimpan dengan kolom yang disebut saja / Each participant testimonial is stored with the named fields only
+  if (p.testiPeserta) {
+    p.testiPeserta = (p.testiPeserta as unknown[]).map((t) => {
+      const x = (t ?? {}) as Record<string, unknown>;
+      if (typeof x.uid !== 'string' || !x.uid || typeof x.headline !== 'string' || typeof x.quote !== 'string') {
+        throw new Error('Testimoni peserta butuh peserta, judul, dan kutipan');
+      }
+      const video = typeof x.video === 'string' ? x.video.trim() : '';
+      if (video && !safeExternalUrl(video)) throw new Error('Tautan video testimoni harus http(s)');
+      return { uid: x.uid, headline: x.headline.trim(), quote: x.quote.trim(), video };
+    });
   }
   await db().collection('exhibitionSite').doc('content').set(p, { merge: true });
   revalidateTag('pameran');

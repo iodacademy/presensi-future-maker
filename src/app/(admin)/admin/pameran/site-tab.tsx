@@ -17,7 +17,6 @@ export function buildSlots(): { id: string; name: string }[] {
   const out: { id: string; name: string }[] = [{ id: 'hero-poster', name: 'Poster after movie' }];
   SLIDES.forEach((s, i) => out.push({ id: 'doc-' + (i + 1), name: `Slide dokumentasi ${i + 1}: ${s.caption}` }));
   BENTO.forEach((b, i) => { if (b.type === 'photo') out.push({ id: 'bento-' + (i + 1), name: b.label }); });
-  COHORTS.forEach((c) => out.push({ id: 'testi-' + c.key, name: `Testimoni ${c.city}` }));
   [1, 2, 3, 4, 5, 6].forEach((n) => out.push({ id: 'trainer-' + n, name: `Testimoni trainer/fasilitator ${n}` }));
 
   const seen = new Set<string>();
@@ -68,8 +67,8 @@ export function SiteTab() {
   const save = (e: React.FormEvent) => {
     e.preventDefault();
     run(async () => {
-      const { photos, captions, videos, testiPeserta, testiAuthors, testiTrainer, testiPlan } = content;
-      await send('/api/pameran/site', 'PATCH', { photos, captions, videos, testiPeserta, testiAuthors, testiTrainer, testiPlan });
+      const { photos, captions, videos, testiPeserta, testiTrainer, testiPlan } = content;
+      await send('/api/pameran/site', 'PATCH', { photos, captions, videos, testiPeserta, testiTrainer, testiPlan });
       setSaved(true);
     });
   };
@@ -77,6 +76,8 @@ export function SiteTab() {
   const h2: React.CSSProperties = { fontSize: '13px', fontWeight: 700, margin: 0 };
   const setTrainer = (i: number, patch: Partial<SiteContent['testiTrainer'][number]>) =>
     edit((s) => ({ ...s, testiTrainer: s.testiTrainer.map((x, j) => (j === i ? { ...x, ...patch } : x)) }));
+  const setPeserta = (i: number, patch: Partial<SiteContent['testiPeserta'][number]>) =>
+    edit((s) => ({ ...s, testiPeserta: s.testiPeserta.map((x, j) => (j === i ? { ...x, ...patch } : x)) }));
   return (
     <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <section style={card}>
@@ -84,11 +85,6 @@ export function SiteTab() {
         <label style={label}>Video after movie
           <input aria-label="Video after movie" placeholder="https://" value={content.videos.afterMovie} onChange={(e) => setVideo({ afterMovie: e.target.value })} style={field} />
         </label>
-        {COHORTS.map((c) => (
-          <label key={c.key} style={label}>Video peserta {c.city}
-            <input value={content.videos.peserta[c.key] ?? ''} placeholder="https://" onChange={(e) => setVideo({ peserta: { ...content.videos.peserta, [c.key]: e.target.value } })} style={field} />
-          </label>
-        ))}
         {(Object.keys(TRACKS) as TrackKey[]).map((t) => (
           <label key={t} style={label}>Video trainer {TRACKS[t].name}
             <input value={content.videos.trainer[t] ?? ''} placeholder="https://" onChange={(e) => setVideo({ trainer: { ...content.videos.trainer, [t]: e.target.value } })} style={field} />
@@ -101,20 +97,27 @@ export function SiteTab() {
 
       <section style={card}>
         <h2 style={h2}>Testimoni</h2>
-        {COHORTS.map((c) => (
-          <label key={c.key} style={label}>Peserta {c.city}
-            <textarea rows={2} value={content.testiPeserta[c.key] ?? ''} onChange={(e) => edit((s) => ({ ...s, testiPeserta: { ...s.testiPeserta, [c.key]: e.target.value } }))} style={field} />
-          </label>
+        {content.testiPeserta.map((t, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingBottom: '10px', borderBottom: '1px solid var(--color-border)' }}>
+            <label style={label}>{`Testimoni peserta ${i + 1}: peserta`}
+              <select value={t.uid} onChange={(e) => setPeserta(i, { uid: e.target.value })} style={field}>
+                <option value="">Pilih peserta</option>
+                {people.map((p) => <option key={p.uid} value={p.uid}>{p.nickname} ({p.fullName}, {COH[p.cohort]?.city ?? p.cohort})</option>)}
+              </select>
+            </label>
+            <label style={label}>{`Testimoni peserta ${i + 1}: judul`}
+              <input value={t.headline} onChange={(e) => setPeserta(i, { headline: e.target.value })} style={field} />
+            </label>
+            <label style={label}>{`Testimoni peserta ${i + 1}: cerita`}
+              <textarea rows={3} value={t.quote} onChange={(e) => setPeserta(i, { quote: e.target.value })} style={field} />
+            </label>
+            <label style={label}>{`Testimoni peserta ${i + 1}: video`}
+              <input value={t.video ?? ''} placeholder="https://" onChange={(e) => setPeserta(i, { video: e.target.value })} style={field} />
+            </label>
+            <button type="button" onClick={() => edit((s) => ({ ...s, testiPeserta: s.testiPeserta.filter((_, j) => j !== i) }))} style={{ alignSelf: 'flex-start', fontSize: '11px' }}>Hapus testimoni ini</button>
+          </div>
         ))}
-        {COHORTS.map((c) => (
-          <label key={'a-' + c.key} style={label}>Penulis kutipan {c.city}
-            <select value={content.testiAuthors?.[c.key] ?? ''} style={field}
-              onChange={(e) => edit((s) => ({ ...s, testiAuthors: { ...s.testiAuthors, [c.key]: e.target.value } }))}>
-              <option value="">Tidak ditampilkan</option>
-              {people.filter((p) => p.cohort === c.key).map((p) => <option key={p.uid} value={p.uid}>{p.nickname} ({p.fullName})</option>)}
-            </select>
-          </label>
-        ))}
+        <button type="button" onClick={() => edit((s) => ({ ...s, testiPeserta: [...s.testiPeserta, { uid: '', headline: '', quote: '', video: '' }] }))} style={{ alignSelf: 'flex-start', fontSize: '11px' }}>Tambah testimoni peserta</button>
         {content.testiTrainer.map((t, i) => (
           <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={label}>{`Testimoni ${i + 1}: nama (${TRACKS[t.track].name})`}

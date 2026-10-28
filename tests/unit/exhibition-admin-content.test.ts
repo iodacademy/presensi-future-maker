@@ -100,8 +100,8 @@ describe('API admin peserta, koleksi, konten situs', () => {
     await expect(updateCollection('c1', { cohort: 'x' } as never)).rejects.toThrow('tidak boleh diubah');
   });
   it('konten situs disimpan dengan merge dan divalidasi', async () => {
-    await updateSiteContent({ testiPeserta: { s1: 'bagus' } });
-    expect(data.exhibitionSite.content).toEqual({ photos: { a: 'x' }, testiPeserta: { s1: 'bagus' } });
+    await updateSiteContent({ testiPeserta: [{ uid: 'u1', headline: ' Bisa ', quote: 'Bagus' }] });
+    expect(data.exhibitionSite.content).toEqual({ photos: { a: 'x' }, testiPeserta: [{ uid: 'u1', headline: 'Bisa', quote: 'Bagus', video: '' }] });
     expect(revalidateTag).toHaveBeenCalledWith('pameran');
     await expect(updateSiteContent({ foo: 1 } as never)).rejects.toThrow('tidak boleh diubah');
     await expect(updateSiteContent({ photos: null } as never)).rejects.toThrow();
@@ -112,10 +112,11 @@ describe('API admin peserta, koleksi, konten situs', () => {
     const res = await sitePatch(new Request('http://x', { method: 'PATCH', body: JSON.stringify({ photos: [] }) }));
     expect(res.status).toBe(400);
   });
-  it('testiAuthors diterima sebagai objek dan ditolak bila bukan objek', async () => {
-    await updateSiteContent({ testiAuthors: { 'web-smg': 'u1' } });
-    expect((data.exhibitionSite.content as { testiAuthors: unknown }).testiAuthors).toEqual({ 'web-smg': 'u1' });
-    await expect(updateSiteContent({ testiAuthors: [] } as never)).rejects.toThrow();
+  it('testimoni peserta ditolak bila bentuknya salah atau videonya bukan http(s)', async () => {
+    await expect(updateSiteContent({ testiPeserta: { s1: 'bagus' } } as never)).rejects.toThrow();
+    await expect(updateSiteContent({ testiPeserta: [{ uid: '', headline: 'a', quote: 'b' }] })).rejects.toThrow('butuh peserta');
+    await expect(updateSiteContent({ testiPeserta: [{ uid: 'u1', headline: 'a', quote: 'b', video: 'javascript:alert(1)' }] })).rejects.toThrow('http');
+    await expect(updateSiteContent({ testiAuthors: {} } as never)).rejects.toThrow('tidak boleh diubah');
   });
   it('GET situs: bawaan bila belum ada dokumen, isi tersimpan bila ada', async () => {
     delete data.exhibitionSite.content;

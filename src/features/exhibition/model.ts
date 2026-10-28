@@ -34,14 +34,15 @@ export interface ExhibitionCollection {
   id: string; title: string; brief: string; classId: string; cohort: string; type: string; coverUrls: string[];
 }
 
+// Satu testimoni peserta; video menyusul / One participant testimonial; the video comes later
+export interface PesertaTesti { uid: string; headline: string; quote: string; video?: string }
+
 export interface SiteContent {
   photos: Record<string, string>;
   // Id slot foto -> keterangan / Photo slot id -> caption
   captions: Record<string, string>;
-  videos: { afterMovie: string; peserta: Record<string, string>; trainer: Record<TrackKey, string>; plan: string };
-  testiPeserta: Record<string, string>;
-  // Kunci kohor -> uid peserta yang diberi kutipan / Cohort key -> uid of the participant credited with the quote
-  testiAuthors: Record<string, string>;
+  videos: { afterMovie: string; trainer: Record<TrackKey, string>; plan: string };
+  testiPeserta: PesertaTesti[];
   // Testimoni trainer dan fasilitator; role berisi "Trainer" atau "Fasilitator" / Trainer and facilitator testimonials; role holds "Trainer" or "Fasilitator"
   testiTrainer: { track: TrackKey; cohort?: string; role?: string; name: string; quote: string }[];
   testiPlan: { name: string; role: string; quote: string };
@@ -57,14 +58,14 @@ export interface CollectionCard {
 }
 
 /**
- * Penulis testimoni beranda: hanya kohor yang dipilih admin dan pesertanya tampil di katalog.
+ * Testimoni beranda: hanya peserta yang tampil di katalog, dengan nama panggilan dan fotonya.
  *
- * Homepage testimonial authors: only cohorts an admin picked whose person is visible in the catalog.
+ * Homepage testimonials: only participants visible in the catalog, with their nickname and photo.
  */
-export function homeTesti(people: { uid: string; nickname: string }[], authors: Record<string, string>) {
-  return COHORTS.flatMap((c) => {
-    const p = people.find((x) => x.uid === authors[c.key]);
-    return p ? [{ cohort: c.key, uid: p.uid, nickname: p.nickname }] : [];
+export function homeTesti(people: { uid: string; nickname: string; cohort: string; photoUrl: string }[], list: PesertaTesti[]) {
+  return list.flatMap((t) => {
+    const p = people.find((x) => x.uid === t.uid);
+    return p && COH[p.cohort] ? [{ ...t, nickname: p.nickname, cohort: p.cohort, photoUrl: p.photoUrl }] : [];
   });
 }
 

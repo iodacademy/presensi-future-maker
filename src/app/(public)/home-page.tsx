@@ -3,11 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BENTO, COH, SLIDES, SLIDE_INTERVAL_SECONDS, TRACKS } from '@/features/exhibition/content';
-import { safeExternalUrl, type SiteContent } from '@/features/exhibition/model';
+import { safeExternalUrl, type SiteContent, type homeTesti } from '@/features/exhibition/model';
 import { Hv, Photo, css, media } from '@/features/exhibition/ui';
 
 export interface HomeBest { cohort: string; title: string; nickname: string; type: string; href: string; thumb: string }
-export interface HomeTesti { cohort: string; uid: string; nickname: string }
+export type HomeTesti = ReturnType<typeof homeTesti>[number];
 interface Props { people: number; works: number; best: HomeBest[]; testi: HomeTesti[]; site: SiteContent }
 
 // Tautan video tersimpan hanya dipakai bila http(s) / A stored video link is used only when http(s)
@@ -31,9 +31,9 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
   const nT = testi.length;
   const testiPeserta = testi.map((p, i) => {
     const c = COH[p.cohort], on = i === testiIdx;
-    return { key: c.key, name: p.nickname, initials: p.nickname[0]?.toUpperCase() ?? '?', cohort: TRACKS[c.track].name + ' · ' + c.city, cohortShort: c.city, quote: site.testiPeserta[c.key] ?? '', bg: c.color, fg: c.fg, slotId: 'testi-' + c.key,
+    return { key: p.uid, name: p.nickname, initials: p.nickname[0]?.toUpperCase() ?? '?', cohort: TRACKS[c.track].name + ' · ' + c.city, cohortShort: c.city, headline: p.headline, quote: p.quote, photo: p.photoUrl, bg: c.color, fg: c.fg,
       display: on ? 'block' : 'none', tabBg: on ? 'var(--dark-blue)' : 'var(--surface-muted)', tabFg: on ? '#fff' : 'var(--dark-blue)', tabHover: on ? 'var(--dark-blue)' : '#e9ecee',
-      play: () => setModal({ title: 'Testimoni ' + p.nickname, url: site.videos.peserta?.[c.key] ?? '' }), href: '/peserta/' + p.uid };
+      play: p.video ? () => setModal({ title: 'Testimoni ' + p.nickname, url: p.video ?? '' }) : null, href: '/peserta/' + p.uid };
   });
   const tpA = testiPeserta[testiIdx];
   const mm = modal ? media(safeVideo(modal.url)) : null;
@@ -186,15 +186,16 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
               <div style={css('position:relative;width:100%;height:100%;border-radius:18px;overflow:hidden;background:var(--surface-muted);color:var(--dark-blue)')}>
                 {testiPeserta.map((tp) => (
                   <div key={tp.key} style={css(`position:absolute;inset:0;display:${tp.display}`)}>
-                    <Photo src={site.photos[tp.slotId]} placeholder="Cuplikan video testimoni" />
+                    <Photo src={tp.photo} placeholder={tp.name} />
                   </div>
                 ))}
-                <Hv onClick={tpA.play} aria-label="Putar video" s="all:unset;cursor:pointer;position:absolute;left:16px;bottom:16px;display:flex;align-items:center;gap:10px;padding:6px 18px 6px 6px;border-radius:999px;background:#fff;color:var(--dark-blue);font-weight:700;font-size:14px;box-shadow:var(--shadow-md)" h="transform:scale(1.04)"><span style={css('width:44px;height:44px;border-radius:50%;background:var(--yellow);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md)')}><span style={css('width:0;height:0;border-left:12px solid var(--dark-blue);border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:4px')} /></span>Putar video</Hv>
+                {tpA.play && <Hv onClick={tpA.play} aria-label="Putar video" s="all:unset;cursor:pointer;position:absolute;left:16px;bottom:16px;display:flex;align-items:center;gap:10px;padding:6px 18px 6px 6px;border-radius:999px;background:#fff;color:var(--dark-blue);font-weight:700;font-size:14px;box-shadow:var(--shadow-md)" h="transform:scale(1.04)"><span style={css('width:44px;height:44px;border-radius:50%;background:var(--yellow);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md)')}><span style={css('width:0;height:0;border-left:12px solid var(--dark-blue);border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:4px')} /></span>Putar video</Hv>}
               </div>
             </div>
             <div style={css('flex:1 1 420px;min-width:0;display:flex;flex-direction:column;gap:28px;padding:clamp(8px,2vw,24px) 0')}>
               <span style={css(`font-family:var(--font-headline);font-weight:700;font-size:clamp(96px,10vw,140px);line-height:0.6;height:0.45em;color:${tpA.bg};transition:color 300ms ease`)}>“</span>
-              <p style={css('margin:0;font-family:var(--font-headline);font-weight:700;font-size:clamp(26px,3.2vw,40px);line-height:1.2;letter-spacing:-0.02em;text-wrap:pretty')}>{tpA.quote}</p>
+              <p style={css('margin:0;font-family:var(--font-headline);font-weight:700;font-size:clamp(26px,3.2vw,40px);line-height:1.2;letter-spacing:-0.02em;text-wrap:pretty')}>{tpA.headline}</p>
+              <p style={css('margin:0;font-size:17px;line-height:1.65;color:var(--text-muted);max-width:60ch;text-wrap:pretty')}>{tpA.quote}</p>
               <Link href={tpA.href} style={css('all:unset;cursor:pointer;display:flex;align-items:center;gap:14px')}>
                 <span style={css(`width:52px;height:52px;border-radius:50%;background:${tpA.bg};color:${tpA.fg};display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-weight:700;font-size:17px`)}>{tpA.initials}</span>
                 <span style={css('display:flex;flex-direction:column;gap:2px')}>
