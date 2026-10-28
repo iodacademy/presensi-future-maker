@@ -223,7 +223,13 @@ describe('nilai akhir', () => {
 
 describe('nilai akhir satu peserta', () => {
   const dasar = {
-    sessions: [{ id: 's1', endsAt: '2026-10-01T10:00:00Z' }, { id: 's2', endsAt: '2026-10-08T10:00:00Z' }],
+    sessions: [
+      { id: 's1', endsAt: '2026-10-01T10:00:00Z', title: 'Onboarding dan Pertemuan 1: Setup' },
+      { id: 's2', endsAt: '2026-10-08T10:00:00Z', title: 'Pertemuan 2: Data Model' },
+      { id: 'k1', endsAt: '2026-10-09T10:00:00Z', title: 'Kelas Karier - Optimasi CV & Portofolio' },
+      { id: 'sc', endsAt: '2026-10-10T10:00:00Z', title: 'Showcase: Presentasi capstone project' },
+      { id: 'on', endsAt: '2026-10-11T10:00:00Z', title: 'Onboarding' },
+    ],
     joinIso: '2026-09-01T00:00:00Z',
     recorded: () => true,
     taskIds: ['t1', 't2'],
@@ -234,6 +240,17 @@ describe('nilai akhir satu peserta', () => {
   it('hanya menghitung hadir, bukan izin atau sakit', () => {
     const hasil = gradeParticipant({ ...dasar, present: (id) => id === 's1', taskScore: () => 100, quizScore: () => 100 });
     expect(hasil.breakdown.find((b) => b.component === 'attendance')!.score).toBe(50);
+  });
+
+  it('hanya menghitung sesi berjudul Pertemuan N', () => {
+    // Hadir di Pertemuan 1 dan 2 saja tetap seratus: kelas karier, showcase,
+    // dan onboarding tidak dinilai.
+    // Attending only Pertemuan 1 and 2 is still a hundred: career classes, the
+    // showcase and onboarding are not graded.
+    const hasil = gradeParticipant({ ...dasar, present: (id) => id === 's1' || id === 's2', taskScore: () => 100, quizScore: () => 100 });
+    const hadir = hasil.breakdown.find((b) => b.component === 'attendance')!;
+    expect(hadir.score).toBe(100);
+    expect(hadir.detail).toBe('2 dari 2 pertemuan');
   });
 
   it('memakai nilai tugas dan menghitung yang belum dinilai sebagai nol', () => {

@@ -93,8 +93,9 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  * 10: the ranking uses the weighted final score (capstone, task scores,
  *     attendance, quizzes with untaken ones as zero) instead of the plain
  *     average of attendance, task submission and quizzes taken.
+ * 11: the ranking's attendance counts only "Pertemuan N" sessions.
  */
-export const SNAPSHOT_VERSION = 10;
+export const SNAPSHOT_VERSION = 11;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -645,11 +646,11 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   // The ranking uses the same weighted final score as the Final Score page,
   // through the same function, so the dashboard's "best participant" never
   // differs from the official score.
-  const sesiPerKelas = new Map<string, { id: string; endsAt: string }[]>();
+  const sesiPerKelas = new Map<string, { id: string; endsAt: string; title: string }[]>();
   for (const x of sessions) {
     for (const cid of new Set([x.classId, ...(x.classIds ?? [])])) {
       if (!sesiPerKelas.has(cid)) sesiPerKelas.set(cid, []);
-      sesiPerKelas.get(cid)!.push({ id: x.id, endsAt: x.endsAt });
+      sesiPerKelas.get(cid)!.push({ id: x.id, endsAt: x.endsAt, title: x.title });
     }
   }
   const ranking = aktif

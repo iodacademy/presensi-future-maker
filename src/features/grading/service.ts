@@ -146,9 +146,9 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
     await Promise.all([
       db.collection('users').where('classId', '==', classId).where('role', '==', 'student').where('active', '==', true).get(),
       db.collection('classes').doc(classId).get(),
-      db.collection('sessions').where('classId', '==', classId).select('endsAt').get(),
+      db.collection('sessions').where('classId', '==', classId).select('endsAt', 'title').get(),
       // Pertemuan gabungan menyimpan kelas tambahannya di classIds / A joint meeting stores its extra classes in classIds
-      db.collection('sessions').where('classIds', 'array-contains', classId).select('endsAt').get(),
+      db.collection('sessions').where('classIds', 'array-contains', classId).select('endsAt', 'title').get(),
       db.collection('tasks').where('classId', '==', classId).where('published', '==', true).get(),
       db.collection('submissions').where('classId', '==', classId).get(),
       db.collection('exams').where('classId', '==', classId).where('published', '==', true).get(),
@@ -158,8 +158,10 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
     ]);
 
   const className = (classSnap.data()?.canonicalName as string) ?? '';
-  const sessionEnd = new Map<string, string>();
-  for (const d of [...sessionsSnap.docs, ...sharedSessionsSnap.docs]) sessionEnd.set(d.id, d.data().endsAt as string);
+  const sesiKelas = new Map<string, { id: string; endsAt: string; title: string }>();
+  for (const d of [...sessionsSnap.docs, ...sharedSessionsSnap.docs]) {
+    sesiKelas.set(d.id, { id: d.id, endsAt: d.data().endsAt as string, title: (d.data().title as string) ?? '' });
+  }
 
   // Nilai Tugas hanya dari Tugas Praktik Mandiri: hasil praktik di kelas tidak
   // dinilai, dan capstone punya komponennya sendiri.
@@ -229,7 +231,7 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
       const tugasSiswa = nilaiTugas.get(u.uid);
       const kuisSiswa = nilaiKuis.get(u.uid);
       const { score, breakdown, pending } = gradeParticipant({
-        sessions: [...sessionEnd].map(([id, endsAt]) => ({ id, endsAt })),
+        sessions: [...sesiKelas.values()],
         joinIso: joinMoment(u),
         recorded: (id) => tercatatPerSiswa.get(u.uid)?.has(id) ?? false,
         present: (id) => hadirPerSiswa.get(u.uid)?.has(id) ?? false,

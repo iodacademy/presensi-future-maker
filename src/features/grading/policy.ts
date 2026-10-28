@@ -147,7 +147,7 @@ export function calculateFinalGrade(input: {
  * separately drifts into showing figures that differ from the official score.
  */
 export function gradeParticipant(input: {
-  sessions: { id: string; endsAt: string }[];
+  sessions: { id: string; endsAt: string; title?: string }[];
   joinIso: string;
   recorded: (sessionId: string) => boolean;
   present: (sessionId: string) => boolean;
@@ -160,7 +160,17 @@ export function gradeParticipant(input: {
   // Pertemuan yang berakhir sebelum peserta bergabung tidak dihitung kecuali
   // ia tercatat di sana. / Meetings that ended before the participant joined
   // do not count unless they are recorded there.
-  const sesi = input.sessions.filter((s) => countsAfterJoin(s.endsAt, input.joinIso, input.recorded(s.id)));
+  //
+  // Hanya sesi berjudul "Pertemuan N" yang dinilai: onboarding, kelas karier,
+  // dan showcase bukan pertemuan materi. Di Semarang onboarding digabung dengan
+  // "Pertemuan 1" dalam satu sesi, jadi judulnya dicari di mana saja.
+  //
+  // Only sessions titled "Pertemuan N" are graded: onboarding, career classes
+  // and the showcase are not material meetings. In Semarang onboarding shares
+  // one session with "Pertemuan 1", so the title is matched anywhere.
+  const sesi = input.sessions.filter(
+    (s) => /\bPertemuan\s+\d+/i.test(s.title ?? '') && countsAfterJoin(s.endsAt, input.joinIso, input.recorded(s.id))
+  );
   const hadir = sesi.filter((s) => input.present(s.id)).length;
 
   // Tugas dan kuis tetap wajib bagi peserta yang bergabung belakangan.
