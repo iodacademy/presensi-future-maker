@@ -8,7 +8,7 @@ import type { RankedStudent } from '../../src/features/dashboard/snapshot-types'
 const row = (studentName: string, city: string, placement: RankedStudent['placement'], placementReasons: string[] = []): RankedStudent => ({
   studentId: studentName, studentName, className: 'Web ' + city, city, score: 80, capstone: 80, tasks: 90, attendance: 100, quiz: 70, unexcused: 0,
   componentDetails: { attendance: '12 dari 12 pertemuan' }, placement, placementReasons,
-  perfScore: 85, perfQuiz: 70,
+  perfScore: 85, perfAttendance: 100, perfTasks: 90, perfQuiz: 70,
 });
 const jurusan = new Map([['Web Semarang', 'Web Programming'], ['Web Surabaya', 'Web Programming']]);
 
@@ -43,8 +43,8 @@ describe('panel skema magang', () => {
 
 describe('urutan Performance Terbaik', () => {
   it('skor, kehadiran, dan TPM sama: kuis menentukan', () => {
-    const a = { ...row('Zalfa', 'Semarang', 'full'), perfScore: 99, tasks: 98, perfQuiz: 97 };
-    const b = { ...row('Selvi', 'Semarang', 'full'), perfScore: 99, tasks: 98, perfQuiz: 98 };
+    const a = { ...row('Zalfa', 'Semarang', 'full'), perfScore: 98.7, perfTasks: 97.5, perfQuiz: 96.9 };
+    const b = { ...row('Selvi', 'Semarang', 'full'), perfScore: 98.7, perfTasks: 97.5, perfQuiz: 98.5 };
     expect([a, b].sort(byPerformance).map((r) => r.studentName)).toEqual(['Selvi', 'Zalfa']);
   });
 });

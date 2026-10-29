@@ -10,7 +10,7 @@ import { ageFrom } from '../users/profile-service';
 import { countsAfterJoin, effectiveDueAt, joinMoment } from '../users/join-policy';
 import { hitungFase, keteranganFase } from './phases';
 import { buildFeedbackReport } from './feedback';
-import { averageWithZeros, countUnexcused, gradeParticipant, performanceScore } from '../grading/policy';
+import { countUnexcused, gradeParticipant, gradedMeetings, performanceScore } from '../grading/policy';
 import { comparePlacementRank, decidePlacement } from '../grading/placement';
 import { wibDate } from '@/lib/time';
 import {
@@ -101,8 +101,9 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  * 14: the ranking carries every component score for the placement table.
  * 15: the ranking carries the Best Performance score (attendance, TPM,
  *     first quiz attempts; no capstone).
+ * 16: the Best Performance score and its components keep one decimal.
  */
-export const SNAPSHOT_VERSION = 15;
+export const SNAPSHOT_VERSION = 16;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -694,7 +695,13 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         nowIso,
         status: (id) => statusPerSesi.get(id)?.get(st.uid),
       });
-      const kuisPertama = averageWithZeros(examIds.map((id) => nilaiPertama.get(id)?.get(st.uid) ?? null), examIds.length);
+      const pertemuan = gradedMeetings(sesiPerKelas.get(cid) ?? [], joinIso, (id) => statusPerSesi.get(id)?.has(st.uid) ?? false);
+      const perf = performanceScore({
+        meetings: pertemuan.length,
+        attended: pertemuan.filter((x) => hadirPerSesi.get(x.id)?.has(st.uid)).length,
+        taskScores: (tugasPerKelasId.get(cid) ?? []).map((t) => nilaiTugas?.get(t.id) ?? null),
+        quizScores: examIds.map((id) => nilaiPertama.get(id)?.get(st.uid) ?? null),
+      });
       const { placement, reasons } = decidePlacement({
         spa: nilai.score, capstone: komponen('capstone'), unexcused, capstoneGraded: !nilai.pending.includes('capstone'),
       });
@@ -712,8 +719,10 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         // Where each number comes from, e.g. "11 dari 12 pertemuan", so the placement can be checked
         componentDetails: Object.fromEntries(nilai.breakdown.map((b) => [b.component, b.detail])),
         unexcused,
-        perfScore: performanceScore({ attendance: komponen('attendance'), tasks: komponen('tasks'), quiz: kuisPertama }),
-        perfQuiz: kuisPertama,
+        perfScore: perf.score,
+        perfAttendance: perf.attendance,
+        perfTasks: perf.tasks,
+        perfQuiz: perf.quiz,
         placement,
         placementReasons: reasons,
       };

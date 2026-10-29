@@ -246,7 +246,29 @@ export const PERFORMANCE_WEIGHTS = { attendance: 40, tasks: 40, quiz: 20 } as co
  * 20%. The capstone is left out on purpose so this award does not go to the
  * same capstone winners. The internship scheme still uses the final score.
  */
-export function performanceScore(c: { attendance: number; tasks: number; quiz: number }): number {
+export function performanceScore(input: {
+  meetings: number;
+  attended: number;
+  taskScores: (number | null)[];
+  quizScores: (number | null)[];
+}): { score: number; attendance: number; tasks: number; quiz: number } {
+  // Komponen tidak dibulatkan sebelum dijumlah: TPM 97,5 dan 96,5 yang dibulatkan
+  // ke 98 dan 97 sempat menukar urutan juara. Satu angka desimal cukup untuk
+  // membedakan mereka.
+  //
+  // Components are not rounded before summing: TPM 97.5 and 96.5 rounded to 98
+  // and 97 once swapped the winners' order. One decimal is enough to tell them
+  // apart.
+  const rerata = (xs: (number | null)[]) => (xs.length ? xs.reduce<number>((t, x) => t + (x ?? 0), 0) / xs.length : 0);
+  const attendance = input.meetings > 0 ? (input.attended / input.meetings) * 100 : 0;
+  const tasks = rerata(input.taskScores);
+  const quiz = rerata(input.quizScores);
   const w = PERFORMANCE_WEIGHTS;
-  return Math.round((c.attendance * w.attendance + c.tasks * w.tasks + c.quiz * w.quiz) / 100);
+  const satuDesimal = (n: number) => Math.round(n * 10) / 10;
+  return {
+    score: satuDesimal((attendance * w.attendance + tasks * w.tasks + quiz * w.quiz) / 100),
+    attendance: satuDesimal(attendance),
+    tasks: satuDesimal(tasks),
+    quiz: satuDesimal(quiz),
+  };
 }

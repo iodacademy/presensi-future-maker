@@ -58,7 +58,13 @@ describe('absen tanpa izin', () => {
 });
 
 describe('rubrik Performance Terbaik', () => {
-  it('kehadiran 40%, TPM 40%, kuis 20%, tanpa capstone', () => {
-    expect(performanceScore({ attendance: 92, tasks: 80, quiz: 70 })).toBe(Math.round(92 * 0.4 + 80 * 0.4 + 70 * 0.2));
+  it('kehadiran 40%, TPM 40%, kuis 20%, tanpa capstone; yang tidak dikerjakan bernilai 0', () => {
+    expect(performanceScore({ meetings: 12, attended: 11, taskScores: [80, null], quizScores: [70] }))
+      .toEqual({ score: 66.7, attendance: 91.7, tasks: 40, quiz: 70 });
+  });
+  it('komponen tidak dibulatkan sebelum dijumlah, agar urutan juara tidak tertukar', () => {
+    const nabila = performanceScore({ meetings: 12, attended: 12, taskScores: [93, 100], quizScores: [100, 100] });
+    const zalfa = performanceScore({ meetings: 12, attended: 12, taskScores: [100, 95], quizScores: [100, 60, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100] });
+    expect(nabila.score).toBeGreaterThan(zalfa.score);
   });
 });
