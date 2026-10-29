@@ -497,7 +497,7 @@ describe('halaman dashboard', () => {
     expect(table).toMatch(/title=\{`\$\{snapshot\.sessionLabels\[j\]/);
   });
 
-  it('menyebut bobot nilai akhir yang dipakai peringkat', () => {
-    expect(page).toContain('capstone 45%, nilai tugas 30%, kehadiran 15%, kuis 10%');
+  it('menyebut bobot rubrik Performance Terbaik, tanpa capstone', () => {
+    expect(page).toContain('Kehadiran 40% (terlambat lebih dari 15 menit dihitung setengah), rerata TPM 40%, rerata kuis percobaan pertama 20%. Capstone tidak dihitung');
   });
 });

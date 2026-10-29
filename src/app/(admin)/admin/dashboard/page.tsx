@@ -586,9 +586,9 @@ function DashboardBody({
         {/* --- peringkat ---------------------------------------------------- */}
         <section className={s.panel} aria-labelledby="h-rank">
           <div className={s.panelHead}>
-            <h2 id="h-rank">Performance ranking</h2>
+            <h2 id="h-rank">Performance terbaik</h2>
             <p className={s.hint}>
-              Nilai akhir: capstone 45%, nilai tugas 30%, kehadiran 15%, kuis 10%. Rinciannya di menu Nilai Akhir
+              Kehadiran 40% (terlambat lebih dari 15 menit dihitung setengah), rerata TPM 40%, rerata kuis percobaan pertama 20%. Capstone tidak dihitung
             </p>
           </div>
           <RankingGroups

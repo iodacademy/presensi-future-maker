@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { comparePlacementRank, decidePlacement } from '../../src/features/grading/placement';
-import { countUnexcused } from '../../src/features/grading/policy';
+import { countUnexcused, lateArrivals, performanceScore } from '../../src/features/grading/policy';
 
 describe('penentuan skema magang', () => {
   it('SPA ≥ 80, capstone ≥ 75, tanpa absen tanpa izin: kandidat Full Internship', () => {
@@ -54,5 +54,42 @@ describe('absen tanpa izin', () => {
       sessions, joinIso: '2026-09-16T00:00:00Z', nowIso: '2026-10-29T00:00:00Z',
       status: (id) => (id === 's1' ? 'present' : undefined),
     })).toBe(1);
+  });
+});
+
+describe('rubrik Performance Terbaik', () => {
+  const meetings = Array.from({ length: 12 }, (_, i) => ({ id: 's' + i }));
+  it('hadir 11 dari 12 = 92; kehadiran 40%, TPM 40%, kuis 20%', () => {
+    const r = performanceScore({ meetings, present: (id) => id !== 's0', late: () => false, tasks: 80, quiz: 70 });
+    expect(r.attendance).toBe(92);
+    expect(r.score).toBe(Math.round(92 * 0.4 + 80 * 0.4 + 70 * 0.2));
+    expect(r.attendanceDetail).toBe('11 dari 12 pertemuan');
+  });
+  it('terlambat lebih dari 15 menit dihitung setengah sesi', () => {
+    const r = performanceScore({ meetings, present: () => true, late: (id) => id === 's1' || id === 's2', tasks: 0, quiz: 0 });
+    expect(r.attendance).toBe(Math.round((11 / 12) * 100));
+    expect(r.attendanceDetail).toBe('12 dari 12 pertemuan, 2 terlambat');
+  });
+});
+
+describe('keterlambatan', () => {
+  const mulai = '2026-09-01T09:00:00Z';
+  const at = (min: number) => new Date(Date.parse(mulai) + min * 60_000).toISOString();
+  it('pindai lewat 15 menit terlambat; catatan manual tidak', () => {
+    const t = lateArrivals([
+      { sessionId: 'a', studentId: 'tepat', recordedAt: at(15), source: 'scan' },
+      { sessionId: 'a', studentId: 'telat', recordedAt: at(16), source: 'camera' },
+      { sessionId: 'a', studentId: 'admin', recordedAt: at(300), source: 'manual' },
+      { sessionId: 'a', studentId: 'awal', recordedAt: at(-5), source: 'scan' },
+    ], () => mulai);
+    expect([...t.get('a')!]).toEqual(['telat']);
+  });
+  it('sesi yang mayoritas pemindaiannya terlambat dilewati, karena QR-nya yang telat', () => {
+    const t = lateArrivals([
+      { sessionId: 'b', studentId: 'x', recordedAt: at(170), source: 'scan' },
+      { sessionId: 'b', studentId: 'y', recordedAt: at(175), source: 'scan' },
+      { sessionId: 'b', studentId: 'z', recordedAt: at(2), source: 'scan' },
+    ], () => mulai);
+    expect(t.has('b')).toBe(false);
   });
 });
