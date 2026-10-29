@@ -236,76 +236,17 @@ export function countUnexcused(input: {
 
 /** Bobot rubrik Performance Terbaik / Weights of the Best Performance rubric */
 export const PERFORMANCE_WEIGHTS = { attendance: 40, tasks: 40, quiz: 20 } as const;
-/** Menit setelah sesi mulai yang masih dihitung tepat waktu / Minutes after start still counted on time */
-export const LATE_AFTER_MIN = 15;
 
 /**
  * Nilai Performance Terbaik: kehadiran 40%, rerata TPM 40%, rerata kuis 20%.
  * Capstone sengaja tidak ikut agar penghargaan ini tidak jatuh ke juara
  * capstone yang sama. Skema magang tetap memakai nilai akhir.
  *
- * Kehadiran: tiap pertemuan bernilai satu, setengah bila terlambat lebih dari
- * 15 menit.
- *
  * The Best Performance score: attendance 40%, TPM average 40%, quiz average
  * 20%. The capstone is left out on purpose so this award does not go to the
  * same capstone winners. The internship scheme still uses the final score.
- *
- * Attendance: each meeting is worth one, half when more than 15 minutes late.
  */
-export function performanceScore(input: {
-  meetings: { id: string }[];
-  present: (sessionId: string) => boolean;
-  late: (sessionId: string) => boolean;
-  tasks: number;
-  quiz: number;
-}): { score: number; attendance: number; attendanceDetail: string } {
-  let poin = 0;
-  let telat = 0;
-  for (const m of input.meetings) {
-    if (!input.present(m.id)) continue;
-    if (input.late(m.id)) { poin += 0.5; telat += 1; } else poin += 1;
-  }
-  const n = input.meetings.length;
-  const attendance = n > 0 ? Math.round((poin / n) * 100) : 0;
+export function performanceScore(c: { attendance: number; tasks: number; quiz: number }): number {
   const w = PERFORMANCE_WEIGHTS;
-  const score = Math.round((attendance * w.attendance + input.tasks * w.tasks + input.quiz * w.quiz) / 100);
-  const hadir = input.meetings.filter((m) => input.present(m.id)).length;
-  return {
-    score,
-    attendance,
-    attendanceDetail: n > 0 ? `${hadir} dari ${n} pertemuan${telat > 0 ? `, ${telat} terlambat` : ''}` : 'Belum ada pertemuan',
-  };
-}
-
-/**
- * Peserta yang memindai lebih dari 15 menit setelah sesi mulai, per sesi.
- * Catatan manual dari admin tidak punya jam kedatangan, jadi dianggap tepat
- * waktu. Sesi yang lebih dari separuh pemindaiannya terlambat dilewati: di sesi
- * seperti itu QR-nya baru ditampilkan belakangan, bukan pesertanya yang telat.
- *
- * Participants who scanned more than 15 minutes after a session started, per
- * session. Manual admin records carry no arrival time, so they count as on
- * time. A session where more than half the scans were late is skipped: there
- * the QR was shown late, not the participants.
- */
-export function lateArrivals(
-  records: { sessionId: string; studentId: string; recordedAt: string; source?: string }[],
-  startsAt: (sessionId: string) => string | undefined
-): Map<string, Set<string>> {
-  const scan = new Map<string, { studentId: string; late: boolean }[]>();
-  for (const r of records) {
-    const mulai = startsAt(r.sessionId);
-    if (!mulai || r.source === 'manual' || !r.recordedAt) continue;
-    const late = Date.parse(r.recordedAt) - Date.parse(mulai) > LATE_AFTER_MIN * 60_000;
-    if (!scan.has(r.sessionId)) scan.set(r.sessionId, []);
-    scan.get(r.sessionId)!.push({ studentId: r.studentId, late });
-  }
-  const hasil = new Map<string, Set<string>>();
-  for (const [sid, xs] of scan) {
-    const telat = xs.filter((x) => x.late);
-    if (telat.length * 2 > xs.length) continue;
-    hasil.set(sid, new Set(telat.map((x) => x.studentId)));
-  }
-  return hasil;
+  return Math.round((c.attendance * w.attendance + c.tasks * w.tasks + c.quiz * w.quiz) / 100);
 }

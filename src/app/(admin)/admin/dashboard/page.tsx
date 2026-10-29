@@ -588,7 +588,7 @@ function DashboardBody({
           <div className={s.panelHead}>
             <h2 id="h-rank">Performance terbaik</h2>
             <p className={s.hint}>
-              Kehadiran 40% (terlambat lebih dari 15 menit dihitung setengah), rerata TPM 40%, rerata kuis percobaan pertama 20%. Capstone tidak dihitung
+              Kehadiran 40%, rerata TPM 40%, rerata kuis percobaan pertama 20%. Capstone tidak dihitung
             </p>
           </div>
           <RankingGroups

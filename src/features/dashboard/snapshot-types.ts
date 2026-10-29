@@ -161,11 +161,10 @@ export interface RankedStudent {
   componentDetails: Partial<Record<GradeComponent, string>>;
   /** Pertemuan yang lewat tanpa hadir, izin, atau sakit / Past meetings with no attendance, leave or sick record */
   unexcused: number;
-  /** Nilai Performance Terbaik dan komponennya yang berbeda dari nilai akhir / The Best Performance score and its components that differ from the final score */
+  /** Nilai Performance Terbaik, tanpa capstone / The Best Performance score, without the capstone */
   perfScore: number;
-  perfAttendance: number;
+  /** Rerata kuis percobaan pertama / Average of first quiz attempts */
   perfQuiz: number;
-  perfAttendanceDetail: string;
   placement: Placement;
   /** Syarat Full Internship yang belum terpenuhi / Full Internship requirements not met */
   placementReasons: string[];

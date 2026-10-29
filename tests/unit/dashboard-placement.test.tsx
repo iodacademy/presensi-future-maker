@@ -7,7 +7,7 @@ import type { RankedStudent } from '../../src/features/dashboard/snapshot-types'
 const row = (studentName: string, city: string, placement: RankedStudent['placement'], placementReasons: string[] = []): RankedStudent => ({
   studentId: studentName, studentName, className: 'Web ' + city, city, score: 80, capstone: 80, tasks: 90, attendance: 100, quiz: 70, unexcused: 0,
   componentDetails: { attendance: '12 dari 12 pertemuan' }, placement, placementReasons,
-  perfScore: 85, perfAttendance: 100, perfQuiz: 70, perfAttendanceDetail: '12 dari 12 pertemuan',
+  perfScore: 85, perfQuiz: 70,
 });
 const jurusan = new Map([['Web Semarang', 'Web Programming'], ['Web Surabaya', 'Web Programming']]);
 

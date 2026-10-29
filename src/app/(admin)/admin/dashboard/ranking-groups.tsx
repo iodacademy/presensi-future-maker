@@ -4,10 +4,10 @@ import React, { useEffect, useState } from 'react';
 import type { RankedStudent } from '@/features/dashboard/snapshot-types';
 import s from './dashboard.module.css';
 
-type RankRow = Pick<RankedStudent, 'studentId' | 'studentName' | 'className' | 'city' | 'tasks' | 'perfScore' | 'perfAttendance' | 'perfQuiz' | 'perfAttendanceDetail'>;
+type RankRow = Pick<RankedStudent, 'studentId' | 'studentName' | 'className' | 'city' | 'attendance' | 'tasks' | 'componentDetails' | 'perfScore' | 'perfQuiz'>;
 
 // Seri dipecah oleh kehadiran lalu TPM, dua komponen berbobot terbesar / Ties are broken by attendance then TPM, the two heaviest components
-const byPerformance = (a: RankRow, b: RankRow) => b.perfScore - a.perfScore || b.perfAttendance - a.perfAttendance || b.tasks - a.tasks;
+const byPerformance = (a: RankRow, b: RankRow) => b.perfScore - a.perfScore || b.attendance - a.attendance || b.tasks - a.tasks;
 
 /**
  * Peringkat per jurusan dan kota: lima teratas tiap kelompok, sisanya di modal.
@@ -130,7 +130,7 @@ function RankModal({ title, subtitle, rows, onClose }: { title: string; subtitle
                 <tr key={r.studentId}>
                   <td className={s.ctr}><span className={`${s.rkn} ${i < 3 ? s.top : ''}`}>{i + 1}</span></td>
                   <td>{r.studentName}<div className={s.plSub}>{r.className}</div></td>
-                  <td className={`${s.ctr} ${s.num}`}>{r.perfAttendance}<div className={s.plSub}>{r.perfAttendanceDetail}</div></td>
+                  <td className={`${s.ctr} ${s.num}`}>{r.attendance}<div className={s.plSub}>{r.componentDetails.attendance}</div></td>
                   <td className={`${s.ctr} ${s.num}`}>{r.tasks}</td>
                   <td className={`${s.ctr} ${s.num}`}>{r.perfQuiz}</td>
                   <td className={`${s.ctr} ${s.num}`} style={{ fontWeight: 600 }}>{r.perfScore}</td>

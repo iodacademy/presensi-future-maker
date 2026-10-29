@@ -10,7 +10,7 @@ import { ageFrom } from '../users/profile-service';
 import { countsAfterJoin, effectiveDueAt, joinMoment } from '../users/join-policy';
 import { hitungFase, keteranganFase } from './phases';
 import { buildFeedbackReport } from './feedback';
-import { averageWithZeros, countUnexcused, gradeParticipant, gradedMeetings, lateArrivals, performanceScore } from '../grading/policy';
+import { averageWithZeros, countUnexcused, gradeParticipant, performanceScore } from '../grading/policy';
 import { comparePlacementRank, decidePlacement } from '../grading/placement';
 import { wibDate } from '@/lib/time';
 import {
@@ -99,8 +99,8 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  * 13: the ranking carries each participant's internship placement and
  *     breaks SPA ties by capstone, then attendance.
  * 14: the ranking carries every component score for the placement table.
- * 15: the ranking carries the Best Performance score (attendance with late
- *     arrivals at half, TPM, first quiz attempts; no capstone).
+ * 15: the ranking carries the Best Performance score (attendance, TPM,
+ *     first quiz attempts; no capstone).
  */
 export const SNAPSHOT_VERSION = 15;
 
@@ -148,7 +148,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     db.collection('classes').get(),
     db.collection('users').where('role', '==', 'student').get(),
     db.collection('sessions').get(),
-    db.collection('attendance').select('sessionId', 'studentId', 'status', 'recordedAt', 'source').get(),
+    db.collection('attendance').select('sessionId', 'studentId', 'status').get(),
     db.collection('tasks').where('published', '==', true).get(),
     db.collection('submissions').get(),
     db.collection('exams').where('published', '==', true).get(),
@@ -250,9 +250,8 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
 
   const hadirPerSesi = new Map<string, Set<string>>();
   const statusPerSesi = new Map<string, Map<string, AttendanceStatus>>();
-  const catatanHadir: { sessionId: string; studentId: string; recordedAt: string; source?: string }[] = [];
   for (const d of attendanceSnap.docs) {
-    const a = d.data() as { sessionId: string; studentId: string; status?: AttendanceStatus; recordedAt: string; source?: string };
+    const a = d.data() as { sessionId: string; studentId: string; status?: AttendanceStatus };
     // Peserta nonaktif tidak dihitung: persentasenya dibagi jumlah peserta
     // aktif, dan menyertakan yang sudah keluar membuat angkanya melampaui
     // seratus.
@@ -270,7 +269,6 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     if (!statusPerSesi.has(a.sessionId)) statusPerSesi.set(a.sessionId, new Map());
     statusPerSesi.get(a.sessionId)!.set(a.studentId, status);
     if (status !== 'present') continue;
-    catatanHadir.push(a);
     if (!hadirPerSesi.has(a.sessionId)) hadirPerSesi.set(a.sessionId, new Set());
     hadirPerSesi.get(a.sessionId)!.add(a.studentId);
   }
@@ -670,8 +668,6 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
       sesiPerKelas.get(cid)!.push({ id: x.id, endsAt: x.endsAt, title: x.title });
     }
   }
-  const mulaiSesi = new Map(sessions.map((x) => [x.id, x.startsAt]));
-  const telatPerSesi = lateArrivals(catatanHadir, (id) => mulaiSesi.get(id));
   const ranking = aktif
     .filter((st) => st.classId && classNames.has(st.classId))
     .map((st) => {
@@ -699,13 +695,6 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         status: (id) => statusPerSesi.get(id)?.get(st.uid),
       });
       const kuisPertama = averageWithZeros(examIds.map((id) => nilaiPertama.get(id)?.get(st.uid) ?? null), examIds.length);
-      const perf = performanceScore({
-        meetings: gradedMeetings(sesiPerKelas.get(cid) ?? [], joinIso, (id) => statusPerSesi.get(id)?.has(st.uid) ?? false),
-        present: (id) => hadirPerSesi.get(id)?.has(st.uid) ?? false,
-        late: (id) => telatPerSesi.get(id)?.has(st.uid) ?? false,
-        tasks: komponen('tasks'),
-        quiz: kuisPertama,
-      });
       const { placement, reasons } = decidePlacement({
         spa: nilai.score, capstone: komponen('capstone'), unexcused, capstoneGraded: !nilai.pending.includes('capstone'),
       });
@@ -723,10 +712,8 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         // Where each number comes from, e.g. "11 dari 12 pertemuan", so the placement can be checked
         componentDetails: Object.fromEntries(nilai.breakdown.map((b) => [b.component, b.detail])),
         unexcused,
-        perfScore: perf.score,
-        perfAttendance: perf.attendance,
+        perfScore: performanceScore({ attendance: komponen('attendance'), tasks: komponen('tasks'), quiz: kuisPertama }),
         perfQuiz: kuisPertama,
-        perfAttendanceDetail: perf.attendanceDetail,
         placement,
         placementReasons: reasons,
       };

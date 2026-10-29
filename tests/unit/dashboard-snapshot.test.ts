@@ -498,6 +498,6 @@ describe('halaman dashboard', () => {
   });
 
   it('menyebut bobot rubrik Performance Terbaik, tanpa capstone', () => {
-    expect(page).toContain('Kehadiran 40% (terlambat lebih dari 15 menit dihitung setengah), rerata TPM 40%, rerata kuis percobaan pertama 20%. Capstone tidak dihitung');
+    expect(page).toContain('Kehadiran 40%, rerata TPM 40%, rerata kuis percobaan pertama 20%. Capstone tidak dihitung');
   });
 });
