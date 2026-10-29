@@ -10,7 +10,8 @@ import { ageFrom } from '../users/profile-service';
 import { countsAfterJoin, effectiveDueAt, joinMoment } from '../users/join-policy';
 import { hitungFase, keteranganFase } from './phases';
 import { buildFeedbackReport } from './feedback';
-import { gradeParticipant } from '../grading/policy';
+import { countUnexcused, gradeParticipant } from '../grading/policy';
+import { comparePlacementRank, decidePlacement } from '../grading/placement';
 import { wibDate } from '@/lib/time';
 import {
   DISABILITY_LABELS,
@@ -95,8 +96,10 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  *     average of attendance, task submission and quizzes taken.
  * 11: the ranking's attendance counts only "Pertemuan N" sessions.
  * 12: the capstone is read from the graded capstone task, not only the import.
+ * 13: the ranking carries each participant's internship placement and
+ *     breaks SPA ties by capstone, then attendance.
  */
-export const SNAPSHOT_VERSION = 12;
+export const SNAPSHOT_VERSION = 13;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -659,26 +662,45 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     .map((st) => {
       const cid = st.classId ?? '';
       const nilaiTugas = nilaiTugasPerSiswa.get(st.uid);
+      const joinIso = joinPerSiswa.get(st.uid) ?? '';
+      const nilai = gradeParticipant({
+        sessions: sesiPerKelas.get(cid) ?? [],
+        joinIso,
+        recorded: (id) => statusPerSesi.get(id)?.has(st.uid) ?? false,
+        present: (id) => hadirPerSesi.get(id)?.has(st.uid) ?? false,
+        taskIds: (tugasPerKelasId.get(cid) ?? []).map((t) => t.id),
+        taskScore: (id) => nilaiTugas?.get(id) ?? null,
+        examIds: exams.filter((e) => e.classId === cid && e.kind !== 'pretest').map((e) => e.id),
+        quizScore: (id) => nilaiTertinggi.get(id)?.get(st.uid) ?? null,
+        capstoneTaskIds: (capstonePerKelasId.get(cid) ?? []).map((t) => t.id),
+        capstone: nilaiCapstone.get(st.uid) ?? null,
+      });
+      const komponen = (k: string) => nilai.breakdown.find((b) => b.component === k)?.score ?? 0;
+      const unexcused = countUnexcused({
+        sessions: sesiPerKelas.get(cid) ?? [],
+        joinIso,
+        nowIso,
+        status: (id) => statusPerSesi.get(id)?.get(st.uid),
+      });
+      const { placement, reasons } = decidePlacement({
+        spa: nilai.score, capstone: komponen('capstone'), unexcused, capstoneGraded: !nilai.pending.includes('capstone'),
+      });
       return {
         studentId: st.uid,
         studentName: st.name,
         className: classNames.get(cid) ?? '',
         city: classCities.get(cid) ?? '',
-        score: gradeParticipant({
-          sessions: sesiPerKelas.get(cid) ?? [],
-          joinIso: joinPerSiswa.get(st.uid) ?? '',
-          recorded: (id) => statusPerSesi.get(id)?.has(st.uid) ?? false,
-          present: (id) => hadirPerSesi.get(id)?.has(st.uid) ?? false,
-          taskIds: (tugasPerKelasId.get(cid) ?? []).map((t) => t.id),
-          taskScore: (id) => nilaiTugas?.get(id) ?? null,
-          examIds: exams.filter((e) => e.classId === cid && e.kind !== 'pretest').map((e) => e.id),
-          quizScore: (id) => nilaiTertinggi.get(id)?.get(st.uid) ?? null,
-          capstoneTaskIds: (capstonePerKelasId.get(cid) ?? []).map((t) => t.id),
-          capstone: nilaiCapstone.get(st.uid) ?? null,
-        }).score,
+        score: nilai.score,
+        capstone: komponen('capstone'),
+        attendance: komponen('attendance'),
+        unexcused,
+        placement,
+        placementReasons: reasons,
       };
     })
-    .sort((a, b) => b.score - a.score);
+    // Bila SPA sama, capstone lalu kehadiran menentukan urutan (skema magang)
+    // When SPA ties, capstone then attendance decide the order (internship scheme)
+    .sort((a, b) => comparePlacementRank({ ...a, spa: a.score }, { ...b, spa: b.score }));
 
   const alerts: AlertStudent[] = terukur
     .map((t) => {

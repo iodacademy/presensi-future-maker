@@ -180,7 +180,14 @@ describe('perhitungan angkanya', () => {
   it('menghitung peringkat dengan fungsi nilai akhir yang sama', () => {
     // Peringkat yang dihitung terpisah lambat laun berbeda dari nilai resminya.
     // A ranking computed separately drifts from the official score.
-    expect(compute).toMatch(/score: gradeParticipant\(/);
+    expect(compute).toMatch(/const nilai = gradeParticipant\(/);
+    expect(compute).toMatch(/score: nilai\.score/);
+  });
+
+  it('menentukan skema magang dari nilai akhir yang sama', () => {
+    expect(compute).toMatch(/decidePlacement\(\{\s*spa: nilai\.score/);
+    expect(compute).toMatch(/capstoneGraded: !nilai\.pending\.includes\('capstone'\)/);
+    expect(compute).toMatch(/comparePlacementRank\(/);
   });
 });
 

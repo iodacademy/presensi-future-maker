@@ -1,3 +1,4 @@
+import type { Placement } from '../grading/placement';
 import type { FeedbackForm } from './feedback';
 import type { AttendanceStatus } from '../attendance/types';
 // Definisi tipe ringkasan dashboard / Dashboard snapshot type definitions
@@ -150,6 +151,14 @@ export interface RankedStudent {
   className: string;
   city: string;
   score: number;
+  /** Nilai komponen capstone dan kehadiran, penentu urutan bila SPA sama / Capstone and attendance component scores, the tie-breakers when SPA is equal */
+  capstone: number;
+  attendance: number;
+  /** Pertemuan yang lewat tanpa hadir, izin, atau sakit / Past meetings with no attendance, leave or sick record */
+  unexcused: number;
+  placement: Placement;
+  /** Syarat Full Internship yang belum terpenuhi / Full Internship requirements not met */
+  placementReasons: string[];
 }
 
 /**

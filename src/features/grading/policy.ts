@@ -1,5 +1,6 @@
 // Aturan perhitungan nilai akhir / Final score calculation rules
 import { countsAfterJoin } from '../users/join-policy';
+import type { AttendanceStatus } from '../attendance/types';
 import { GRADE_WEIGHTS, type ComponentBreakdown, type GradeComponent } from './types';
 
 /**
@@ -170,9 +171,7 @@ export function gradeParticipant(input: {
   // Only sessions titled "Pertemuan N" are graded: onboarding, career classes
   // and the showcase are not material meetings. In Semarang onboarding shares
   // one session with "Pertemuan 1", so the title is matched anywhere.
-  const sesi = input.sessions.filter(
-    (s) => /\bPertemuan\s+\d+/i.test(s.title ?? '') && countsAfterJoin(s.endsAt, input.joinIso, input.recorded(s.id))
-  );
+  const sesi = gradedMeetings(input.sessions, input.joinIso, input.recorded);
   const hadir = sesi.filter((s) => input.present(s.id)).length;
 
   // Tugas dan kuis tetap wajib bagi peserta yang bergabung belakangan.
@@ -202,4 +201,35 @@ export function gradeParticipant(input: {
       quiz: kuis.length > 0 ? `${kuis.filter((n) => n !== null).length} dari ${kuis.length} ujian dikerjakan` : 'Belum ada ujian',
     },
   });
+}
+
+/**
+ * Pertemuan yang dinilai bagi satu peserta; dipakai bersama nilai kehadiran
+ * dan hitungan absen tanpa izin supaya keduanya tidak pernah berbeda pertemuan.
+ *
+ * The meetings graded for one participant; shared by the attendance score and
+ * the unexcused-absence count so both always look at the same meetings.
+ */
+export function gradedMeetings<T extends { id: string; endsAt: string; title?: string }>(
+  sessions: T[], joinIso: string, recorded: (sessionId: string) => boolean
+): T[] {
+  return sessions.filter((s) => /\bPertemuan\s+\d+/i.test(s.title ?? '') && countsAfterJoin(s.endsAt, joinIso, recorded(s.id)));
+}
+
+/**
+ * Jumlah pertemuan yang sudah lewat tanpa hadir, izin, atau sakit. Pertemuan
+ * tanpa catatan presensi dihitung absen, sama seperti nilai kehadiran.
+ *
+ * How many past meetings had no attendance, leave, or sick record. A meeting
+ * with no record counts as absent, as it does for the attendance score.
+ */
+export function countUnexcused(input: {
+  sessions: { id: string; endsAt: string; title?: string }[];
+  joinIso: string;
+  nowIso: string;
+  status: (sessionId: string) => AttendanceStatus | undefined;
+}): number {
+  const ok = new Set<AttendanceStatus | undefined>(['present', 'excused', 'sick']);
+  return gradedMeetings(input.sessions, input.joinIso, (id) => input.status(id) !== undefined)
+    .filter((s) => s.endsAt <= input.nowIso && !ok.has(input.status(s.id))).length;
 }

@@ -546,6 +546,139 @@
   background: var(--color-highlight-yellow);
 }
 
+/* --- skema magang --------------------------------------------------------- */
+/* Warna kelompok: hijau Full Internship, biru Project Based, merah tidak
+   ditempatkan; dipasang lewat --pl agar kartu, kepala kolom, dan garisnya
+   selalu seragam.
+   Group colours: green Full Internship, blue Project Based, red not placed;
+   set through --pl so the card, column head and rule always match. */
+.plFull { --pl: var(--color-success); --pl-bg: var(--color-success-light); --pl-ink: #4d6d05; }
+.plProject { --pl: var(--color-primary); --pl-bg: var(--color-primary-light); --pl-ink: var(--color-primary-hover); }
+.plNone { --pl: var(--color-danger); --pl-bg: var(--color-danger-light); --pl-ink: var(--color-danger); }
+.plPending { --pl: var(--color-text-faint); --pl-bg: var(--color-bg-app); --pl-ink: var(--color-text-muted); }
+
+.plWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.plSum {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.plStat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--pl-bg);
+  border-left: 4px solid var(--pl);
+}
+
+.plStat b {
+  font-size: 26px;
+  line-height: 1.1;
+  color: var(--pl-ink);
+}
+
+.plStat span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.plStat small {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.plCols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.plCol {
+  border: 1px solid var(--color-border);
+  border-top: 3px solid var(--pl);
+  border-radius: 8px;
+  padding: 4px 12px 8px;
+  min-width: 0;
+}
+
+.plHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pl-ink);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.plHead b {
+  min-width: 24px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--pl-bg);
+  text-align: center;
+}
+
+.plRow {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 36px;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-main);
+}
+
+.plRow:last-child {
+  border-bottom: 0;
+}
+
+.plName {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.plName small {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.plWait {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--pl-bg);
+  border-left: 3px solid var(--pl);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-main);
+}
+
+.plEmpty {
+  padding: 10px 0;
+  font-size: 12px;
+  color: var(--color-text-faint);
+}
+
+@media (max-width: 900px) {
+  .plSum,
+  .plCols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* --- peringkat ------------------------------------------------------------ */
 .rk4 {
   display: grid;

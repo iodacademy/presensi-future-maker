@@ -8,6 +8,7 @@ import { DailyBars, GainChart, GroupedBars, Heatmap, ProfileBars, TrendLines, ci
 import { RosterTable } from './roster-table';
 import { FeedbackPanel } from './feedback-panel';
 import { RankingGroups } from './ranking-groups';
+import { PlacementGroups } from './placement-groups';
 import { AttendanceCellModal, AttendanceTableModal } from './attendance-detail';
 import { StudentSearch } from './student-search';
 import { QuizDetailModal } from './quiz-detail';
@@ -591,6 +592,20 @@ function DashboardBody({
             </p>
           </div>
           <RankingGroups
+            rows={snapshot.ranking.filter((r) => cities.includes(r.city))}
+            jurusanKelas={jurusanKelas}
+          />
+        </section>
+
+        {/* --- skema magang ------------------------------------------------- */}
+        <section className={s.panel} aria-labelledby="h-magang">
+          <div className={s.panelHead}>
+            <h2 id="h-magang">Penentuan skema magang</h2>
+            <p className={s.hint}>
+              SPA = nilai akhir. Diurutkan per lokasi menurut SPA, lalu capstone, lalu kehadiran
+            </p>
+          </div>
+          <PlacementGroups
             rows={snapshot.ranking.filter((r) => cities.includes(r.city))}
             jurusanKelas={jurusanKelas}
           />
