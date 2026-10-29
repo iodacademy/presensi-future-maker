@@ -6,8 +6,9 @@ import s from './dashboard.module.css';
 
 type RankRow = Pick<RankedStudent, 'studentId' | 'studentName' | 'className' | 'city' | 'attendance' | 'tasks' | 'componentDetails' | 'perfScore' | 'perfQuiz'>;
 
-// Seri dipecah oleh kehadiran lalu TPM, dua komponen berbobot terbesar / Ties are broken by attendance then TPM, the two heaviest components
-const byPerformance = (a: RankRow, b: RankRow) => b.perfScore - a.perfScore || b.attendance - a.attendance || b.tasks - a.tasks;
+// Seri dipecah oleh kehadiran, lalu TPM, lalu kuis, mengikuti urutan bobotnya / Ties are broken by attendance, then TPM, then quiz, following their weights
+export const byPerformance = (a: RankRow, b: RankRow) =>
+  b.perfScore - a.perfScore || b.attendance - a.attendance || b.tasks - a.tasks || b.perfQuiz - a.perfQuiz;
 
 /**
  * Peringkat per jurusan dan kota: lima teratas tiap kelompok, sisanya di modal.

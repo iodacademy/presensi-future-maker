@@ -2,6 +2,7 @@ import React from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { PlacementGroups } from '../../src/app/(admin)/admin/dashboard/placement-groups';
+import { byPerformance } from '../../src/app/(admin)/admin/dashboard/ranking-groups';
 import type { RankedStudent } from '../../src/features/dashboard/snapshot-types';
 
 const row = (studentName: string, city: string, placement: RankedStudent['placement'], placementReasons: string[] = []): RankedStudent => ({
@@ -37,5 +38,13 @@ describe('panel skema magang', () => {
     fireEvent.click(screen.getByRole('button', { name: /Project Based/ }));
     expect(screen.queryByText('Roi')).toBeNull();
     expect(screen.getByText('Vero')).toBeTruthy();
+  });
+});
+
+describe('urutan Performance Terbaik', () => {
+  it('skor, kehadiran, dan TPM sama: kuis menentukan', () => {
+    const a = { ...row('Zalfa', 'Semarang', 'full'), perfScore: 99, tasks: 98, perfQuiz: 97 };
+    const b = { ...row('Selvi', 'Semarang', 'full'), perfScore: 99, tasks: 98, perfQuiz: 98 };
+    expect([a, b].sort(byPerformance).map((r) => r.studentName)).toEqual(['Selvi', 'Zalfa']);
   });
 });
