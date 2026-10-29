@@ -98,8 +98,9 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  * 12: the capstone is read from the graded capstone task, not only the import.
  * 13: the ranking carries each participant's internship placement and
  *     breaks SPA ties by capstone, then attendance.
+ * 14: the ranking carries every component score for the placement table.
  */
-export const SNAPSHOT_VERSION = 13;
+export const SNAPSHOT_VERSION = 14;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -692,7 +693,12 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         city: classCities.get(cid) ?? '',
         score: nilai.score,
         capstone: komponen('capstone'),
+        tasks: komponen('tasks'),
         attendance: komponen('attendance'),
+        quiz: komponen('quiz'),
+        // Asal tiap angka, mis. "11 dari 12 pertemuan", agar penempatannya dapat diperiksa
+        // Where each number comes from, e.g. "11 dari 12 pertemuan", so the placement can be checked
+        componentDetails: Object.fromEntries(nilai.breakdown.map((b) => [b.component, b.detail])),
         unexcused,
         placement,
         placementReasons: reasons,

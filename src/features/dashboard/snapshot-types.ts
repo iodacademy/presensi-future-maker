@@ -1,3 +1,4 @@
+import type { GradeComponent } from '../grading/types';
 import type { Placement } from '../grading/placement';
 import type { FeedbackForm } from './feedback';
 import type { AttendanceStatus } from '../attendance/types';
@@ -153,7 +154,11 @@ export interface RankedStudent {
   score: number;
   /** Nilai komponen capstone dan kehadiran, penentu urutan bila SPA sama / Capstone and attendance component scores, the tie-breakers when SPA is equal */
   capstone: number;
+  tasks: number;
   attendance: number;
+  quiz: number;
+  /** Keterangan asal tiap nilai komponen / Where each component score comes from */
+  componentDetails: Partial<Record<GradeComponent, string>>;
   /** Pertemuan yang lewat tanpa hadir, izin, atau sakit / Past meetings with no attendance, leave or sick record */
   unexcused: number;
   placement: Placement;

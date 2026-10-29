@@ -548,10 +548,10 @@
 
 /* --- skema magang --------------------------------------------------------- */
 /* Warna kelompok: hijau Full Internship, biru Project Based, merah tidak
-   ditempatkan; dipasang lewat --pl agar kartu, kepala kolom, dan garisnya
-   selalu seragam.
-   Group colours: green Full Internship, blue Project Based, red not placed;
-   set through --pl so the card, column head and rule always match. */
+   ditempatkan, abu-abu menunggu capstone; dipasang lewat --pl agar kartu dan
+   lencananya selalu seragam.
+   Group colours: green Full Internship, blue Project Based, red not placed,
+   grey awaiting the capstone; set through --pl so cards and badges match. */
 .plFull { --pl: var(--color-success); --pl-bg: var(--color-success-light); --pl-ink: #4d6d05; }
 .plProject { --pl: var(--color-primary); --pl-bg: var(--color-primary-light); --pl-ink: var(--color-primary-hover); }
 .plNone { --pl: var(--color-danger); --pl-bg: var(--color-danger-light); --pl-ink: var(--color-danger); }
@@ -561,6 +561,46 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+}
+
+.plTabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.plTab {
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 10px 16px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.plTab small {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.plTab:hover {
+  color: var(--color-text-main);
+}
+
+.plTab[aria-selected='true'] {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
 }
 
 .plSum {
@@ -570,13 +610,27 @@
 }
 
 .plStat {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 2px;
   padding: 14px 16px;
+  border: 1px solid transparent;
+  border-left: 4px solid var(--pl);
   border-radius: 10px;
   background: var(--pl-bg);
-  border-left: 4px solid var(--pl);
+  transition: box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.plStat:hover {
+  border-color: var(--pl);
+}
+
+.plStat[aria-pressed='true'] {
+  border-color: var(--pl);
+  box-shadow: 0 0 0 2px var(--pl);
 }
 
 .plStat b {
@@ -596,66 +650,6 @@
   color: var(--color-text-muted);
 }
 
-.plCols {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  align-items: start;
-}
-
-.plCol {
-  border: 1px solid var(--color-border);
-  border-top: 3px solid var(--pl);
-  border-radius: 8px;
-  padding: 4px 12px 8px;
-  min-width: 0;
-}
-
-.plHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--pl-ink);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.plHead b {
-  min-width: 24px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--pl-bg);
-  text-align: center;
-}
-
-.plRow {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) 36px;
-  gap: 8px;
-  align-items: center;
-  padding: 7px 0;
-  font-size: 13px;
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text-main);
-}
-
-.plRow:last-child {
-  border-bottom: 0;
-}
-
-.plName {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.plName small {
-  font-size: 11px;
-  color: var(--color-text-muted);
-}
-
 .plWait {
   padding: 12px 14px;
   border-radius: 8px;
@@ -666,17 +660,34 @@
   color: var(--color-text-main);
 }
 
-.plEmpty {
-  padding: 10px 0;
-  font-size: 12px;
+.plTableWrap {
+  overflow-x: auto;
+}
+
+.plTableWrap th small {
+  font-weight: 400;
   color: var(--color-text-faint);
 }
 
-@media (max-width: 900px) {
-  .plSum,
-  .plCols {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.plSub {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.plSpa {
+  font-size: 15px;
+}
+
+.plBadge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--pl-bg);
+  color: var(--pl-ink);
 }
 
 /* --- peringkat ------------------------------------------------------------ */
