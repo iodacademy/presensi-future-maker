@@ -18,14 +18,14 @@ const IDLE_MS = 3000;
 // Satuan vmax/vmin: ukuran sama di layar mendatar maupun berdiri / vmax/vmin units: the same size on landscape and portrait screens
 
 const STYLE = `
-.cap{position:fixed;inset:0;overflow:hidden;background:#1b2f3b;color:#fff;font-family:var(--font-body)}
+.cap{position:fixed;inset:0;overflow:hidden;background:#0072CE;color:#fff;font-family:var(--font-body)}
 .cap.idle{cursor:none}
-.cap-glow{position:absolute;inset:-20%;transition:background 1.2s ease;pointer-events:none}
+.cap-glow{position:absolute;inset:-20%;background:radial-gradient(60% 55% at 22% 45%,rgba(255,255,255,.14) 0%,transparent 70%);pointer-events:none}
 .cap-frame{position:absolute;inset:0;display:grid;grid-template-rows:auto 1fr auto;gap:3.2vh;padding:4.2vh 4vw}
 .cap-top{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:2vw}
 .cap-brand{display:flex;align-items:center;gap:1.4vw}
-.cap-logo{background:#fff;border-radius:999px;padding:.9vh 1.4vw;display:flex}
-.cap-logo img{height:4.2vmin;width:auto;display:block}
+.cap-logo{display:flex}
+.cap-logo img{height:6vmin;width:auto;display:block}
 .cap-name{display:flex;flex-direction:column;gap:.3vh}
 .cap-name b{font-family:var(--font-headline);font-weight:700;font-size:clamp(18px,1.9vmax,40px);letter-spacing:-.02em;line-height:1}
 .cap-name span{font-size:clamp(11px,.95vmax,20px);opacity:.7}
@@ -34,14 +34,14 @@ const STYLE = `
 .cap-slide{position:absolute;inset:0;display:grid;grid-template-columns:1.55fr 1fr;gap:4vw;align-items:center}
 .cap-slide.in{animation:capIn 700ms ease 350ms both}
 .cap-slide.out{animation:capOut 350ms ease both;pointer-events:none}
-.cap-shot{position:relative;border-radius:1.1vw;overflow:hidden;background:#0f1d26;box-shadow:0 3vh 8vh rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.08)}
-.cap-bar{height:3.6vh;display:flex;align-items:center;gap:.5vw;padding:0 1vw;background:#0f1d26}
+.cap-shot{position:relative;border-radius:1.1vw;overflow:hidden;background:#00427A;box-shadow:0 3vh 8vh rgba(0,30,70,.4);border:1px solid rgba(255,255,255,.08)}
+.cap-bar{height:3.6vh;display:flex;align-items:center;gap:.5vw;padding:0 1vw;background:#00427A}
 .cap-bar i{width:.75vh;height:.75vh;min-width:6px;min-height:6px;border-radius:50%;background:rgba(255,255,255,.25)}
 .cap-img{position:relative;aspect-ratio:16/10;overflow:hidden}
 .cap-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;transform-origin:50% 0}
 .cap-slide.in .cap-img img{animation:capZoom ${SLIDE_MS + 1000}ms linear both}
 .cap-info{display:flex;flex-direction:column;gap:3.2vh;min-width:0}
-.cap-chip{align-self:flex-start;padding:.8vh 1vw;border-radius:999px;font-weight:700;font-size:clamp(11px,.95vmax,20px);letter-spacing:.02em}
+.cap-chip{align-self:flex-start;background:#fff;color:#0072CE;padding:.8vh 1vw;border-radius:999px;font-weight:700;font-size:clamp(11px,.95vmax,20px);letter-spacing:.02em}
 .cap-coh{font-size:clamp(12px,1.05vmax,22px);opacity:.75;margin-top:-1.8vh}
 .cap-title{margin:0;font-family:var(--font-headline);font-weight:700;font-size:clamp(28px,3.4vmax,72px);line-height:1.04;letter-spacing:-.03em;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-wrap:balance}
 .cap-who{display:flex;align-items:center;gap:1.2vw}
@@ -165,13 +165,13 @@ export function CapstoneShow({ slides }: { slides: CapstoneSlide[] }) {
   return (
     <div className={`cap${idle ? ' idle' : ''}${paused ? ' paused' : ''}`}>
       <style>{STYLE}</style>
-      {s && <div className="cap-glow" style={{ background: `radial-gradient(60% 55% at 22% 45%, ${s.color}55 0%, transparent 70%)` }} />}
+      <div className="cap-glow" />
       <div className="cap-frame">
         <div className="cap-top">
           <div className="cap-brand">
             {/* Halaman ini tanpa menu, jadi logo menjadi jalan kembali ke beranda / This page has no menu, so the logo is the way back home */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <Link href="/" className="cap-logo"><img src="/pameran/logo-plan-indonesia.png" alt="Plan International Indonesia · Beranda" /></Link>
+            <Link href="/" className="cap-logo"><img src="/pameran/logo-plan-indonesia-putih.png" alt="Plan International Indonesia · Beranda" /></Link>
             <div className="cap-name"><b>Karya Capstone</b><span>Bootcamp Future Innovators 2026</span></div>
           </div>
           {n > 0 && <div className="cap-count" aria-live="polite">{String(cur + 1).padStart(2, '0')} / {String(n).padStart(2, '0')}</div>}
@@ -213,7 +213,7 @@ function Slide({ s, enter }: { s: CapstoneSlide; enter?: boolean }) {
         </div>
       </div>
       <div className="cap-info">
-        <span className="cap-chip" style={{ background: s.color, color: s.fg }}>Capstone Project</span>
+        <span className="cap-chip">Capstone Project</span>
         <span className="cap-coh">{s.cohortLabel}</span>
         <h1 className="cap-title">{s.title}</h1>
         <div className="cap-who">
