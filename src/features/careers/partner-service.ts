@@ -41,6 +41,7 @@ export async function partnerDashboard(actor: PartnerActor, now: Date) {
     .sort((a, b) => b.closesAt.localeCompare(a.closesAt));
   return {
     partnerName: String(partner.get('name') ?? ''),
+    picName: actor.name,
     stats: { newCount: count('baru'), shortlist: count('shortlist'), interviews: count('interview'), activeJobs: jobs.filter((j) => j.state === 'aktif').length },
     jobs,
   };

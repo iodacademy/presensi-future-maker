@@ -7,6 +7,7 @@ import { CountdownBanner } from '@/features/careers/countdown-banner';
 import { JobCard } from '@/features/careers/job-card';
 import { CATEGORY_LABELS, type Category } from '@/features/careers/model';
 import type { MyApplication, StudentJobCard } from '@/features/careers/student-service';
+import { InterviewCard } from './interview-card';
 import { BLUE, btnOutline, card, errorBox, formatDate, getJson, heading, LINE, MUTED, pageWrap, pill, STATUS_PILL } from './ui';
 
 type Lowongan = { access: boolean; jobs: StudentJobCard[]; appliedJobIds: string[]; bannerClosesAt: string | null };
@@ -108,6 +109,7 @@ export default function KarierPage() {
                       <span style={pill(bg, fg)}>{a.statusLabel}</span>
                     </div>
                     {a.message && <p style={{ margin: 0, fontSize: '13px', color: MUTED }}>{a.message}</p>}
+                    {a.interview && <InterviewCard appId={a.id} partnerName={a.partnerName} interview={a.interview} />}
                   </div>
                 );
               })}
