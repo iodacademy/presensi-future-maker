@@ -1,0 +1,64 @@
+/**
+ * Bank CV dan surat lamaran siswa. Berkas privat di bucket default dan hanya
+ * dibuka lewat server; tidak pernah ditimpa atau dihapus, karena lamaran yang
+ * sudah terkirim harus tetap menunjuk berkas yang sama.
+ *
+ * Students' CV and cover-letter bank. Files are private in the default bucket
+ * and only opened through the server; never overwritten or deleted, because a
+ * submitted application must keep pointing at the same file.
+ */
+import { getAdminDb, getAdminStorage } from '../../lib/firebase/admin';
+import type { Actor } from '../auth/types';
+import type { CvFile, CvKind } from './model';
+
+export const MAX_PDF_BYTES = 2 * 1024 * 1024;
+const MAX_ACTIVE = 5;
+const KIND_NAME: Record<CvKind, string> = { cv: 'CV', surat: 'surat lamaran' };
+
+const cvs = () => getAdminDb().collection('studentCvs');
+const cleanName = (n: string) => n.replace(/[\\/\r\n"]/g, '_').trim().slice(0, 120) || 'berkas.pdf';
+
+export async function listCvs(uid: string, kind?: CvKind): Promise<CvFile[]> {
+  const snap = await cvs().where('ownerUid', '==', uid).get();
+  return snap.docs
+    .map((d) => ({ ...(d.data() as CvFile), id: d.id }))
+    .filter((c) => !c.deleted && (!kind || c.kind === kind))
+    .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+}
+
+export async function uploadCv(uid: string, kind: CvKind, file: { name: string; type: string; size: number; bytes: Buffer }): Promise<CvFile> {
+  if (kind !== 'cv' && kind !== 'surat') throw new Error('Jenis berkas tidak dikenal');
+  if (file.size > MAX_PDF_BYTES || file.bytes.length > MAX_PDF_BYTES) throw new Error('Ukuran PDF maksimal 2 MB');
+  // Isi diperiksa, bukan hanya nama dan jenis kiriman peramban yang dapat dipalsukan
+  // The content is checked, not only the browser-sent name and type, which can be forged
+  if (!/\.pdf$/i.test(file.name) || file.bytes.subarray(0, 5).toString('latin1') !== '%PDF-') throw new Error('Berkas harus PDF');
+  if ((await listCvs(uid, kind)).length >= MAX_ACTIVE) {
+    throw new Error(`Maksimal ${MAX_ACTIVE} ${KIND_NAME[kind]} tersimpan. Hapus salah satu dulu.`);
+  }
+  const ref = cvs().doc();
+  const storagePath = `cv/${uid}/${ref.id}.pdf`;
+  await getAdminStorage().bucket().file(storagePath).save(file.bytes, { contentType: 'application/pdf' });
+  const cv: CvFile = { id: ref.id, ownerUid: uid, kind, fileName: cleanName(file.name), size: file.bytes.length, storagePath, uploadedAt: new Date().toISOString(), deleted: false };
+  const { id: _id, ...doc } = cv;
+  await ref.set(doc);
+  return cv;
+}
+
+export async function deleteCv(uid: string, id: string): Promise<void> {
+  const snap = await cvs().doc(id).get();
+  if (!snap.exists || (snap.data() as CvFile).ownerUid !== uid) throw new Error('CV tidak ditemukan');
+  await cvs().doc(id).update({ deleted: true });
+}
+
+/**
+ * Pemilik dan admin boleh membuka. PIC mitra menyusul di Tahap 3.
+ *
+ * The owner and admins may open it. Partner PICs follow in stage 3.
+ */
+export async function readCvFile(actor: Actor, id: string): Promise<{ buffer: Buffer; fileName: string }> {
+  const snap = await cvs().doc(id).get();
+  const cv = snap.exists ? (snap.data() as CvFile) : null;
+  if (!cv || (actor.role !== 'admin' && cv.ownerUid !== actor.uid)) throw new Error('Tidak boleh membuka berkas ini');
+  const [buffer] = await getAdminStorage().bucket().file(cv.storagePath).download();
+  return { buffer, fileName: cv.fileName };
+}

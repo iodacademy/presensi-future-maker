@@ -1,0 +1,61 @@
+// @vitest-environment node
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { data, fakeDb, fakeStorage, objects, reset } from './careers-fake-db';
+
+const getSessionActor = vi.fn();
+vi.mock('../../src/features/auth/session', () => ({ getSessionActor: () => getSessionActor() }));
+vi.mock('../../src/lib/firebase/admin', () => ({ getAdminDb: () => fakeDb, getAdminStorage: () => fakeStorage }));
+
+import { deleteCv, listCvs, readCvFile, uploadCv } from '../../src/features/careers/cv-service';
+import { GET as fileGet } from '../../src/app/api/karier/cv/[id]/route';
+
+const pdf = (size = 100) => Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(Math.max(0, size - 9), 'a')]);
+const file = (bytes: Buffer, name = 'CV Andi.pdf', type = 'application/pdf') => ({ name, type, size: bytes.length, bytes });
+
+beforeEach(() => { reset({ studentCvs: {} }); getSessionActor.mockResolvedValue({ uid: 'u1', role: 'student' }); });
+
+describe('bank CV', () => {
+  it('menolak berkas yang bukan PDF walau bernama .pdf', async () => {
+    await expect(uploadCv('u1', 'cv', file(Buffer.from('hello')))).rejects.toThrow('Berkas harus PDF');
+  });
+
+  it('menolak PDF lebih dari 2 MB', async () => {
+    await expect(uploadCv('u1', 'cv', file(pdf(2 * 1024 * 1024 + 1)))).rejects.toThrow('Ukuran PDF maksimal 2 MB');
+  });
+
+  it('menyimpan berkas privat di cv/<uid>/<id>.pdf', async () => {
+    const cv = await uploadCv('u1', 'cv', file(pdf()));
+    expect(cv.storagePath).toBe(`cv/u1/${cv.id}.pdf`);
+    expect(objects[cv.storagePath]).toBeTruthy();
+    expect(data.studentCvs[cv.id]).toMatchObject({ ownerUid: 'u1', kind: 'cv', fileName: 'CV Andi.pdf', deleted: false });
+  });
+
+  it('maksimal lima CV aktif, surat dihitung terpisah', async () => {
+    for (let i = 0; i < 5; i++) await uploadCv('u1', 'cv', file(pdf()));
+    await expect(uploadCv('u1', 'cv', file(pdf()))).rejects.toThrow('Maksimal 5 CV tersimpan. Hapus salah satu dulu.');
+    await expect(uploadCv('u1', 'surat', file(pdf()))).resolves.toBeTruthy();
+  });
+
+  it('hapus hanya menandai, berkas tetap ada untuk lamaran lama', async () => {
+    const cv = await uploadCv('u1', 'cv', file(pdf()));
+    await expect(deleteCv('u2', cv.id)).rejects.toThrow('CV tidak ditemukan');
+    await deleteCv('u1', cv.id);
+    expect(data.studentCvs[cv.id].deleted).toBe(true);
+    expect(objects[cv.storagePath]).toBeTruthy();
+    expect(await listCvs('u1')).toEqual([]);
+  });
+
+  it('hanya pemilik dan admin yang bisa membuka berkas', async () => {
+    const cv = await uploadCv('u1', 'cv', file(pdf()));
+    await expect(readCvFile({ uid: 'u2', role: 'student' } as never, cv.id)).rejects.toThrow('Tidak boleh membuka berkas ini');
+    await expect(readCvFile({ uid: 'a', role: 'admin' } as never, cv.id)).resolves.toMatchObject({ fileName: 'CV Andi.pdf' });
+    await expect(readCvFile({ uid: 'u1', role: 'student' } as never, cv.id)).resolves.toBeTruthy();
+  });
+
+  it('rute berkas menolak siswa lain dengan 403', async () => {
+    const cv = await uploadCv('u1', 'cv', file(pdf()));
+    getSessionActor.mockResolvedValue({ uid: 'u2', role: 'student' });
+    const res = await fileGet(new Request('http://x'), { params: Promise.resolve({ id: cv.id }) });
+    expect(res.status).toBe(403);
+  });
+});
