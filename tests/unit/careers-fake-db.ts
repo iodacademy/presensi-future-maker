@@ -50,7 +50,8 @@ interface Q {
 
 function query(col: string, filters: [string, unknown][] = [], order?: 'desc', lim?: number): Q {
   const rows = () => {
-    let r = Object.entries(data[col] ?? {}).filter(([, d]) => filters.every(([f, v]) => pick(d, f) === v));
+    // Medan bukan teks dianggap FieldPath.documentId() / A non-string field is treated as FieldPath.documentId()
+    let r = Object.entries(data[col] ?? {}).filter(([id, d]) => filters.every(([f, v]) => (typeof f === 'string' ? pick(d, f) : id) === v));
     if (order) r = r.sort(([a], [b]) => (a < b ? 1 : -1));
     return lim ? r.slice(0, lim) : r;
   };
@@ -59,8 +60,12 @@ function query(col: string, filters: [string, unknown][] = [], order?: 'desc', l
     return { docs, size: docs.length, empty: docs.length === 0 };
   };
   return {
-    where: (f: string, _op: string, v: unknown) => query(col, [...filters, [f, v]], order, lim),
-    orderBy: (_f: unknown, dir?: 'desc') => query(col, filters, dir, lim),
+    where: (f: string, _op: string, v: unknown) => query(col, [...filters, [f as string, v]], order, lim),
+    orderBy: (f: unknown, dir?: 'desc') => {
+      // Firestore menolak urutan id menurun tanpa indeks khusus / Firestore refuses a descending id order without a dedicated index
+      if (typeof f !== 'string' && dir === 'desc') throw new Error('9 FAILED_PRECONDITION: The query requires an index.');
+      return query(col, filters, dir, lim);
+    },
     limit: (n: number) => query(col, filters, order, n),
     select: (...fields: string[]) => { (selects[col] ??= []).push(fields); return query(col, filters, order, lim); },
     count: () => ({ get: async () => ({ data: () => ({ count: rows().length }) }) }),
@@ -85,6 +90,7 @@ export const fakeDb = {
   },
   collection: (col: string) => ({
     ...query(col),
+    listDocuments: async () => Object.keys(data[col] ?? {}).map((id) => ref(col, id)),
     doc: (id?: string) => ref(col, id ?? `${col}-${++counters.ids}`),
     add: async (d: Doc) => { data[col] ??= {}; const id = `${col}-${++counters.ids}`; data[col][id] = d; return { id }; },
   }),

@@ -36,7 +36,14 @@ const CARD_FIELDS = ['title', 'partnerId', 'partnerName', 'employment', 'categor
  * an admin opens the dashboard, so its date is kept to show how old it is.
  */
 export async function latestFinalScore(uid: string): Promise<FinalScore> {
-  const snap = await db().collection('dashboardSnapshots').orderBy(FieldPath.documentId(), 'desc').limit(1).select('ranking').get();
+  // Id ringkasan adalah tanggal WIB. Urutan id menurun butuh indeks khusus, jadi id terbesar dicari dari
+  // daftar referensi (tanpa isi dokumen), lalu hanya kolom ranking dokumen itu yang dibaca.
+  // Snapshot ids are WIB dates. A descending id order needs a dedicated index, so the largest id comes from
+  // the reference list (no document bodies), then only that document's ranking field is read.
+  const refs = await db().collection('dashboardSnapshots').listDocuments();
+  const latest = refs.map((r) => r.id).sort().pop();
+  if (!latest) return { finalScore: null, finalScorePending: false, finalScoreAt: null };
+  const snap = await db().collection('dashboardSnapshots').where(FieldPath.documentId(), '==', latest).select('ranking').get();
   const doc = snap.docs[0];
   if (!doc) return { finalScore: null, finalScorePending: false, finalScoreAt: null };
   const row = ((doc.get('ranking') ?? []) as { studentId: string; score: number; pending?: string[] }[]).find((r) => r.studentId === uid);
