@@ -13,7 +13,7 @@ vi.mock('../../src/lib/firebase/admin', () => ({
 const session = vi.hoisted(() => ({ actor: { uid: 'a', role: 'admin' } as any }));
 vi.mock('@/features/auth/session', () => ({ getSessionActor: async () => session.actor }));
 
-import { storeImage, storeHtml, storePdf, publicUrl } from '../../src/features/exhibition/media';
+import { storeImage, storeHtml, storePdf, publicUrl, isValidFolder } from '../../src/features/exhibition/media';
 import { POST } from '../../src/app/api/pameran/upload/route';
 
 const widthOf = async (b: Buffer) => (await sharp(b).metadata()).width;
@@ -92,5 +92,12 @@ describe('rute unggah', () => {
     const res = await POST(req({ kind: 'pdf', folder: 'karya/w-1_x' }, new File(['%PDF'], 'a.pdf', { type: 'application/pdf' })));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ url: expect.stringContaining('pameran%2Fkarya%2Fw-1_x%2F') });
+  });
+});
+
+describe('folder logo mitra', () => {
+  it('menerima mitra/<id> dan menolak jalan keluar lewat ..', () => {
+    expect(isValidFolder('mitra/abc')).toBe(true);
+    expect(isValidFolder('mitra/../x')).toBe(false);
   });
 });

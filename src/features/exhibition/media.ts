@@ -17,14 +17,14 @@ export function publicUrl(objectPath: string): string {
 }
 
 /**
- * Folder hanya boleh karya/<id>, peserta/<id>, atau situs; selain itu bisa
+ * Folder hanya boleh karya/<id>, peserta/<id>, mitra/<id>, atau situs; selain itu bisa
  * menyusup keluar dari pameran/ lewat "..".
  *
- * Folder may only be karya/<id>, peserta/<id>, or situs; anything else could
+ * Folder may only be karya/<id>, peserta/<id>, mitra/<id>, or situs; anything else could
  * escape pameran/ via "..".
  */
 export function isValidFolder(folder: string): boolean {
-  return folder === 'situs' || /^(karya|peserta)\/[A-Za-z0-9_-]{1,64}$/.test(folder);
+  return folder === 'situs' || /^(karya|peserta|mitra)\/[A-Za-z0-9_-]{1,64}$/.test(folder);
 }
 
 // Nama memuat sidik isi, jadi berkas yang diganti mendapat alamat baru / The name carries a content hash, so a replaced file gets a new address
