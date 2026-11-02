@@ -45,6 +45,8 @@ interface StudentShellProps {
 interface StudentContextValue {
   name: string;
   reminders: StudentReminders;
+  /** Menu Karier hanya untuk skema Full Internship dan Project Based / The Karier menu is only for the Full Internship and Project Based schemes */
+  careerAccess?: boolean;
 }
 
 const StudentContext = createContext<StudentContextValue | null>(null);
@@ -85,6 +87,7 @@ export function StudentShell({ userName, children }: StudentShellProps) {
   const pathname = usePathname();
   const context = useContext(StudentContext);
   const reminderCount = (context?.reminders.surveys.length ?? 0) + (context?.reminders.exams.length ?? 0);
+  const navItems = NAV_ITEMS.filter((item) => item.href !== '/app/karier' || context?.careerAccess);
 
   function isActive(href: string) {
     return href === '/app' ? pathname === '/app' : pathname.startsWith(href);
@@ -117,7 +120,7 @@ export function StudentShell({ userName, children }: StudentShellProps) {
         </div>
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px', padding: '8px 12px', flex: 1 }}>
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const active = isActive(item.href);
             const Icon = item.icon;
             return (
@@ -196,7 +199,7 @@ export function StudentShell({ userName, children }: StudentShellProps) {
           padding: '10px 8px 26px 8px', justifyContent: 'space-around', zIndex: 40,
         }}
       >
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const active = isActive(item.href);
           const Icon = item.icon;
           return (

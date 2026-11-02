@@ -65,7 +65,7 @@ const partner = {
   pics: [{ name: 'Rina Kusuma', phone: '0812', email: 'rina@dipsi.co.id' }],
 };
 const job = {
-  partnerId: 'p1', title: 'UI/UX Designer Intern', employment: 'magang-3', category: 'desain',
+  partnerId: 'p1', title: 'UI/UX Designer Intern', employment: 'magang-3', category: 'desain', scheme: 'project',
   location: 'Jakarta Selatan', workMode: 'hybrid', quota: 2, description: 'Panjang', qualifications: 'Figma',
   eligibility: { mode: 'all' }, opensAt: '2026-11-03T01:00:00.000Z', closesAt: '2026-11-12T16:59:00.000Z',
   documents: { portfolio: 'required', works: 'optional', coverLetter: 'off' }, questions: [], status: 'published',

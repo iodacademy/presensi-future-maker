@@ -8,6 +8,9 @@ export type DocRule = 'required' | 'optional' | 'off';
 export type QuestionKind = 'long' | 'yes-no' | 'choice';
 export type JobStatus = 'draft' | 'published';
 export type JobState = 'draft' | 'terjadwal' | 'aktif' | 'ditutup';
+/** Skema magang lowongan, mengikuti penempatan siswa di dashboard / The job's internship scheme, matching the student's dashboard placement */
+export type Scheme = 'full' | 'project';
+export const SCHEME_LABELS: Record<Scheme, string> = { full: 'Full Internship', project: 'Project Based' };
 
 export const EMPLOYMENT_LABELS: Record<Employment, string> = {
   'magang-3': 'Magang 3 bulan', 'magang-6': 'Magang 6 bulan', kontrak: 'Kontrak', 'full-time': 'Full-time',
@@ -32,7 +35,7 @@ export type Partner = PartnerInput & { id: string; nameKey: string; active: bool
 
 export interface JobDocuments { portfolio: DocRule; works: DocRule; coverLetter: DocRule }
 export interface JobInput {
-  partnerId: string; title: string; employment: Employment; category: Category; location: string; workMode: WorkMode;
+  partnerId: string; title: string; employment: Employment; category: Category; scheme: Scheme; location: string; workMode: WorkMode;
   quota: number; description: string; qualifications: string[]; eligibility: Eligibility;
   opensAt: string; closesAt: string; documents: JobDocuments; questions: JobQuestion[]; status: JobStatus;
 }
@@ -157,6 +160,7 @@ export function validateJobInput(raw: unknown): JobInput {
     partnerId, title, location, quota, opensAt, closesAt,
     employment: oneOf<Employment>(r.employment, EMPLOYMENT_LABELS, 'Jenis lowongan tidak dikenal'),
     category: oneOf<Category>(r.category, CATEGORY_LABELS, 'Bidang lowongan tidak dikenal'),
+    scheme: oneOf<Scheme>(r.scheme, SCHEME_LABELS, 'Skema lowongan tidak dikenal'),
     workMode: oneOf<WorkMode>(r.workMode, WORK_MODE_LABELS, 'Mode kerja tidak dikenal'),
     description: str(r.description),
     qualifications: lines(r.qualifications),
@@ -229,6 +233,17 @@ export interface Application {
 export function isOpenToStudents(job: Pick<Job, 'status' | 'opensAt' | 'closesAt'>, now: Date): boolean {
   return jobState(job, now) === 'aktif';
 }
+
+/**
+ * Penempatan dari dashboard: Full Internship boleh melamar kedua skema (cadangan bila tidak lolos seleksi
+ * mitra), Project Based hanya Project Based. Tidak ditempatkan dan menunggu capstone tidak punya akses.
+ *
+ * Placement from the dashboard: Full Internship may apply to both schemes (a fallback if partner selection
+ * fails), Project Based only to Project Based. Not placed and awaiting capstone have no access.
+ */
+export const hasCareerAccess = (placement: string | null): boolean => placement === 'full' || placement === 'project';
+export const canApplyScheme = (placement: string | null, scheme: Scheme): boolean =>
+  placement === 'full' || (placement === 'project' && scheme === 'project');
 
 export function isEligible(e: Eligibility, s: { classId: string | null; finalScore: number | null }): boolean {
   if (e.mode === 'classes') return !!s.classId && e.classIds.includes(s.classId);

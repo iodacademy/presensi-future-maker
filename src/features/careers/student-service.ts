@@ -5,18 +5,19 @@
  * Job Portal reads for students: the jobs they may see, partner profiles, the
  * application form context, and their own applications.
  */
+import { unstable_cache } from 'next/cache';
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
 import { safeExternalUrl } from '../exhibition/model';
 import { isStoredSubmissionFile } from '../tasks/submission-policy';
 import { listCvs } from './cv-service';
 import {
-  isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
+  canApplyScheme, hasCareerAccess, isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
   type ApplicationStatus, type AttachedTask, type AttachedWork, type CvFile, type Eligibility, type Job, type Logo, type Personal, type Socials,
 } from './model';
 
 export interface StudentJobCard {
-  id: string; title: string; partnerId: string; partnerName: string; employment: Job['employment']; category: Job['category'];
+  id: string; title: string; partnerId: string; partnerName: string; employment: Job['employment']; category: Job['category']; scheme: Job['scheme'];
   location: string; workMode: Job['workMode']; quota: number; opensAt: string; closesAt: string; applicantCount: number; logo: string | null;
 }
 export interface PublicPartner { id: string; name: string; field: string; about: string; logo: Logo | null; website: string; socials: Socials }
@@ -27,26 +28,45 @@ export interface MyApplication {
 export interface FinalScore { finalScore: number | null; finalScorePending: boolean; finalScoreAt: string | null }
 
 const db = () => getAdminDb();
-const CARD_FIELDS = ['title', 'partnerId', 'partnerName', 'employment', 'category', 'location', 'workMode', 'quota', 'opensAt', 'closesAt', 'status', 'applicantCount', 'eligibility'];
+const CARD_FIELDS = ['title', 'partnerId', 'partnerName', 'employment', 'category', 'scheme', 'location', 'workMode', 'quota', 'opensAt', 'closesAt', 'status', 'applicantCount', 'eligibility'];
+
+type Standing = { score: number; pending: boolean; placement: string | null };
 
 /**
- * Nilai akhir dari ringkasan dashboard terbaru. Ringkasan dibangun ulang saat
- * admin membuka dashboard, jadi tanggalnya ikut disimpan agar umurnya terlihat.
+ * Nilai dan penempatan dari ringkasan dashboard terbaru, disimpan di cache 5 menit: layout siswa
+ * membacanya di setiap halaman untuk menampilkan atau menyembunyikan menu Karier.
  *
- * The final score from the latest dashboard snapshot. Snapshots are rebuilt when
- * an admin opens the dashboard, so its date is kept to show how old it is.
+ * Score and placement from the latest dashboard snapshot, cached for 5 minutes: the student layout
+ * reads it on every page to show or hide the Karier menu.
  */
-export async function latestFinalScore(uid: string): Promise<FinalScore> {
+const snapshotStandings = unstable_cache(async (): Promise<{ at: string | null; rows: Record<string, Standing> }> => {
   // generatedAt adalah medan biasa, jadi urutan menurunnya memakai indeks bawaan; tidak perlu indeks khusus
   // generatedAt is a plain field, so its descending order uses the built-in index; no dedicated index needed
   const snap = await db().collection('dashboardSnapshots').orderBy('generatedAt', 'desc').limit(1).select('ranking', 'version').get();
   const doc = snap.docs[0];
-  if (!doc) return { finalScore: null, finalScorePending: false, finalScoreAt: null };
-  const row = ((doc.get('ranking') ?? []) as { studentId: string; score: number; pending?: string[] }[]).find((r) => r.studentId === uid);
+  if (!doc) return { at: null, rows: {} };
   // Ringkasan sebelum versi 17 tidak mencatat komponen tertunda, jadi nilainya belum bisa disebut final
   // Snapshots before version 17 do not record pending components, so their score cannot be called final
   const unknown = Number(doc.get('version') ?? 1) < 17;
-  return { finalScore: row?.score ?? null, finalScorePending: !!row && (unknown || (row.pending?.length ?? 0) > 0), finalScoreAt: doc.id };
+  const rows: Record<string, Standing> = {};
+  for (const r of (doc.get('ranking') ?? []) as { studentId: string; score: number; pending?: string[]; placement?: string }[]) {
+    rows[r.studentId] = { score: r.score, pending: unknown || (r.pending?.length ?? 0) > 0, placement: r.placement ?? null };
+  }
+  return { at: doc.id, rows };
+}, ['karier-ringkasan-nilai'], { revalidate: 300 });
+
+export async function latestFinalScore(uid: string): Promise<FinalScore> {
+  const { at, rows } = await snapshotStandings();
+  const row = rows[uid];
+  return { finalScore: row?.score ?? null, finalScorePending: row?.pending ?? false, finalScoreAt: at };
+}
+
+export async function latestPlacement(uid: string): Promise<string | null> {
+  return (await snapshotStandings()).rows[uid]?.placement ?? null;
+}
+
+export async function careerAccess(uid: string): Promise<boolean> {
+  return hasCareerAccess(await latestPlacement(uid));
 }
 
 async function appliedJobIds(uid: string): Promise<Set<string>> {
@@ -54,13 +74,13 @@ async function appliedJobIds(uid: string): Promise<Set<string>> {
   return new Set(snap.docs.map((d) => d.get('jobId') as string));
 }
 
-// Nilai akhir hanya dibaca bila ada lowongan bersyarat nilai / The final score is read only when a job requires one
+// Skema magang dan syarat lowongan diperiksa bersama / The internship scheme and the job's requirements are checked together
 function eligibilityCheck(actor: Actor) {
-  let score: Promise<FinalScore> | null = null;
-  return async (e: Eligibility) => {
-    if (e.mode !== 'min-score') return isEligible(e, { classId: actor.classId, finalScore: null });
-    score ??= latestFinalScore(actor.uid);
-    return isEligible(e, { classId: actor.classId, finalScore: (await score).finalScore });
+  let standing: Promise<[FinalScore, string | null]> | null = null;
+  return async (job: Pick<Job, 'eligibility' | 'scheme'>) => {
+    standing ??= Promise.all([latestFinalScore(actor.uid), latestPlacement(actor.uid)]);
+    const [score, placement] = await standing;
+    return canApplyScheme(placement, job.scheme) && isEligible(job.eligibility, { classId: actor.classId, finalScore: score.finalScore });
   };
 }
 
@@ -73,9 +93,9 @@ async function visibleCards(actor: Actor, now: Date, partnerId?: string): Promis
   const cards: StudentJobCard[] = [];
   for (const j of jSnap.docs) {
     const d = j.data() as Job;
-    if (!isOpenToStudents(d, now) || !(await eligible(d.eligibility))) continue;
+    if (!isOpenToStudents(d, now) || !(await eligible(d))) continue;
     cards.push({
-      id: j.id, title: d.title, partnerId: d.partnerId, partnerName: d.partnerName, employment: d.employment, category: d.category,
+      id: j.id, title: d.title, partnerId: d.partnerId, partnerName: d.partnerName, employment: d.employment, category: d.category, scheme: d.scheme,
       location: d.location, workMode: d.workMode, quota: d.quota, opensAt: d.opensAt, closesAt: d.closesAt,
       applicantCount: d.applicantCount ?? 0, logo: logos.get(d.partnerId) ?? null,
     });
@@ -84,9 +104,10 @@ async function visibleCards(actor: Actor, now: Date, partnerId?: string): Promis
 }
 
 export async function listOpenJobs(actor: Actor, now: Date) {
+  if (!(await careerAccess(actor.uid))) return { access: false, jobs: [] as StudentJobCard[], appliedJobIds: [] as string[], bannerClosesAt: null };
   const [jobs, applied] = await Promise.all([visibleCards(actor, now), appliedJobIds(actor.uid)]);
   const bannerClosesAt = jobs.reduce<string | null>((max, j) => (!max || j.closesAt > max ? j.closesAt : max), null);
-  return { jobs, appliedJobIds: jobs.filter((j) => applied.has(j.id)).map((j) => j.id), bannerClosesAt };
+  return { access: true, jobs, appliedJobIds: jobs.filter((j) => applied.has(j.id)).map((j) => j.id), bannerClosesAt };
 }
 
 function toPublic(id: string, d: Record<string, unknown>): PublicPartner {
@@ -116,7 +137,7 @@ export async function getJobForStudent(actor: Actor, id: string, now: Date) {
   if (!jSnap.exists) return null;
   const job = { ...(jSnap.data() as Job), id };
   const application = aSnap.exists ? { status: aSnap.get('status') as ApplicationStatus, number: aSnap.get('number') as string } : null;
-  if (!application && (job.status !== 'published' || !isOpenToStudents(job, now) || !(await eligibilityCheck(actor)(job.eligibility)))) return null;
+  if (!application && (job.status !== 'published' || !isOpenToStudents(job, now) || !(await eligibilityCheck(actor)(job)))) return null;
   const partner = await publicPartner(job.partnerId);
   return partner ? { job, partner, application } : null;
 }

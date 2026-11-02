@@ -5,8 +5,8 @@ import { alertBox, api, btn, btnSolid, card, field, label, send } from '../pamer
 import type { PartnerRow } from '@/features/careers/admin-service';
 import { JobCard } from '@/features/careers/job-card';
 import {
-  CATEGORY_LABELS, DOC_RULE_LABELS, EMPLOYMENT_LABELS, isoToWib, QUESTION_KIND_LABELS, WORK_MODE_LABELS,
-  type Category, type DocRule, type Employment, type Job, type JobDocuments, type QuestionKind, type WorkMode,
+  CATEGORY_LABELS, DOC_RULE_LABELS, EMPLOYMENT_LABELS, isoToWib, QUESTION_KIND_LABELS, SCHEME_LABELS, WORK_MODE_LABELS,
+  type Category, type DocRule, type Employment, type Job, type JobDocuments, type QuestionKind, type Scheme, type WorkMode,
 } from '@/features/careers/model';
 
 type Q = { id: string; label: string; kind: QuestionKind; optionsText: string; required: boolean };
@@ -33,6 +33,7 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
   const [title, setTitle] = useState('');
   const [employment, setEmployment] = useState<Employment>('magang-3');
   const [category, setCategory] = useState<Category>('teknologi');
+  const [scheme, setScheme] = useState<Scheme>('project');
   const [location, setLocation] = useState('');
   const [workMode, setWorkMode] = useState<WorkMode>('hybrid');
   const [quota, setQuota] = useState(1);
@@ -56,7 +57,7 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
     api('/api/classes').then((d) => setClasses(d.classes)).catch(() => setClasses([]));
     if (!id) return;
     api(`/api/karier/jobs/${id}`).then(({ job: j }: { job: Job }) => {
-      setPartnerId(j.partnerId); setTitle(j.title); setEmployment(j.employment); setCategory(j.category);
+      setPartnerId(j.partnerId); setTitle(j.title); setEmployment(j.employment); setCategory(j.category); setScheme(j.scheme ?? 'project');
       setLocation(j.location); setWorkMode(j.workMode); setQuota(j.quota); setDescription(j.description);
       setQualifications(j.qualifications.join('\n')); setEligMode(j.eligibility.mode);
       if (j.eligibility.mode === 'classes') setClassIds(j.eligibility.classIds);
@@ -75,7 +76,7 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
     setBusy(true); setError(null);
     try {
       const body = {
-        partnerId, title, employment, category, location, workMode, quota, description, qualifications,
+        partnerId, title, employment, category, scheme, location, workMode, quota, description, qualifications,
         eligibility: eligMode === 'classes' ? { mode: 'classes', classIds } : eligMode === 'min-score' ? { mode: 'min-score', minScore } : { mode: 'all' },
         opensAt: opens, closesAt: closes, documents, status,
         questions: questions.map((q) => ({ id: q.id, label: q.label, kind: q.kind, options: q.optionsText, required: q.required })),
@@ -111,6 +112,10 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
         <div style={grid}>
           <label style={label}>Jenis<select value={employment} onChange={(e) => setEmployment(e.target.value as Employment)} style={field}>{options(EMPLOYMENT_LABELS)}</select></label>
           <label style={label}>Bidang<select value={category} onChange={(e) => setCategory(e.target.value as Category)} style={field}>{options(CATEGORY_LABELS)}</select></label>
+          <label style={label}>Skema magang
+            <select value={scheme} onChange={(e) => setScheme(e.target.value as Scheme)} style={field}>{options(SCHEME_LABELS)}</select>
+            <span style={muted}>{scheme === 'full' ? 'Hanya kandidat Full Internship.' : 'Peserta Project Based dan Full Internship.'}</span>
+          </label>
           <label style={label}>Lokasi<input value={location} onChange={(e) => setLocation(e.target.value)} style={field} placeholder="mis. Jakarta Selatan" required /></label>
           <label style={label}>Mode kerja<select value={workMode} onChange={(e) => setWorkMode(e.target.value as WorkMode)} style={field}>{options(WORK_MODE_LABELS)}</select></label>
           <label style={label}>Kuota diterima<input type="number" min={1} value={quota} onChange={(e) => setQuota(Number(e.target.value))} style={field} /></label>
@@ -198,7 +203,7 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
 
       <aside style={{ flex: '0 1 340px', position: 'sticky', top: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '.06em', color: 'var(--color-text-muted)' }}>PRATINJAU DI PORTAL SISWA</div>
-        <JobCard job={{ title, partnerName, employment, location, workMode, quota, closesAt: previewClose }} logo={partnerLogo} now={now} />
+        <JobCard job={{ title, partnerName, employment, scheme, location, workMode, quota, closesAt: previewClose }} logo={partnerLogo} now={now} />
       </aside>
     </div>
   );

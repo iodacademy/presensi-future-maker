@@ -239,11 +239,15 @@ Alurnya:
 10. **Sebelum Tahap 3 jadi,** CV sampai ke perusahaan secara manual. Admin membuka dan mengunduh CV per pelamar dari tampilan pelamar, lalu meneruskannya sendiri. Tidak ada pengiriman otomatis dan tidak ada tautan publik (anti-sasaran 3).
 11. **Satu email PIC untuk satu akun dan satu mitra.** PIC yang juga mentor memakai email lain untuk akun PIC-nya, supaya model satu pengguna satu peran tetap berlaku.
 
-## 12. Pertanyaan Terbuka
+## 11a. Skema Magang (keputusan pemilik produk, 3 November 2026)
 
-1. **Cara PIC masuk (sebelum Tahap 3).** Siswa, mentor, dan admin masuk hanya dengan mengetik email. Untuk PIC perusahaan luar yang membuka CV dan nomor WhatsApp siswa, cara ini berarti siapa pun yang tahu email PIC bisa masuk. Pilihannya:
-   - Sama seperti pengguna lain (email saja).
-   - Password, seperti di contoh ("email undangan untuk membuat password").
-   - Kode sekali pakai yang dikirim ke email PIC setiap kali masuk.
+1. Setiap lowongan punya skema: Full Internship atau Project Based.
+2. Skema siswa diambil dari penempatan di ringkasan dashboard (`ranking[].placement`):
+   - Kandidat Full Internship boleh melamar lowongan Full Internship dan Project Based.
+   - Project Based hanya boleh melamar lowongan Project Based.
+3. Siswa "Tidak Ditempatkan" dan "Menunggu nilai capstone" tidak melihat menu Karier sama sekali, dan API menolak mereka.
 
-   Jawabannya menentukan seberapa besar pekerjaan login di Tahap 3.
+## 12. Keputusan Tahap 3
+
+1. **Cara PIC masuk (diputuskan pemilik produk, 3 November 2026):** email saja, sama seperti pengguna lain. Risiko yang diterima: siapa pun yang tahu email PIC bisa masuk dan melihat CV serta nomor WhatsApp pelamar perusahaan itu.
+2. **Email undangan interview (keputusan builder):** untuk mode "Buat link Meet otomatis", aplikasi memakai aksi `create` Apps Script yang sudah ada. Google Calendar mengirim undangan beserta link Meet ke siswa dan PIC, dan PIC menjadi co-host. Code.gs tidak perlu diubah. Untuk link luar dan interview offline, tidak ada email otomatis; undangan sampai lewat kartu di Lamaran Saya dan tombol WhatsApp. Pengingat otomatis Apps Script memakai kata "Sesi mentoring" untuk semua acara kalender aplikasi, termasuk interview.

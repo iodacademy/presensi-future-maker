@@ -8,12 +8,12 @@
 import { getAdminDb } from '../../lib/firebase/admin';
 import {
   jobState, partnerNameKey, validateJobInput, validatePartnerInput,
-  type Category, type Employment, type Job, type JobStatus, type Partner, type WorkMode,
+  type Category, type Employment, type Job, type JobStatus, type Partner, type Scheme, type WorkMode,
 } from './model';
 
 export interface PartnerRow { id: string; name: string; field: string; logoThumb: string; picNames: string[]; jobCount: number }
 export interface JobRow {
-  id: string; title: string; employment: Employment; category: Category; location: string; workMode: WorkMode; quota: number;
+  id: string; title: string; employment: Employment; category: Category; scheme: Scheme; location: string; workMode: WorkMode; quota: number;
   partnerId: string; partnerName: string; picName: string; opensAt: string; closesAt: string; status: JobStatus; applicantCount: number;
 }
 
@@ -74,7 +74,7 @@ export async function updatePartner(id: string, raw: unknown): Promise<void> {
 }
 
 const JOB_ROW_FIELDS = [
-  'title', 'employment', 'category', 'location', 'workMode', 'quota', 'partnerId', 'partnerName',
+  'title', 'employment', 'category', 'scheme', 'location', 'workMode', 'quota', 'partnerId', 'partnerName',
   'opensAt', 'closesAt', 'status', 'applicantCount',
 ];
 

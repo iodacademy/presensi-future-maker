@@ -4,7 +4,7 @@ import {
 } from '../../src/features/careers/model';
 
 const baseJob = {
-  partnerId: 'p1', title: 'UI/UX Designer Intern', employment: 'magang-3', category: 'desain',
+  partnerId: 'p1', title: 'UI/UX Designer Intern', employment: 'magang-3', category: 'desain', scheme: 'full',
   location: 'Jakarta Selatan', workMode: 'hybrid', quota: 2, description: 'Membantu tim produk.',
   qualifications: 'Menguasai Figma', eligibility: { mode: 'all' },
   opensAt: { date: '2026-11-03', time: '08:00' }, closesAt: { date: '2026-11-12', time: '23:59' },
@@ -77,6 +77,11 @@ describe('model karier', () => {
 
   it('mode kelas tertentu butuh minimal satu kelas', () => {
     expect(() => validateJobInput({ ...baseJob, eligibility: { mode: 'classes', classIds: [] } })).toThrow('Pilih minimal satu kelas');
+  });
+
+  it('skema lowongan wajib Full Internship atau Project Based', () => {
+    expect(() => validateJobInput({ ...baseJob, scheme: undefined })).toThrow('Skema lowongan tidak dikenal');
+    expect(validateJobInput(baseJob).scheme).toBe('full');
   });
 
   it('jenis yang tidak dikenal ditolak', () => {

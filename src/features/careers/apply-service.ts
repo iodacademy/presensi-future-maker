@@ -13,15 +13,15 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
 import { listCvs } from './cv-service';
-import { formatApplicationNumber, isEligible, isOpenToStudents, validateApplicationInput, type Job } from './model';
-import { latestFinalScore, ownTasks, ownWorks } from './student-service';
+import { canApplyScheme, formatApplicationNumber, isEligible, isOpenToStudents, validateApplicationInput, type Job } from './model';
+import { latestFinalScore, latestPlacement, ownTasks, ownWorks } from './student-service';
 
 export async function submitApplication(actor: Actor, raw: unknown, now: Date): Promise<{ id: string; number: string }> {
   const jobId = String((raw as { jobId?: unknown })?.jobId ?? '');
   if (!jobId) throw new Error('Lowongan tidak ditemukan');
   const db = getAdminDb();
-  const [cvs, covers, works, tasks, score] = await Promise.all([
-    listCvs(actor.uid, 'cv'), listCvs(actor.uid, 'surat'), ownWorks(actor.uid), ownTasks(actor.uid), latestFinalScore(actor.uid),
+  const [cvs, covers, works, tasks, score, placement] = await Promise.all([
+    listCvs(actor.uid, 'cv'), listCvs(actor.uid, 'surat'), ownWorks(actor.uid), ownTasks(actor.uid), latestFinalScore(actor.uid), latestPlacement(actor.uid),
   ]);
   const jobRef = db.collection('jobs').doc(jobId);
   const appRef = db.collection('jobApplications').doc(`${jobId}_${actor.uid}`);
@@ -32,7 +32,9 @@ export async function submitApplication(actor: Actor, raw: unknown, now: Date): 
     if (!jobSnap.exists) throw new Error('Lowongan tidak ditemukan');
     const job = jobSnap.data() as Job;
     if (!isOpenToStudents(job, now)) throw new Error('Lowongan sudah ditutup');
-    if (!isEligible(job.eligibility, { classId: actor.classId, finalScore: score.finalScore })) throw new Error('Kamu belum memenuhi syarat lowongan ini');
+    if (!canApplyScheme(placement, job.scheme) || !isEligible(job.eligibility, { classId: actor.classId, finalScore: score.finalScore })) {
+      throw new Error('Kamu belum memenuhi syarat lowongan ini');
+    }
     if (appSnap.exists) throw new Error('Kamu sudah melamar lowongan ini');
 
     const input = validateApplicationInput(raw, job, {

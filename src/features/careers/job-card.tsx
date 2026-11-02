@@ -1,8 +1,8 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
-import { countdownParts, formatCountdown, EMPLOYMENT_LABELS, WORK_MODE_LABELS, type Job } from './model';
+import { countdownParts, formatCountdown, EMPLOYMENT_LABELS, SCHEME_LABELS, WORK_MODE_LABELS, type Job } from './model';
 
-export type JobCardData = Pick<Job, 'title' | 'partnerName' | 'employment' | 'location' | 'workMode' | 'quota' | 'closesAt'>;
+export type JobCardData = Pick<Job, 'title' | 'partnerName' | 'employment' | 'location' | 'workMode' | 'quota' | 'closesAt'> & { scheme?: Job['scheme'] };
 
 const chip: React.CSSProperties = { padding: '3px 8px', borderRadius: '6px', backgroundColor: '#f3f4f6', fontSize: '12px', color: '#243c4b' };
 
@@ -41,6 +41,7 @@ export function JobCard({ job, logo, now, footer }: { job: JobCardData; logo: st
         </div>
       </div>
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {job.scheme && <span style={{ ...chip, backgroundColor: job.scheme === 'full' ? '#FFF7E0' : '#E6F1FB', color: job.scheme === 'full' ? '#946200' : '#0072CE', fontWeight: 600 }}>{SCHEME_LABELS[job.scheme]}</span>}
         <span style={chip}>{EMPLOYMENT_LABELS[job.employment]}</span>
         <span style={chip}>{`${job.location || 'Lokasi'} · ${WORK_MODE_LABELS[job.workMode]}`}</span>
         <span style={chip}>{`Kuota ${job.quota}`}</span>

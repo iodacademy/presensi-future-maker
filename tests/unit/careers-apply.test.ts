@@ -4,6 +4,7 @@ import { data, fakeDb, fakeStorage, reset } from './careers-fake-db';
 
 const getSessionActor = vi.fn();
 vi.mock('../../src/features/auth/session', () => ({ getSessionActor: () => getSessionActor() }));
+vi.mock('next/cache', () => ({ unstable_cache: (fn: () => unknown) => fn }));
 vi.mock('../../src/lib/firebase/admin', () => ({ getAdminDb: () => fakeDb, getAdminStorage: () => fakeStorage }));
 
 import { submitApplication } from '../../src/features/careers/apply-service';
@@ -12,7 +13,7 @@ import { POST as lamarPost } from '../../src/app/api/karier/lamar/route';
 const now = new Date('2026-11-05T00:00:00Z');
 const actor = (uid: string, classId = 'k1') => ({ uid, role: 'student', classId }) as never;
 const job = {
-  partnerId: 'p1', partnerName: 'PT DIPSI', title: 'UI/UX Intern', employment: 'magang-3', category: 'desain', location: 'Jakarta',
+  partnerId: 'p1', partnerName: 'PT DIPSI', title: 'UI/UX Intern', employment: 'magang-3', category: 'desain', scheme: 'project', location: 'Jakarta',
   workMode: 'hybrid', quota: 2, description: '', qualifications: [], eligibility: { mode: 'all' },
   opensAt: '2026-11-03T01:00:00.000Z', closesAt: '2026-11-12T16:59:00.000Z',
   documents: { portfolio: 'optional', works: 'optional', coverLetter: 'off' },
@@ -23,7 +24,7 @@ const body = (over: Record<string, unknown> = {}) => ({ jobId: 'j1', personal, c
 
 beforeEach(() => {
   reset({
-    jobs: { j1: job, j2: { ...job, eligibility: { mode: 'classes', classIds: ['k9'] } } },
+    jobs: { j1: job, j2: { ...job, eligibility: { mode: 'classes', classIds: ['k9'] } }, j3: { ...job, scheme: 'full' } },
     jobApplications: {},
     counters: {},
     careerProfiles: {},
@@ -36,7 +37,7 @@ beforeEach(() => {
       w9: { personUid: 'u2', status: 'published', title: 'Punya Budi', type: 'TPM', cover: { thumb: '' } },
     },
     submissions: { t1_u1: { studentId: 'u1', taskTitle: 'TPM 1', taskKind: 'daily', fileId: 'submissions/k1/t1/u1/a.pdf', url: null } },
-    dashboardSnapshots: { '2026-11-04': { generatedAt: '2026-11-04T01:00:00Z', version: 17, ranking: [{ studentId: 'u1', score: 82, pending: ['capstone'] }] } },
+    dashboardSnapshots: { '2026-11-04': { generatedAt: '2026-11-04T01:00:00Z', version: 17, ranking: [{ studentId: 'u1', score: 82, pending: ['capstone'], placement: 'project' }, { studentId: 'u3', score: 75, pending: [], placement: 'project' }] } },
   });
   getSessionActor.mockResolvedValue({ uid: 'u1', role: 'student', classId: 'k1' });
 });
@@ -80,6 +81,10 @@ describe('kirim lamaran', () => {
 
   it('siswa yang tidak memenuhi syarat ditolak', async () => {
     await expect(submitApplication(actor('u1'), body({ jobId: 'j2' }), now)).rejects.toThrow('Kamu belum memenuhi syarat lowongan ini');
+  });
+
+  it('siswa Project Based tidak bisa melamar lowongan Full Internship', async () => {
+    await expect(submitApplication(actor('u1'), body({ jobId: 'j3' }), now)).rejects.toThrow('Kamu belum memenuhi syarat lowongan ini');
   });
 
   it('mentor tidak bisa memakai rute lamaran', async () => {

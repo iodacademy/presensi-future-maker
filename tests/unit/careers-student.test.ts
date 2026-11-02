@@ -4,17 +4,18 @@ import { fakeDb, fakeStorage, reset } from './careers-fake-db';
 
 const getSessionActor = vi.fn();
 vi.mock('../../src/features/auth/session', () => ({ getSessionActor: () => getSessionActor() }));
+vi.mock('next/cache', () => ({ unstable_cache: (fn: () => unknown) => fn }));
 vi.mock('../../src/lib/firebase/admin', () => ({ getAdminDb: () => fakeDb, getAdminStorage: () => fakeStorage }));
 
 import {
-  getApplyContext, getJobForStudent, getPartnerProfile, latestFinalScore, listMyApplications, listOpenJobs,
+  careerAccess, getApplyContext, getJobForStudent, getPartnerProfile, latestFinalScore, listMyApplications, listOpenJobs,
 } from '../../src/features/careers/student-service';
 import { GET as lowonganGet } from '../../src/app/api/karier/lowongan/route';
 
 const now = new Date('2026-11-05T00:00:00Z');
 const andi = { uid: 'u1', role: 'student', classId: 'k1', name: 'Andi', email: 'andi@x.id' } as never;
 const job = {
-  partnerId: 'p1', partnerName: 'PT DIPSI', title: 'UI/UX Intern', employment: 'magang-3', category: 'desain', location: 'Jakarta',
+  partnerId: 'p1', partnerName: 'PT DIPSI', title: 'UI/UX Intern', employment: 'magang-3', category: 'desain', scheme: 'project', location: 'Jakarta',
   workMode: 'hybrid', quota: 2, description: 'Panjang', qualifications: ['Figma'], eligibility: { mode: 'all' },
   opensAt: '2026-11-03T01:00:00.000Z', closesAt: '2026-11-12T16:59:00.000Z',
   documents: { portfolio: 'optional', works: 'optional', coverLetter: 'off' }, questions: [], status: 'published', applicantCount: 3,
@@ -30,6 +31,7 @@ beforeEach(() => {
       tutup: { ...job, closesAt: '2026-11-04T00:00:00.000Z' },
       kelasLain: { ...job, eligibility: { mode: 'classes', classIds: ['k2'] } },
       nilai: { ...job, eligibility: { mode: 'min-score', minScore: 90 } },
+      full: { ...job, scheme: 'full' },
     },
     jobApplications: {},
     users: { u1: { name: 'Andi Pratama', email: 'andi@x.id', classId: 'k1' } },
@@ -50,8 +52,8 @@ beforeEach(() => {
     },
     studentCvs: {},
     dashboardSnapshots: {
-      '2026-11-01': { generatedAt: '2026-11-01T01:00:00Z', version: 17, ranking: [{ studentId: 'u1', score: 70, pending: [] }] },
-      '2026-11-04': { generatedAt: '2026-11-04T01:00:00Z', version: 17, ranking: [{ studentId: 'u1', score: 82, pending: ['capstone'] }] },
+      '2026-11-01': { generatedAt: '2026-11-01T01:00:00Z', version: 17, ranking: [{ studentId: 'u1', score: 70, pending: [], placement: 'project' }] },
+      '2026-11-04': { generatedAt: '2026-11-04T01:00:00Z', version: 17, ranking: [{ studentId: 'u1', score: 82, pending: ['capstone'], placement: 'project' }, { studentId: 'u7', score: 85, pending: [], placement: 'full' }, { studentId: 'u8', score: 50, pending: [], placement: 'none' }] },
     },
   });
   getSessionActor.mockResolvedValue({ uid: 'u1', role: 'student', classId: 'k1' });
@@ -65,7 +67,7 @@ describe('bacaan siswa', () => {
 
   it('ringkasan sebelum versi 17 dianggap sementara karena belum mencatat komponen yang tertunda', async () => {
     const { data } = await import('./careers-fake-db');
-    data.dashboardSnapshots['2026-11-05'] = { generatedAt: '2026-11-05T01:00:00Z', ranking: [{ studentId: 'u1', score: 88 }] };
+    data.dashboardSnapshots['2026-11-05'] = { generatedAt: '2026-11-05T01:00:00Z', ranking: [{ studentId: 'u1', score: 88, placement: 'project' }] };
     expect(await latestFinalScore('u1')).toEqual({ finalScore: 88, finalScorePending: true, finalScoreAt: '2026-11-05' });
   });
 
@@ -74,6 +76,20 @@ describe('bacaan siswa', () => {
     expect(r.jobs.map((j) => j.id)).toEqual(['ok']);
     expect(r.jobs[0].logo).toBe('https://x/t.webp');
     expect(r.bannerClosesAt).toBe('2026-11-12T16:59:00.000Z');
+  });
+
+  it('siswa Project Based tidak melihat lowongan Full, siswa Full melihat keduanya', async () => {
+    expect((await listOpenJobs(andi, now)).jobs.map((j) => j.id)).not.toContain('full');
+    const full = { uid: 'u7', role: 'student', classId: 'k1' } as never;
+    expect((await listOpenJobs(full, now)).jobs.map((j) => j.id).sort()).toEqual(['full', 'ok']);
+  });
+
+  it('siswa tanpa skema magang tidak punya akses Karier', async () => {
+    const r = await listOpenJobs({ uid: 'u8', role: 'student', classId: 'k1' } as never, now);
+    expect(r).toMatchObject({ access: false, jobs: [] });
+    expect((await listOpenJobs(andi, now)).access).toBe(true);
+    expect(await careerAccess('u8')).toBe(false);
+    expect(await careerAccess('u1')).toBe(true);
   });
 
   it('lowongan yang sudah dilamar ditandai', async () => {

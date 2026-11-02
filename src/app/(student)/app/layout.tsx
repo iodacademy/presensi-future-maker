@@ -4,6 +4,7 @@ import { recordDailyLogin } from '@/features/dashboard/login-service';
 import { ProfileGateClient } from '@/components/profile-gate-client';
 import { StudentContextProvider } from '@/components/student-shell';
 import { listStudentReminders } from '@/features/dashboard/reminder-service';
+import { careerAccess } from '@/features/careers/student-service';
 
 /**
  * Gerbang profil untuk seluruh halaman peserta.
@@ -74,13 +75,16 @@ export default async function StudentAppLayout({ children }: { children: React.R
   //
   // Reminders are computed alongside the profile check rather than after it,
   // and their failure must not hold the page: reminders are only a helper.
-  const [profile, reminders] = await Promise.all([
+  const [profile, reminders, karier] = await Promise.all([
     getProfile(actor.uid),
     listStudentReminders(actor).catch(() => ({ surveys: [], exams: [] })),
+    // Akses Karier dari ringkasan dashboard yang di-cache; kegagalannya hanya menyembunyikan menu
+    // Karier access from the cached dashboard snapshot; a failure only hides the menu
+    careerAccess(actor.uid).catch(() => false),
   ]);
   if (!profile) {
     return <ProfileGateClient />;
   }
 
-  return <StudentContextProvider value={{ name: actor.name, reminders }}>{children}</StudentContextProvider>;
+  return <StudentContextProvider value={{ name: actor.name, reminders, careerAccess: karier }}>{children}</StudentContextProvider>;
 }

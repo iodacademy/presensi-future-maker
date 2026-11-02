@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { btn, send } from '../pameran/admin-ui';
 import type { JobRow } from '@/features/careers/admin-service';
-import { countdownParts, EMPLOYMENT_LABELS, formatCountdown, jobState, type JobState } from '@/features/careers/model';
+import { countdownParts, EMPLOYMENT_LABELS, formatCountdown, jobState, SCHEME_LABELS, type JobState } from '@/features/careers/model';
 
 const STATE_STYLE: Record<JobState, { label: string; bg: string; fg: string }> = {
   draft: { label: 'Draf', bg: '#f3f4f6', fg: '#5b6b75' },
@@ -50,7 +50,7 @@ export function JobsTab({ rows, onEdit, onChanged, onError }: {
             const s = STATE_STYLE[state];
             return (
               <tr key={r.id}>
-                <td style={td}><div style={{ fontWeight: 600 }}>{r.title}</div><div style={{ color: 'var(--color-text-muted)', fontSize: '11px' }}>{EMPLOYMENT_LABELS[r.employment]}</div></td>
+                <td style={td}><div style={{ fontWeight: 600 }}>{r.title}</div><div style={{ color: 'var(--color-text-muted)', fontSize: '11px' }}>{EMPLOYMENT_LABELS[r.employment]}{r.scheme ? ` · ${SCHEME_LABELS[r.scheme]}` : ''}</div></td>
                 <td style={td}><div style={{ fontWeight: 600 }}>{r.partnerName}</div><div style={{ color: 'var(--color-text-muted)', fontSize: '11px' }}>{r.picName || '–'}</div></td>
                 <td style={td}>
                   <span style={{ padding: '2px 8px', borderRadius: '6px', fontVariantNumeric: 'tabular-nums', backgroundColor: urgent ? '#FDECEA' : '#E6F1FB', color: urgent ? '#B42318' : '#0072CE' }}>

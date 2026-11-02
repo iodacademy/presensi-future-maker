@@ -9,7 +9,7 @@ import { CATEGORY_LABELS, type Category } from '@/features/careers/model';
 import type { MyApplication, StudentJobCard } from '@/features/careers/student-service';
 import { BLUE, btnOutline, card, errorBox, formatDate, getJson, heading, LINE, MUTED, pageWrap, pill, STATUS_PILL } from './ui';
 
-type Lowongan = { jobs: StudentJobCard[]; appliedJobIds: string[]; bannerClosesAt: string | null };
+type Lowongan = { access: boolean; jobs: StudentJobCard[]; appliedJobIds: string[]; bannerClosesAt: string | null };
 
 /**
  * Portal Karier siswa: tab Lowongan dan Lamaran Saya. Tab disimpan di ?tab= agar tautan "Lihat status" langsung ke sana.
@@ -59,7 +59,13 @@ export default function KarierPage() {
 
         {error && <div role="alert" style={errorBox}>{error}</div>}
 
-        {tab === 'lowongan' ? (
+        {data && !data.access && (
+          <div style={{ ...card, color: MUTED }}>
+            Portal Karier terbuka untuk peserta dengan skema Full Internship atau Project Based. Skemamu mengikuti nilai akhir bootcamp.
+          </div>
+        )}
+
+        {data && !data.access ? null : tab === 'lowongan' ? (
           <>
             <CountdownBanner closesAt={data?.bannerClosesAt ?? null} />
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

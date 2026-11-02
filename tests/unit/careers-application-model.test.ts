@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  formatApplicationNumber, isEligible, studentStatusLabel, validateApplicationInput, type JobDocuments, type JobQuestion,
+  canApplyScheme, formatApplicationNumber, hasCareerAccess, isEligible, studentStatusLabel, validateApplicationInput, type JobDocuments, type JobQuestion,
 } from '../../src/features/careers/model';
 
 const questions: JobQuestion[] = [
@@ -25,6 +25,22 @@ describe('kelayakan pelamar', () => {
   it('nilai minimal butuh nilai yang ada dan cukup', () => {
     expect(isEligible({ mode: 'min-score', minScore: 75 }, { classId: 'k1', finalScore: null })).toBe(false);
     expect(isEligible({ mode: 'min-score', minScore: 75 }, { classId: 'k1', finalScore: 80 })).toBe(true);
+  });
+});
+
+describe('skema magang', () => {
+  it('siswa Full boleh melamar dua skema, Project Based hanya Project Based', () => {
+    expect(canApplyScheme('full', 'full')).toBe(true);
+    expect(canApplyScheme('full', 'project')).toBe(true);
+    expect(canApplyScheme('project', 'project')).toBe(true);
+    expect(canApplyScheme('project', 'full')).toBe(false);
+  });
+  it('tidak ditempatkan, menunggu capstone, atau tanpa data tidak punya akses Karier', () => {
+    for (const p of ['none', 'pending', null]) {
+      expect(hasCareerAccess(p)).toBe(false);
+      expect(canApplyScheme(p, 'project')).toBe(false);
+    }
+    expect(hasCareerAccess('project')).toBe(true);
   });
 });
 
