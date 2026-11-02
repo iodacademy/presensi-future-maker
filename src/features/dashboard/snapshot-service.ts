@@ -102,8 +102,10 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  * 15: the ranking carries the Best Performance score (attendance, TPM,
  *     first quiz attempts; no capstone).
  * 16: the Best Performance score and its components keep one decimal.
+ * 17: the ranking carries the components not yet graded (Job Portal marks the
+ *     final score provisional).
  */
-export const SNAPSHOT_VERSION = 16;
+export const SNAPSHOT_VERSION = 17;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -725,6 +727,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         perfQuiz: perf.quiz,
         placement,
         placementReasons: reasons,
+        pending: nilai.pending,
       };
     })
     // Bila SPA sama, capstone lalu kehadiran menentukan urutan (skema magang)

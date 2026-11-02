@@ -625,3 +625,11 @@ function sebelumTeks(teks: string, a: string, b: string) {
   expect(j, `tidak ditemukan: ${b}`).toBeGreaterThan(-1);
   expect(i).toBeLessThan(j);
 }
+
+describe('nilai sementara di ringkasan', () => {
+  it('baris peringkat membawa komponen yang belum dinilai, dan versinya naik', () => {
+    // Job Portal menandai nilai akhir "sementara" dari medan ini / The Job Portal marks a final score "provisional" from this field
+    expect(service).toMatch(/pending: nilai\.pending/);
+    expect(SNAPSHOT_VERSION).toBeGreaterThanOrEqual(17);
+  });
+});

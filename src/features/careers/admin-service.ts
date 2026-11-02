@@ -103,26 +103,40 @@ export async function createJob(raw: unknown): Promise<string> {
   return ref.id;
 }
 
+/**
+ * Jumlah pelamar diperiksa di dalam transaksi: lamaran yang masuk di antara
+ * pemeriksaan dan penulisan akan tertinggal di lowongan terhapus, atau terkirim
+ * ke mitra lama.
+ *
+ * The applicant count is checked inside a transaction: an application landing
+ * between the check and the write would be stranded on a deleted job, or routed
+ * to the old partner.
+ */
 export async function updateJob(id: string, raw: unknown): Promise<void> {
-  const current = await getJob(id);
-  if (!current) throw new Error('Lowongan tidak ditemukan');
   const input = validateJobInput(raw);
-  let partnerName = current.partnerName;
-  if (input.partnerId !== current.partnerId) {
-    // Lamaran yang sudah masuk dirutekan ke PIC mitra lama / Applications already in are routed to the old partner's PIC
-    if ((current.applicantCount ?? 0) > 0) throw new Error('Mitra lowongan yang sudah punya pelamar tidak bisa diganti');
-    const partner = await getPartner(input.partnerId);
-    if (!partner) throw new Error('Mitra tidak ditemukan');
-    partnerName = partner.name;
-  }
-  await jobs().doc(id).update({ ...input, partnerName, updatedAt: now() });
+  const db = getAdminDb();
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(jobs().doc(id));
+    if (!snap.exists) throw new Error('Lowongan tidak ditemukan');
+    const current = snap.data() as Job;
+    let partnerName = current.partnerName;
+    if (input.partnerId !== current.partnerId) {
+      if ((current.applicantCount ?? 0) > 0) throw new Error('Mitra lowongan yang sudah punya pelamar tidak bisa diganti');
+      const partner = await tx.get(partners().doc(input.partnerId));
+      if (!partner.exists) throw new Error('Mitra tidak ditemukan');
+      partnerName = partner.data()!.name;
+    }
+    tx.update(jobs().doc(id), { ...input, partnerName, updatedAt: now() });
+  });
 }
 
 export async function deleteJob(id: string): Promise<void> {
-  const current = await getJob(id);
-  if (!current) throw new Error('Lowongan tidak ditemukan');
-  if ((current.applicantCount ?? 0) > 0) throw new Error('Lowongan yang sudah punya pelamar tidak bisa dihapus');
-  await jobs().doc(id).delete();
+  await getAdminDb().runTransaction(async (tx) => {
+    const snap = await tx.get(jobs().doc(id));
+    if (!snap.exists) throw new Error('Lowongan tidak ditemukan');
+    if (((snap.data() as Job).applicantCount ?? 0) > 0) throw new Error('Lowongan yang sudah punya pelamar tidak bisa dihapus');
+    tx.delete(jobs().doc(id));
+  });
 }
 
 export async function portalStats(at: Date): Promise<{ activeJobs: number; applicants: number; partners: number; interviews: number }> {

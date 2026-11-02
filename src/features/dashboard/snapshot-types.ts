@@ -170,6 +170,8 @@ export interface RankedStudent {
   placement: Placement;
   /** Syarat Full Internship yang belum terpenuhi / Full Internship requirements not met */
   placementReasons: string[];
+  /** Komponen yang belum dinilai; tidak ada pada ringkasan sebelum versi 17 / Components not yet graded; absent before version 17 */
+  pending?: GradeComponent[];
 }
 
 /**

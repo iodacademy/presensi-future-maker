@@ -6,6 +6,7 @@ type Doc = Record<string, unknown>;
 const data: Record<string, Record<string, Doc>> = {};
 const selects: Record<string, string[][]> = {};
 const getSessionActor = vi.fn();
+let txCount = 0;
 
 function query(col: string, filters: [string, unknown][] = []) {
   const rows = () => Object.entries(data[col] ?? {}).filter(([, d]) => filters.every(([f, v]) => d[f] === v));
@@ -22,6 +23,17 @@ function query(col: string, filters: [string, unknown][] = []) {
 vi.mock('../../src/features/auth/session', () => ({ getSessionActor: () => getSessionActor() }));
 vi.mock('../../src/lib/firebase/admin', () => ({
   getAdminDb: () => ({
+    // Transaksi palsu: tulisan langsung diterapkan, jumlah pemakaian dicatat / Fake transaction: writes apply at once, usage is counted
+    runTransaction: async (fn: (tx: unknown) => Promise<unknown>) => {
+      txCount++;
+      type R = { col: string; id: string; get: () => Promise<unknown> };
+      return fn({
+        get: (ref: R) => ref.get(),
+        set: (ref: R, d: Doc) => { data[ref.col][ref.id] = d; },
+        update: (ref: R, d: Doc) => { data[ref.col][ref.id] = { ...data[ref.col][ref.id], ...d }; },
+        delete: (ref: R) => { delete data[ref.col][ref.id]; },
+      });
+    },
     batch: () => {
       const ops: (() => void)[] = [];
       return {
@@ -65,6 +77,7 @@ beforeEach(() => {
   data.partners = { p1: { ...partner, nameKey: 'pt dipsi', active: true } };
   data.jobs = {};
   data.jobApplications = {};
+  txCount = 0;
   getSessionActor.mockResolvedValue({ role: 'admin' });
 });
 
@@ -137,6 +150,13 @@ describe('layanan admin Job Portal', () => {
     data.jobApplications = { a1: { status: 'interview' }, a2: { status: 'baru' } };
     const s = await portalStats(new Date('2026-11-05T00:00:00Z'));
     expect(s).toEqual({ activeJobs: 1, applicants: 20, partners: 1, interviews: 1 });
+  });
+
+  it('hapus dan ubah lowongan memeriksa pelamar di dalam transaksi', async () => {
+    data.jobs.j1 = { ...job, partnerName: 'PT DIPSI', applicantCount: 0 };
+    await updateJob('j1', { ...job, title: 'Baru' });
+    await deleteJob('j1');
+    expect(txCount).toBe(2);
   });
 
   it('selain admin ditolak 403', async () => {
