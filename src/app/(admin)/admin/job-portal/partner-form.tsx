@@ -29,6 +29,9 @@ export function PartnerForm({ id, onDone }: { id: string | null; onDone: () => v
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Id mitra baru disimpan agar percobaan ulang setelah logo gagal tidak membuat mitra kedua
+  // A new partner's id is kept so a retry after a failed logo upload does not create a second partner
+  const [createdId, setCreatedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -45,9 +48,12 @@ export function PartnerForm({ id, onDone }: { id: string | null; onDone: () => v
     setBusy(true); setError(null);
     try {
       const body = { name, field: fieldText, about, website, socials, pics, logo };
-      let pid = id;
+      let pid = id ?? createdId;
       if (pid) await send(`/api/karier/partners/${pid}`, 'PATCH', body);
-      else pid = (await send('/api/karier/partners', 'POST', body)).id as string;
+      else {
+        pid = (await send('/api/karier/partners', 'POST', body)).id as string;
+        setCreatedId(pid);
+      }
       // Logo diunggah ke folder mitra/<id>, jadi mitra baru disimpan dulu agar id-nya ada
       // The logo goes to the mitra/<id> folder, so a new partner is saved first to get its id
       if (logoFile) {
