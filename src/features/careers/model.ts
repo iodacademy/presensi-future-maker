@@ -323,6 +323,8 @@ export function validateInterviewInput(raw: unknown): InterviewInput {
   const start = str(r.start);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('Tanggal interview wajib diisi');
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)) throw new Error('Jam mulai harus berformat HH:mm');
+  // 2026-13-01 lolos pola tetapi merusak tampilan jadwal / 2026-13-01 passes the pattern but breaks the schedule display
+  if (Number.isNaN(new Date(`${date}T${start}:00+07:00`).getTime())) throw new Error('Tanggal interview tidak sah');
   const durationMin = Number(r.durationMin);
   if (![30, 45, 60].includes(durationMin)) throw new Error('Durasi interview tidak dikenal');
   const mode = r.mode === 'offline' ? 'offline' : r.mode === 'online' ? 'online' : null;

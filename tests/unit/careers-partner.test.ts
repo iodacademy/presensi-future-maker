@@ -6,8 +6,10 @@ const getSessionActor = vi.fn();
 vi.mock('next/cache', () => ({ unstable_cache: (fn: () => unknown) => fn, revalidateTag: vi.fn() }));
 vi.mock('../../src/features/auth/session', () => ({ getSessionActor: () => getSessionActor() }));
 vi.mock('../../src/lib/firebase/admin', () => ({ getAdminDb: () => fakeDb, getAdminStorage: () => fakeStorage }));
+const cancel = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock('../../src/features/calendar/client', () => ({ cancelCalendarEvent: cancel, isCalendarConfigured: () => true, createCalendarEvent: vi.fn() }));
 
-import { decideCandidate, getCandidate, listCandidates, partnerDashboard, updateOwnProfile } from '../../src/features/careers/partner-service';
+import { decideCandidate, getCandidate, listCandidates, partnerDashboard, partnerMe, updateOwnProfile } from '../../src/features/careers/partner-service';
 import { GET as dashGet } from '../../src/app/api/mitra/dashboard/route';
 
 const now = new Date('2026-11-05T00:00:00Z');
@@ -62,6 +64,26 @@ describe('layanan PIC', () => {
     await updateOwnProfile(rina, { name: 'PT Lain', field: 'Konsultan', about: 'Baru', website: 'https://dipsi.co.id', socials: { instagram: '', linkedin: '', tiktok: '', youtube: '' }, logo: null, pics: [] });
     expect(data.partners.p1).toMatchObject({ name: 'PT DIPSI', field: 'Konsultan', about: 'Baru', website: 'https://dipsi.co.id' });
     expect((data.partners.p1.pics as unknown[]).length).toBe(1);
+  });
+
+  it('menolak kandidat yang sudah diundang ikut membatalkan acara kalendernya', async () => {
+    data.jobApplications.a3.interview = { calendarEventId: 'ev-1', date: '2026-11-12', start: '10:00', durationMin: 45 };
+    await decideCandidate(rina, 'a3', 'tidak-lolos', 'Skill belum sesuai');
+    expect(cancel).toHaveBeenCalledWith('ev-1');
+    expect((data.jobApplications.a3.interview as { calendarEventId: string | null }).calendarEventId).toBeNull();
+  });
+
+  it('logo profil hanya boleh dari unggahan portal ke folder mitra sendiri', async () => {
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET = 'bkt';
+    const base = { field: '', about: '', website: '', socials: { instagram: '', linkedin: '', tiktok: '', youtube: '' } };
+    await expect(updateOwnProfile(rina, { ...base, logo: { thumb: 'https://pelacak.example/x.png', full: 'https://pelacak.example/x.png' } })).rejects.toThrow('Logo harus diunggah lewat portal');
+    const own = 'https://firebasestorage.googleapis.com/v0/b/bkt/o/' + encodeURIComponent('pameran/mitra/p1/abc.webp') + '?alt=media';
+    await updateOwnProfile(rina, { ...base, logo: { thumb: own, full: own } });
+    expect((data.partners.p1.logo as { thumb: string }).thumb).toBe(own);
+  });
+
+  it('nama PIC dan perusahaan dibaca tanpa memindai lamaran', async () => {
+    expect(await partnerMe(rina)).toEqual({ picName: 'Rina', partnerName: 'PT DIPSI' });
   });
 
   it('siswa tidak bisa membuka dashboard mitra', async () => {

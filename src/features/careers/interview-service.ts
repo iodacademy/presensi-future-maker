@@ -27,12 +27,7 @@ export async function inviteToInterview(actor: PartnerActor, appId: string, raw:
 
   if (input.linkSource === 'meet-auto' && !isCalendarConfigured()) throw new Error('Link Meet otomatis belum tersedia. Tempel link meeting sendiri.');
 
-  // Acara lama dibatalkan dulu agar siswa tidak menerima dua undangan; gagal batal tidak menahan jadwal baru
-  // The old event is cancelled first so the student does not get two invites; a failed cancel does not block the new one
   const previous = snap.get('interview') as Interview | undefined;
-  if (previous?.calendarEventId) {
-    await cancelCalendarEvent(previous.calendarEventId).catch((e) => console.error('[karier] batal acara interview', e));
-  }
 
   let url = input.url;
   let calendarEventId: string | null = null;
@@ -45,7 +40,11 @@ export async function inviteToInterview(actor: PartnerActor, appId: string, raw:
       studentEmail: personal.email,
       mentorEmail: actor.email,
     });
-    if (!ev.meetUrl) throw new Error('Link Meet belum terbentuk. Coba lagi atau tempel link sendiri.');
+    if (!ev.meetUrl) {
+      // Acara tanpa link dibatalkan lagi agar tidak menjadi undangan yatim / An event without a link is cancelled so it is not an orphan invite
+      await cancelCalendarEvent(ev.eventId).catch((e) => console.error('[karier] batal acara tanpa link', e));
+      throw new Error('Link Meet belum terbentuk. Coba lagi atau tempel link sendiri.');
+    }
     url = ev.meetUrl;
     calendarEventId = ev.eventId;
   }
@@ -53,6 +52,11 @@ export async function inviteToInterview(actor: PartnerActor, appId: string, raw:
   const t = now.toISOString();
   const interview: Interview = { ...input, url, confirmation: 'pending', rescheduleNote: '', calendarEventId, invitedAt: t };
   await apps().doc(appId).update({ interview, status: 'interview', statusChangedAt: t, updatedAt: t });
+  // Acara lama baru dibatalkan setelah jadwal baru tersimpan: bila pembuatan gagal, undangan lama tetap berlaku
+  // The old event is cancelled only after the new schedule is saved: if creation fails, the old invite still stands
+  if (previous?.calendarEventId && previous.calendarEventId !== calendarEventId) {
+    await cancelCalendarEvent(previous.calendarEventId).catch((e) => console.error('[karier] batal acara interview lama', e));
+  }
   return {
     meetUrl: url,
     waLink: whatsAppLink(personal.phone, interviewMessage({ studentName: personal.fullName, jobTitle, partnerName, interview })),

@@ -74,6 +74,14 @@ describe('bank CV', () => {
     expect(formData).not.toHaveBeenCalled();
   });
 
+  it('PDF boleh tampil di iframe aplikasi: tanpa sandbox, hanya bingkai dari situs sendiri', async () => {
+    const cv = await uploadCv('u1', 'cv', file(pdf()));
+    const res = await fileGet(new Request('http://x'), { params: Promise.resolve({ id: cv.id }) });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-security-policy')).toBe("frame-ancestors 'self'");
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff');
+  });
+
   it('rute berkas menolak siswa lain dengan 403', async () => {
     const cv = await uploadCv('u1', 'cv', file(pdf()));
     getSessionActor.mockResolvedValue({ uid: 'u2', role: 'student' });

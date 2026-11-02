@@ -32,7 +32,7 @@ export default function CandidatePage({ params }: { params: Promise<{ id: string
   }, [id]);
   useEffect(() => {
     load();
-    fetch('/api/mitra/dashboard').then((r) => r.json()).then((d) => setPic(d.picName ?? '')).catch(() => undefined);
+    fetch('/api/mitra/me').then((r) => r.json()).then((d) => setPic(d.picName ?? '')).catch(() => undefined);
   }, [load]);
 
   async function decide(status: string, rejectReason = '') {

@@ -11,7 +11,7 @@ import { AppShell } from '@/components/app-shell';
 export function MitraShell({ children }: { children: React.ReactNode }) {
   const [names, setNames] = useState<{ picName: string; partnerName: string } | null>(null);
   useEffect(() => {
-    fetch('/api/mitra/dashboard').then((r) => (r.ok ? r.json() : null)).then((d) => d && setNames({ picName: d.picName, partnerName: d.partnerName })).catch(() => undefined);
+    fetch('/api/mitra/me').then((r) => (r.ok ? r.json() : null)).then((d) => d && setNames({ picName: d.picName, partnerName: d.partnerName })).catch(() => undefined);
   }, []);
   return (
     <AppShell role="partner" userName={names?.picName ?? 'PIC Mitra'} classNameTitle={names ? `${names.partnerName} · Portal Mitra` : undefined}>

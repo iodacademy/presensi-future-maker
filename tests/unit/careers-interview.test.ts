@@ -38,6 +38,10 @@ beforeEach(() => {
 });
 
 describe('model interview', () => {
+  it('tanggal yang mustahil ditolak sebelum disimpan', () => {
+    expect(() => validateInterviewInput({ ...manual, date: '2026-13-01' })).toThrow('Tanggal interview tidak sah');
+  });
+
   it('durasi hanya 30, 45, atau 60 menit', () => {
     expect(() => validateInterviewInput({ ...manual, durationMin: 20 })).toThrow('Durasi interview tidak dikenal');
   });
@@ -83,6 +87,21 @@ describe('undangan interview', () => {
     await inviteToInterview(rina, 'a1', { ...manual, date: '2026-11-13' }, now);
     expect(calendar.cancel).toHaveBeenCalledWith('ev-baru');
     expect(data.jobApplications.a1.interview).toMatchObject({ date: '2026-11-13', confirmation: 'pending', calendarEventId: null });
+  });
+
+  it('jadwal ulang yang gagal membuat acara baru tidak membatalkan undangan lama', async () => {
+    await inviteToInterview(rina, 'a1', { ...manual, linkSource: 'meet-auto', url: '' }, now);
+    calendar.create.mockRejectedValueOnce(new Error('Google Calendar HTTP 500'));
+    await expect(inviteToInterview(rina, 'a1', { ...manual, linkSource: 'meet-auto', url: '', date: '2026-11-13' }, now)).rejects.toThrow('Google Calendar HTTP 500');
+    expect(calendar.cancel).not.toHaveBeenCalled();
+    expect(data.jobApplications.a1.interview).toMatchObject({ date: '2026-11-12', calendarEventId: 'ev-baru' });
+  });
+
+  it('acara baru tanpa link Meet dibatalkan lagi agar tidak menjadi undangan yatim', async () => {
+    calendar.create.mockResolvedValueOnce({ eventId: 'ev-kosong', meetUrl: null, conferenceStatus: 'pending' } as never);
+    await expect(inviteToInterview(rina, 'a1', { ...manual, linkSource: 'meet-auto', url: '' }, now)).rejects.toThrow('Link Meet belum terbentuk');
+    expect(calendar.cancel).toHaveBeenCalledWith('ev-kosong');
+    expect(data.jobApplications.a1.status).toBe('shortlist');
   });
 
   it('PIC perusahaan lain tidak bisa mengundang', async () => {
