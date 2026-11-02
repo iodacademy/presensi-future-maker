@@ -56,15 +56,24 @@ export async function deleteCv(uid: string, id: string): Promise<void> {
   await cvs().doc(id).update({ deleted: true });
 }
 
+// PIC hanya boleh membuka berkas yang dikirim ke lamaran perusahaannya / A PIC may only open files sent with an application to their company
+async function sentToPartner(partnerId: string, id: string): Promise<boolean> {
+  const apps = getAdminDb().collection('jobApplications').where('partnerId', '==', partnerId);
+  const [asCv, asCover] = await Promise.all([apps.where('cvId', '==', id).select().get(), apps.where('coverLetterId', '==', id).select().get()]);
+  return !asCv.empty || !asCover.empty;
+}
+
 /**
- * Pemilik dan admin boleh membuka. PIC mitra menyusul di Tahap 3.
+ * Pemilik, admin, dan PIC mitra yang menerima lamarannya boleh membuka.
  *
- * The owner and admins may open it. Partner PICs follow in stage 3.
+ * The owner, admins, and the partner PIC who received the application may open it.
  */
 export async function readCvFile(actor: Actor, id: string): Promise<{ buffer: Buffer; fileName: string }> {
   const snap = await cvs().doc(id).get();
   const cv = snap.exists ? (snap.data() as CvFile) : null;
-  if (!cv || (actor.role !== 'admin' && cv.ownerUid !== actor.uid)) throw new Error('Tidak boleh membuka berkas ini');
+  const allowed = !!cv && (actor.role === 'admin' || cv.ownerUid === actor.uid
+    || (actor.role === 'partner' && !!actor.partnerId && (await sentToPartner(actor.partnerId, id))));
+  if (!cv || !allowed) throw new Error('Tidak boleh membuka berkas ini');
   const [buffer] = await getAdminStorage().bucket().file(cv.storagePath).download();
   return { buffer, fileName: cv.fileName };
 }

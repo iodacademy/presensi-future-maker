@@ -125,6 +125,11 @@ export async function uploadSubmissionFile(
  * The file gets no public link. Participants' work is private, and a tokenised
  * link would stay open to anyone handed a copy of it.
  */
+async function attachedForPartner(partnerId: string, studentId: string, submissionId: string): Promise<boolean> {
+  const apps = await getAdminDb().collection('jobApplications').where('partnerId', '==', partnerId).where('studentId', '==', studentId).select('tasks').get();
+  return apps.docs.some((a) => ((a.get('tasks') ?? []) as { submissionId: string }[]).some((t) => t.submissionId === submissionId));
+}
+
 export async function readSubmissionFile(
   actor: Actor,
   submissionId: string
@@ -136,7 +141,10 @@ export async function readSubmissionFile(
   const allowed =
     actor.role === 'admin' ||
     (actor.role === 'student' && actor.uid === sub.studentId) ||
-    (actor.role === 'mentor' && (await isMenteeOf(actor.uid, sub.studentId)));
+    (actor.role === 'mentor' && (await isMenteeOf(actor.uid, sub.studentId))) ||
+    // PIC mitra hanya untuk tugas yang dilampirkan siswa ke lamaran perusahaannya
+    // A partner PIC only for tasks the student attached to an application to their company
+    (actor.role === 'partner' && !!actor.partnerId && (await attachedForPartner(actor.partnerId, sub.studentId, submissionId)));
   if (!allowed) throw new Error('Anda tidak berhak membuka berkas ini');
 
   if (!isStoredSubmissionFile(sub.fileId)) throw new Error('Berkas pengumpulan ini tidak tersimpan');
