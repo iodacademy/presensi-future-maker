@@ -13,7 +13,7 @@ import { isStoredSubmissionFile } from '../tasks/submission-policy';
 import { listCvs } from './cv-service';
 import {
   canApplyScheme, hasCareerAccess, isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
-  type ApplicationStatus, type AttachedTask, type AttachedWork, type CvFile, type Eligibility, type Job, type Logo, type Personal, type Socials,
+  type ApplicationStatus, type AttachedTask, type Interview, type AttachedWork, type CvFile, type Eligibility, type Job, type Logo, type Personal, type Socials,
 } from './model';
 
 export interface StudentJobCard {
@@ -24,6 +24,7 @@ export interface PublicPartner { id: string; name: string; field: string; about:
 export interface MyApplication {
   id: string; jobId: string; number: string; jobTitle: string; partnerName: string;
   status: ApplicationStatus; statusLabel: string; submittedAt: string; message: string | null;
+  interview: Omit<Interview, 'calendarEventId'> | null;
 }
 export interface FinalScore { finalScore: number | null; finalScorePending: boolean; finalScoreAt: string | null }
 
@@ -197,9 +198,14 @@ export async function ownTasks(uid: string): Promise<AttachedTask[]> {
     }));
 }
 
+// Id acara kalender hanya untuk server / The calendar event id is server-only
+function publicInterview({ calendarEventId: _c, ...rest }: Interview): Omit<Interview, 'calendarEventId'> {
+  return rest;
+}
+
 export async function listMyApplications(uid: string): Promise<MyApplication[]> {
   const [aSnap, jSnap] = await Promise.all([
-    db().collection('jobApplications').where('studentId', '==', uid).select('jobId', 'number', 'status', 'submittedAt').get(),
+    db().collection('jobApplications').where('studentId', '==', uid).select('jobId', 'number', 'status', 'submittedAt', 'interview').get(),
     db().collection('jobs').select('title', 'partnerName').get(),
   ]);
   const jobs = new Map(jSnap.docs.map((j) => [j.id, { title: j.get('title') as string, partnerName: j.get('partnerName') as string }]));
@@ -211,6 +217,7 @@ export async function listMyApplications(uid: string): Promise<MyApplication[]> 
         id: a.id, jobId: a.get('jobId') as string, number: String(a.get('number') ?? ''), jobTitle: j?.title ?? 'Lowongan', partnerName: j?.partnerName ?? '',
         status, statusLabel: studentStatusLabel(status), submittedAt: String(a.get('submittedAt') ?? ''),
         message: status === 'tidak-lolos' ? REJECT_MESSAGE : null,
+        interview: status === 'interview' && a.get('interview') ? publicInterview(a.get('interview') as Interview) : null,
       };
     })
     .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));

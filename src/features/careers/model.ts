@@ -305,3 +305,62 @@ export function validateApplicationInput(
   }
   return { personal, cvId, coverLetterId, portfolioUrl, workIds, submissionIds, answers };
 }
+
+// ---- Interview ----
+
+export type InterviewConfirmation = 'pending' | 'hadir' | 'jadwal-ulang';
+export interface InterviewInput {
+  date: string; start: string; durationMin: 30 | 45 | 60; mode: 'online' | 'offline'; linkSource: 'meet-auto' | 'manual';
+  url: string; address: string; interviewer: string; note: string;
+}
+export interface Interview extends InterviewInput {
+  confirmation: InterviewConfirmation; rescheduleNote: string; calendarEventId: string | null; invitedAt: string;
+}
+
+export function validateInterviewInput(raw: unknown): InterviewInput {
+  const r = obj(raw);
+  const date = str(r.date);
+  const start = str(r.start);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('Tanggal interview wajib diisi');
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)) throw new Error('Jam mulai harus berformat HH:mm');
+  const durationMin = Number(r.durationMin);
+  if (![30, 45, 60].includes(durationMin)) throw new Error('Durasi interview tidak dikenal');
+  const mode = r.mode === 'offline' ? 'offline' : r.mode === 'online' ? 'online' : null;
+  if (!mode) throw new Error('Mode interview tidak dikenal');
+  const linkSource = mode === 'online' && r.linkSource === 'meet-auto' ? 'meet-auto' : 'manual';
+  const url = mode === 'online' && linkSource === 'manual' ? link(r.url) : '';
+  if (mode === 'online' && linkSource === 'manual' && !url) throw new Error('Tempel link meeting');
+  const address = mode === 'offline' ? str(r.address) : '';
+  if (mode === 'offline' && !address) throw new Error('Alamat kantor wajib diisi');
+  const interviewer = str(r.interviewer);
+  if (!interviewer) throw new Error('Nama pewawancara wajib diisi');
+  const note = str(r.note);
+  if (note.length > 500) throw new Error('Catatan maksimal 500 karakter');
+  return { date, start, durationMin: durationMin as 30 | 45 | 60, mode, linkSource, url, address, interviewer, note };
+}
+
+// Jam WIB menjadi ISO UTC; penanda +07:00 karena server berjalan pada UTC / WIB time becomes ISO UTC; +07:00 because the server runs on UTC
+export function interviewWindow(i: Pick<InterviewInput, 'date' | 'start' | 'durationMin'>): { startsAt: string; endsAt: string } {
+  const startMs = new Date(`${i.date}T${i.start}:00+07:00`).getTime();
+  return { startsAt: new Date(startMs).toISOString(), endsAt: new Date(startMs + i.durationMin * 60_000).toISOString() };
+}
+
+export function interviewTimeLabel(i: Pick<InterviewInput, 'date' | 'start' | 'durationMin'>): { day: string; time: string } {
+  const { startsAt, endsAt } = interviewWindow(i);
+  const fmt = (iso: string) => new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }).replace(':', '.');
+  const day = new Date(startsAt).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
+  return { day, time: `${fmt(startsAt)}–${fmt(endsAt)} WIB` };
+}
+
+export function interviewMessage(x: { studentName: string; jobTitle: string; partnerName: string; interview: InterviewInput }): string {
+  const { day, time } = interviewTimeLabel(x.interview);
+  const where = x.interview.mode === 'offline' ? `Lokasi: ${x.interview.address}` : `Link meeting: ${x.interview.url}`;
+  return [
+    `Halo ${x.studentName}, terima kasih sudah melamar posisi ${x.jobTitle} di ${x.partnerName}.`,
+    `Kamu diundang interview pada ${day}, pukul ${time} (${x.interview.mode === 'offline' ? 'tatap muka' : 'online'}).`,
+    where,
+    `Pewawancara: ${x.interview.interviewer}`,
+    x.interview.note ? `Catatan: ${x.interview.note}` : '',
+    'Mohon konfirmasi kehadiran lewat menu Karier di aplikasi Future Makers. Terima kasih.',
+  ].filter(Boolean).join('\n');
+}

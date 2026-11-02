@@ -23,6 +23,12 @@ function apply(prev: Doc | undefined, d: Doc): Doc {
   const out: Doc = { ...(prev ?? {}) };
   for (const [k, v] of Object.entries(d)) {
     const inc = v && typeof v === 'object' && 'operand' in (v as Doc) ? Number((v as Doc).operand) : null;
+    if (k.includes('.')) {
+      // Kunci bertitik seperti Firestore update('a.b', v) / Dotted keys like Firestore update('a.b', v)
+      const [head, ...rest] = k.split('.');
+      out[head] = apply((out[head] as Doc) ?? {}, { [rest.join('.')]: v });
+      continue;
+    }
     out[k] = inc !== null ? Number(out[k] ?? 0) + inc : v;
   }
   return out;
