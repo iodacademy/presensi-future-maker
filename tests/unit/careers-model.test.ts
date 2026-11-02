@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  assignQuestionIds, countdownParts, formatCountdown, jobState, partnerNameKey, validateJobInput, validatePartnerInput,
+  assignQuestionIds, countdownParts, isoToWib, formatCountdown, jobState, partnerNameKey, validateJobInput, validatePartnerInput,
 } from '../../src/features/careers/model';
 
 const baseJob = {
@@ -31,6 +31,11 @@ describe('model karier', () => {
   it('tanggal WIB disimpan sebagai UTC', () => {
     expect(validateJobInput(baseJob).closesAt).toBe('2026-11-12T16:59:00.000Z');
     expect(validateJobInput(baseJob).opensAt).toBe('2026-11-03T01:00:00.000Z');
+  });
+
+  it('ISO UTC dikembalikan ke tanggal dan jam WIB untuk diubah', () => {
+    expect(isoToWib('2026-11-12T16:59:00.000Z')).toEqual({ date: '2026-11-12', time: '23:59' });
+    expect(isoToWib('2026-11-12T18:30:00.000Z')).toEqual({ date: '2026-11-13', time: '01:30' });
   });
 
   it('tanggal ISO yang sudah jadi diterima apa adanya', () => {

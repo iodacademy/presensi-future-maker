@@ -2,7 +2,8 @@ import type React from 'react';
 
 // Gaya dan pemanggil API yang dipakai bersama oleh tab Peserta, Koleksi, dan Konten Situs
 // Styles and API caller shared by the Peserta, Koleksi, and Konten Situs tabs
-export const field: React.CSSProperties = { padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '12px', backgroundColor: '#ffffff', width: '100%' };
+// fontFamily inherit: textarea dan input tanggal memakai huruf monospace bawaan peramban bila tidak diatur / textarea and date inputs fall back to the browser's monospace font otherwise
+export const field: React.CSSProperties = { padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '12px', fontFamily: 'inherit', backgroundColor: '#ffffff', width: '100%' };
 export const btn: React.CSSProperties = { padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--color-primary)', backgroundColor: '#ffffff', color: 'var(--color-primary)', fontSize: '11px', fontWeight: 700, cursor: 'pointer' };
 export const btnSolid: React.CSSProperties = { ...btn, backgroundColor: 'var(--color-primary)', color: '#ffffff' };
 export const label: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px', fontWeight: 600, color: 'var(--color-text-main)' };

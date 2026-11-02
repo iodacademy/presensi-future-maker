@@ -186,3 +186,13 @@ export function formatCountdown(p: ReturnType<typeof countdownParts>): string {
   const clock = `${two(p.hours)}:${two(p.minutes)}:${two(p.seconds)}`;
   return p.days > 0 ? `${p.days} hari ${clock}` : clock;
 }
+
+/**
+ * Kebalikan dari masukan formulir: ISO UTC menjadi tanggal dan jam WIB untuk diisi ulang.
+ *
+ * The reverse of the form input: ISO UTC becomes a WIB date and time to refill the form.
+ */
+export function isoToWib(iso: string): { date: string; time: string } {
+  const wib = new Date(new Date(iso).getTime() + 7 * 3600 * 1000).toISOString();
+  return { date: wib.slice(0, 10), time: wib.slice(11, 16) };
+}
