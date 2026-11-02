@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { COH, TRACKS, cohLabel } from '@/features/exhibition/content';
 import { orderGallery } from '@/features/exhibition/gallery-order';
 import { getCapstones, getCatalog, todayWib } from '@/features/exhibition/read';
-import { CapstoneShow, type CapstoneSlide } from './capstone-show';
+import { CapstoneShow, type CapstoneSlide, type CohortOption } from './capstone-show';
 
 /**
  * Halaman layar Karya Capstone: seluruh capstone yang terbit, berputar sendiri.
@@ -13,8 +13,12 @@ import { CapstoneShow, type CapstoneSlide } from './capstone-show';
  * The Karya Capstone screen page: every published capstone, cycling on its own.
  * Its order follows the gallery (changes daily, classes alternate).
  */
-export default async function CapstonePage() {
-  const [catalog, caps, h] = await Promise.all([getCatalog(), getCapstones(), headers()]);
+export default async function CapstonePage({ searchParams }: { searchParams: Promise<{ kelas?: string }> }) {
+  const [catalog, all, h, sp] = await Promise.all([getCatalog(), getCapstones(), headers(), searchParams]);
+  // Pilihan kelas hanya kelas yang punya capstone terbit / The class choice lists only classes with published capstones
+  const cohorts: CohortOption[] = [...new Set(all.map((c) => c.cohort))].flatMap((k) => (COH[k] ? [{ key: k, label: cohLabel(COH[k]) }] : []));
+  const kelas = cohorts.some((c) => c.key === sp.kelas) ? sp.kelas! : '';
+  const caps = kelas ? all.filter((c) => c.cohort === kelas) : all;
   const people = new Map(catalog.people.map((p) => [p.uid, p]));
   const byId = new Map(caps.map((c) => [c.id, c]));
   const order = orderGallery({ people: catalog.people, cards: catalog.cards, collections: [] }, todayWib())
@@ -32,10 +36,10 @@ export default async function CapstonePage() {
     // The QR opens the app itself; the work page only when there is no app address
     const target = c.appUrl || `${origin}/karya/${c.id}`;
     return [QRCode.toString(target, { type: 'svg', margin: 0, color: { dark: '#243C4B', light: '#FFFFFF' } }).then((qr) => ({
-      id: c.id, title: c.title, cover: c.cover, tools: c.tools, nickname: p.nickname, photo: p.photoUrl,
+      id: c.id, title: c.title, images: [c.cover, ...c.showcase].filter(Boolean), tools: c.tools, nickname: p.nickname, photo: p.photoUrl,
       cohortLabel: cohLabel(coh), color: TRACKS[coh.track].color, fg: TRACKS[coh.track].fg, qr, isApp: !!c.appUrl,
     }))];
   }));
 
-  return <CapstoneShow slides={slides} />;
+  return <CapstoneShow key={kelas} slides={slides} cohorts={cohorts} kelas={kelas} />;
 }

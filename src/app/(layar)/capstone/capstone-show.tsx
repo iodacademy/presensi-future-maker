@@ -5,12 +5,18 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export interface CapstoneSlide {
-  id: string; title: string; cover: string; tools: string[]; nickname: string; photo: string;
+  /** Sampul dulu; capstone SMM menyertakan slide dan konten sorotannya / Cover first; SMM capstones add their highlight slides and content */
+  id: string; title: string; images: string[]; tools: string[]; nickname: string; photo: string;
   cohortLabel: string; color: string; fg: string; qr: string; isApp: boolean;
 }
 
+export interface CohortOption { key: string; label: string }
+
 // Lama satu karya tampil / How long one work shows
 const SLIDE_MS = 7000;
+// Lama satu gambar sorotan tampil; karya bergambar banyak tampil lebih lama / How long one highlight image shows; works with many images stay longer
+const IMG_MS = 4000;
+const durOf = (s?: CapstoneSlide) => Math.max(SLIDE_MS, (s?.images.length ?? 1) * IMG_MS);
 // Data diambil ulang berkala agar capstone yang baru terbit ikut tampil tanpa memuat ulang layar
 // Data is refetched periodically so newly published capstones appear without reloading the screen
 const REFRESH_MS = 30 * 60 * 1000;
@@ -39,7 +45,9 @@ const STYLE = `
 .cap-bar i{width:.75vh;height:.75vh;min-width:6px;min-height:6px;border-radius:50%;background:rgba(255,255,255,.25)}
 .cap-img{position:relative;aspect-ratio:16/10;overflow:hidden}
 .cap-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;transform-origin:50% 0}
-.cap-slide.in .cap-img img{animation:capZoom ${SLIDE_MS + 1000}ms linear both}
+.cap-slide.in .cap-img.one img{animation:capZoom ${SLIDE_MS + 1000}ms linear both}
+.cap-img.many img{object-fit:contain;object-position:center;opacity:0;transition:opacity .7s ease}
+.cap-img.many img.on{opacity:1}
 .cap-info{display:flex;flex-direction:column;gap:3.2vh;min-width:0}
 .cap-chip{align-self:flex-start;background:#fff;color:#0072CE;padding:.8vh 1vw;border-radius:999px;font-weight:700;font-size:clamp(11px,.95vmax,20px);letter-spacing:.02em}
 .cap-coh{font-size:clamp(12px,1.05vmax,22px);opacity:.75;margin-top:-1.8vh}
@@ -59,20 +67,23 @@ const STYLE = `
 .cap-qr span{font-size:clamp(11px,.85vmax,18px);opacity:.75}
 .cap-foot{display:flex;align-items:center;gap:2vw}
 .cap-prog{flex:1;height:.5vh;min-height:4px;border-radius:999px;background:rgba(255,255,255,.14);overflow:hidden}
-.cap-prog i{display:block;height:100%;background:#fff;border-radius:999px;animation:capBar ${SLIDE_MS}ms linear both}
+.cap-prog i{display:block;height:100%;background:#fff;border-radius:999px;animation:capBar linear both}
 .cap.paused .cap-prog i{animation-play-state:paused}
 .cap-next{font-size:clamp(11px,.95vmax,20px);opacity:.75;white-space:nowrap;max-width:40vw;overflow:hidden;text-overflow:ellipsis}
 .cap-ctl{position:absolute;right:4vw;top:12vh;display:flex;gap:10px;transition:opacity .3s ease}
 .cap.idle .cap-ctl{opacity:0;pointer-events:none}
 .cap-ctl button{all:unset;cursor:pointer;padding:10px 16px;border-radius:999px;background:rgba(255,255,255,.14);font-weight:700;font-size:14px}
 .cap-ctl button:hover,.cap-ctl button:focus-visible{background:rgba(255,255,255,.28)}
+.cap-ctl .cap-pick{display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(0,30,70,.3)}
+.cap-ctl .cap-pick button{background:none}
+.cap-ctl .cap-pick button[aria-pressed="true"]{background:#fff;color:#0072CE}
 .cap-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-size:2vmax;opacity:.8}
 @keyframes capIn{from{opacity:0;transform:translateY(1.5vh)}to{opacity:1;transform:none}}
 @keyframes capOut{from{opacity:1}to{opacity:0}}
 @keyframes capZoom{from{transform:scale(1)}to{transform:scale(1.07)}}
 @keyframes capBar{from{width:0}to{width:100%}}
 @media (max-aspect-ratio:1/1){.cap-slide{grid-template-columns:1fr;align-content:center;gap:4vh}}
-@media (prefers-reduced-motion:reduce){.cap-slide.in .cap-img img{animation:none}.cap-slide.in{animation:none}.cap-slide.out{display:none}}
+@media (prefers-reduced-motion:reduce){.cap-slide.in .cap-img img{animation:none}.cap-img.many img{transition:none}.cap-slide.in{animation:none}.cap-slide.out{display:none}}
 `;
 
 /**
@@ -84,7 +95,7 @@ const STYLE = `
  * Keys: left/right arrows move, space pauses, F toggles full screen. Controls
  * and the cursor appear only while the mouse moves.
  */
-export function CapstoneShow({ slides }: { slides: CapstoneSlide[] }) {
+export function CapstoneShow({ slides, cohorts, kelas }: { slides: CapstoneSlide[]; cohorts: CohortOption[]; kelas: string }) {
   const router = useRouter();
   const n = slides.length;
   const [cur, setCur] = useState(0);
@@ -103,9 +114,9 @@ export function CapstoneShow({ slides }: { slides: CapstoneSlide[] }) {
 
   useEffect(() => {
     if (paused || n < 2) return;
-    const t = setTimeout(() => go(1), SLIDE_MS);
+    const t = setTimeout(() => go(1), durOf(slides[cur % n]));
     return () => clearTimeout(t);
-  }, [cur, run, paused, n, go]);
+  }, [cur, run, paused, n, go, slides]);
 
   // Slide lama memudar keluar lebih dulu lalu dilepas; slide baru baru masuk setelahnya agar teks tidak bertumpuk
   // The old slide fades out first and is then dropped; the new one enters afterwards so text never overlaps
@@ -172,7 +183,7 @@ export function CapstoneShow({ slides }: { slides: CapstoneSlide[] }) {
             {/* Halaman ini tanpa menu, jadi logo menjadi jalan kembali ke beranda / This page has no menu, so the logo is the way back home */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <Link href="/" className="cap-logo"><img src="/pameran/logo-plan-indonesia-putih.png" alt="Plan International Indonesia · Beranda" /></Link>
-            <div className="cap-name"><b>Karya Capstone</b><span>Bootcamp Future Innovators 2026</span></div>
+            <div className="cap-name"><b>Karya Capstone</b><span>{cohorts.find((c) => c.key === kelas)?.label ?? 'Bootcamp Future Innovators 2026'}</span></div>
           </div>
           {n > 0 && <div className="cap-count" aria-live="polite">{String(cur + 1).padStart(2, '0')} / {String(n).padStart(2, '0')}</div>}
         </div>
@@ -180,16 +191,27 @@ export function CapstoneShow({ slides }: { slides: CapstoneSlide[] }) {
         <div className="cap-stage">
           {n === 0 && <div className="cap-empty">Belum ada karya capstone yang terbit.</div>}
           {prev !== null && slides[prev] && <Slide key={'out-' + slides[prev].id + '-' + run} s={slides[prev]} />}
-          {s && <Slide key={s.id + '-' + run} s={s} enter />}
+          {s && <Slide key={s.id + '-' + run} s={s} enter paused={paused} />}
         </div>
 
         <div className="cap-foot">
-          <div className="cap-prog"><i key={run} /></div>
+          <div className="cap-prog"><i key={run} style={{ animationDuration: durOf(s) + 'ms' }} /></div>
           {next && <div className="cap-next">Berikutnya: {next.title} · {next.nickname}</div>}
         </div>
       </div>
 
       <div className="cap-ctl">
+        {/* Layar bisa dikhususkan untuk satu kelas; pilihannya tersimpan di alamat agar bertahan saat dimuat ulang
+            A screen can be set to one class; the choice lives in the address so it survives a reload */}
+        {cohorts.length > 1 && (
+          <div className="cap-pick" role="group" aria-label="Pilih kelas">
+            {[{ key: '', label: 'Semua' }, ...cohorts].map((c) => (
+              <button key={c.key} type="button" aria-pressed={c.key === kelas} onClick={() => router.replace(c.key ? `/capstone?kelas=${c.key}` : '/capstone')}>
+                {c.key ? c.label.split(' · ').pop() : c.label}
+              </button>
+            ))}
+          </div>
+        )}
         <button type="button" onClick={() => go(-1)} aria-label="Karya sebelumnya">←</button>
         <button type="button" onClick={togglePause}>{paused ? 'Lanjutkan' : 'Jeda'}</button>
         <button type="button" onClick={() => go(1)} aria-label="Karya berikutnya">→</button>
@@ -197,19 +219,31 @@ export function CapstoneShow({ slides }: { slides: CapstoneSlide[] }) {
       </div>
       {/* Gambar berikutnya dimuat lebih dulu agar tidak berkedip saat berganti / The next image preloads so it does not flash on change */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      {next?.cover && <img src={next.cover} alt="" aria-hidden style={{ display: 'none' }} />}
+      {next?.images[0] && <img src={next.images[0]} alt="" aria-hidden style={{ display: 'none' }} />}
     </div>
   );
 }
 
-function Slide({ s, enter }: { s: CapstoneSlide; enter?: boolean }) {
+function Slide({ s, enter, paused }: { s: CapstoneSlide; enter?: boolean; paused?: boolean }) {
+  const many = s.images.length > 1;
+  const [k, setK] = useState(0);
+  useEffect(() => {
+    if (!enter || paused || !many) return;
+    const t = setInterval(() => setK((x) => (x + 1) % s.images.length), IMG_MS);
+    return () => clearInterval(t);
+  }, [enter, paused, many, s.images.length]);
+
   return (
     <div className={`cap-slide ${enter ? 'in' : 'out'}`} aria-hidden={!enter}>
       <div className="cap-shot">
         <div className="cap-bar"><i /><i /><i /></div>
-        <div className="cap-img">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {s.cover && <img src={s.cover} alt={'Tampilan ' + s.title} />}
+        <div className={`cap-img ${many ? 'many' : 'one'}`}>
+          {/* Gambar sorotan ditumpuk dan dipudarkan bergantian; hanya yang berikutnya dimuat lebih dulu
+              Highlight images are stacked and cross-faded; only the next one loads ahead */}
+          {s.images.map((src, i) => (i === k || i === (k + 1) % s.images.length) && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={src} src={src} className={i === k ? 'on' : ''} alt={i === k ? 'Tampilan ' + s.title : ''} />
+          ))}
         </div>
       </div>
       <div className="cap-info">
