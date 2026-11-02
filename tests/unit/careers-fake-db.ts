@@ -48,11 +48,12 @@ interface Q {
   get: () => Promise<Snap>;
 }
 
-function query(col: string, filters: [string, unknown][] = [], order?: 'desc', lim?: number): Q {
+function query(col: string, filters: [string, unknown][] = [], order?: 'desc', lim?: number, orderField?: string): Q {
   const rows = () => {
     // Medan bukan teks dianggap FieldPath.documentId() / A non-string field is treated as FieldPath.documentId()
     let r = Object.entries(data[col] ?? {}).filter(([id, d]) => filters.every(([f, v]) => (typeof f === 'string' ? pick(d, f) : id) === v));
-    if (order) r = r.sort(([a], [b]) => (a < b ? 1 : -1));
+    if (orderField) r = r.sort(([, a], [, b]) => (String(pick(a, orderField)) < String(pick(b, orderField)) ? 1 : -1) * (order === 'desc' ? 1 : -1));
+    else if (order) r = r.sort(([a], [b]) => (a < b ? 1 : -1));
     return lim ? r.slice(0, lim) : r;
   };
   const snap = () => {
@@ -60,14 +61,14 @@ function query(col: string, filters: [string, unknown][] = [], order?: 'desc', l
     return { docs, size: docs.length, empty: docs.length === 0 };
   };
   return {
-    where: (f: string, _op: string, v: unknown) => query(col, [...filters, [f as string, v]], order, lim),
+    where: (f: string, _op: string, v: unknown) => query(col, [...filters, [f as string, v]], order, lim, orderField),
     orderBy: (f: unknown, dir?: 'desc') => {
       // Firestore menolak urutan id menurun tanpa indeks khusus / Firestore refuses a descending id order without a dedicated index
       if (typeof f !== 'string' && dir === 'desc') throw new Error('9 FAILED_PRECONDITION: The query requires an index.');
-      return query(col, filters, dir, lim);
+      return query(col, filters, dir, lim, typeof f === 'string' ? f : undefined);
     },
-    limit: (n: number) => query(col, filters, order, n),
-    select: (...fields: string[]) => { (selects[col] ??= []).push(fields); return query(col, filters, order, lim); },
+    limit: (n: number) => query(col, filters, order, n, orderField),
+    select: (...fields: string[]) => { (selects[col] ??= []).push(fields); return query(col, filters, order, lim, orderField); },
     count: () => ({ get: async () => ({ data: () => ({ count: rows().length }) }) }),
     get: async () => snap(),
   };

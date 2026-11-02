@@ -42,13 +42,15 @@ beforeEach(() => {
       w3: { personUid: 'u2', status: 'published', title: 'Orang lain', type: 'TPM', cover: { thumb: '' } },
     },
     submissions: {
-      t1_u1: { studentId: 'u1', taskTitle: 'TPM 1', taskKind: 'daily', fileId: 'f', url: null },
+      t1_u1: { studentId: 'u1', taskTitle: 'TPM 1', taskKind: 'daily', fileId: 'submissions/k1/t1/u1/a.pdf', url: null },
       t2_u1: { studentId: 'u1', taskTitle: 'Kosong', taskKind: 'daily', fileId: null, url: null },
+      t3_u1: { studentId: 'u1', taskTitle: 'Tautan', taskKind: 'daily', fileId: null, url: 'https://figma.com/x' },
+      t4_u1: { studentId: 'u1', taskTitle: 'Hilang', taskKind: 'daily', fileId: 'local-file-123', url: null },
     },
     studentCvs: {},
     dashboardSnapshots: {
-      '2026-11-01': { generatedAt: 'a', ranking: [{ studentId: 'u1', score: 70, pending: [] }] },
-      '2026-11-04': { generatedAt: 'b', ranking: [{ studentId: 'u1', score: 82, pending: ['capstone'] }] },
+      '2026-11-01': { generatedAt: '2026-11-01T01:00:00Z', version: 17, ranking: [{ studentId: 'u1', score: 70, pending: [] }] },
+      '2026-11-04': { generatedAt: '2026-11-04T01:00:00Z', version: 17, ranking: [{ studentId: 'u1', score: 82, pending: ['capstone'] }] },
     },
   });
   getSessionActor.mockResolvedValue({ uid: 'u1', role: 'student', classId: 'k1' });
@@ -58,6 +60,12 @@ describe('bacaan siswa', () => {
   it('nilai akhir diambil dari ringkasan terbaru dan ditandai sementara', async () => {
     expect(await latestFinalScore('u1')).toEqual({ finalScore: 82, finalScorePending: true, finalScoreAt: '2026-11-04' });
     expect(await latestFinalScore('u9')).toEqual({ finalScore: null, finalScorePending: false, finalScoreAt: '2026-11-04' });
+  });
+
+  it('ringkasan sebelum versi 17 dianggap sementara karena belum mencatat komponen yang tertunda', async () => {
+    const { data } = await import('./careers-fake-db');
+    data.dashboardSnapshots['2026-11-05'] = { generatedAt: '2026-11-05T01:00:00Z', ranking: [{ studentId: 'u1', score: 88 }] };
+    expect(await latestFinalScore('u1')).toEqual({ finalScore: 88, finalScorePending: true, finalScoreAt: '2026-11-05' });
   });
 
   it('hanya lowongan terbuka dan layak yang tampil, dengan logo mitra', async () => {
@@ -91,7 +99,11 @@ describe('bacaan siswa', () => {
     expect(c.personal).toEqual({ fullName: 'Andi Pratama', email: 'andi@x.id', phone: '0812', city: 'Semarang', school: 'SMK 1', major: 'RPL', linkedin: '' });
     expect(c.className).toBe('Web Programming · Semarang');
     expect(c.works).toEqual([{ id: 'w1', title: 'Griya', type: 'Capstone', cover: 'https://x/c.webp' }]);
-    expect(c.tasks).toEqual([{ submissionId: 't1_u1', title: 'TPM 1', kind: 'daily' }]);
+    // Berkas yang hilang tidak bisa dibuka mitra; tugas bertautan dibawa tautannya / Lost files cannot be opened; link tasks carry their link
+    expect(c.tasks).toEqual([
+      { submissionId: 't1_u1', title: 'TPM 1', kind: 'daily', url: '' },
+      { submissionId: 't3_u1', title: 'Tautan', kind: 'daily', url: 'https://figma.com/x' },
+    ]);
   });
 
   it('konteks formulir menolak lowongan tak terbuka dan yang sudah dilamar', async () => {

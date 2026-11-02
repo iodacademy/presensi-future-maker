@@ -216,7 +216,8 @@ export type CvKind = 'cv' | 'surat';
 export interface CvFile { id: string; ownerUid: string; kind: CvKind; fileName: string; size: number; storagePath: string; uploadedAt: string; deleted: boolean }
 export interface Personal { fullName: string; email: string; phone: string; city: string; school: string; major: string; linkedin: string }
 export interface AttachedWork { id: string; title: string; type: string; cover: string }
-export interface AttachedTask { submissionId: string; title: string; kind: string }
+/** url kosong berarti berkas tersimpan, dibuka lewat rute berkas tugas / An empty url means a stored file, opened through the task file route */
+export interface AttachedTask { submissionId: string; title: string; kind: string; url: string }
 export interface Application {
   id: string; jobId: string; partnerId: string; studentId: string; classId: string; number: string;
   personal: Personal; cvId: string; cvFileName: string; coverLetterId: string | null; portfolioUrl: string;
@@ -250,6 +251,8 @@ export function validateApplicationInput(
   const p = obj(r.personal);
   const personal = { fullName: str(p.fullName), email: str(p.email), phone: str(p.phone), city: str(p.city), school: str(p.school), major: str(p.major), linkedin: str(p.linkedin) };
   for (const [k, l] of PERSONAL_LABELS) if (!personal[k]) throw new Error(`Lengkapi data diri: ${l}`);
+  // Isian disalin ke setiap baris daftar pelamar dan ekspor, jadi panjangnya dibatasi / Fields are copied into every applicant row and export, so their length is capped
+  for (const [k, l] of [...PERSONAL_LABELS, ['linkedin', 'LinkedIn'] as [keyof Personal, string]]) if (personal[k].length > 200) throw new Error(`Isian terlalu panjang: ${l}`);
   if (personal.linkedin && !safeExternalUrl(personal.linkedin)) personal.linkedin = `https://${personal.linkedin.replace(/^\/+/, '')}`;
 
   const cvId = str(r.cvId);

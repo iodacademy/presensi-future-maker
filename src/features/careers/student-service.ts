@@ -5,9 +5,9 @@
  * Job Portal reads for students: the jobs they may see, partner profiles, the
  * application form context, and their own applications.
  */
-import { FieldPath } from 'firebase-admin/firestore';
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
+import { isStoredSubmissionFile } from '../tasks/submission-policy';
 import { listCvs } from './cv-service';
 import {
   isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
@@ -36,18 +36,16 @@ const CARD_FIELDS = ['title', 'partnerId', 'partnerName', 'employment', 'categor
  * an admin opens the dashboard, so its date is kept to show how old it is.
  */
 export async function latestFinalScore(uid: string): Promise<FinalScore> {
-  // Id ringkasan adalah tanggal WIB. Urutan id menurun butuh indeks khusus, jadi id terbesar dicari dari
-  // daftar referensi (tanpa isi dokumen), lalu hanya kolom ranking dokumen itu yang dibaca.
-  // Snapshot ids are WIB dates. A descending id order needs a dedicated index, so the largest id comes from
-  // the reference list (no document bodies), then only that document's ranking field is read.
-  const refs = await db().collection('dashboardSnapshots').listDocuments();
-  const latest = refs.map((r) => r.id).sort().pop();
-  if (!latest) return { finalScore: null, finalScorePending: false, finalScoreAt: null };
-  const snap = await db().collection('dashboardSnapshots').where(FieldPath.documentId(), '==', latest).select('ranking').get();
+  // generatedAt adalah medan biasa, jadi urutan menurunnya memakai indeks bawaan; tidak perlu indeks khusus
+  // generatedAt is a plain field, so its descending order uses the built-in index; no dedicated index needed
+  const snap = await db().collection('dashboardSnapshots').orderBy('generatedAt', 'desc').limit(1).select('ranking', 'version').get();
   const doc = snap.docs[0];
   if (!doc) return { finalScore: null, finalScorePending: false, finalScoreAt: null };
   const row = ((doc.get('ranking') ?? []) as { studentId: string; score: number; pending?: string[] }[]).find((r) => r.studentId === uid);
-  return { finalScore: row?.score ?? null, finalScorePending: (row?.pending?.length ?? 0) > 0, finalScoreAt: doc.id };
+  // Ringkasan sebelum versi 17 tidak mencatat komponen tertunda, jadi nilainya belum bisa disebut final
+  // Snapshots before version 17 do not record pending components, so their score cannot be called final
+  const unknown = Number(doc.get('version') ?? 1) < 17;
+  return { finalScore: row?.score ?? null, finalScorePending: !!row && (unknown || (row.pending?.length ?? 0) > 0), finalScoreAt: doc.id };
 }
 
 async function appliedJobIds(uid: string): Promise<Set<string>> {
@@ -158,12 +156,21 @@ export async function ownWorks(uid: string): Promise<AttachedWork[]> {
   return snap.docs.map((w) => ({ id: w.id, title: String(w.get('title') ?? ''), type: String(w.get('type') ?? ''), cover: String(w.get('cover.thumb') ?? '') }));
 }
 
-// Hanya pengumpulan yang punya berkas atau tautan yang bisa dibuka mitra / Only submissions with a file or link can be opened by a partner
+/**
+ * Hanya pengumpulan yang bisa dibuka peninjau: berkas yang benar-benar tersimpan, atau tautan. Berkas lama
+ * yang hilang ("local-file-") ditolak oleh rute berkas, jadi tidak ditawarkan sebagai lampiran.
+ *
+ * Only submissions a reviewer can open: a file actually stored, or a link. Old lost files ("local-file-")
+ * are refused by the file route, so they are not offered as attachments.
+ */
 export async function ownTasks(uid: string): Promise<AttachedTask[]> {
   const snap = await db().collection('submissions').where('studentId', '==', uid).select('taskTitle', 'taskKind', 'fileId', 'url').get();
   return snap.docs
-    .filter((s) => s.get('fileId') || s.get('url'))
-    .map((s) => ({ submissionId: s.id, title: String(s.get('taskTitle') ?? 'Tugas'), kind: String(s.get('taskKind') ?? '') }));
+    .filter((s) => isStoredSubmissionFile(s.get('fileId')) || s.get('url'))
+    .map((s) => ({
+      submissionId: s.id, title: String(s.get('taskTitle') ?? 'Tugas'), kind: String(s.get('taskKind') ?? ''),
+      url: isStoredSubmissionFile(s.get('fileId')) ? '' : String(s.get('url')),
+    }));
 }
 
 export async function listMyApplications(uid: string): Promise<MyApplication[]> {

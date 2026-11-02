@@ -35,8 +35,8 @@ beforeEach(() => {
       w1: { personUid: 'u1', status: 'published', title: 'Griya', type: 'Capstone', cover: { thumb: 'https://x/c.webp' } },
       w9: { personUid: 'u2', status: 'published', title: 'Punya Budi', type: 'TPM', cover: { thumb: '' } },
     },
-    submissions: { t1_u1: { studentId: 'u1', taskTitle: 'TPM 1', taskKind: 'daily', fileId: 'f', url: null } },
-    dashboardSnapshots: { '2026-11-04': { ranking: [{ studentId: 'u1', score: 82, pending: ['capstone'] }] } },
+    submissions: { t1_u1: { studentId: 'u1', taskTitle: 'TPM 1', taskKind: 'daily', fileId: 'submissions/k1/t1/u1/a.pdf', url: null } },
+    dashboardSnapshots: { '2026-11-04': { generatedAt: '2026-11-04T01:00:00Z', version: 17, ranking: [{ studentId: 'u1', score: 82, pending: ['capstone'] }] } },
   });
   getSessionActor.mockResolvedValue({ uid: 'u1', role: 'student', classId: 'k1' });
 });
@@ -48,7 +48,7 @@ describe('kirim lamaran', () => {
     expect(data.jobApplications.j1_u1).toMatchObject({
       jobId: 'j1', partnerId: 'p1', studentId: 'u1', classId: 'k1', status: 'baru', rejectReason: '', cvFileName: 'CV Andi.pdf',
       works: [{ id: 'w1', title: 'Griya', type: 'Capstone', cover: 'https://x/c.webp' }],
-      tasks: [{ submissionId: 't1_u1', title: 'TPM 1', kind: 'daily' }],
+      tasks: [{ submissionId: 't1_u1', title: 'TPM 1', kind: 'daily', url: '' }],
       finalScore: 82, finalScorePending: true, finalScoreAt: '2026-11-04',
     });
     expect(data.jobs.j1.applicantCount).toBe(1);

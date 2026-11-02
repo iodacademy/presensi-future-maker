@@ -38,6 +38,9 @@ describe('validasi lamaran', () => {
     expect(() => validateApplicationInput({ ...base, personal: { ...personal, phone: ' ' } }, job, owned)).toThrow('Lengkapi data diri: No. WhatsApp');
     expect(() => validateApplicationInput({ ...base, personal: { ...personal, school: '' } }, job, owned)).toThrow('Lengkapi data diri: Asal sekolah / kampus');
   });
+  it('isian data diri dibatasi panjangnya', () => {
+    expect(() => validateApplicationInput({ ...base, personal: { ...personal, city: 'a'.repeat(201) } }, job, owned)).toThrow('Isian terlalu panjang: Domisili');
+  });
   it('CV harus milik siswa', () => {
     expect(() => validateApplicationInput({ ...base, cvId: 'cvLain' }, job, owned)).toThrow('CV tidak ditemukan');
   });
