@@ -136,7 +136,7 @@ export function WorkView({ work, related }: { work: WorkDetail; related: Gallery
           {kind === 'video' && (
             <div style={css('position:relative;aspect-ratio:16/9;background:var(--dark-blue);border-radius:24px;overflow:hidden')}>
               {vid?.isEmbed && <iframe src={vid.embed} title={work.title} allow="autoplay; encrypted-media; fullscreen" allowFullScreen style={css('position:absolute;inset:0;width:100%;height:100%;border:0')} />}
-              {vid?.isFile && <video src={vid.url} controls playsInline style={css('position:absolute;inset:0;width:100%;height:100%;background:#000')} />}
+              {vid?.isFile && <video src={vid.url} poster={cover ?? undefined} preload="metadata" controls playsInline style={css('position:absolute;inset:0;width:100%;height:100%;background:#000')} />}
               {!vid && <span style={css('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700')}>Video belum tersedia</span>}
             </div>
           )}
