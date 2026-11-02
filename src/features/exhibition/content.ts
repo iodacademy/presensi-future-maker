@@ -72,7 +72,7 @@ export const TRACKS: Record<TrackKey, Track> = {
   smm: { key: 'smm', name: 'Social Media Marketing', short: 'SMM', color: '#DC0080', fg: '#FFFFFF', tint: '#FBE5F2',
     tagline: 'Konten, campaign, dan laporan performanya.',
     desc: 'Peserta merancang konten, menjalankan campaign, dan melaporkan performanya.',
-    types: ['Konten Feed', 'Reels', 'Brand Identity', 'Laporan Campaign'],
+    types: ['Capstone', 'Konten Feed', 'Reels', 'Brand Identity', 'Laporan Campaign'],
     outputs: ['Konten feed dan Reels', 'Identitas merek', 'Laporan performa campaign'] },
 };
 
