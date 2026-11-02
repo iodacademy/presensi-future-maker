@@ -2,6 +2,7 @@ import React from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { JobCard } from '../../src/features/careers/job-card';
+import { CountdownBanner } from '../../src/features/careers/countdown-banner';
 
 const job = {
   title: 'UI/UX Designer Intern', partnerName: 'PT DIPSI', employment: 'magang-3' as const,
@@ -29,5 +30,14 @@ describe('kartu lowongan', () => {
     render(<JobCard job={{ ...job, closesAt: '2026-11-03T11:14:02Z' }} logo={null} now={now} />);
     const pita = screen.getByText('Tutup dalam 11:14:02').closest('[data-urgent]');
     expect(pita?.getAttribute('data-urgent')).toBe('true');
+  });
+});
+
+describe('spanduk hitung mundur', () => {
+  it('judul spanduk berwarna putih di atas latar biru', () => {
+    render(<CountdownBanner closesAt={null} />);
+    // Gaya global h2 berwarna gelap; tanpa warna eksplisit judul tidak terbaca di atas biru
+    // The global h2 style is dark; without an explicit colour the heading is unreadable on blue
+    expect(screen.getByRole('heading', { name: 'Lamar posisi dari mitra Future Makers' }).style.color).toBe('rgb(255, 255, 255)');
   });
 });

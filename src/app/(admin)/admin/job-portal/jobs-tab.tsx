@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { btn, send } from '../pameran/admin-ui';
 import type { JobRow } from '@/features/careers/admin-service';
 import { countdownParts, EMPLOYMENT_LABELS, formatCountdown, jobState, type JobState } from '@/features/careers/model';
@@ -59,6 +60,7 @@ export function JobsTab({ rows, onEdit, onChanged, onError }: {
                 <td style={td}>{r.applicantCount}</td>
                 <td style={td}><span style={{ padding: '2px 8px', borderRadius: '6px', fontWeight: 600, backgroundColor: s.bg, color: s.fg }}>{s.label}</span></td>
                 <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <Link href={`/admin/job-portal/${r.id}`} style={{ ...btn, textDecoration: 'none', marginRight: '6px' }}>Lihat pelamar</Link>
                   <button type="button" style={btn} onClick={() => onEdit(r.id)}>Ubah</button>
                   {r.applicantCount === 0 && (
                     <button type="button" style={{ ...btn, marginLeft: '6px', borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }} onClick={() => remove(r)}>Hapus</button>

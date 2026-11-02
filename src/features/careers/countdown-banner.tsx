@@ -17,7 +17,7 @@ export function CountdownBanner({ closesAt }: { closesAt: string | null }) {
     <section style={{ backgroundColor: '#0072CE', color: '#ffffff', borderRadius: '16px', padding: '26px 28px', display: 'flex', gap: '20px', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
       <div style={{ maxWidth: '520px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <span style={{ alignSelf: 'flex-start', backgroundColor: '#FFD200', color: '#243c4b', fontSize: '12px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px' }}>Rekrutmen Mitra</span>
-        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '24px', fontWeight: 700, margin: 0, lineHeight: 1.25 }}>Lamar posisi dari mitra Future Makers</h2>
+        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '24px', fontWeight: 700, margin: 0, lineHeight: 1.25, color: '#ffffff' }}>Lamar posisi dari mitra Future Makers</h2>
         <p style={{ margin: 0, fontSize: '14px', opacity: 0.92 }}>Lamaran dikirim langsung ke PIC perusahaan. Pastikan CV kamu sudah siap sebelum periode ditutup.</p>
       </div>
       {p && !p.ended && (
