@@ -6,9 +6,13 @@ export const GET = () => asStudent(async (actor) => ({ cvs: await listCvs(actor.
 
 export const POST = (request: Request) =>
   asStudent(async (actor) => {
-    // Panjang permintaan diperiksa sebelum formData() membaca seluruh isinya ke memori
-    // The request length is checked before formData() reads the whole body into memory
-    if (Number(request.headers.get('content-length') ?? 0) > MAX_PDF_BYTES + 64 * 1024) throw new Error('Ukuran PDF maksimal 2 MB');
+    // Panjang permintaan diperiksa sebelum formData() membaca seluruh isinya ke memori. Kiriman tanpa
+    // panjang (chunked) ditolak: peramban selalu menyertakannya untuk FormData.
+    // The request length is checked before formData() reads the whole body into memory. A body with no
+    // length (chunked) is refused: browsers always send one for FormData.
+    const length = Number(request.headers.get('content-length'));
+    if (!Number.isFinite(length) || length <= 0) throw new Error('Panjang unggahan tidak diketahui');
+    if (length > MAX_PDF_BYTES + 64 * 1024) throw new Error('Ukuran PDF maksimal 2 MB');
     const form = await request.formData();
     const file = form.get('file');
     if (!(file instanceof File)) throw new Error('Berkas wajib disertakan');

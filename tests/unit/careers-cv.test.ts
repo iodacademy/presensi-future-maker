@@ -66,6 +66,14 @@ describe('bank CV', () => {
     expect(formData).not.toHaveBeenCalled();
   });
 
+  it('permintaan unggah tanpa panjang yang sah ditolak sebelum isinya dibaca', async () => {
+    const req = new Request('http://x', { method: 'POST', body: 'x' });
+    req.headers.delete('content-length');
+    const formData = vi.spyOn(req, 'formData');
+    expect((await cvPost(req)).status).toBe(400);
+    expect(formData).not.toHaveBeenCalled();
+  });
+
   it('rute berkas menolak siswa lain dengan 403', async () => {
     const cv = await uploadCv('u1', 'cv', file(pdf()));
     getSessionActor.mockResolvedValue({ uid: 'u2', role: 'student' });
