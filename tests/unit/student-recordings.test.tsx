@@ -62,13 +62,14 @@ describe('label menu peserta', () => {
   it('tetap pendek agar tidak terpotong di layar sempit', () => {
     const shell = readFileSync(resolve(process.cwd(), 'src/components/student-shell.tsx'), 'utf-8');
     const labels = [...shell.matchAll(/label: '([^']+)'/g)].map((m) => m[1]);
-    expect(labels.length).toBe(5);
+    expect(labels.length).toBe(6);
     for (const label of labels) {
-      // Sekitar 69px tersedia per tombol pada 360px dengan font 9px, kira-kira
-      // 13 huruf.
+      // Enam menu (Karier ditambahkan) menyisakan sekitar 57px per tombol pada
+      // 360px dengan font 9px, kira-kira 11 huruf.
       //
-      // About 69px per button at 360px with a 9px font, roughly 13 characters.
-      expect(label.length, label).toBeLessThanOrEqual(13);
+      // Six items (Karier added) leave about 57px per button at 360px with a
+      // 9px font, roughly 11 characters.
+      expect(label.length, label).toBeLessThanOrEqual(11);
     }
   });
 });

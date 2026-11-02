@@ -235,7 +235,7 @@ export function isEligible(e: Eligibility, s: { classId: string | null; finalSco
   return true;
 }
 
-const PERSONAL_LABELS: [keyof Personal, string][] = [
+export const PERSONAL_LABELS: [keyof Personal, string][] = [
   ['fullName', 'Nama lengkap'], ['email', 'Email'], ['phone', 'No. WhatsApp'],
   ['city', 'Domisili'], ['school', 'Asal sekolah / kampus'], ['major', 'Jurusan'],
 ];

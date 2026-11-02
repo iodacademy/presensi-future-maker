@@ -3,7 +3,7 @@
 import React, { createContext, useContext } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Calendar, Users, FileText, BookOpen } from 'lucide-react';
+import { Home, Calendar, Users, FileText, BookOpen, Briefcase } from 'lucide-react';
 import { ProfileMenu } from '@/components/ui/profile-menu';
 import { NotificationBell, ReminderToast } from '@/components/reminders';
 import type { StudentReminders } from '@/features/dashboard/types';
@@ -20,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Mentoring', href: '/app/mentoring', icon: Users },
   { label: 'Tugas', href: '/app/tugas', icon: FileText },
   { label: 'Program', href: '/app/program', icon: BookOpen },
+  { label: 'Karier', href: '/app/karier', icon: Briefcase },
 ];
 
 interface StudentShellProps {
@@ -134,6 +135,9 @@ export function StudentShell({ userName, children }: StudentShellProps) {
                 <Icon size={16} color={active ? 'var(--color-primary)' : 'var(--color-student-inactive)'} strokeWidth={2} />
                 <span style={{ flex: 1 }}>{item.label}</span>
                 {item.href === '/app/jadwal' && <ReminderCount count={reminderCount} />}
+                {item.href === '/app/karier' && (
+                  <span style={{ backgroundColor: '#FFD200', color: '#243c4b', fontSize: '9px', fontWeight: 700, padding: '1px 6px', borderRadius: '999px' }}>Baru</span>
+                )}
               </Link>
             );
           })}
