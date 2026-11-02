@@ -196,3 +196,94 @@ export function isoToWib(iso: string): { date: string; time: string } {
   const wib = new Date(new Date(iso).getTime() + 7 * 3600 * 1000).toISOString();
   return { date: wib.slice(0, 10), time: wib.slice(11, 16) };
 }
+
+// ---- Lamaran / Applications ----
+
+export type ApplicationStatus = 'baru' | 'ditinjau' | 'shortlist' | 'interview' | 'diterima' | 'tidak-lolos';
+export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  baru: 'Baru', ditinjau: 'Ditinjau', shortlist: 'Shortlist', interview: 'Interview', diterima: 'Diterima', 'tidak-lolos': 'Tidak lolos',
+};
+// Shortlist sengaja tampil sama dengan "Dilihat mitra" agar siswa tidak menebak peringkatnya
+// Shortlist deliberately reads as "Dilihat mitra" so students do not guess their ranking
+const STUDENT_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  baru: 'Terkirim', ditinjau: 'Dilihat mitra', shortlist: 'Dilihat mitra', interview: 'Undangan interview', diterima: 'Diterima', 'tidak-lolos': 'Belum lolos',
+};
+export const REJECT_MESSAGE = 'Terima kasih sudah melamar. Kali ini kamu belum lolos ke tahap berikutnya.';
+export const studentStatusLabel = (s: ApplicationStatus): string => STUDENT_STATUS_LABELS[s] ?? s;
+export const formatApplicationNumber = (n: number): string => `FM-JOB-${String(n).padStart(4, '0')}`;
+
+export type CvKind = 'cv' | 'surat';
+export interface CvFile { id: string; ownerUid: string; kind: CvKind; fileName: string; size: number; storagePath: string; uploadedAt: string; deleted: boolean }
+export interface Personal { fullName: string; email: string; phone: string; city: string; school: string; major: string; linkedin: string }
+export interface AttachedWork { id: string; title: string; type: string; cover: string }
+export interface AttachedTask { submissionId: string; title: string; kind: string }
+export interface Application {
+  id: string; jobId: string; partnerId: string; studentId: string; classId: string; number: string;
+  personal: Personal; cvId: string; cvFileName: string; coverLetterId: string | null; portfolioUrl: string;
+  works: AttachedWork[]; tasks: AttachedTask[]; answers: Record<string, string>;
+  finalScore: number | null; finalScorePending: boolean; finalScoreAt: string | null;
+  status: ApplicationStatus; rejectReason: string; submittedAt: string; updatedAt: string; statusChangedAt: string;
+}
+
+export function isOpenToStudents(job: Pick<Job, 'status' | 'opensAt' | 'closesAt'>, now: Date): boolean {
+  return jobState(job, now) === 'aktif';
+}
+
+export function isEligible(e: Eligibility, s: { classId: string | null; finalScore: number | null }): boolean {
+  if (e.mode === 'classes') return !!s.classId && e.classIds.includes(s.classId);
+  if (e.mode === 'min-score') return s.finalScore !== null && s.finalScore >= e.minScore;
+  return true;
+}
+
+const PERSONAL_LABELS: [keyof Personal, string][] = [
+  ['fullName', 'Nama lengkap'], ['email', 'Email'], ['phone', 'No. WhatsApp'],
+  ['city', 'Domisili'], ['school', 'Asal sekolah / kampus'], ['major', 'Jurusan'],
+];
+const MAX_ANSWER = 3000;
+
+export function validateApplicationInput(
+  raw: unknown,
+  job: Pick<Job, 'documents' | 'questions'>,
+  owned: { cvIds: Set<string>; coverIds: Set<string>; workIds: Set<string>; submissionIds: Set<string> },
+) {
+  const r = obj(raw);
+  const p = obj(r.personal);
+  const personal = { fullName: str(p.fullName), email: str(p.email), phone: str(p.phone), city: str(p.city), school: str(p.school), major: str(p.major), linkedin: str(p.linkedin) };
+  for (const [k, l] of PERSONAL_LABELS) if (!personal[k]) throw new Error(`Lengkapi data diri: ${l}`);
+  if (personal.linkedin && !safeExternalUrl(personal.linkedin)) personal.linkedin = `https://${personal.linkedin.replace(/^\/+/, '')}`;
+
+  const cvId = str(r.cvId);
+  if (!owned.cvIds.has(cvId)) throw new Error('CV tidak ditemukan');
+
+  const { documents: d } = job;
+  // Lampiran untuk dokumen yang tidak diminta dibuang, bukan ditolak / Attachments for documents not requested are dropped, not rejected
+  const portfolioUrl = d.portfolio === 'off' ? '' : link(r.portfolioUrl);
+  if (d.portfolio === 'required' && !portfolioUrl) throw new Error('Link portofolio wajib diisi');
+
+  const ids = (v: unknown) => [...new Set((Array.isArray(v) ? v : []).map(str).filter(Boolean))];
+  const workIds = d.works === 'off' ? [] : ids(r.workIds);
+  const submissionIds = d.works === 'off' ? [] : ids(r.submissionIds);
+  if (workIds.some((id) => !owned.workIds.has(id)) || submissionIds.some((id) => !owned.submissionIds.has(id))) throw new Error('Lampiran bukan milikmu');
+  if (d.works === 'required' && workIds.length + submissionIds.length === 0) throw new Error('Lampirkan minimal satu karya atau tugas');
+
+  const cover = str(r.coverLetterId);
+  const coverLetterId = d.coverLetter === 'off' || !cover ? null : cover;
+  if (coverLetterId && !owned.coverIds.has(coverLetterId)) throw new Error('Surat lamaran tidak ditemukan');
+  if (d.coverLetter === 'required' && !coverLetterId) throw new Error('Surat lamaran wajib diunggah');
+
+  const given = obj(r.answers);
+  const answers: Record<string, string> = {};
+  for (const q of job.questions) {
+    const a = str(given[q.id]);
+    if (!a) {
+      if (q.required) throw new Error(`Jawab pertanyaan: ${q.label}`);
+      continue;
+    }
+    if (a.length > MAX_ANSWER) throw new Error(`Jawaban terlalu panjang: ${q.label}`);
+    if ((q.kind === 'choice' && !q.options.includes(a)) || (q.kind === 'yes-no' && a !== 'Ya' && a !== 'Tidak')) {
+      throw new Error(`Jawaban tidak sah: ${q.label}`);
+    }
+    answers[q.id] = a;
+  }
+  return { personal, cvId, coverLetterId, portfolioUrl, workIds, submissionIds, answers };
+}
