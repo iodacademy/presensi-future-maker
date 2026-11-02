@@ -32,6 +32,7 @@ export function PartnerForm({ id, onDone }: { id: string | null; onDone: () => v
   // Id mitra baru disimpan agar percobaan ulang setelah logo gagal tidak membuat mitra kedua
   // A new partner's id is kept so a retry after a failed logo upload does not create a second partner
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const [accountNote, setAccountNote] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -116,6 +117,24 @@ export function PartnerForm({ id, onDone }: { id: string | null; onDone: () => v
         </div>
       ))}
       <button type="button" style={{ ...btn, alignSelf: 'flex-start' }} onClick={() => setPics([...pics, emptyPic()])}>+ Tambah PIC</button>
+
+      {id && (
+        <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <b style={{ fontSize: '12px' }}>Login portal mitra</b>
+          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
+            PIC masuk di halaman login dengan emailnya. Simpan perubahan PIC dulu sebelum mengaktifkan login.
+          </span>
+          <button type="button" style={{ ...btn, alignSelf: 'flex-start' }} disabled={busy}
+            onClick={async () => {
+              setError(null); setAccountNote(null);
+              try {
+                const r = await send(`/api/karier/partners/${id}/accounts`, 'POST', {});
+                setAccountNote(`Login aktif: ${[...r.created, ...r.existing].join(', ')}${r.created.length ? ` (baru: ${r.created.length})` : ''}`);
+              } catch (err) { setError((err as Error).message); }
+            }}>Aktifkan login PIC</button>
+          {accountNote && <span role="status" style={{ fontSize: '11px', color: 'var(--color-success, #067647)' }}>{accountNote}</span>}
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
         <button type="button" style={btn} onClick={onDone}>Batal</button>

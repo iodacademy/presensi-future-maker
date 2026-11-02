@@ -20,7 +20,7 @@ const TABS: [Role, string][] = [
 export default function AdminAkunPage() {
   const [tab, setTab] = useState<Role>('student');
   const [users, setUsers] = useState<UserListItem[]>([]);
-  const [counts, setCounts] = useState<Record<Role, number>>({ admin: 0, mentor: 0, student: 0 });
+  const [counts, setCounts] = useState<Record<Role, number>>({ admin: 0, mentor: 0, student: 0, partner: 0 });
   const [classes, setClasses] = useState<ClassSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');

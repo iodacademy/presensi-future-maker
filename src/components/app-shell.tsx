@@ -26,6 +26,7 @@ const ROLE_LABELS: Record<Role, string> = {
   admin: 'Administrator',
   mentor: 'Mentor',
   student: 'Peserta',
+  partner: 'Mitra',
 };
 
 export function AppShell({ role, userName, classNameTitle, children }: AppShellProps) {
@@ -65,6 +66,12 @@ export function AppShell({ role, userName, classNameTitle, children }: AppShellP
     mentor: [
       { label: 'Peserta Bimbingan', href: '/mentor/peserta', icon: Contact },
       { label: 'Jadwal Mentoring', href: '/mentor/jadwal', icon: Calendar },
+    ],
+    partner: [
+      { label: 'Dashboard', href: '/mitra', icon: LayoutGrid },
+      { label: 'Kandidat', href: '/mitra/kandidat', icon: Users },
+      { label: 'Jadwal interview', href: '/mitra/jadwal', icon: Calendar },
+      { label: 'Profil perusahaan', href: '/mitra/profil', icon: Briefcase },
     ],
   };
 

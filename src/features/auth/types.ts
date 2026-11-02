@@ -1,5 +1,5 @@
 // Tipe data autentikasi dan peran / Authentication and role data types
-export type Role = 'admin' | 'student' | 'mentor';
+export type Role = 'admin' | 'student' | 'mentor' | 'partner';
 
 export interface UserDocument {
   uid: string;
@@ -9,6 +9,8 @@ export interface UserDocument {
   role: Role;
   active: boolean;
   classId: string | null;
+  /** Mitra milik akun PIC; hanya untuk peran partner / The partner a PIC account belongs to; partner role only */
+  partnerId?: string | null;
   /** Akun uji coba: tidak dihitung di dashboard / A test account: excluded from the dashboard */
   isTest?: boolean;
   /**
@@ -29,6 +31,8 @@ export interface Actor {
   name: string;
   role: Role;
   classId: string | null;
+  /** Mitra milik PIC yang masuk / The signed-in PIC's partner */
+  partnerId?: string | null;
   /** Saat peserta mulai dihitung (joinMoment); hanya untuk peserta / When the participant starts counting (joinMoment); participants only */
   joinIso?: string;
 }

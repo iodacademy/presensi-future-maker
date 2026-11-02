@@ -87,7 +87,11 @@ export const fakeDb = {
   },
   batch: () => {
     const ops: (() => void)[] = [];
-    return { update: (r: R, d: Doc) => ops.push(() => { data[r.col][r.id] = apply(data[r.col][r.id], d); }), commit: async () => ops.forEach((o) => o()) };
+    return {
+      update: (r: R, d: Doc) => ops.push(() => { data[r.col][r.id] = apply(data[r.col][r.id], d); }),
+      set: (r: R, d: Doc) => ops.push(() => { data[r.col] ??= {}; data[r.col][r.id] = apply(undefined, d); }),
+      commit: async () => ops.forEach((o) => o()),
+    };
   },
   collection: (col: string) => ({
     ...query(col),

@@ -22,5 +22,11 @@ async function as(roles: Role[] | null, denied: string, action: (actor: Actor) =
 export const asAdmin = (action: (actor: Actor) => Promise<unknown>) => as(['admin'], 'Hanya admin yang diizinkan', action);
 export const asStudent = (action: (actor: Actor) => Promise<unknown>) => as(['student'], 'Hanya peserta yang diizinkan', action);
 export const asSignedIn = (action: (actor: Actor) => Promise<unknown>) => as(null, '', action);
+// PIC tanpa partnerId tidak punya perusahaan untuk dilihat / A PIC without a partnerId has no company to see
+export const asPartner = (action: (actor: Actor & { partnerId: string }) => Promise<unknown>) =>
+  as(['partner'], 'Hanya PIC mitra yang diizinkan', async (actor) => {
+    if (!actor.partnerId) throw new Error('Akun PIC belum terhubung ke mitra');
+    return action(actor as Actor & { partnerId: string });
+  });
 
 export const notFound = (error: string) => NextResponse.json({ error }, { status: 404 });

@@ -5,13 +5,15 @@
  * Job Portal admin service: partners and jobs. API routes check the admin role
  * before calling anything here.
  */
+import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
+import { getEmailHash, normalizeEmail } from '../auth/policy';
 import {
   jobState, partnerNameKey, validateJobInput, validatePartnerInput,
   type Category, type Employment, type Job, type JobStatus, type Partner, type Scheme, type WorkMode,
 } from './model';
 
-export interface PartnerRow { id: string; name: string; field: string; logoThumb: string; picNames: string[]; jobCount: number }
+export interface PartnerRow { id: string; name: string; field: string; logoThumb: string; picNames: string[]; jobCount: number; picAccounts: string[] }
 export interface JobRow {
   id: string; title: string; employment: Employment; category: Category; scheme: Scheme; location: string; workMode: WorkMode; quota: number;
   partnerId: string; partnerName: string; picName: string; opensAt: string; closesAt: string; status: JobStatus; applicantCount: number;
@@ -29,17 +31,20 @@ async function assertUniqueName(name: string, selfId?: string) {
 }
 
 export async function listPartners(): Promise<PartnerRow[]> {
-  const [pSnap, jSnap] = await Promise.all([
+  const [pSnap, jSnap, aSnap] = await Promise.all([
     partners().select('name', 'field', 'logo.thumb', 'pics').get(),
     jobs().select('partnerId').get(),
+    getAdminDb().collection('users').where('role', '==', 'partner').select('email', 'partnerId').get(),
   ]);
+  const accounts = new Map<string, string[]>();
+  aSnap.docs.forEach((u) => accounts.set(u.get('partnerId'), [...(accounts.get(u.get('partnerId')) ?? []), u.get('email')]));
   const counts = new Map<string, number>();
   jSnap.docs.forEach((j) => counts.set(j.get('partnerId'), (counts.get(j.get('partnerId')) ?? 0) + 1));
   return pSnap.docs.map((p) => {
     const d = p.data();
     return {
       id: p.id, name: d.name ?? '', field: d.field ?? '', logoThumb: d.logo?.thumb ?? '',
-      picNames: ((d.pics ?? []) as { name: string }[]).map((x) => x.name), jobCount: counts.get(p.id) ?? 0,
+      picNames: ((d.pics ?? []) as { name: string }[]).map((x) => x.name), jobCount: counts.get(p.id) ?? 0, picAccounts: accounts.get(p.id) ?? [],
     };
   });
 }
@@ -71,6 +76,38 @@ export async function updatePartner(id: string, raw: unknown): Promise<void> {
     own.docs.forEach((j) => batch.update(j.ref, { partnerName: input.name }));
     await batch.commit();
   }
+}
+
+/**
+ * Membuat akun login (peran partner) untuk setiap PIC mitra. Semua email diperiksa dulu: bila satu saja
+ * sudah dipakai akun lain, tidak ada akun yang dibuat, agar PIC tidak masuk sebagai siswa atau mentor.
+ *
+ * Creates a login account (partner role) for each of a partner's PICs. Every email is checked first: if
+ * even one belongs to another account, none is created, so a PIC never signs in as a student or mentor.
+ */
+export async function createPicAccounts(partnerId: string): Promise<{ created: string[]; existing: string[] }> {
+  const partner = await getPartner(partnerId);
+  if (!partner) throw new Error('Mitra tidak ditemukan');
+  const db = getAdminDb();
+  const todo: { name: string; email: string }[] = [];
+  const existing: string[] = [];
+  for (const pic of partner.pics) {
+    const email = normalizeEmail(pic.email);
+    const idx = await db.collection('emailIndex').doc(getEmailHash(email)).get();
+    if (!idx.exists) { todo.push({ name: pic.name, email }); continue; }
+    const user = await db.collection('users').doc(String(idx.get('uid'))).get();
+    if (user.get('role') === 'partner' && user.get('partnerId') === partnerId) existing.push(email);
+    else throw new Error(`Email ${email} sudah dipakai akun lain. Pakai email lain untuk PIC.`);
+  }
+  const t = now();
+  const batch = db.batch();
+  for (const { name, email } of todo) {
+    const uid = crypto.randomUUID();
+    batch.set(db.collection('users').doc(uid), { uid, email, normalizedEmail: email, name, role: 'partner', partnerId, active: true, classId: null, createdAt: t, updatedAt: t });
+    batch.set(db.collection('emailIndex').doc(getEmailHash(email)), { uid, normalizedEmail: email, role: 'partner', createdAt: t });
+  }
+  await batch.commit();
+  return { created: todo.map((x) => x.email), existing };
 }
 
 const JOB_ROW_FIELDS = [

@@ -129,6 +129,7 @@ export async function getSessionActor(): Promise<Actor | null> {
       name: userData.name,
       role: userData.role,
       classId: userData.classId || null,
+      ...(userData.role === 'partner' ? { partnerId: userData.partnerId ?? null } : {}),
       // Dibawa bersama sesi agar tenggat per peserta tidak perlu baca tambahan.
       // Carried with the session so per-participant deadlines need no extra read.
       ...(userData.role === 'student' ? { joinIso: joinMoment(userData) } : {}),

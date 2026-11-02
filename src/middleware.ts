@@ -10,7 +10,8 @@ export function middleware(request: NextRequest) {
   const isProtectedPath =
     pathname.startsWith('/admin') ||
     pathname.startsWith('/app') ||
-    pathname.startsWith('/mentor');
+    pathname.startsWith('/mentor') ||
+    pathname.startsWith('/mitra');
 
   if (isProtectedPath && !sessionCookie) {
     const loginUrl = new URL('/login', request.url);
@@ -22,5 +23,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/app/:path*', '/mentor/:path*', '/login'],
+  matcher: ['/admin/:path*', '/app/:path*', '/mentor/:path*', '/mitra/:path*', '/mitra', '/login'],
 };

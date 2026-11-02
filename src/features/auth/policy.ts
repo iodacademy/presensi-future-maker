@@ -19,7 +19,7 @@ export function normalizeEmail(email: string): string {
  * Validates if the role is one of the valid enums.
  */
 export function isValidRole(role: string): role is Role {
-  return role === 'admin' || role === 'student' || role === 'mentor';
+  return role === 'admin' || role === 'student' || role === 'mentor' || role === 'partner';
 }
 
 /**

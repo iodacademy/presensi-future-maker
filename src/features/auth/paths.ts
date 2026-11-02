@@ -15,6 +15,8 @@ export function getRoleRedirectPath(role: Role): string {
       return '/app';
     case 'mentor':
       return '/mentor/peserta';
+    case 'partner':
+      return '/mitra';
     default:
       return '/login';
   }
@@ -34,6 +36,9 @@ export function isAuthorizedPath(role: Role, path: string): boolean {
   }
   if (path.startsWith('/mentor')) {
     return role === 'mentor';
+  }
+  if (path.startsWith('/mitra')) {
+    return role === 'partner';
   }
   return true;
 }

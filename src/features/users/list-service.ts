@@ -63,7 +63,7 @@ export async function listUsers(actor: Actor): Promise<UserListResult> {
     classNames.set(doc.id, (doc.data() as Pick<ClassDocument, 'canonicalName'>).canonicalName);
   }
 
-  const counts: Record<Role, number> = { admin: 0, mentor: 0, student: 0 };
+  const counts: Record<Role, number> = { admin: 0, mentor: 0, student: 0, partner: 0 };
 
   const users = usersSnap.docs.map((doc) => {
     const data = doc.data() as Partial<UserDocument>;
