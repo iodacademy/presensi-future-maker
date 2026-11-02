@@ -13,17 +13,21 @@ import type { CvFile, CvKind } from './model';
 
 export const MAX_PDF_BYTES = 2 * 1024 * 1024;
 const MAX_ACTIVE = 5;
+// Berkas terhapus tetap disimpan untuk lamaran lama, jadi unggah-hapus berulang dibatasi agar penyimpanan tidak tumbuh tanpa batas
+// Deleted files stay stored for older applications, so repeated upload-delete is capped to keep storage from growing without bound
+const MAX_TOTAL = 20;
 const KIND_NAME: Record<CvKind, string> = { cv: 'CV', surat: 'surat lamaran' };
 
 const cvs = () => getAdminDb().collection('studentCvs');
 const cleanName = (n: string) => n.replace(/[\\/\r\n"]/g, '_').trim().slice(0, 120) || 'berkas.pdf';
 
-export async function listCvs(uid: string, kind?: CvKind): Promise<CvFile[]> {
+async function allCvs(uid: string, kind?: CvKind): Promise<CvFile[]> {
   const snap = await cvs().where('ownerUid', '==', uid).get();
-  return snap.docs
-    .map((d) => ({ ...(d.data() as CvFile), id: d.id }))
-    .filter((c) => !c.deleted && (!kind || c.kind === kind))
-    .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+  return snap.docs.map((d) => ({ ...(d.data() as CvFile), id: d.id })).filter((c) => !kind || c.kind === kind);
+}
+
+export async function listCvs(uid: string, kind?: CvKind): Promise<CvFile[]> {
+  return (await allCvs(uid, kind)).filter((c) => !c.deleted).sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
 }
 
 export async function uploadCv(uid: string, kind: CvKind, file: { name: string; type: string; size: number; bytes: Buffer }): Promise<CvFile> {
@@ -32,7 +36,9 @@ export async function uploadCv(uid: string, kind: CvKind, file: { name: string; 
   // Isi diperiksa, bukan hanya nama dan jenis kiriman peramban yang dapat dipalsukan
   // The content is checked, not only the browser-sent name and type, which can be forged
   if (!/\.pdf$/i.test(file.name) || file.bytes.subarray(0, 5).toString('latin1') !== '%PDF-') throw new Error('Berkas harus PDF');
-  if ((await listCvs(uid, kind)).length >= MAX_ACTIVE) {
+  const all = await allCvs(uid, kind);
+  if (all.length >= MAX_TOTAL) throw new Error(`Batas unggahan ${KIND_NAME[kind]} tercapai. Hubungi admin.`);
+  if (all.filter((c) => !c.deleted).length >= MAX_ACTIVE) {
     throw new Error(`Maksimal ${MAX_ACTIVE} ${KIND_NAME[kind]} tersimpan. Hapus salah satu dulu.`);
   }
   const ref = cvs().doc();

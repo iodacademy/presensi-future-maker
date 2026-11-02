@@ -8,6 +8,7 @@ vi.mock('../../src/lib/firebase/admin', () => ({ getAdminDb: () => fakeDb, getAd
 
 import { deleteCv, listCvs, readCvFile, uploadCv } from '../../src/features/careers/cv-service';
 import { GET as fileGet } from '../../src/app/api/karier/cv/[id]/route';
+import { POST as cvPost } from '../../src/app/api/karier/cv/route';
 
 const pdf = (size = 100) => Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(Math.max(0, size - 9), 'a')]);
 const file = (bytes: Buffer, name = 'CV Andi.pdf', type = 'application/pdf') => ({ name, type, size: bytes.length, bytes });
@@ -50,6 +51,19 @@ describe('bank CV', () => {
     await expect(readCvFile({ uid: 'u2', role: 'student' } as never, cv.id)).rejects.toThrow('Tidak boleh membuka berkas ini');
     await expect(readCvFile({ uid: 'a', role: 'admin' } as never, cv.id)).resolves.toMatchObject({ fileName: 'CV Andi.pdf' });
     await expect(readCvFile({ uid: 'u1', role: 'student' } as never, cv.id)).resolves.toBeTruthy();
+  });
+
+  it('unggah-hapus berulang dibatasi 20 berkas per jenis', async () => {
+    for (let i = 0; i < 20; i++) await deleteCv('u1', (await uploadCv('u1', 'cv', file(pdf()))).id);
+    await expect(uploadCv('u1', 'cv', file(pdf()))).rejects.toThrow('Batas unggahan CV tercapai. Hubungi admin.');
+  });
+
+  it('permintaan unggah yang terlalu besar ditolak sebelum isinya dibaca', async () => {
+    const req = new Request('http://x', { method: 'POST', headers: { 'content-length': String(3 * 1024 * 1024) }, body: 'x' });
+    const formData = vi.spyOn(req, 'formData');
+    const res = await cvPost(req);
+    expect(res.status).toBe(400);
+    expect(formData).not.toHaveBeenCalled();
   });
 
   it('rute berkas menolak siswa lain dengan 403', async () => {
