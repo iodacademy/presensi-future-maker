@@ -1,14 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { Poppins } from 'next/font/google';
+import { poppinsPameran as poppins } from '@/fonts';
 import '@/features/exhibition/pameran.css';
-
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-pameran-headline',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: 'Karya Capstone · Bootcamp Future Innovators 2026',

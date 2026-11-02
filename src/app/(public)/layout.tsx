@@ -1,16 +1,8 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { Poppins } from 'next/font/google';
+import { poppinsPameran as poppins } from '@/fonts';
 import { Header } from '@/features/exhibition/ui';
 import '@/features/exhibition/pameran.css';
-
-// Bobot 500 dan 600 dipakai desain pameran, tidak dimuat oleh layout akar / Weights 500 and 600 are used by the exhibition design and not loaded by the root layout
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-pameran-headline',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: 'Pameran Bootcamp Future Innovators 2026',

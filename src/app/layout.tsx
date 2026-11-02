@@ -1,23 +1,7 @@
 import React from 'react';
 import './globals.css';
 import type { Metadata } from 'next';
-import { Poppins, Inter } from 'next/font/google';
-
-// Font persis sesuai file Figma: Poppins (judul) dan Inter (body/UI)
-// Fonts matching the Figma file exactly: Poppins (headings) and Inter (body/UI)
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  variable: '--font-poppins',
-  display: 'swap',
-});
-
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-inter',
-  display: 'swap',
-});
+import { inter, poppins } from '@/fonts';
 
 export const metadata: Metadata = {
   title: 'Future Innovators Bootcamp',
