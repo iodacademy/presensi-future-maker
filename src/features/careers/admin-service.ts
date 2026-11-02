@@ -68,6 +68,16 @@ export async function updatePartner(id: string, raw: unknown): Promise<void> {
   if (!current) throw new Error('Mitra tidak ditemukan');
   await assertUniqueName(input.name, id);
   await partners().doc(id).update({ ...input, nameKey: partnerNameKey(input.name), updatedAt: now() });
+  // PIC yang dihapus dari daftar kehilangan aksesnya: akun nonaktif tidak bisa masuk dan sesinya ditolak
+  // A PIC removed from the list loses access: an inactive account cannot sign in and its session is refused
+  const keep = new Set(input.pics.map((p) => normalizeEmail(p.email)));
+  const accounts = await getAdminDb().collection('users').where('role', '==', 'partner').where('partnerId', '==', id).select('email', 'active').get();
+  const revoke = accounts.docs.filter((u) => u.get('active') !== false && !keep.has(normalizeEmail(String(u.get('email')))));
+  if (revoke.length) {
+    const b = getAdminDb().batch();
+    revoke.forEach((u) => b.update(u.ref, { active: false, updatedAt: now() }));
+    await b.commit();
+  }
   if (input.name !== current.name) {
     // Nama mitra disalin ke lowongan agar kartu tidak perlu membaca mitra; salinannya ikut diperbarui
     // The partner name is copied onto jobs so cards need not read the partner; the copies follow it
@@ -96,8 +106,11 @@ export async function createPicAccounts(partnerId: string): Promise<{ created: s
     const idx = await db.collection('emailIndex').doc(getEmailHash(email)).get();
     if (!idx.exists) { todo.push({ name: pic.name, email }); continue; }
     const user = await db.collection('users').doc(String(idx.get('uid'))).get();
-    if (user.get('role') === 'partner' && user.get('partnerId') === partnerId) existing.push(email);
-    else throw new Error(`Email ${email} sudah dipakai akun lain. Pakai email lain untuk PIC.`);
+    if (user.get('role') === 'partner' && user.get('partnerId') === partnerId) {
+      existing.push(email);
+      // PIC yang ditambahkan kembali diaktifkan lagi / A PIC added back is reactivated
+      if (user.get('active') === false) await user.ref.update({ active: true, updatedAt: now() });
+    } else throw new Error(`Email ${email} sudah dipakai akun lain. Pakai email lain untuk PIC.`);
   }
   const t = now();
   const batch = db.batch();

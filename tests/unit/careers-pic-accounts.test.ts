@@ -5,7 +5,7 @@ import { data, fakeDb, fakeStorage, reset } from './careers-fake-db';
 vi.mock('../../src/features/auth/session', () => ({ getSessionActor: vi.fn() }));
 vi.mock('../../src/lib/firebase/admin', () => ({ getAdminDb: () => fakeDb, getAdminStorage: () => fakeStorage }));
 
-import { createPicAccounts, listPartners } from '../../src/features/careers/admin-service';
+import { createPicAccounts, listPartners, updatePartner } from '../../src/features/careers/admin-service';
 import { getEmailHash, isValidRole } from '../../src/features/auth/policy';
 import { getRoleRedirectPath, isAuthorizedPath } from '../../src/features/auth/paths';
 
@@ -45,5 +45,17 @@ describe('akun PIC mitra', () => {
     data.emailIndex[getEmailHash('budi@dipsi.co.id')] = { uid: 's1', role: 'student' };
     await expect(createPicAccounts('p1')).rejects.toThrow('Email budi@dipsi.co.id sudah dipakai akun lain. Pakai email lain untuk PIC.');
     expect(Object.keys(data.users)).toEqual(['s1']);
+  });
+
+  it('PIC yang dihapus dari daftar mitra kehilangan akses, dan aktif lagi bila ditambahkan kembali', async () => {
+    await createPicAccounts('p1');
+    const budi = String(data.emailIndex[getEmailHash('budi@dipsi.co.id')].uid);
+    const { nameKey: _k, active: _a, ...input } = partner;
+    await updatePartner('p1', { ...input, pics: [partner.pics[0]] });
+    expect(data.users[budi].active).toBe(false);
+    expect(data.users[String(data.emailIndex[getEmailHash('rina@dipsi.co.id')].uid)].active).toBe(true);
+    await updatePartner('p1', input);
+    expect(await createPicAccounts('p1')).toEqual({ created: [], existing: ['rina@dipsi.co.id', 'budi@dipsi.co.id'] });
+    expect(data.users[budi].active).toBe(true);
   });
 });
