@@ -136,7 +136,7 @@ export default function ApplicantsPage({ params }: { params: Promise<{ jobId: st
               <b>Lampiran</b>
               <ul style={{ margin: '6px 0 0', paddingLeft: '18px' }}>
                 {open.works.map((w) => <li key={w.id}><a href={`/karya/${w.id}`} target="_blank" rel="noopener noreferrer">{w.title}</a> · karya pameran {w.type}</li>)}
-                {open.tasks.map((t) => <li key={t.submissionId}><a href={t.url || `/api/submissions/${t.submissionId}/file`} target="_blank" rel="noopener noreferrer">{t.title}</a> · tugas</li>)}
+                {open.tasks.map((t) => <li key={t.submissionId}><a href={/^https?:\/\//i.test(t.url) ? t.url : `/api/submissions/${t.submissionId}/file`} target="_blank" rel="noopener noreferrer">{t.title}</a> · tugas</li>)}
               </ul>
             </div>
           )}

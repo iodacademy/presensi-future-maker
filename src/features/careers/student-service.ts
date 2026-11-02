@@ -7,6 +7,7 @@
  */
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
+import { safeExternalUrl } from '../exhibition/model';
 import { isStoredSubmissionFile } from '../tasks/submission-policy';
 import { listCvs } from './cv-service';
 import {
@@ -166,7 +167,9 @@ export async function ownWorks(uid: string): Promise<AttachedWork[]> {
 export async function ownTasks(uid: string): Promise<AttachedTask[]> {
   const snap = await db().collection('submissions').where('studentId', '==', uid).select('taskTitle', 'taskKind', 'fileId', 'url').get();
   return snap.docs
-    .filter((s) => isStoredSubmissionFile(s.get('fileId')) || s.get('url'))
+    // Tautan non-http(s) dari data lama dibuang agar tidak menjadi href berbahaya di halaman peninjau
+    // Non-http(s) links from older data are dropped so they never become a dangerous href on the reviewer's page
+    .filter((s) => isStoredSubmissionFile(s.get('fileId')) || safeExternalUrl(String(s.get('url') ?? '')))
     .map((s) => ({
       submissionId: s.id, title: String(s.get('taskTitle') ?? 'Tugas'), kind: String(s.get('taskKind') ?? ''),
       url: isStoredSubmissionFile(s.get('fileId')) ? '' : String(s.get('url')),

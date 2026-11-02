@@ -46,6 +46,7 @@ beforeEach(() => {
       t2_u1: { studentId: 'u1', taskTitle: 'Kosong', taskKind: 'daily', fileId: null, url: null },
       t3_u1: { studentId: 'u1', taskTitle: 'Tautan', taskKind: 'daily', fileId: null, url: 'https://figma.com/x' },
       t4_u1: { studentId: 'u1', taskTitle: 'Hilang', taskKind: 'daily', fileId: 'local-file-123', url: null },
+      t5_u1: { studentId: 'u1', taskTitle: 'Skrip', taskKind: 'daily', fileId: null, url: 'javascript:alert(1)' },
     },
     studentCvs: {},
     dashboardSnapshots: {
