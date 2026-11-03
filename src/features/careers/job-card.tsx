@@ -1,8 +1,8 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
-import { countdownParts, formatCountdown, EMPLOYMENT_LABELS, SCHEME_LABELS, WORK_MODE_LABELS, type Job } from './model';
+import { countdownParts, formatCountdown, EMPLOYMENT_LABELS, salaryLabel, SCHEME_LABELS, WORK_MODE_LABELS, type Job } from './model';
 
-export type JobCardData = Pick<Job, 'title' | 'partnerName' | 'employment' | 'location' | 'workMode' | 'quota' | 'closesAt'> & { scheme?: Job['scheme'] };
+export type JobCardData = Pick<Job, 'title' | 'partnerName' | 'employment' | 'location' | 'workMode' | 'quota' | 'closesAt'> & { scheme?: Job['scheme']; salaryMin?: number | null; salaryMax?: number | null };
 
 const chip: React.CSSProperties = { padding: '3px 8px', borderRadius: '6px', backgroundColor: '#f3f4f6', fontSize: '12px', color: '#243c4b' };
 
@@ -29,6 +29,7 @@ export function PartnerLogo({ name, logo, size = 44 }: { name: string; logo: str
  */
 export function JobCard({ job, logo, now, footer }: { job: JobCardData; logo: string | null; now: Date; footer?: React.ReactNode }) {
   const parts = countdownParts(job.closesAt, now);
+  const salary = salaryLabel(job.salaryMin, job.salaryMax);
   // Kurang dari sehari tampil merah agar siswa tidak menunda / Under a day shows red so students do not put it off
   const urgent = !parts.ended && parts.days === 0;
   return (
@@ -45,6 +46,7 @@ export function JobCard({ job, logo, now, footer }: { job: JobCardData; logo: st
         <span style={chip}>{EMPLOYMENT_LABELS[job.employment]}</span>
         <span style={chip}>{`${job.location || 'Lokasi'} · ${WORK_MODE_LABELS[job.workMode]}`}</span>
         <span style={chip}>{`Kuota ${job.quota}`}</span>
+        {salary && <span style={{ ...chip, backgroundColor: '#E7F6EC', color: '#1E7A3D', fontWeight: 600 }}>{salary}</span>}
       </div>
       <div
         data-urgent={urgent ? 'true' : 'false'}

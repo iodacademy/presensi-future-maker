@@ -6,7 +6,7 @@ import { Clock } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import { PartnerLogo } from '@/features/careers/job-card';
 import {
-  countdownParts, EMPLOYMENT_LABELS, formatCountdown, studentStatusLabel, WORK_MODE_LABELS,
+  countdownParts, EMPLOYMENT_LABELS, formatCountdown, salaryLabel, studentStatusLabel, WORK_MODE_LABELS,
   type ApplicationStatus, type DocRule, type Job,
 } from '@/features/careers/model';
 import type { PublicPartner } from '@/features/careers/student-service';
@@ -54,7 +54,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ jobId: str
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {[EMPLOYMENT_LABELS[d.job.employment], `${d.job.location} · ${WORK_MODE_LABELS[d.job.workMode]}`, `Kuota ${d.job.quota}`].map((c) => (
+                {[EMPLOYMENT_LABELS[d.job.employment], `${d.job.location} · ${WORK_MODE_LABELS[d.job.workMode]}`, `Kuota ${d.job.quota}`, salaryLabel(d.job.salaryMin, d.job.salaryMax)].filter((c): c is string => !!c).map((c) => (
                   <span key={c} style={{ padding: '4px 10px', borderRadius: '6px', backgroundColor: '#f3f4f6', fontSize: '13px' }}>{c}</span>
                 ))}
               </div>

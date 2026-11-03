@@ -21,6 +21,14 @@ describe('kartu lowongan', () => {
     expect(screen.getByText('Kuota 2')).toBeTruthy();
   });
 
+  it('menampilkan gaji bila dicantumkan', () => {
+    const { unmount } = render(<JobCard job={{ ...job, salaryMin: 2000000, salaryMax: 3000000 }} logo={null} now={now} />);
+    expect(screen.getByText('Rp 2.000.000 – 3.000.000 / bulan')).toBeTruthy();
+    unmount();
+    render(<JobCard job={job} logo={null} now={now} />);
+    expect(screen.queryByText(/\/ bulan/)).toBeNull();
+  });
+
   it('menampilkan inisial bila belum ada logo', () => {
     render(<JobCard job={job} logo={null} now={now} />);
     expect(screen.getByText('P')).toBeTruthy();

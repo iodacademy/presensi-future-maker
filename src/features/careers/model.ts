@@ -37,6 +37,8 @@ export interface JobDocuments { portfolio: DocRule; works: DocRule; coverLetter:
 export interface JobInput {
   partnerId: string; title: string; employment: Employment; category: Category; scheme: Scheme; location: string; workMode: WorkMode;
   quota: number; description: string; qualifications: string[]; eligibility: Eligibility;
+  /** Rupiah per bulan; null bila mitra tidak mencantumkan / Rupiah per month; null when the partner does not state it */
+  salaryMin: number | null; salaryMax: number | null;
   opensAt: string; closesAt: string; documents: JobDocuments; questions: JobQuestion[]; status: JobStatus;
 }
 export type Job = JobInput & { id: string; partnerName: string; applicantCount: number; createdAt: string; updatedAt: string };
@@ -142,6 +144,26 @@ function validateEligibility(raw: unknown): Eligibility {
   return { mode: 'all' };
 }
 
+function rupiah(v: unknown): number | null {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  if (!Number.isInteger(n) || n <= 0) throw new Error('Gaji harus berupa angka rupiah');
+  return n;
+}
+
+/**
+ * Label gaji untuk siswa. Lowongan lama tanpa kolom gaji menghasilkan null, jadi label tidak tampil.
+ *
+ * Salary label for students. Older jobs without salary fields yield null, so no label shows.
+ */
+export function salaryLabel(min?: number | null, max?: number | null): string | null {
+  const rp = (n: number) => n.toLocaleString('id-ID');
+  if (min && max && max !== min) return `Rp ${rp(min)} – ${rp(max)} / bulan`;
+  if (min) return `Rp ${rp(min)} / bulan`;
+  if (max) return `Hingga Rp ${rp(max)} / bulan`;
+  return null;
+}
+
 export function validateJobInput(raw: unknown): JobInput {
   const r = obj(raw);
   const partnerId = str(r.partnerId);
@@ -155,9 +177,12 @@ export function validateJobInput(raw: unknown): JobInput {
   const opensAt = wibIso(r.opensAt, 'buka');
   const closesAt = wibIso(r.closesAt, 'tutup');
   if (closesAt <= opensAt) throw new Error('Tanggal tutup harus setelah tanggal buka');
+  const salaryMin = rupiah(r.salaryMin);
+  const salaryMax = rupiah(r.salaryMax);
+  if (salaryMin && salaryMax && salaryMax < salaryMin) throw new Error('Gaji maksimal tidak boleh di bawah gaji minimal');
   const docs = obj(r.documents);
   return {
-    partnerId, title, location, quota, opensAt, closesAt,
+    partnerId, title, location, quota, opensAt, closesAt, salaryMin, salaryMax,
     employment: oneOf<Employment>(r.employment, EMPLOYMENT_LABELS, 'Jenis lowongan tidak dikenal'),
     category: oneOf<Category>(r.category, CATEGORY_LABELS, 'Bidang lowongan tidak dikenal'),
     scheme: oneOf<Scheme>(r.scheme, SCHEME_LABELS, 'Skema lowongan tidak dikenal'),

@@ -37,6 +37,8 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
   const [location, setLocation] = useState('');
   const [workMode, setWorkMode] = useState<WorkMode>('hybrid');
   const [quota, setQuota] = useState(1);
+  const [salaryMin, setSalaryMin] = useState('');
+  const [salaryMax, setSalaryMax] = useState('');
   const [description, setDescription] = useState('');
   const [qualifications, setQualifications] = useState('');
   const [eligMode, setEligMode] = useState<'all' | 'classes' | 'min-score'>('all');
@@ -59,6 +61,7 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
     api(`/api/karier/jobs/${id}`).then(({ job: j }: { job: Job }) => {
       setPartnerId(j.partnerId); setTitle(j.title); setEmployment(j.employment); setCategory(j.category); setScheme(j.scheme ?? 'project');
       setLocation(j.location); setWorkMode(j.workMode); setQuota(j.quota); setDescription(j.description);
+      setSalaryMin(j.salaryMin ? String(j.salaryMin) : ''); setSalaryMax(j.salaryMax ? String(j.salaryMax) : '');
       setQualifications(j.qualifications.join('\n')); setEligMode(j.eligibility.mode);
       if (j.eligibility.mode === 'classes') setClassIds(j.eligibility.classIds);
       if (j.eligibility.mode === 'min-score') setMinScore(j.eligibility.minScore);
@@ -76,7 +79,7 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
     setBusy(true); setError(null);
     try {
       const body = {
-        partnerId, title, employment, category, scheme, location, workMode, quota, description, qualifications,
+        partnerId, title, employment, category, scheme, location, workMode, quota, description, qualifications, salaryMin, salaryMax,
         eligibility: eligMode === 'classes' ? { mode: 'classes', classIds } : eligMode === 'min-score' ? { mode: 'min-score', minScore } : { mode: 'all' },
         opensAt: opens, closesAt: closes, documents, status,
         questions: questions.map((q) => ({ id: q.id, label: q.label, kind: q.kind, options: q.optionsText, required: q.required })),
@@ -119,6 +122,10 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
           <label style={label}>Lokasi<input value={location} onChange={(e) => setLocation(e.target.value)} style={field} placeholder="mis. Jakarta Selatan" required /></label>
           <label style={label}>Mode kerja<select value={workMode} onChange={(e) => setWorkMode(e.target.value as WorkMode)} style={field}>{options(WORK_MODE_LABELS)}</select></label>
           <label style={label}>Kuota diterima<input type="number" min={1} value={quota} onChange={(e) => setQuota(Number(e.target.value))} style={field} /></label>
+          <label style={label}>Gaji minimal (Rp/bulan)<input type="number" min={1} step={1} value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} style={field} placeholder="mis. 2000000" /></label>
+          <label style={label}>Gaji maksimal (Rp/bulan)<input type="number" min={1} step={1} value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} style={field} placeholder="kosongkan bila tetap" />
+            <span style={muted}>Kosongkan keduanya bila gaji dirahasiakan.</span>
+          </label>
         </div>
         <label style={label}>Deskripsi pekerjaan<textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} style={field} placeholder="Apa yang dikerjakan, dengan tim siapa" /></label>
         <label style={label}>Kualifikasi<textarea rows={4} value={qualifications} onChange={(e) => setQualifications(e.target.value)} style={field} placeholder="Satu kualifikasi per baris" /></label>
@@ -203,7 +210,7 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
 
       <aside style={{ flex: '0 1 340px', position: 'sticky', top: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '.06em', color: 'var(--color-text-muted)' }}>PRATINJAU DI PORTAL SISWA</div>
-        <JobCard job={{ title, partnerName, employment, scheme, location, workMode, quota, closesAt: previewClose }} logo={partnerLogo} now={now} />
+        <JobCard job={{ title, partnerName, employment, scheme, location, workMode, quota, closesAt: previewClose, salaryMin: Number(salaryMin) || null, salaryMax: Number(salaryMax) || null }} logo={partnerLogo} now={now} />
       </aside>
     </div>
   );

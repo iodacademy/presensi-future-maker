@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  assignQuestionIds, countdownParts, isoToWib, formatCountdown, jobState, partnerNameKey, validateJobInput, validatePartnerInput,
+  assignQuestionIds, countdownParts, isoToWib, formatCountdown, jobState, partnerNameKey, salaryLabel, validateJobInput, validatePartnerInput,
 } from '../../src/features/careers/model';
 
 const baseJob = {
@@ -82,6 +82,24 @@ describe('model karier', () => {
   it('skema lowongan wajib Full Internship atau Project Based', () => {
     expect(() => validateJobInput({ ...baseJob, scheme: undefined })).toThrow('Skema lowongan tidak dikenal');
     expect(validateJobInput(baseJob).scheme).toBe('full');
+  });
+
+  it('gaji boleh kosong, berupa rentang rupiah per bulan', () => {
+    expect(validateJobInput(baseJob)).toMatchObject({ salaryMin: null, salaryMax: null });
+    expect(validateJobInput({ ...baseJob, salaryMin: '', salaryMax: '' })).toMatchObject({ salaryMin: null, salaryMax: null });
+    expect(validateJobInput({ ...baseJob, salaryMin: 2000000, salaryMax: '3000000' })).toMatchObject({ salaryMin: 2000000, salaryMax: 3000000 });
+    expect(() => validateJobInput({ ...baseJob, salaryMin: 3000000, salaryMax: 2000000 })).toThrow('Gaji maksimal tidak boleh di bawah gaji minimal');
+    expect(() => validateJobInput({ ...baseJob, salaryMin: -5 })).toThrow('Gaji harus berupa angka rupiah');
+    expect(() => validateJobInput({ ...baseJob, salaryMax: 'dua juta' })).toThrow('Gaji harus berupa angka rupiah');
+  });
+
+  it('label gaji untuk kartu dan detail lowongan', () => {
+    expect(salaryLabel(2000000, 3000000)).toBe('Rp 2.000.000 – 3.000.000 / bulan');
+    expect(salaryLabel(2000000, null)).toBe('Rp 2.000.000 / bulan');
+    expect(salaryLabel(2000000, 2000000)).toBe('Rp 2.000.000 / bulan');
+    expect(salaryLabel(null, 3000000)).toBe('Hingga Rp 3.000.000 / bulan');
+    expect(salaryLabel(null, null)).toBeNull();
+    expect(salaryLabel(undefined, undefined)).toBeNull();
   });
 
   it('jenis yang tidak dikenal ditolak', () => {
