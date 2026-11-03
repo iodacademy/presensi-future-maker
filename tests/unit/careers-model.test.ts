@@ -100,6 +100,9 @@ describe('model karier', () => {
     expect(salaryLabel(null, 3000000)).toBe('Hingga Rp 3.000.000 / bulan');
     expect(salaryLabel(null, null)).toBeNull();
     expect(salaryLabel(undefined, undefined)).toBeNull();
+    expect(salaryLabel(1500000, 2500000, 'project')).toBe('Rp 1.500.000 – 2.500.000 / project');
+    expect(salaryLabel(null, 2500000, 'project')).toBe('Hingga Rp 2.500.000 / project');
+    expect(salaryLabel(2000000, null, 'full')).toBe('Rp 2.000.000 / bulan');
   });
 
   it('jenis yang tidak dikenal ditolak', () => {

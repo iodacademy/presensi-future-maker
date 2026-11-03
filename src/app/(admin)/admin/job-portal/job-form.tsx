@@ -5,7 +5,7 @@ import { alertBox, api, btn, btnSolid, card, field, label, send } from '../pamer
 import type { PartnerRow } from '@/features/careers/admin-service';
 import { JobCard } from '@/features/careers/job-card';
 import {
-  CATEGORY_LABELS, DOC_RULE_LABELS, EMPLOYMENT_LABELS, isoToWib, QUESTION_KIND_LABELS, SCHEME_LABELS, WORK_MODE_LABELS,
+  CATEGORY_LABELS, DOC_RULE_LABELS, EMPLOYMENT_LABELS, isoToWib, QUESTION_KIND_LABELS, salaryUnit, SCHEME_LABELS, WORK_MODE_LABELS,
   type Category, type DocRule, type Employment, type Job, type JobDocuments, type QuestionKind, type Scheme, type WorkMode,
 } from '@/features/careers/model';
 
@@ -122,8 +122,8 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
           <label style={label}>Lokasi<input value={location} onChange={(e) => setLocation(e.target.value)} style={field} placeholder="mis. Jakarta Selatan" required /></label>
           <label style={label}>Mode kerja<select value={workMode} onChange={(e) => setWorkMode(e.target.value as WorkMode)} style={field}>{options(WORK_MODE_LABELS)}</select></label>
           <label style={label}>Kuota diterima<input type="number" min={1} value={quota} onChange={(e) => setQuota(Number(e.target.value))} style={field} /></label>
-          <label style={label}>Gaji minimal (Rp/bulan)<input type="number" min={1} step={1} value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} style={field} placeholder="mis. 2000000" /></label>
-          <label style={label}>Gaji maksimal (Rp/bulan)<input type="number" min={1} step={1} value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} style={field} placeholder="kosongkan bila tetap" />
+          <label style={label}>{`Gaji minimal (Rp/${salaryUnit(scheme)})`}<input type="number" min={1} step={1} value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} style={field} placeholder="mis. 2000000" /></label>
+          <label style={label}>{`Gaji maksimal (Rp/${salaryUnit(scheme)})`}<input type="number" min={1} step={1} value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} style={field} placeholder="kosongkan bila tetap" />
             <span style={muted}>Kosongkan keduanya bila gaji dirahasiakan.</span>
           </label>
         </div>

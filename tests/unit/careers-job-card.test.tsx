@@ -29,6 +29,11 @@ describe('kartu lowongan', () => {
     expect(screen.queryByText(/\/ bulan/)).toBeNull();
   });
 
+  it('gaji lowongan Project Based dihitung per project', () => {
+    render(<JobCard job={{ ...job, scheme: 'project', salaryMin: 1500000, salaryMax: null }} logo={null} now={now} />);
+    expect(screen.getByText('Rp 1.500.000 / project')).toBeTruthy();
+  });
+
   it('menampilkan inisial bila belum ada logo', () => {
     render(<JobCard job={job} logo={null} now={now} />);
     expect(screen.getByText('P')).toBeTruthy();

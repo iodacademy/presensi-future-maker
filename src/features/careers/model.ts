@@ -37,7 +37,7 @@ export interface JobDocuments { portfolio: DocRule; works: DocRule; coverLetter:
 export interface JobInput {
   partnerId: string; title: string; employment: Employment; category: Category; scheme: Scheme; location: string; workMode: WorkMode;
   quota: number; description: string; qualifications: string[]; eligibility: Eligibility;
-  /** Rupiah per bulan; null bila mitra tidak mencantumkan / Rupiah per month; null when the partner does not state it */
+  /** Rupiah per bulan, atau per project untuk skema Project Based; null bila tidak dicantumkan / Rupiah per month, or per project for the Project Based scheme; null when not stated */
   salaryMin: number | null; salaryMax: number | null;
   opensAt: string; closesAt: string; documents: JobDocuments; questions: JobQuestion[]; status: JobStatus;
 }
@@ -152,17 +152,22 @@ function rupiah(v: unknown): number | null {
 }
 
 /**
- * Label gaji untuk siswa. Lowongan lama tanpa kolom gaji menghasilkan null, jadi label tidak tampil.
+ * Label gaji untuk siswa. Project Based dibayar per project, Full Internship per bulan.
+ * Lowongan lama tanpa kolom gaji menghasilkan null, jadi label tidak tampil.
  *
- * Salary label for students. Older jobs without salary fields yield null, so no label shows.
+ * Salary label for students. Project Based is paid per project, Full Internship per month.
+ * Older jobs without salary fields yield null, so no label shows.
  */
-export function salaryLabel(min?: number | null, max?: number | null): string | null {
+export function salaryLabel(min?: number | null, max?: number | null, scheme?: Scheme): string | null {
   const rp = (n: number) => n.toLocaleString('id-ID');
-  if (min && max && max !== min) return `Rp ${rp(min)} – ${rp(max)} / bulan`;
-  if (min) return `Rp ${rp(min)} / bulan`;
-  if (max) return `Hingga Rp ${rp(max)} / bulan`;
+  const unit = salaryUnit(scheme);
+  if (min && max && max !== min) return `Rp ${rp(min)} – ${rp(max)} / ${unit}`;
+  if (min) return `Rp ${rp(min)} / ${unit}`;
+  if (max) return `Hingga Rp ${rp(max)} / ${unit}`;
   return null;
 }
+
+export const salaryUnit = (scheme?: Scheme) => (scheme === 'project' ? 'project' : 'bulan');
 
 export function validateJobInput(raw: unknown): JobInput {
   const r = obj(raw);

@@ -29,7 +29,7 @@ export function PartnerLogo({ name, logo, size = 44 }: { name: string; logo: str
  */
 export function JobCard({ job, logo, now, footer }: { job: JobCardData; logo: string | null; now: Date; footer?: React.ReactNode }) {
   const parts = countdownParts(job.closesAt, now);
-  const salary = salaryLabel(job.salaryMin, job.salaryMax);
+  const salary = salaryLabel(job.salaryMin, job.salaryMax, job.scheme);
   // Kurang dari sehari tampil merah agar siswa tidak menunda / Under a day shows red so students do not put it off
   const urgent = !parts.ended && parts.days === 0;
   return (
