@@ -131,7 +131,7 @@ function createEvent(body) {
   // so the booking still gets a link.
   var space = null;
   try {
-    space = createMeetSpace(body.mentorEmail, body.studentEmail);
+    space = createMeetSpace(body.mentorEmail, body.studentEmail, body.record !== false);
   } catch (err) {
     console.warn('Meet API gagal, memakai createRequest Calendar: ' + err);
   }
@@ -235,7 +235,7 @@ function createEvent(body) {
  * outside the bootcamp account's organisation. Failing to add the co-host does
  * not fail the space: the meeting still works, just without those rights.
  */
-function createMeetSpace(mentorEmail, studentEmail) {
+function createMeetSpace(mentorEmail, studentEmail, record) {
   // Akses OPEN: siapa pun yang memegang tautan langsung masuk tanpa mengetuk.
   // Ruang dari Meet API tidak mengenali tamu undangan Calendar, sehingga dengan
   // akses bawaan peserta dari luar organisasi harus diizinkan masuk satu per
@@ -255,7 +255,9 @@ function createMeetSpace(mentorEmail, studentEmail) {
   // Without it the mentor is listed as co-host but gets none of the controls.
   var space = meetApi('post', 'https://meet.googleapis.com/v2/spaces', { config: { accessType: 'OPEN', moderation: 'ON' } });
   if (!space || !space.meetingUri || !space.name) throw new Error('Balasan Meet API tanpa meetingUri');
-  enableAutoRecording(space.name);
+  // Interview mitra (record === false) tidak direkam; mentoring tetap direkam.
+  // Partner interviews (record === false) are not recorded; mentoring still is.
+  if (record !== false) enableAutoRecording(space.name);
 
   if (mentorEmail) {
     try {
@@ -322,6 +324,8 @@ function fixUpcomingMeetSpaces() {
     var uri = priv.meetUrl || event.hangoutLink || '';
     var code = uri.split('/').pop();
     if (!code) return;
+    // Interview mitra sengaja tidak direkam / Partner interviews are deliberately not recorded
+    if (String(priv.bookingId || '').indexOf('interview-') === 0) return;
     try {
       var space = meetApi('get', 'https://meet.googleapis.com/v2/spaces/' + code);
       meetApi('patch', 'https://meet.googleapis.com/v2/' + space.name + '?updateMask=config.accessType,config.moderation', { config: { accessType: 'OPEN', moderation: 'ON' } });
@@ -589,6 +593,8 @@ function attachRecordings() {
       if (files.length === 0) return;
 
       if (!priv.bookingId) return;
+      // Interview mitra tidak punya booking mentoring untuk ditautkan / Partner interviews have no mentoring booking to link
+      if (String(priv.bookingId).indexOf('interview-') === 0) return;
       var url = files[0].exportUri || 'https://drive.google.com/file/d/' + files[0].file + '/view';
 
       // Aplikasi menyimpan tautannya lebih dulu. Bila aplikasi gagal, event

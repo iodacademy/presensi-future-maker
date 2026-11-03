@@ -68,7 +68,7 @@ describe('undangan interview', () => {
   it('Meet otomatis membuat acara kalender dengan PIC sebagai co-host', async () => {
     const r = await inviteToInterview(rina, 'a1', { ...manual, linkSource: 'meet-auto', url: '' }, now);
     expect(calendar.create).toHaveBeenCalledWith(expect.objectContaining({
-      bookingId: 'interview-a1', studentEmail: 'andi@x.id', mentorEmail: 'rina@dipsi.co.id',
+      bookingId: 'interview-a1', studentEmail: 'andi@x.id', mentorEmail: 'rina@dipsi.co.id', record: false,
       startsAt: '2026-11-12T03:00:00.000Z', endsAt: '2026-11-12T03:45:00.000Z',
     }));
     expect(r.meetUrl).toBe('https://meet.google.com/abc-defg-hij');

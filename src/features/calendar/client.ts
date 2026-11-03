@@ -8,6 +8,8 @@ export interface CreateEventInput {
   endsAt: string;
   studentEmail: string;
   mentorEmail: string;
+  /** false: ruang Meet tidak direkam otomatis (interview mitra); kosong berarti direkam / false: the Meet space is not auto-recorded (partner interviews); absent means recorded */
+  record?: boolean;
 }
 
 export interface CreateEventResult {

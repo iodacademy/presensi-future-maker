@@ -39,6 +39,9 @@ export async function inviteToInterview(actor: PartnerActor, appId: string, raw:
       ...interviewWindow(input),
       studentEmail: personal.email,
       mentorEmail: actor.email,
+      // Interview perusahaan tidak direkam, berbeda dari sesi mentoring (keputusan pemilik produk)
+      // Company interviews are not recorded, unlike mentoring sessions (product owner's decision)
+      record: false,
     });
     if (!ev.meetUrl) {
       // Acara tanpa link dibatalkan lagi agar tidak menjadi undangan yatim / An event without a link is cancelled so it is not an orphan invite
