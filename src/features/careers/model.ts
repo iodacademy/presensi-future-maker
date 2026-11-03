@@ -38,7 +38,7 @@ export interface JobInput {
   partnerId: string; title: string; employment: Employment; category: Category; scheme: Scheme; location: string; workMode: WorkMode;
   quota: number; description: string; qualifications: string[]; eligibility: Eligibility;
   /** Rupiah per bulan, atau per project untuk skema Project Based; null bila tidak dicantumkan / Rupiah per month, or per project for the Project Based scheme; null when not stated */
-  salaryMin: number | null; salaryMax: number | null;
+  salary: number | null;
   opensAt: string; closesAt: string; documents: JobDocuments; questions: JobQuestion[]; status: JobStatus;
 }
 export type Job = JobInput & { id: string; partnerName: string; applicantCount: number; createdAt: string; updatedAt: string };
@@ -158,13 +158,8 @@ function rupiah(v: unknown): number | null {
  * Salary label for students. Project Based is paid per project, Full Internship per month.
  * Older jobs without salary fields yield null, so no label shows.
  */
-export function salaryLabel(min?: number | null, max?: number | null, scheme?: Scheme): string | null {
-  const rp = (n: number) => n.toLocaleString('id-ID');
-  const unit = salaryUnit(scheme);
-  if (min && max && max !== min) return `Rp ${rp(min)} – ${rp(max)} / ${unit}`;
-  if (min) return `Rp ${rp(min)} / ${unit}`;
-  if (max) return `Hingga Rp ${rp(max)} / ${unit}`;
-  return null;
+export function salaryLabel(salary?: number | null, scheme?: Scheme): string | null {
+  return salary ? `Rp ${salary.toLocaleString('id-ID')} / ${salaryUnit(scheme)}` : null;
 }
 
 export const salaryUnit = (scheme?: Scheme) => (scheme === 'project' ? 'project' : 'bulan');
@@ -182,12 +177,9 @@ export function validateJobInput(raw: unknown): JobInput {
   const opensAt = wibIso(r.opensAt, 'buka');
   const closesAt = wibIso(r.closesAt, 'tutup');
   if (closesAt <= opensAt) throw new Error('Tanggal tutup harus setelah tanggal buka');
-  const salaryMin = rupiah(r.salaryMin);
-  const salaryMax = rupiah(r.salaryMax);
-  if (salaryMin && salaryMax && salaryMax < salaryMin) throw new Error('Gaji maksimal tidak boleh di bawah gaji minimal');
   const docs = obj(r.documents);
   return {
-    partnerId, title, location, quota, opensAt, closesAt, salaryMin, salaryMax,
+    partnerId, title, location, quota, opensAt, closesAt, salary: rupiah(r.salary),
     employment: oneOf<Employment>(r.employment, EMPLOYMENT_LABELS, 'Jenis lowongan tidak dikenal'),
     category: oneOf<Category>(r.category, CATEGORY_LABELS, 'Bidang lowongan tidak dikenal'),
     scheme: oneOf<Scheme>(r.scheme, SCHEME_LABELS, 'Skema lowongan tidak dikenal'),

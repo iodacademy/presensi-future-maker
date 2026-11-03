@@ -84,25 +84,20 @@ describe('model karier', () => {
     expect(validateJobInput(baseJob).scheme).toBe('full');
   });
 
-  it('gaji boleh kosong, berupa rentang rupiah per bulan', () => {
-    expect(validateJobInput(baseJob)).toMatchObject({ salaryMin: null, salaryMax: null });
-    expect(validateJobInput({ ...baseJob, salaryMin: '', salaryMax: '' })).toMatchObject({ salaryMin: null, salaryMax: null });
-    expect(validateJobInput({ ...baseJob, salaryMin: 2000000, salaryMax: '3000000' })).toMatchObject({ salaryMin: 2000000, salaryMax: 3000000 });
-    expect(() => validateJobInput({ ...baseJob, salaryMin: 3000000, salaryMax: 2000000 })).toThrow('Gaji maksimal tidak boleh di bawah gaji minimal');
-    expect(() => validateJobInput({ ...baseJob, salaryMin: -5 })).toThrow('Gaji harus berupa angka rupiah');
-    expect(() => validateJobInput({ ...baseJob, salaryMax: 'dua juta' })).toThrow('Gaji harus berupa angka rupiah');
+  it('gaji satu angka tetap, boleh kosong', () => {
+    expect(validateJobInput(baseJob).salary).toBeNull();
+    expect(validateJobInput({ ...baseJob, salary: '' }).salary).toBeNull();
+    expect(validateJobInput({ ...baseJob, salary: '2000000' }).salary).toBe(2000000);
+    expect(() => validateJobInput({ ...baseJob, salary: -5 })).toThrow('Gaji harus berupa angka rupiah');
+    expect(() => validateJobInput({ ...baseJob, salary: 'dua juta' })).toThrow('Gaji harus berupa angka rupiah');
   });
 
-  it('label gaji untuk kartu dan detail lowongan', () => {
-    expect(salaryLabel(2000000, 3000000)).toBe('Rp 2.000.000 – 3.000.000 / bulan');
-    expect(salaryLabel(2000000, null)).toBe('Rp 2.000.000 / bulan');
-    expect(salaryLabel(2000000, 2000000)).toBe('Rp 2.000.000 / bulan');
-    expect(salaryLabel(null, 3000000)).toBe('Hingga Rp 3.000.000 / bulan');
-    expect(salaryLabel(null, null)).toBeNull();
-    expect(salaryLabel(undefined, undefined)).toBeNull();
-    expect(salaryLabel(1500000, 2500000, 'project')).toBe('Rp 1.500.000 – 2.500.000 / project');
-    expect(salaryLabel(null, 2500000, 'project')).toBe('Hingga Rp 2.500.000 / project');
-    expect(salaryLabel(2000000, null, 'full')).toBe('Rp 2.000.000 / bulan');
+  it('label gaji per bulan, atau per project untuk Project Based', () => {
+    expect(salaryLabel(2000000)).toBe('Rp 2.000.000 / bulan');
+    expect(salaryLabel(2000000, 'full')).toBe('Rp 2.000.000 / bulan');
+    expect(salaryLabel(1500000, 'project')).toBe('Rp 1.500.000 / project');
+    expect(salaryLabel(null)).toBeNull();
+    expect(salaryLabel(undefined)).toBeNull();
   });
 
   it('jenis yang tidak dikenal ditolak', () => {

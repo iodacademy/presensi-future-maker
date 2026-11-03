@@ -22,15 +22,15 @@ describe('kartu lowongan', () => {
   });
 
   it('menampilkan gaji bila dicantumkan', () => {
-    const { unmount } = render(<JobCard job={{ ...job, salaryMin: 2000000, salaryMax: 3000000 }} logo={null} now={now} />);
-    expect(screen.getByText('Rp 2.000.000 – 3.000.000 / bulan')).toBeTruthy();
+    const { unmount } = render(<JobCard job={{ ...job, salary: 2000000 }} logo={null} now={now} />);
+    expect(screen.getByText('Rp 2.000.000 / bulan')).toBeTruthy();
     unmount();
     render(<JobCard job={job} logo={null} now={now} />);
     expect(screen.queryByText(/\/ bulan/)).toBeNull();
   });
 
   it('gaji lowongan Project Based dihitung per project', () => {
-    render(<JobCard job={{ ...job, scheme: 'project', salaryMin: 1500000, salaryMax: null }} logo={null} now={now} />);
+    render(<JobCard job={{ ...job, scheme: 'project', salary: 1500000 }} logo={null} now={now} />);
     expect(screen.getByText('Rp 1.500.000 / project')).toBeTruthy();
   });
 

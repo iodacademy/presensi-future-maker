@@ -19,7 +19,7 @@ import {
 export interface StudentJobCard {
   id: string; title: string; partnerId: string; partnerName: string; employment: Job['employment']; category: Job['category']; scheme: Job['scheme'];
   location: string; workMode: Job['workMode']; quota: number; opensAt: string; closesAt: string; applicantCount: number; logo: string | null;
-  salaryMin: number | null; salaryMax: number | null;
+  salary: number | null;
 }
 export interface PublicPartner { id: string; name: string; field: string; about: string; logo: Logo | null; website: string; socials: Socials }
 export interface MyApplication {
@@ -30,7 +30,7 @@ export interface MyApplication {
 export interface FinalScore { finalScore: number | null; finalScorePending: boolean; finalScoreAt: string | null }
 
 const db = () => getAdminDb();
-const CARD_FIELDS = ['title', 'partnerId', 'partnerName', 'employment', 'category', 'scheme', 'location', 'workMode', 'quota', 'opensAt', 'closesAt', 'status', 'applicantCount', 'eligibility', 'salaryMin', 'salaryMax'];
+const CARD_FIELDS = ['title', 'partnerId', 'partnerName', 'employment', 'category', 'scheme', 'location', 'workMode', 'quota', 'opensAt', 'closesAt', 'status', 'applicantCount', 'eligibility', 'salary'];
 
 type Standing = { score: number; pending: boolean; placement: string | null };
 
@@ -99,7 +99,7 @@ async function visibleCards(actor: Actor, now: Date, partnerId?: string): Promis
     cards.push({
       id: j.id, title: d.title, partnerId: d.partnerId, partnerName: d.partnerName, employment: d.employment, category: d.category, scheme: d.scheme,
       location: d.location, workMode: d.workMode, quota: d.quota, opensAt: d.opensAt, closesAt: d.closesAt,
-      applicantCount: d.applicantCount ?? 0, logo: logos.get(d.partnerId) ?? null, salaryMin: d.salaryMin ?? null, salaryMax: d.salaryMax ?? null,
+      applicantCount: d.applicantCount ?? 0, logo: logos.get(d.partnerId) ?? null, salary: d.salary ?? null,
     });
   }
   return cards.sort((a, b) => a.closesAt.localeCompare(b.closesAt));
