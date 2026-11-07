@@ -53,6 +53,28 @@ describe('layar Karya Capstone: sorotan dan pilihan kelas', () => {
     act(() => { vi.advanceTimersByTime(4000); });
     expect(screen.getByText('02 / 02')).toBeTruthy();
   });
+  it('reels diputar sebagai video dan tayangan menunggu videonya selesai', () => {
+    vi.useFakeTimers();
+    const smm = { ...slide('a', 'Lentur Studio', false), images: ['/1.png', '/reels.mp4?alt=media', '/3.png'] };
+    const { container } = render(<CapstoneShow slides={[smm, slide('b', 'Lumbung POS')]} cohorts={[]} kelas="" />);
+    act(() => { vi.advanceTimersByTime(4000); });
+    const video = container.querySelector('.cap-slide.in video') as HTMLVideoElement;
+    expect(video?.getAttribute('src')).toBe('/reels.mp4?alt=media');
+    expect(video.muted).toBe(true);
+    act(() => { vi.advanceTimersByTime(20000); });
+    expect(container.querySelector('.cap-slide.in video')).toBeTruthy();
+    fireEvent.ended(video);
+    expect(container.querySelector('.cap-slide.in .cap-img img.on')?.getAttribute('src')).toBe('/3.png');
+    act(() => { vi.advanceTimersByTime(4000); });
+    expect(screen.getByText('02 / 02')).toBeTruthy();
+  });
+  it('video yang panjang dipotong agar layar tidak tertahan', () => {
+    vi.useFakeTimers();
+    const smm = { ...slide('a', 'Lentur Studio', false), images: ['/reels.mp4?alt=media', '/2.png'] };
+    const { container } = render(<CapstoneShow slides={[smm, slide('b', 'Lumbung POS')]} cohorts={[]} kelas="" />);
+    act(() => { vi.advanceTimersByTime(30000); });
+    expect(container.querySelector('.cap-slide.in .cap-img img.on')?.getAttribute('src')).toBe('/2.png');
+  });
   it('pilihan kelas mengganti alamat halaman', () => {
     render(<CapstoneShow slides={[slide('a', 'Griya Kenanga')]} cohorts={[{ key: 'web-smg', label: 'Web Programming · Semarang' }, { key: 'smm-yk', label: 'Social Media Marketing · Yogyakarta' }]} kelas="" />);
     fireEvent.click(screen.getByRole('button', { name: 'Yogyakarta' }));

@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export interface CapstoneSlide {
-  /** Sampul dulu; capstone SMM menyertakan slide dan konten sorotannya / Cover first; SMM capstones add their highlight slides and content */
+  /** Sampul dulu; capstone SMM menyertakan slide, carousel, dan video reels / Cover first; SMM capstones add their slides, carousels, and reels videos */
   id: string; title: string; images: string[]; tools: string[]; nickname: string; photo: string;
   cohortLabel: string; color: string; fg: string; qr: string; isApp: boolean;
 }
@@ -14,9 +14,14 @@ export interface CohortOption { key: string; label: string }
 
 // Lama satu karya tampil / How long one work shows
 const SLIDE_MS = 7000;
-// Lama satu gambar sorotan tampil; karya bergambar banyak tampil lebih lama / How long one highlight image shows; works with many images stay longer
+// Lama satu gambar sorotan tampil / How long one highlight image shows
 const IMG_MS = 4000;
-const durOf = (s?: CapstoneSlide) => Math.max(SLIDE_MS, (s?.images.length ?? 1) * IMG_MS);
+// ponytail: video diputar sampai selesai tetapi paling lama 30 detik, agar satu reels panjang tidak menahan layar
+// ponytail: a video plays to its end but at most 30 s, so one long reel does not hold the screen
+const VIDEO_MAX_MS = 30000;
+export const isVideo = (u: string) => /\.mp4(\?|$)/i.test(u);
+const itemMs = (s: CapstoneSlide | undefined, k: number) =>
+  isVideo(s?.images[k] ?? '') ? VIDEO_MAX_MS : (s?.images.length ?? 1) > 1 ? IMG_MS : SLIDE_MS;
 // Data diambil ulang berkala agar capstone yang baru terbit ikut tampil tanpa memuat ulang layar
 // Data is refetched periodically so newly published capstones appear without reloading the screen
 const REFRESH_MS = 30 * 60 * 1000;
@@ -47,6 +52,7 @@ const STYLE = `
 .cap-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;transform-origin:50% 0}
 .cap-slide.in .cap-img.one img{animation:capZoom ${SLIDE_MS + 1000}ms linear both}
 .cap-img.many img{object-fit:contain;object-position:center;opacity:0;transition:opacity .7s ease}
+.cap-img video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#00427A}
 .cap-img.many img.on{opacity:1}
 .cap-info{display:flex;flex-direction:column;gap:3.2vh;min-width:0}
 .cap-chip{align-self:flex-start;background:#fff;color:#0072CE;padding:.8vh 1vw;border-radius:999px;font-weight:700;font-size:clamp(11px,.95vmax,20px);letter-spacing:.02em}
@@ -81,7 +87,7 @@ const STYLE = `
 @keyframes capIn{from{opacity:0;transform:translateY(1.5vh)}to{opacity:1;transform:none}}
 @keyframes capOut{from{opacity:1}to{opacity:0}}
 @keyframes capZoom{from{transform:scale(1)}to{transform:scale(1.07)}}
-@keyframes capBar{from{width:0}to{width:100%}}
+@keyframes capBar{from{width:var(--a)}to{width:var(--b)}}
 @media (max-aspect-ratio:1/1){.cap-slide{grid-template-columns:1fr;align-content:center;gap:4vh}}
 @media (prefers-reduced-motion:reduce){.cap-slide.in .cap-img img{animation:none}.cap-img.many img{transition:none}.cap-slide.in{animation:none}.cap-slide.out{display:none}}
 `;
@@ -100,6 +106,9 @@ export function CapstoneShow({ slides, cohorts, kelas }: { slides: CapstoneSlide
   const n = slides.length;
   const [cur, setCur] = useState(0);
   const [prev, setPrev] = useState<number | null>(null);
+  // Urutan gambar atau video yang sedang tampil di dalam satu karya / Index of the image or video showing within one work
+  const [k, setK] = useState(0);
+  const [prevK, setPrevK] = useState(0);
   const [paused, setPaused] = useState(false);
   const [idle, setIdle] = useState(true);
   // Dinaikkan tiap kali slide dimulai ulang agar bilah progres ikut mulai dari nol
@@ -107,16 +116,26 @@ export function CapstoneShow({ slides, cohorts, kelas }: { slides: CapstoneSlide
   const [run, setRun] = useState(0);
 
   const go = useCallback((step: number) => {
-    if (n < 2) return;
+    if (n < 2) { setK(0); setRun((r) => r + 1); return; }
+    setPrevK(k);
+    setK(0);
     setCur((c) => { setPrev(c); return (c + step + n) % n; });
     setRun((r) => r + 1);
-  }, [n]);
+  }, [n, k]);
+
+  // Gambar atau video berikutnya dalam karya yang sama, atau karya berikutnya setelah yang terakhir
+  // The next image or video in the same work, or the next work after the last one
+  const advance = useCallback(() => {
+    if (k + 1 < (slides[cur % Math.max(n, 1)]?.images.length ?? 1)) setK(k + 1);
+    else go(1);
+  }, [k, cur, n, slides, go]);
 
   useEffect(() => {
-    if (paused || n < 2) return;
-    const t = setTimeout(() => go(1), durOf(slides[cur % n]));
+    const len = slides[cur % Math.max(n, 1)]?.images.length ?? 1;
+    if (paused || n === 0 || (n < 2 && len < 2)) return;
+    const t = setTimeout(advance, itemMs(slides[cur % n], k));
     return () => clearTimeout(t);
-  }, [cur, run, paused, n, go, slides]);
+  }, [cur, k, run, paused, n, advance, slides]);
 
   // Slide lama memudar keluar lebih dulu lalu dilepas; slide baru baru masuk setelahnya agar teks tidak bertumpuk
   // The old slide fades out first and is then dropped; the new one enters afterwards so text never overlaps
@@ -190,12 +209,13 @@ export function CapstoneShow({ slides, cohorts, kelas }: { slides: CapstoneSlide
 
         <div className="cap-stage">
           {n === 0 && <div className="cap-empty">Belum ada karya capstone yang terbit.</div>}
-          {prev !== null && slides[prev] && <Slide key={'out-' + slides[prev].id + '-' + run} s={slides[prev]} />}
-          {s && <Slide key={s.id + '-' + run} s={s} enter paused={paused} />}
+          {prev !== null && slides[prev] && <Slide key={'out-' + slides[prev].id + '-' + run} s={slides[prev]} k={prevK} />}
+          {s && <Slide key={s.id + '-' + cur} s={s} k={k} enter paused={paused} onEnded={advance} />}
         </div>
 
         <div className="cap-foot">
-          <div className="cap-prog"><i key={run} style={{ animationDuration: durOf(s) + 'ms' }} /></div>
+          {/* Bilah maju per gambar atau video, dari posisi item sekarang ke berikutnya / The bar moves per image or video, from this item's position to the next */}
+          <div className="cap-prog"><i key={run + '-' + k} style={{ animationDuration: itemMs(s, k) + 'ms', '--a': (k / Math.max(s?.images.length ?? 1, 1)) * 100 + '%', '--b': ((k + 1) / Math.max(s?.images.length ?? 1, 1)) * 100 + '%' } as React.CSSProperties} /></div>
           {next && <div className="cap-next">Berikutnya: {next.title} · {next.nickname}</div>}
         </div>
       </div>
@@ -224,26 +244,34 @@ export function CapstoneShow({ slides, cohorts, kelas }: { slides: CapstoneSlide
   );
 }
 
-function Slide({ s, enter, paused }: { s: CapstoneSlide; enter?: boolean; paused?: boolean }) {
+function Slide({ s, k, enter, paused, onEnded }: { s: CapstoneSlide; k: number; enter?: boolean; paused?: boolean; onEnded?: () => void }) {
   const many = s.images.length > 1;
-  const [k, setK] = useState(0);
+  const video = useRef<HTMLVideoElement>(null);
   useEffect(() => {
-    if (!enter || paused || !many) return;
-    const t = setInterval(() => setK((x) => (x + 1) % s.images.length), IMG_MS);
-    return () => clearInterval(t);
-  }, [enter, paused, many, s.images.length]);
+    const v = video.current;
+    if (!v || !enter) return;
+    if (paused) v.pause();
+    else v.play()?.catch(() => {});
+  }, [paused, k, enter]);
 
   return (
     <div className={`cap-slide ${enter ? 'in' : 'out'}`} aria-hidden={!enter}>
       <div className="cap-shot">
         <div className="cap-bar"><i /><i /><i /></div>
         <div className={`cap-img ${many ? 'many' : 'one'}`}>
-          {/* Gambar sorotan ditumpuk dan dipudarkan bergantian; hanya yang berikutnya dimuat lebih dulu
-              Highlight images are stacked and cross-faded; only the next one loads ahead */}
-          {s.images.map((src, i) => (i === k || i === (k + 1) % s.images.length) && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={src} src={src} className={i === k ? 'on' : ''} alt={i === k ? 'Tampilan ' + s.title : ''} />
-          ))}
+          {/* Gambar sorotan ditumpuk dan dipudarkan bergantian; hanya yang berikutnya dimuat lebih dulu.
+              Reels diputar tanpa suara karena peramban menolak putar otomatis bersuara.
+              Highlight images are stacked and cross-faded; only the next one loads ahead.
+              Reels play muted because browsers refuse autoplay with sound. */}
+          {s.images.map((src, i) => {
+            if (isVideo(src)) {
+              return i === k && <video key={src} ref={video} src={src} muted autoPlay={enter} playsInline onEnded={onEnded} aria-label={'Video ' + s.title} />;
+            }
+            return (i === k || i === (k + 1) % s.images.length) && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={src} src={src} className={i === k ? 'on' : ''} alt={i === k ? 'Tampilan ' + s.title : ''} />
+            );
+          })}
         </div>
       </div>
       <div className="cap-info">
