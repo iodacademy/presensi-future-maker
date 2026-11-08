@@ -205,10 +205,10 @@ export function gradeParticipant(input: {
 
 /**
  * Pertemuan yang dinilai bagi satu peserta; dipakai bersama nilai kehadiran
- * dan hitungan absen tanpa izin supaya keduanya tidak pernah berbeda pertemuan.
+ * dan hitungan absen supaya keduanya tidak pernah berbeda pertemuan.
  *
  * The meetings graded for one participant; shared by the attendance score and
- * the unexcused-absence count so both always look at the same meetings.
+ * the absence count so both always look at the same meetings.
  */
 export function gradedMeetings<T extends { id: string; endsAt: string; title?: string }>(
   sessions: T[], joinIso: string, recorded: (sessionId: string) => boolean
@@ -217,21 +217,22 @@ export function gradedMeetings<T extends { id: string; endsAt: string; title?: s
 }
 
 /**
- * Jumlah pertemuan yang sudah lewat tanpa hadir, izin, atau sakit. Pertemuan
- * tanpa catatan presensi dihitung absen, sama seperti nilai kehadiran.
+ * Jumlah pertemuan yang sudah lewat tanpa hadir. Izin dan sakit ikut dihitung
+ * (syarat skema magang), dan pertemuan tanpa catatan presensi dihitung absen,
+ * sama seperti nilai kehadiran.
  *
- * How many past meetings had no attendance, leave, or sick record. A meeting
- * with no record counts as absent, as it does for the attendance score.
+ * How many past meetings were not attended. Leave and sick count too (the
+ * internship scheme rule), and a meeting with no record counts as absent, as it
+ * does for the attendance score.
  */
-export function countUnexcused(input: {
+export function countAbsent(input: {
   sessions: { id: string; endsAt: string; title?: string }[];
   joinIso: string;
   nowIso: string;
   status: (sessionId: string) => AttendanceStatus | undefined;
 }): number {
-  const ok = new Set<AttendanceStatus | undefined>(['present', 'excused', 'sick']);
   return gradedMeetings(input.sessions, input.joinIso, (id) => input.status(id) !== undefined)
-    .filter((s) => s.endsAt <= input.nowIso && !ok.has(input.status(s.id))).length;
+    .filter((s) => s.endsAt <= input.nowIso && input.status(s.id) !== 'present').length;
 }
 
 /** Bobot rubrik Performance Terbaik / Weights of the Best Performance rubric */

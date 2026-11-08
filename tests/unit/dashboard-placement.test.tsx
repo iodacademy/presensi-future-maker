@@ -6,7 +6,7 @@ import { byPerformance } from '../../src/app/(admin)/admin/dashboard/ranking-gro
 import type { RankedStudent } from '../../src/features/dashboard/snapshot-types';
 
 const row = (studentName: string, city: string, placement: RankedStudent['placement'], placementReasons: string[] = []): RankedStudent => ({
-  studentId: studentName, studentName, className: 'Web ' + city, city, score: 80, capstone: 80, tasks: 90, attendance: 100, quiz: 70, unexcused: 0,
+  studentId: studentName, studentName, className: 'Web ' + city, city, score: 80, capstone: 80, tasks: 90, attendance: 100, quiz: 70, combined: 84, absent: 0,
   componentDetails: { attendance: '12 dari 12 pertemuan' }, placement, placementReasons,
   perfScore: 85, perfAttendance: 100, perfTasks: 90, perfQuiz: 70,
 });
@@ -18,7 +18,7 @@ describe('panel skema magang', () => {
   it('satu tab per kelompok; tab dibuka menampilkan seluruh nilai komponen', () => {
     render(<PlacementGroups jurusanKelas={jurusan} rows={[
       row('Roi', 'Semarang', 'full'),
-      row('Vero', 'Semarang', 'project', ['Capstone di bawah 75']),
+      row('Vero', 'Semarang', 'project', ['Nilai TPM + capstone di bawah 70']),
       row('Andi', 'Surabaya', 'pending', ['Capstone belum dinilai']),
     ]} />);
     expect(screen.getAllByRole('tab')).toHaveLength(2);
@@ -26,7 +26,7 @@ describe('panel skema magang', () => {
     expect(screen.getByText('Roi')).toBeTruthy();
     expect(screen.queryByText('Andi')).toBeNull();
     expect(screen.getAllByText('12 dari 12 pertemuan').length).toBe(2);
-    expect(screen.getByText('Capstone di bawah 75')).toBeTruthy();
+    expect(screen.getByText('Nilai TPM + capstone di bawah 70')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('tab', { name: /Surabaya/ }));
     expect(screen.getByText('Andi')).toBeTruthy();

@@ -159,8 +159,10 @@ export interface RankedStudent {
   quiz: number;
   /** Keterangan asal tiap nilai komponen / Where each component score comes from */
   componentDetails: Partial<Record<GradeComponent, string>>;
-  /** Pertemuan yang lewat tanpa hadir, izin, atau sakit / Past meetings with no attendance, leave or sick record */
-  unexcused: number;
+  /** Nilai gabungan capstone 60% dan TPM 40%, syarat skema magang / Combined capstone 60% and TPM 40% score, an internship requirement */
+  combined: number;
+  /** Pertemuan yang lewat tanpa hadir, termasuk izin dan sakit / Past meetings not attended, leave and sick included */
+  absent: number;
   /** Nilai Performance Terbaik tanpa capstone, satu angka desimal / The Best Performance score without the capstone, one decimal */
   perfScore: number;
   perfAttendance: number;
@@ -168,7 +170,7 @@ export interface RankedStudent {
   /** Rerata kuis percobaan pertama / Average of first quiz attempts */
   perfQuiz: number;
   placement: Placement;
-  /** Syarat Full Internship yang belum terpenuhi / Full Internship requirements not met */
+  /** Syarat skema yang belum terpenuhi / Scheme requirements not met */
   placementReasons: string[];
   /** Komponen yang belum dinilai; tidak ada pada ringkasan sebelum versi 17 / Components not yet graded; absent before version 17 */
   pending?: GradeComponent[];

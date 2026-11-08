@@ -990,3 +990,49 @@
     font-size: 24px;
   }
 }
+
+/* --- ringkasan magang ---------------------------------------------------- */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chips button {
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 5px 12px;
+  background: #ffffff;
+  color: var(--color-text-main);
+  cursor: pointer;
+}
+
+.chips button[aria-pressed='true'] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.chips button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Nama jurusan lebih panjang dari nama kota / Programme names are longer than city names */
+.bars .inRow {
+  grid-template-columns: minmax(80px, 180px) minmax(0, 1fr) auto;
+}
+
+.inSeg {
+  background: var(--pl-bg);
+  color: var(--pl-ink);
+  justify-content: center;
+  font-weight: 600;
+}
+
+.sw.inSeg {
+  outline: 1px solid var(--pl);
+}

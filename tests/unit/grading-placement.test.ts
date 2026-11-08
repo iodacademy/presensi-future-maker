@@ -1,26 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { comparePlacementRank, decidePlacement } from '../../src/features/grading/placement';
-import { countUnexcused, performanceScore } from '../../src/features/grading/policy';
+import { combinedScore, comparePlacementRank, decidePlacement } from '../../src/features/grading/placement';
+import { countAbsent, performanceScore } from '../../src/features/grading/policy';
 
 describe('penentuan skema magang', () => {
-  it('SPA ≥ 80, capstone ≥ 75, tanpa absen tanpa izin: kandidat Full Internship', () => {
-    expect(decidePlacement({ spa: 80, capstone: 75, unexcused: 0 })).toEqual({ placement: 'full', reasons: [] });
+  const p = (spa: number, capstone: number, tasks: number, absent: number) => decidePlacement({ spa, capstone, tasks, absent });
+  it('nilai TPM + capstone berbobot capstone 60, TPM 40', () => {
+    expect(combinedScore(80, 60)).toBe(72);
+    expect(combinedScore(75, 64)).toBe(71);
   });
-  it('SPA 65–79 masuk Project Based', () => {
-    expect(decidePlacement({ spa: 79, capstone: 90, unexcused: 0 }).placement).toBe('project');
-    expect(decidePlacement({ spa: 65, capstone: 90, unexcused: 0 }).placement).toBe('project');
+  it('SPA ≥ 70, nilai TPM + capstone ≥ 70, absen paling banyak 1: Full Internship', () => {
+    expect(p(70, 70, 70, 1)).toEqual({ placement: 'full', reasons: [] });
   });
-  it('SPA ≥ 80 yang gagal syarat lain turun ke Project Based beserta alasannya', () => {
-    expect(decidePlacement({ spa: 88, capstone: 70, unexcused: 2 })).toEqual({
-      placement: 'project',
-      reasons: ['Capstone di bawah 75', '2× absen tanpa izin'],
-    });
+  it('SPA 50–69, nilai 50–69, absen paling banyak 3: Project Based', () => {
+    expect(p(69, 69, 69, 3)).toEqual({ placement: 'project', reasons: ['SPA di bawah 70', 'Nilai TPM + capstone di bawah 70', '3× absen'] });
+    expect(p(50, 50, 50, 0).placement).toBe('project');
   });
-  it('SPA di bawah 65 tidak ditempatkan, apa pun nilai lainnya', () => {
-    expect(decidePlacement({ spa: 64, capstone: 100, unexcused: 0 })).toEqual({ placement: 'none', reasons: ['SPA di bawah 65'] });
+  it('lolos SPA Full tetapi absen 2–3 kali turun ke Project Based', () => {
+    expect(p(90, 90, 90, 2)).toEqual({ placement: 'project', reasons: ['2× absen'] });
+  });
+  it('izin dan sakit ikut dihitung absen; lebih dari 3 kali tidak ditempatkan', () => {
+    expect(p(90, 90, 90, 4)).toEqual({ placement: 'none', reasons: ['4× absen, batas 3'] });
+  });
+  it('SPA atau nilai TPM + capstone di bawah 50 tidak ditempatkan', () => {
+    expect(p(49, 90, 90, 0)).toEqual({ placement: 'none', reasons: ['SPA di bawah 50'] });
+    expect(p(60, 40, 50, 0)).toEqual({ placement: 'none', reasons: ['Nilai TPM + capstone di bawah 50'] });
   });
   it('capstone yang belum dinilai menunda penentuan, bukan menolak', () => {
-    expect(decidePlacement({ spa: 25, capstone: 0, unexcused: 0, capstoneGraded: false })).toEqual({ placement: 'pending', reasons: ['Capstone belum dinilai'] });
+    expect(decidePlacement({ spa: 25, capstone: 0, tasks: 0, absent: 0, capstoneGraded: false })).toEqual({ placement: 'pending', reasons: ['Capstone belum dinilai'] });
   });
   it('urutan: SPA, lalu capstone, lalu kehadiran', () => {
     const rows = [
@@ -33,27 +39,28 @@ describe('penentuan skema magang', () => {
   });
 });
 
-describe('absen tanpa izin', () => {
+describe('hitungan absen', () => {
   const sessions = [
     { id: 's1', endsAt: '2026-09-01T10:00:00Z', title: 'Pertemuan 1' },
     { id: 's2', endsAt: '2026-09-08T10:00:00Z', title: 'Pertemuan 2' },
     { id: 's3', endsAt: '2026-09-15T10:00:00Z', title: 'Pertemuan 3' },
     { id: 's4', endsAt: '2026-09-22T10:00:00Z', title: 'Pertemuan 4' },
+    { id: 's5', endsAt: '2026-09-23T10:00:00Z', title: 'Pertemuan 5' },
     { id: 'k', endsAt: '2026-09-09T10:00:00Z', title: 'Kelas Karier' },
-    { id: 'f', endsAt: '2026-12-01T10:00:00Z', title: 'Pertemuan 5' },
+    { id: 'f', endsAt: '2026-12-01T10:00:00Z', title: 'Pertemuan 6' },
   ];
-  const status: Record<string, string> = { s1: 'present', s2: 'excused', s3: 'absent' };
-  it('menghitung status absen dan pertemuan tanpa catatan; izin, sakit, sesi non-pertemuan, dan pertemuan mendatang tidak', () => {
-    expect(countUnexcused({
+  const status: Record<string, string> = { s1: 'present', s2: 'excused', s3: 'absent', s5: 'sick' };
+  it('izin, sakit, absen, dan pertemuan tanpa catatan dihitung; sesi non-pertemuan dan pertemuan mendatang tidak', () => {
+    expect(countAbsent({
       sessions, joinIso: '', nowIso: '2026-10-29T00:00:00Z',
       status: (id) => status[id] as never,
-    })).toBe(2);
+    })).toBe(4);
   });
   it('pertemuan tanpa catatan sebelum peserta bergabung tidak dihitung', () => {
-    expect(countUnexcused({
+    expect(countAbsent({
       sessions, joinIso: '2026-09-16T00:00:00Z', nowIso: '2026-10-29T00:00:00Z',
       status: (id) => (id === 's1' ? 'present' : undefined),
-    })).toBe(1);
+    })).toBe(2);
   });
 });
 

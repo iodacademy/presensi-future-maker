@@ -9,6 +9,7 @@ import { RosterTable } from './roster-table';
 import { FeedbackPanel } from './feedback-panel';
 import { RankingGroups } from './ranking-groups';
 import { PlacementGroups } from './placement-groups';
+import { InternshipSummary } from './internship-summary';
 import { AttendanceCellModal, AttendanceTableModal } from './attendance-detail';
 import { StudentSearch } from './student-search';
 import { QuizDetailModal } from './quiz-detail';
@@ -605,6 +606,10 @@ function DashboardBody({
               SPA = nilai akhir. Diurutkan per lokasi menurut SPA, lalu capstone, lalu kehadiran
             </p>
           </div>
+          <InternshipSummary
+            rows={snapshot.ranking.filter((r) => cities.includes(r.city))}
+            jurusanKelas={jurusanKelas}
+          />
           <PlacementGroups
             rows={snapshot.ranking.filter((r) => cities.includes(r.city))}
             jurusanKelas={jurusanKelas}

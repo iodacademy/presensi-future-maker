@@ -8,11 +8,11 @@ import s from './dashboard.module.css';
 
 const ORDER: Placement[] = ['full', 'project', 'none', 'pending'];
 const TONE: Record<Placement, string> = { full: s.plFull, project: s.plProject, none: s.plNone, pending: s.plPending };
-const { minSpa, fullSpa, fullCapstone } = PLACEMENT_RULES;
+const { full, project, weights } = PLACEMENT_RULES;
 const NOTE: Record<Placement, string> = {
-  full: `SPA ≥ ${fullSpa}, capstone ≥ ${fullCapstone}, tanpa absen tanpa izin. Masih menunggu seleksi CV dan wawancara mitra.`,
-  project: `SPA ${minSpa}–${fullSpa - 1}, atau SPA ≥ ${fullSpa} yang belum memenuhi syarat Full Internship.`,
-  none: `SPA di bawah ${minSpa}.`,
+  full: `SPA ≥ ${full.spa}, nilai TPM + capstone ≥ ${full.combined}, absen ≤ ${full.maxAbsent}× (termasuk izin dan sakit). Masih menunggu seleksi CV dan wawancara mitra.`,
+  project: `SPA ${project.spa}–${full.spa - 1}, nilai TPM + capstone ${project.combined}–${full.combined - 1}, absen ≤ ${project.maxAbsent}×; juga yang lolos nilai Full tetapi absen 2–${project.maxAbsent}×.`,
+  none: 'Tidak memenuhi syarat kedua skema.',
   pending: 'Skemanya ditentukan setelah capstone dinilai.',
 };
 const COLS: { key: GradeComponent; label: string }[] = [
@@ -104,8 +104,9 @@ export function PlacementGroups({ rows, jurusanKelas }: { rows: RankedStudent[];
                 <th className={s.ctr}>#</th>
                 <th>Nama</th>
                 <th className={s.ctr}>SPA</th>
+                <th className={s.ctr}>TPM + Capstone <small>{weights.tasks}/{weights.capstone}</small></th>
                 {COLS.map((c) => <th key={c.key} className={s.ctr}>{c.label} <small>{GRADE_WEIGHTS[c.key]}%</small></th>)}
-                <th className={s.ctr}>Absen tanpa izin</th>
+                <th className={s.ctr}>Absen <small>termasuk izin, sakit</small></th>
                 <th>Skema</th>
               </tr>
             </thead>
@@ -115,6 +116,7 @@ export function PlacementGroups({ rows, jurusanKelas }: { rows: RankedStudent[];
                   <td className={s.ctr}><span className={s.rkn}>{rank}</span></td>
                   <td>{r.studentName}<div className={s.plSub}>{r.className}</div></td>
                   <td className={`${s.ctr} ${s.num}`}><b className={s.plSpa}>{r.score}</b></td>
+                  <td className={`${s.ctr} ${s.num}`}><b className={s.plSpa}>{r.combined ?? '–'}</b></td>
                   {COLS.map((c) => (
                     <td key={c.key} className={`${s.ctr} ${s.num}`}>
                       {r[c.key]}
@@ -125,7 +127,7 @@ export function PlacementGroups({ rows, jurusanKelas }: { rows: RankedStudent[];
                       )}
                     </td>
                   ))}
-                  <td className={`${s.ctr} ${s.num}`} style={r.unexcused > 0 ? { color: 'var(--color-danger)', fontWeight: 600 } : undefined}>{r.unexcused}</td>
+                  <td className={`${s.ctr} ${s.num}`} style={r.absent > full.maxAbsent ? { color: 'var(--color-danger)', fontWeight: 600 } : undefined}>{r.absent ?? '–'}</td>
                   <td>
                     <span className={`${s.plBadge} ${TONE[r.placement]}`}>{PLACEMENT_LABELS[r.placement]}</span>
                     {r.placementReasons.length > 0 && <div className={s.plSub}>{r.placementReasons.join(' · ')}</div>}

@@ -10,8 +10,8 @@ import { ageFrom } from '../users/profile-service';
 import { countsAfterJoin, effectiveDueAt, joinMoment } from '../users/join-policy';
 import { hitungFase, keteranganFase } from './phases';
 import { buildFeedbackReport } from './feedback';
-import { countUnexcused, gradeParticipant, gradedMeetings, performanceScore } from '../grading/policy';
-import { comparePlacementRank, decidePlacement } from '../grading/placement';
+import { countAbsent, gradeParticipant, gradedMeetings, performanceScore } from '../grading/policy';
+import { combinedScore, comparePlacementRank, decidePlacement } from '../grading/placement';
 import { wibDate } from '@/lib/time';
 import {
   DISABILITY_LABELS,
@@ -104,8 +104,10 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  * 16: the Best Performance score and its components keep one decimal.
  * 17: the ranking carries the components not yet graded (Job Portal marks the
  *     final score provisional).
+ * 18: placement uses the combined TPM + capstone score and counts leave and
+ *     sick days as absences.
  */
-export const SNAPSHOT_VERSION = 17;
+export const SNAPSHOT_VERSION = 18;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -691,7 +693,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         capstone: nilaiCapstone.get(st.uid) ?? null,
       });
       const komponen = (k: string) => nilai.breakdown.find((b) => b.component === k)?.score ?? 0;
-      const unexcused = countUnexcused({
+      const absent = countAbsent({
         sessions: sesiPerKelas.get(cid) ?? [],
         joinIso,
         nowIso,
@@ -705,7 +707,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         quizScores: examIds.map((id) => nilaiPertama.get(id)?.get(st.uid) ?? null),
       });
       const { placement, reasons } = decidePlacement({
-        spa: nilai.score, capstone: komponen('capstone'), unexcused, capstoneGraded: !nilai.pending.includes('capstone'),
+        spa: nilai.score, capstone: komponen('capstone'), tasks: komponen('tasks'), absent, capstoneGraded: !nilai.pending.includes('capstone'),
       });
       return {
         studentId: st.uid,
@@ -720,7 +722,8 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         // Asal tiap angka, mis. "11 dari 12 pertemuan", agar penempatannya dapat diperiksa
         // Where each number comes from, e.g. "11 dari 12 pertemuan", so the placement can be checked
         componentDetails: Object.fromEntries(nilai.breakdown.map((b) => [b.component, b.detail])),
-        unexcused,
+        combined: combinedScore(komponen('capstone'), komponen('tasks')),
+        absent,
         perfScore: perf.score,
         perfAttendance: perf.attendance,
         perfTasks: perf.tasks,
