@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { AppShell } from '@/components/app-shell';
-import { alertBox, api, btn, btnSolid } from '../pameran/admin-ui';
+import { alertBox, api, btn, btnSolid, send } from '../pameran/admin-ui';
 import type { JobRow, PartnerRow } from '@/features/careers/admin-service';
 import { JobsTab } from './jobs-tab';
 import { PartnersTab } from './partners-tab';
@@ -28,13 +28,14 @@ export default function AdminJobPortalPage() {
   const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState<boolean | null>(null);
 
   useEffect(() => { if (new URLSearchParams(window.location.search).get('tab') === 'mitra') setTab('mitra'); }, []);
 
   const load = useCallback(async () => {
     try {
-      const [j, p] = await Promise.all([api('/api/karier/jobs'), api('/api/karier/partners')]);
-      setJobs(j.jobs); setStats(j.stats); setPartners(p.partners); setError(null);
+      const [j, p, g] = await Promise.all([api('/api/karier/jobs'), api('/api/karier/partners'), api('/api/karier/pendaftaran')]);
+      setJobs(j.jobs); setStats(j.stats); setPartners(p.partners); setOpen(g.open); setError(null);
     } catch (e) { setError((e as Error).message); }
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -44,6 +45,12 @@ export default function AdminJobPortalPage() {
     window.history.replaceState(null, '', `/admin/job-portal?tab=${key}`);
   }
   const back = () => { setView({ kind: 'list' }); load(); };
+
+  async function toggleOpen() {
+    const next = !open;
+    if (!window.confirm(next ? 'Buka pendaftaran? Siswa langsung bisa mengirim lamaran.' : 'Tutup pendaftaran? Siswa hanya bisa melihat lowongan.')) return;
+    try { setOpen((await send('/api/karier/pendaftaran', 'POST', { open: next })).open); } catch (e) { setError((e as Error).message); }
+  }
 
   return (
     <AppShell role="admin" userName="Administrator">
@@ -55,7 +62,13 @@ export default function AdminJobPortalPage() {
           </p>
         </div>
         {view.kind === 'list' && (
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {open !== null && (
+              <button type="button" style={{ ...btn, color: open ? '#067647' : '#B42318' }} onClick={toggleOpen} aria-pressed={open}
+                title="Siswa tetap bisa melihat lowongan selama pendaftaran tutup">
+                {open ? 'Pendaftaran lamaran: dibuka' : 'Pendaftaran lamaran: ditutup'}
+              </button>
+            )}
             <button type="button" style={btn} onClick={() => setView({ kind: 'partner', id: null })}>+ Tambah mitra</button>
             <button type="button" style={btnSolid} onClick={() => setView({ kind: 'job', id: null })} disabled={partners.length === 0}
               title={partners.length === 0 ? 'Tambahkan mitra lebih dulu' : undefined}>+ Tambah lowongan</button>

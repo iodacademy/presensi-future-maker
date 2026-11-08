@@ -8,6 +8,8 @@ vi.mock('next/cache', () => ({ unstable_cache: (fn: () => unknown) => fn }));
 vi.mock('../../src/lib/firebase/admin', () => ({ getAdminDb: () => fakeDb, getAdminStorage: () => fakeStorage }));
 
 import { submitApplication } from '../../src/features/careers/apply-service';
+import { applicationsOpen, setApplicationsOpen } from '../../src/features/careers/apply-gate';
+import { GET as pendaftaranGet, POST as pendaftaranPost } from '../../src/app/api/karier/pendaftaran/route';
 import { POST as lamarPost } from '../../src/app/api/karier/lamar/route';
 
 const now = new Date('2026-11-05T00:00:00Z');
@@ -28,6 +30,7 @@ beforeEach(() => {
     jobApplications: {},
     counters: {},
     careerProfiles: {},
+    settings: { careers: { applicationsOpen: true } },
     studentCvs: {
       cv1: { ownerUid: 'u1', kind: 'cv', fileName: 'CV Andi.pdf', deleted: false, uploadedAt: '1' },
       cv2: { ownerUid: 'u2', kind: 'cv', fileName: 'CV Budi.pdf', deleted: false, uploadedAt: '1' },
@@ -40,6 +43,30 @@ beforeEach(() => {
     dashboardSnapshots: { '2026-11-04': { generatedAt: '2026-11-04T01:00:00Z', version: 17, ranking: [{ studentId: 'u1', score: 82, pending: ['capstone'], placement: 'project' }, { studentId: 'u3', score: 75, pending: [], placement: 'project' }] } },
   });
   getSessionActor.mockResolvedValue({ uid: 'u1', role: 'student', classId: 'k1' });
+});
+
+describe('pendaftaran lamaran dibuka dan ditutup admin', () => {
+  it('tanpa pengaturan, pendaftaran dianggap belum dibuka', async () => {
+    delete data.settings;
+    expect(await applicationsOpen()).toBe(false);
+    await expect(submitApplication(actor('u1'), body(), now)).rejects.toThrow('Pendaftaran lamaran belum dibuka');
+    expect(data.jobApplications.j1_u1).toBeUndefined();
+    expect(data.jobs.j1.applicantCount).toBe(0);
+  });
+  it('admin menutup lalu membuka pendaftaran lewat rute', async () => {
+    await setApplicationsOpen(false);
+    await expect(submitApplication(actor('u1'), body(), now)).rejects.toThrow('Pendaftaran lamaran belum dibuka');
+    getSessionActor.mockResolvedValue({ uid: 'a1', role: 'admin' });
+    const res = await pendaftaranPost(new Request('http://x', { method: 'POST', body: JSON.stringify({ open: true }) }));
+    expect(await res.json()).toEqual({ open: true });
+    expect(await (await pendaftaranGet()).json()).toEqual({ open: true });
+    expect((await submitApplication(actor('u1'), body(), now)).number).toBe('FM-JOB-0001');
+  });
+  it('siswa tidak dapat mengubah pendaftaran', async () => {
+    const res = await pendaftaranPost(new Request('http://x', { method: 'POST', body: JSON.stringify({ open: false }) }));
+    expect(res.status).toBe(403);
+    expect(await applicationsOpen()).toBe(true);
+  });
 });
 
 describe('kirim lamaran', () => {

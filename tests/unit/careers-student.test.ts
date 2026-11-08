@@ -23,6 +23,7 @@ const job = {
 
 beforeEach(() => {
   reset({
+    settings: { careers: { applicationsOpen: true } },
     partners: { p1: { name: 'PT DIPSI', field: 'Software', about: 'Tentang', logo: { thumb: 'https://x/t.webp', full: 'https://x/f.webp' }, website: '', socials: { instagram: '', linkedin: '', tiktok: '', youtube: '' }, pics: [{ name: 'Rina', phone: '1', email: 'r@x.id' }] } },
     jobs: {
       ok: job,
@@ -95,6 +96,14 @@ describe('bacaan siswa', () => {
   it('lowongan yang sudah dilamar ditandai', async () => {
     (await import('./careers-fake-db')).data.jobApplications['ok_u1'] = { jobId: 'ok', studentId: 'u1', status: 'baru', number: 'FM-JOB-0001' };
     expect((await listOpenJobs(andi, now)).appliedJobIds).toEqual(['ok']);
+  });
+
+  it('selama pendaftaran tutup, lowongan tetap bisa dilihat tetapi formulir lamaran ditolak', async () => {
+    const db = (await import('./careers-fake-db')).data;
+    expect((await getJobForStudent(andi, 'ok', now))?.applicationsOpen).toBe(true);
+    db.settings.careers.applicationsOpen = false;
+    expect((await getJobForStudent(andi, 'ok', now))?.applicationsOpen).toBe(false);
+    await expect(getApplyContext(andi, 'ok', now)).rejects.toThrow('Pendaftaran lamaran belum dibuka');
   });
 
   it('detail lowongan tak terlihat kosong, kecuali sudah dilamar', async () => {

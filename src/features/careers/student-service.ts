@@ -10,6 +10,7 @@ import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
 import { safeExternalUrl } from '../exhibition/model';
 import { isStoredSubmissionFile } from '../tasks/submission-policy';
+import { applicationsOpen, CLOSED_MESSAGE } from './apply-gate';
 import { listCvs } from './cv-service';
 import {
   canApplyScheme, hasCareerAccess, isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
@@ -140,8 +141,8 @@ export async function getJobForStudent(actor: Actor, id: string, now: Date) {
   const job = { ...(jSnap.data() as Job), id };
   const application = aSnap.exists ? { status: aSnap.get('status') as ApplicationStatus, number: aSnap.get('number') as string } : null;
   if (!application && (job.status !== 'published' || !isOpenToStudents(job, now) || !(await eligibilityCheck(actor)(job)))) return null;
-  const partner = await publicPartner(job.partnerId);
-  return partner ? { job, partner, application } : null;
+  const [partner, open] = await Promise.all([publicPartner(job.partnerId), applicationsOpen()]);
+  return partner ? { job, partner, application, applicationsOpen: open } : null;
 }
 
 export async function getPartnerProfile(actor: Actor, id: string, now: Date) {
@@ -153,6 +154,7 @@ export async function getApplyContext(actor: Actor, jobId: string, now: Date) {
   const found = await getJobForStudent(actor, jobId, now);
   if (found?.application) throw new Error('Kamu sudah melamar lowongan ini');
   if (!found) throw new Error('Lowongan tidak bisa dilamar');
+  if (!found.applicationsOpen) throw new Error(CLOSED_MESSAGE);
   const uid = actor.uid;
   const [user, profile, career, cls, worksSnap, subsSnap, cvs, covers] = await Promise.all([
     db().collection('users').doc(uid).get(),

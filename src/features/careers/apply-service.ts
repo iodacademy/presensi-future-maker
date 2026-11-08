@@ -12,6 +12,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
+import { applicationsOpen, CLOSED_MESSAGE } from './apply-gate';
 import { listCvs } from './cv-service';
 import { canApplyScheme, formatApplicationNumber, isEligible, isOpenToStudents, validateApplicationInput, type Job } from './model';
 import { latestFinalScore, latestPlacement, ownTasks, ownWorks } from './student-service';
@@ -19,6 +20,7 @@ import { latestFinalScore, latestPlacement, ownTasks, ownWorks } from './student
 export async function submitApplication(actor: Actor, raw: unknown, now: Date): Promise<{ id: string; number: string }> {
   const jobId = String((raw as { jobId?: unknown })?.jobId ?? '');
   if (!jobId) throw new Error('Lowongan tidak ditemukan');
+  if (!(await applicationsOpen())) throw new Error(CLOSED_MESSAGE);
   const db = getAdminDb();
   const [cvs, covers, works, tasks, score, placement] = await Promise.all([
     listCvs(actor.uid, 'cv'), listCvs(actor.uid, 'surat'), ownWorks(actor.uid), ownTasks(actor.uid), latestFinalScore(actor.uid), latestPlacement(actor.uid),
