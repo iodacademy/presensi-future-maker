@@ -1,27 +1,27 @@
 /**
  * Penentuan skema magang sesudah bootcamp.
  *
- * Tiga syarat dinilai bersama: SPA (nilai akhir), nilai gabungan TPM dan
- * capstone (capstone 60%, TPM 40%), dan jumlah absen termasuk izin dan sakit.
- * Full Internship menuntut SPA dan nilai gabungan minimal 70 dengan absen
- * paling banyak sekali; Project Based menuntut keduanya minimal 50 dengan absen
- * paling banyak tiga kali. Peserta yang lolos ambang nilai Full tetapi gagal di
- * syarat lain turun ke Project Based, bukan ke Tidak Ditempatkan. Seleksi CV,
+ * Nilai menentukan tingkatnya: SPA (nilai akhir) dan nilai gabungan TPM dan
+ * capstone (capstone 60%, TPM 40%). Absen, termasuk izin dan sakit, hanya
+ * menurunkan satu tingkat: nilai Full dengan absen lebih dari sekali menjadi
+ * Project Based, berapa pun absennya, dan nilai Project dengan absen lebih dari
+ * tiga kali tidak ditempatkan. Kehadiran sudah ikut mengurangi SPA, jadi absen
+ * tidak boleh sekaligus menggugurkan peserta bernilai Full. Seleksi CV,
  * wawancara mitra, dan kuota tidak tercatat di sistem.
  *
  * Internship scheme placement after the bootcamp.
  *
- * Three requirements are judged together: SPA (the final score), the combined
- * TPM and capstone score (capstone 60%, TPM 40%), and absences including leave
- * and sick days. Full Internship needs SPA and the combined score of at least 70
- * with at most one absence; Project Based needs both at least 50 with at most
- * three absences. Someone who clears the Full score thresholds but fails another
- * requirement drops to Project Based, not to Not Placed. CV screening, partner
- * interviews and quotas are not recorded in the system.
+ * Scores set the tier: SPA (the final score) and the combined TPM and capstone
+ * score (capstone 60%, TPM 40%). Absences, leave and sick days included, only
+ * drop it one tier: a Full score with more than one absence becomes Project
+ * Based however many absences there are, and a Project score with more than
+ * three absences is not placed. Attendance already lowers the SPA, so absences
+ * must not also knock out a participant with Full-level scores. CV screening,
+ * partner interviews and quotas are not recorded in the system.
  */
 
 export const PLACEMENT_RULES = {
-  full: { spa: 70, combined: 70, maxAbsent: 1 },
+  full: { spa: 70, combined: 60, maxAbsent: 1 },
   project: { spa: 50, combined: 50, maxAbsent: 3 },
   weights: { capstone: 60, tasks: 40 },
 } as const;
@@ -50,17 +50,19 @@ export function combinedScore(capstone: number, tasks: number): number {
  */
 export function decidePlacement(p: { spa: number; capstone: number; tasks: number; absent: number; capstoneGraded?: boolean }): { placement: Placement; reasons: string[] } {
   if (p.capstoneGraded === false) return { placement: 'pending', reasons: ['Capstone belum dinilai'] };
+  const { full, project } = PLACEMENT_RULES;
   const nilai = combinedScore(p.capstone, p.tasks);
-  // Syarat yang belum terpenuhi untuk satu skema / Requirements not met for one scheme
-  const kurang = (r: { spa: number; combined: number; maxAbsent: number }, absen: string) => [
+  // Ambang nilai yang belum tercapai untuk satu tingkat / Score thresholds not reached for one tier
+  const kurang = (r: { spa: number; combined: number }) => [
     ...(p.spa < r.spa ? [`SPA di bawah ${r.spa}`] : []),
     ...(nilai < r.combined ? [`Nilai TPM + capstone di bawah ${r.combined}`] : []),
-    ...(p.absent > r.maxAbsent ? [absen] : []),
   ];
-  const full = kurang(PLACEMENT_RULES.full, `${p.absent}× absen`);
-  if (full.length === 0) return { placement: 'full', reasons: [] };
-  const project = kurang(PLACEMENT_RULES.project, `${p.absent}× absen, batas ${PLACEMENT_RULES.project.maxAbsent}`);
-  return project.length === 0 ? { placement: 'project', reasons: full } : { placement: 'none', reasons: project };
+  if (kurang(full).length === 0) {
+    return p.absent > full.maxAbsent ? { placement: 'project', reasons: [`${p.absent}× absen`] } : { placement: 'full', reasons: [] };
+  }
+  if (kurang(project).length > 0) return { placement: 'none', reasons: kurang(project) };
+  if (p.absent > project.maxAbsent) return { placement: 'none', reasons: [`${p.absent}× absen, batas ${project.maxAbsent} untuk Project Based`] };
+  return { placement: 'project', reasons: kurang(full) };
 }
 
 /**

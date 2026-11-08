@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PLACEMENT_LABELS, type Placement } from '@/features/grading/placement';
+import { PLACEMENT_LABELS, PLACEMENT_RULES, type Placement } from '@/features/grading/placement';
 import type { RankedStudent } from '@/features/dashboard/snapshot-types';
 import s from './dashboard.module.css';
 
@@ -66,7 +66,7 @@ export function InternshipSummary({ rows, jurusanKelas }: { rows: RankedStudent[
           <div key={p} className={s.kpi}>
             <p className={s.l}>{PLACEMENT_LABELS[p]}</p>
             <p className={s.v}>{hitung(dipilih, p)}</p>
-            <p className={s.s}>{p === 'full' ? 'SPA dan nilai TPM + capstone ≥ 70, absen ≤ 1' : 'SPA dan nilai TPM + capstone ≥ 50, absen ≤ 3'}</p>
+            <p className={s.s}>SPA ≥ {PLACEMENT_RULES[p].spa}, nilai TPM + capstone ≥ {PLACEMENT_RULES[p].combined}</p>
           </div>
         ))}
       </div>

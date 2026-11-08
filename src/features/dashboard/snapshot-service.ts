@@ -106,8 +106,10 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  *     final score provisional).
  * 18: placement uses the combined TPM + capstone score and counts leave and
  *     sick days as absences.
+ * 19: Full needs a combined score of 60, and absences drop the scheme one tier
+ *     instead of knocking out a Full-level participant.
  */
-export const SNAPSHOT_VERSION = 18;
+export const SNAPSHOT_VERSION = 19;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;

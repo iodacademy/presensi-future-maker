@@ -11,8 +11,8 @@ const TONE: Record<Placement, string> = { full: s.plFull, project: s.plProject, 
 const { full, project, weights } = PLACEMENT_RULES;
 const NOTE: Record<Placement, string> = {
   full: `SPA ≥ ${full.spa}, nilai TPM + capstone ≥ ${full.combined}, absen ≤ ${full.maxAbsent}× (termasuk izin dan sakit). Masih menunggu seleksi CV dan wawancara mitra.`,
-  project: `SPA ${project.spa}–${full.spa - 1}, nilai TPM + capstone ${project.combined}–${full.combined - 1}, absen ≤ ${project.maxAbsent}×; juga yang lolos nilai Full tetapi absen 2–${project.maxAbsent}×.`,
-  none: 'Tidak memenuhi syarat kedua skema.',
+  project: `SPA ${project.spa}–${full.spa - 1} atau nilai TPM + capstone ${project.combined}–${full.combined - 1}, absen ≤ ${project.maxAbsent}×; juga nilai Full dengan absen lebih dari ${full.maxAbsent}×.`,
+  none: `SPA atau nilai TPM + capstone di bawah ${project.spa}, atau nilai level Project dengan absen lebih dari ${project.maxAbsent}×.`,
   pending: 'Skemanya ditentukan setelah capstone dinilai.',
 };
 const COLS: { key: GradeComponent; label: string }[] = [

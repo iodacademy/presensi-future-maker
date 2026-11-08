@@ -8,18 +8,22 @@ describe('penentuan skema magang', () => {
     expect(combinedScore(80, 60)).toBe(72);
     expect(combinedScore(75, 64)).toBe(71);
   });
-  it('SPA ≥ 70, nilai TPM + capstone ≥ 70, absen paling banyak 1: Full Internship', () => {
-    expect(p(70, 70, 70, 1)).toEqual({ placement: 'full', reasons: [] });
+  it('SPA ≥ 70, nilai TPM + capstone ≥ 60, absen paling banyak 1: Full Internship', () => {
+    expect(p(70, 60, 60, 1)).toEqual({ placement: 'full', reasons: [] });
   });
-  it('SPA 50–69, nilai 50–69, absen paling banyak 3: Project Based', () => {
-    expect(p(69, 69, 69, 3)).toEqual({ placement: 'project', reasons: ['SPA di bawah 70', 'Nilai TPM + capstone di bawah 70', '3× absen'] });
+  it('SPA 50–69 atau nilai 50–59, absen paling banyak 3: Project Based', () => {
+    expect(p(69, 59, 59, 3)).toEqual({ placement: 'project', reasons: ['SPA di bawah 70', 'Nilai TPM + capstone di bawah 60'] });
+    expect(p(85, 55, 55, 0)).toEqual({ placement: 'project', reasons: ['Nilai TPM + capstone di bawah 60'] });
     expect(p(50, 50, 50, 0).placement).toBe('project');
   });
-  it('lolos SPA Full tetapi absen 2–3 kali turun ke Project Based', () => {
+  it('absen menurunkan satu tingkat: nilai Full dengan absen 2–3 kali menjadi Project Based', () => {
     expect(p(90, 90, 90, 2)).toEqual({ placement: 'project', reasons: ['2× absen'] });
   });
-  it('izin dan sakit ikut dihitung absen; lebih dari 3 kali tidak ditempatkan', () => {
-    expect(p(90, 90, 90, 4)).toEqual({ placement: 'none', reasons: ['4× absen, batas 3'] });
+  it('nilai Full dengan absen lebih dari 3 kali tetap Project Based, tidak gugur', () => {
+    expect(p(82, 83, 86, 4)).toEqual({ placement: 'project', reasons: ['4× absen'] });
+  });
+  it('nilai Project dengan absen lebih dari 3 kali tidak ditempatkan; izin dan sakit ikut dihitung', () => {
+    expect(p(60, 55, 55, 4)).toEqual({ placement: 'none', reasons: ['4× absen, batas 3 untuk Project Based'] });
   });
   it('SPA atau nilai TPM + capstone di bawah 50 tidak ditempatkan', () => {
     expect(p(49, 90, 90, 0)).toEqual({ placement: 'none', reasons: ['SPA di bawah 50'] });
