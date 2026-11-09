@@ -114,7 +114,7 @@ export default function KarierPage() {
                       <span style={pill(bg, fg)}>{a.statusLabel}</span>
                     </div>
                     {a.message && <p style={{ margin: 0, fontSize: '13px', color: MUTED }}>{a.message}</p>}
-                    {a.interview && <InterviewCard appId={a.id} partnerName={a.partnerName} interview={a.interview} />}
+                    {a.interview && <InterviewCard appId={a.id} partnerName={a.partnerName} interview={a.interview} picWaLink={a.picWaLink} />}
                     {a.status === 'diterima' && <OfferCard appId={a.id} jobTitle={a.jobTitle} partnerName={a.partnerName} onAnswered={loadApps} />}
                     {a.status === 'bergabung' && (
                       <p style={{ margin: 0, fontSize: '13px', color: '#067647', fontWeight: 600 }}>

@@ -36,7 +36,7 @@ export async function partnerDashboard(actor: PartnerActor, now: Date) {
     db().collection('partners').doc(actor.partnerId).get(),
     db().collection('jobs').where('partnerId', '==', actor.partnerId)
       .select('title', 'employment', 'scheme', 'quota', 'status', 'opensAt', 'closesAt', 'applicantCount').get(),
-    db().collection('jobApplications').where('partnerId', '==', actor.partnerId).select('jobId', 'status', 'contactedAt', 'personal.fullName', 'personal.phone').get(),
+    db().collection('jobApplications').where('partnerId', '==', actor.partnerId).select('jobId', 'status', 'contactedAt', 'personal.fullName', 'personal.phone', 'interview.confirmation', 'interview.rescheduleNote').get(),
   ]);
   // Kandidat lolos yang belum dihubungi PIC / Passed candidates the PIC has not contacted yet
   const toContact = await Promise.all(aSnap.docs
@@ -62,6 +62,13 @@ export async function partnerDashboard(actor: PartnerActor, now: Date) {
     stats: { newCount: count('baru'), shortlist: count('shortlist'), interviews: count('interview'), activeJobs: jobs.filter((j) => j.state === 'aktif').length },
     jobs,
     toContact,
+    // Kandidat yang minta jadwal ulang; hilang setelah PIC mengirim jadwal baru / Candidates asking for a new time; gone once the PIC sends a new schedule
+    rescheduleRequests: aSnap.docs
+      .filter((a) => a.get('status') === 'interview' && a.get('interview.confirmation') === 'jadwal-ulang')
+      .map((a) => ({
+        id: a.id, fullName: String(a.get('personal.fullName') ?? ''),
+        jobTitle: String(jSnap.docs.find((j) => j.id === a.get('jobId'))?.get('title') ?? 'Lowongan'), note: String(a.get('interview.rescheduleNote') ?? ''),
+      })),
   };
 }
 

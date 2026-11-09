@@ -11,6 +11,7 @@ type Dash = {
   picName: string; partnerName: string; stats: { newCount: number; shortlist: number; interviews: number; activeJobs: number };
   jobs: { id: string; title: string; employment: Employment; scheme: Scheme; quota: number; closesAt: string; applicantCount: number; newCount: number }[];
   toContact: { id: string; fullName: string; jobTitle: string; waLink: string | null }[];
+  rescheduleRequests: { id: string; fullName: string; jobTitle: string; note: string }[];
 };
 
 export default function MitraDashboardPage() {
@@ -36,6 +37,17 @@ export default function MitraDashboardPage() {
         <section aria-label="Kandidat lolos yang perlu dihubungi" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <h2 style={{ ...h1, fontSize: '14px', color: '#067647' }}>{d.toContact.length} kandidat lolos perlu segera dihubungi</h2>
           {d.toContact.map((c) => <ContactCandidate key={c.id} appId={c.id} name={c.fullName} jobTitle={c.jobTitle} waLink={c.waLink} onContacted={load} />)}
+        </section>
+      )}
+      {d && d.rescheduleRequests.length > 0 && (
+        <section aria-label="Permintaan jadwal ulang" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <h2 style={{ ...h1, fontSize: '14px', color: '#946200' }}>{d.rescheduleRequests.length} kandidat minta jadwal ulang interview</h2>
+          {d.rescheduleRequests.map((r) => (
+            <div key={r.id} style={{ ...box, borderColor: '#FEC84B', backgroundColor: '#FFFAEB', display: 'flex', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', alignItems: 'center', fontSize: '12px' }}>
+              <span><b>{r.fullName}</b> · {r.jobTitle}<br />&ldquo;{r.note}&rdquo;</span>
+              <Link href={`/mitra/kandidat/${r.id}`} style={{ ...btnSolid, textDecoration: 'none' }}>Jadwalkan ulang</Link>
+            </div>
+          ))}
         </section>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>

@@ -18,6 +18,7 @@ vi.mock('../../src/features/calendar/client', () => ({
 
 import { interviewMessage, validateInterviewInput } from '../../src/features/careers/model';
 import { inviteToInterview, listInterviews, respondInterview } from '../../src/features/careers/interview-service';
+import { partnerDashboard } from '../../src/features/careers/partner-service';
 import { listMyApplications } from '../../src/features/careers/student-service';
 
 const now = new Date('2026-11-05T00:00:00Z');
@@ -28,7 +29,7 @@ const manual = { date: '2026-11-12', start: '10:00', durationMin: 45, mode: 'onl
 beforeEach(() => {
   calendar.configured = true; calendar.create.mockClear(); calendar.cancel.mockClear();
   reset({
-    partners: { p1: { name: 'PT DIPSI' } },
+    partners: { p1: { name: 'PT DIPSI', pics: [{ name: 'Budi HR', email: 'budi@dipsi.co.id', phone: '0811111111' }, { name: 'Rina', email: 'rina@dipsi.co.id', phone: '0822222222' }] } },
     jobs: { j1: { partnerId: 'p1', partnerName: 'PT DIPSI', title: 'UI/UX Intern' } },
     jobApplications: {
       a1: { jobId: 'j1', partnerId: 'p1', studentId: 'u1', number: 'FM-JOB-0001', status: 'shortlist', rejectReason: '', submittedAt: '2026-11-04T00:00:00Z',
@@ -106,6 +107,35 @@ describe('undangan interview', () => {
 
   it('PIC perusahaan lain tidak bisa mengundang', async () => {
     await expect(inviteToInterview(lain, 'a1', manual, now)).rejects.toThrow('Lamaran tidak ditemukan');
+  });
+});
+
+describe('kontak PIC dan jadwal ulang', () => {
+  it('undangan menyimpan kontak PIC yang mengundang, dan siswa mendapat tombol WhatsApp ke PIC', async () => {
+    await inviteToInterview(rina, 'a1', manual, now);
+    expect(data.jobApplications.a1.interview).toMatchObject({ contact: { name: 'Rina', email: 'rina@dipsi.co.id', phone: '0822222222' } });
+    const [a] = await listMyApplications('u1');
+    expect(a.interview?.contact).toEqual({ name: 'Rina', email: 'rina@dipsi.co.id', phone: '0822222222' });
+    const text = decodeURIComponent(a.picWaLink!);
+    expect(a.picWaLink).toMatch(/^https:\/\/wa\.me\/62822222222\?text=/);
+    expect(text).toContain('Andi Pratama');
+    expect(text).toContain('UI/UX Intern');
+  });
+
+  it('undangan lama tanpa kontak memakai PIC pertama mitra', async () => {
+    await inviteToInterview(rina, 'a1', manual, now);
+    delete (data.jobApplications.a1.interview as Record<string, unknown>).contact;
+    const [a] = await listMyApplications('u1');
+    expect(a.interview?.contact).toEqual({ name: 'Budi HR', email: 'budi@dipsi.co.id', phone: '0811111111' });
+  });
+
+  it('permintaan jadwal ulang muncul di dashboard PIC sampai PIC menjadwalkan ulang', async () => {
+    await inviteToInterview(rina, 'a1', manual, now);
+    await respondInterview({ uid: 'u1', role: 'student' } as never, 'a1', 'jadwal-ulang', 'Ada ujian, bisa Jumat?');
+    const d = await partnerDashboard(rina, now);
+    expect(d.rescheduleRequests).toEqual([{ id: 'a1', fullName: 'Andi Pratama', jobTitle: 'UI/UX Intern', note: 'Ada ujian, bisa Jumat?' }]);
+    await inviteToInterview(rina, 'a1', { ...manual, date: '2026-11-13' }, now);
+    expect((await partnerDashboard(rina, now)).rescheduleRequests).toEqual([]);
   });
 });
 

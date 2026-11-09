@@ -353,8 +353,11 @@ export interface InterviewInput {
   date: string; start: string; durationMin: 30 | 45 | 60; mode: 'online' | 'offline'; linkSource: 'meet-auto' | 'manual';
   url: string; address: string; interviewer: string; note: string;
 }
+export interface PicContact { name: string; email: string; phone: string }
 export interface Interview extends InterviewInput {
   confirmation: InterviewConfirmation; rescheduleNote: string; calendarEventId: string | null; invitedAt: string;
+  /** PIC yang mengundang, agar kandidat bisa menghubunginya; kosong pada undangan lama / The inviting PIC, so the candidate can reach them; absent on older invites */
+  contact?: PicContact;
 }
 
 export function validateInterviewInput(raw: unknown): InterviewInput {
@@ -392,6 +395,15 @@ export function interviewTimeLabel(i: Pick<InterviewInput, 'date' | 'start' | 'd
   const fmt = (iso: string) => new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }).replace(':', '.');
   const day = new Date(startsAt).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
   return { day, time: `${fmt(startsAt)}–${fmt(endsAt)} WIB` };
+}
+
+export function rescheduleMessage(x: { picName: string; studentName: string; jobTitle: string; partnerName: string; interview: InterviewInput }): string {
+  const { day, time } = interviewTimeLabel(x.interview);
+  return [
+    `Halo ${x.picName}, saya ${x.studentName}, kandidat posisi ${x.jobTitle} di ${x.partnerName}.`,
+    `Saya dijadwalkan interview pada ${day}, pukul ${time}. Mohon maaf, apakah jadwalnya bisa diubah?`,
+    'Usulan waktu saya: ',
+  ].join('\n');
 }
 
 export function offerMessage(x: { studentName: string; jobTitle: string; partnerName: string }): string {

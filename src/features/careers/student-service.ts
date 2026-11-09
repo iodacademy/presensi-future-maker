@@ -7,14 +7,15 @@
  */
 import { unstable_cache } from 'next/cache';
 import { getAdminDb } from '../../lib/firebase/admin';
+import { whatsAppLink } from '../../lib/whatsapp';
 import type { Actor } from '../auth/types';
 import { safeExternalUrl } from '../exhibition/model';
 import { isStoredSubmissionFile } from '../tasks/submission-policy';
 import { applicationsOpen, CLOSED_MESSAGE } from './apply-gate';
 import { listCvs } from './cv-service';
 import {
-  canApplyScheme, CLOSED_ELSEWHERE_MESSAGE, DEMO_CLASS_ID, hasCareerAccess, isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
-  type ApplicationStatus, type AttachedTask, type Interview, type AttachedWork, type CvFile, type Eligibility, type Job, type Logo, type Personal, type Socials,
+  canApplyScheme, CLOSED_ELSEWHERE_MESSAGE, rescheduleMessage, DEMO_CLASS_ID, hasCareerAccess, isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
+  type ApplicationStatus, type AttachedTask, type Interview, type PicContact, type AttachedWork, type CvFile, type Eligibility, type Job, type Logo, type Personal, type Socials,
 } from './model';
 
 export interface StudentJobCard {
@@ -27,6 +28,8 @@ export interface MyApplication {
   id: string; jobId: string; number: string; jobTitle: string; partnerName: string;
   status: ApplicationStatus; statusLabel: string; submittedAt: string; message: string | null;
   interview: Omit<Interview, 'calendarEventId'> | null;
+  /** WhatsApp ke PIC untuk minta jadwal ulang / WhatsApp to the PIC to ask for a new time */
+  picWaLink: string | null;
 }
 export interface FinalScore { finalScore: number | null; finalScorePending: boolean; finalScoreAt: string | null }
 
@@ -213,19 +216,31 @@ function publicInterview({ calendarEventId: _c, ...rest }: Interview): Omit<Inte
 
 export async function listMyApplications(uid: string): Promise<MyApplication[]> {
   const [aSnap, jSnap] = await Promise.all([
-    db().collection('jobApplications').where('studentId', '==', uid).select('jobId', 'number', 'status', 'submittedAt', 'interview').get(),
+    db().collection('jobApplications').where('studentId', '==', uid).select('jobId', 'partnerId', 'number', 'status', 'submittedAt', 'interview', 'personal.fullName').get(),
     db().collection('jobs').select('title', 'partnerName').get(),
   ]);
   const jobs = new Map(jSnap.docs.map((j) => [j.id, { title: j.get('title') as string, partnerName: j.get('partnerName') as string }]));
+  // Undangan lama belum menyimpan kontak PIC: dipakai PIC pertama mitranya / Older invites lack a PIC contact: the partner's first PIC is used
+  const needPics = [...new Set(aSnap.docs.filter((a) => a.get('status') === 'interview' && !a.get('interview.contact')).map((a) => String(a.get('partnerId'))))];
+  const firstPic = new Map(await Promise.all(needPics.map(async (id) => {
+    const p = await db().collection('partners').doc(id).get();
+    return [id, ((p.get('pics') ?? []) as PicContact[])[0] ?? null] as const;
+  })));
   return aSnap.docs
     .map((a) => {
       const status = a.get('status') as ApplicationStatus;
       const j = jobs.get(a.get('jobId'));
+      const raw = status === 'interview' ? (a.get('interview') as Interview | undefined) : undefined;
+      const pic = raw ? raw.contact ?? firstPic.get(String(a.get('partnerId'))) ?? null : null;
+      const contact = pic ? { name: pic.name, email: pic.email, phone: pic.phone ?? '' } : undefined;
       return {
         id: a.id, jobId: a.get('jobId') as string, number: String(a.get('number') ?? ''), jobTitle: j?.title ?? 'Lowongan', partnerName: j?.partnerName ?? '',
         status, statusLabel: studentStatusLabel(status), submittedAt: String(a.get('submittedAt') ?? ''),
         message: status === 'tidak-lolos' ? REJECT_MESSAGE : status === 'ditutup' ? CLOSED_ELSEWHERE_MESSAGE : null,
-        interview: status === 'interview' && a.get('interview') ? publicInterview(a.get('interview') as Interview) : null,
+        interview: raw ? { ...publicInterview(raw), contact } : null,
+        picWaLink: raw && contact ? whatsAppLink(contact.phone, rescheduleMessage({
+          picName: contact.name, studentName: String(a.get('personal.fullName') ?? ''), jobTitle: j?.title ?? 'Lowongan', partnerName: j?.partnerName ?? '', interview: raw,
+        })) : null,
       };
     })
     .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));

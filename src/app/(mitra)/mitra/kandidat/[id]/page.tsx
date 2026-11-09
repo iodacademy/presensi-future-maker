@@ -118,6 +118,11 @@ export default function CandidatePage({ params }: { params: Promise<{ id: string
                 ) : c.status === 'interview' && !rejecting ? (
                   <>
                     <span style={{ fontSize: '12px' }}>Interview terjadwal. Kirim pengingat ke kandidat, lalu isi hasilnya setelah interview.</span>
+                    {c.interview?.confirmation === 'jadwal-ulang' && (
+                      <span style={{ fontSize: '12px', padding: '8px 10px', borderRadius: '8px', backgroundColor: '#FFFAEB', border: '1px solid #FEC84B' }}>
+                        <b>Kandidat minta jadwal ulang:</b> &ldquo;{c.interview.rescheduleNote}&rdquo;. Tekan &ldquo;Jadwalkan ulang&rdquo; untuk mengirim jadwal baru; undangan Calendar lama dibatalkan otomatis.
+                      </span>
+                    )}
                     {c.interviewWaLink && (
                       <a href={c.interviewWaLink} target="_blank" rel="noopener noreferrer" style={waButton}><MessageCircle size={14} aria-hidden /> Kirim jadwal lewat WhatsApp</a>
                     )}

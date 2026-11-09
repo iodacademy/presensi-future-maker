@@ -11,7 +11,7 @@ import { getAdminDb } from '../../lib/firebase/admin';
 import { whatsAppLink } from '../../lib/whatsapp';
 import type { Actor } from '../auth/types';
 import { cancelCalendarEvent, createCalendarEvent, isCalendarConfigured } from '../calendar/client';
-import { FINAL_MESSAGE, FINAL_STATUSES, interviewMessage, interviewWindow, validateInterviewInput, type Interview } from './model';
+import { FINAL_MESSAGE, FINAL_STATUSES, interviewMessage, interviewWindow, validateInterviewInput, type Interview, type PicContact } from './model';
 import type { PartnerActor } from './partner-service';
 
 const apps = () => getAdminDb().collection('jobApplications');
@@ -54,7 +54,11 @@ export async function inviteToInterview(actor: PartnerActor, appId: string, raw:
   }
 
   const t = now.toISOString();
-  const interview: Interview = { ...input, url, confirmation: 'pending', rescheduleNote: '', calendarEventId, invitedAt: t };
+  // Nomor PIC diambil dari data mitra; PIC tanpa nomor tetap bisa dihubungi lewat email
+  // The PIC's number comes from the partner record; a PIC without one can still be emailed
+  const pics = ((await getAdminDb().collection('partners').doc(actor.partnerId).get()).get('pics') ?? []) as PicContact[];
+  const contact: PicContact = { name: actor.name, email: actor.email, phone: pics.find((p) => p.email === actor.email)?.phone ?? '' };
+  const interview: Interview = { ...input, url, confirmation: 'pending', rescheduleNote: '', calendarEventId, invitedAt: t, contact };
   await apps().doc(appId).update({ interview, status: 'interview', statusChangedAt: t, updatedAt: t });
   // Acara lama baru dibatalkan setelah jadwal baru tersimpan: bila pembuatan gagal, undangan lama tetap berlaku
   // The old event is cancelled only after the new schedule is saved: if creation fails, the old invite still stands
