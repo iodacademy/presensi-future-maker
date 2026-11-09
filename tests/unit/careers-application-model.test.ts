@@ -26,6 +26,12 @@ describe('kelayakan pelamar', () => {
     expect(isEligible({ mode: 'min-score', minScore: 75 }, { classId: 'k1', finalScore: null })).toBe(false);
     expect(isEligible({ mode: 'min-score', minScore: 75 }, { classId: 'k1', finalScore: 80 })).toBe(true);
   });
+  it('akun demo hanya layak untuk lowongan demo, tidak untuk lowongan sungguhan', () => {
+    expect(isEligible({ mode: 'all' }, { classId: 'demo', finalScore: null })).toBe(false);
+    expect(isEligible({ mode: 'min-score', minScore: 0 }, { classId: 'demo', finalScore: 100 })).toBe(false);
+    expect(isEligible({ mode: 'classes', classIds: ['k1'] }, { classId: 'demo', finalScore: null })).toBe(false);
+    expect(isEligible({ mode: 'classes', classIds: ['demo'] }, { classId: 'demo', finalScore: null })).toBe(true);
+  });
 });
 
 describe('skema magang', () => {

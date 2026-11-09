@@ -286,6 +286,9 @@ export const canApplyScheme = (placement: string | null, scheme: Scheme): boolea
   placement === 'full' || (placement === 'project' && scheme === 'project');
 
 export function isEligible(e: Eligibility, s: { classId: string | null; finalScore: number | null }): boolean {
+  // Akun demo hanya melihat lowongan demo, agar lamaran demo tidak pernah sampai ke mitra sungguhan
+  // Demo accounts only see demo jobs, so a demo application never reaches a real partner
+  if (s.classId === DEMO_CLASS_ID) return e.mode === 'classes' && e.classIds.includes(DEMO_CLASS_ID);
   if (e.mode === 'classes') return !!s.classId && e.classIds.includes(s.classId);
   if (e.mode === 'min-score') return s.finalScore !== null && s.finalScore >= e.minScore;
   return true;
