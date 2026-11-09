@@ -25,4 +25,10 @@ describe('formulir undangan interview', () => {
     expect(sent).toMatchObject({ url: 'https://zoom.us/j/1', linkSource: 'manual', mode: 'online', date: '2026-11-12', start: '10:00', durationMin: 45, interviewer: 'Rina Kusuma' });
     expect(onSent).toHaveBeenCalled();
   });
+
+  it('hanya wawancara daring: tidak ada pilihan offline maupun isian alamat kantor', () => {
+    render(<InviteForm appId="a1" defaultInterviewer="Rina Kusuma" />);
+    expect(screen.queryByText(/Offline/)).toBeNull();
+    expect(screen.queryByLabelText(/Alamat kantor/)).toBeNull();
+  });
 });

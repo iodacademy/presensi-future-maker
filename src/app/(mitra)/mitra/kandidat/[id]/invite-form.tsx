@@ -18,8 +18,10 @@ export function InviteForm({ appId, defaultInterviewer, initial, onSent }: {
   appId: string; defaultInterviewer: string; initial?: Partial<InterviewInput>; onSent?: () => void;
 }) {
   const [v, setV] = useState<InterviewInput>({
-    date: '', start: '10:00', durationMin: 45, mode: 'online', linkSource: 'meet-auto', url: '', address: '', interviewer: defaultInterviewer, note: '',
+    date: '', start: '10:00', durationMin: 45, linkSource: 'meet-auto', url: '', address: '', interviewer: defaultInterviewer, note: '',
     ...initial,
+    // Undangan lama yang luring dijadwalkan ulang sebagai daring / An older offline invite is rescheduled as online
+    mode: 'online',
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,13 +67,7 @@ export function InviteForm({ appId, defaultInterviewer, initial, onSent }: {
           </select>
         </label>
       </div>
-      <fieldset style={{ border: 'none', padding: 0, margin: 0, display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
-        <legend style={{ ...label, marginBottom: '6px' }}>Mode interview</legend>
-        <label style={radioRow}><input type="radio" name="mode" checked={v.mode === 'online'} onChange={() => set({ mode: 'online' })} /> Online</label>
-        <label style={radioRow}><input type="radio" name="mode" checked={v.mode === 'offline'} onChange={() => set({ mode: 'offline' })} /> Offline (di kantor)</label>
-      </fieldset>
-      {v.mode === 'online' ? (
-        <>
+      <>
           <fieldset style={{ border: 'none', padding: 0, margin: 0, display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
             <legend style={{ ...label, marginBottom: '6px' }}>Link meeting</legend>
             <label style={radioRow}><input type="radio" name="link" checked={v.linkSource === 'meet-auto'} onChange={() => set({ linkSource: 'meet-auto' })} /> Buat link Google Meet otomatis</label>
@@ -80,10 +76,7 @@ export function InviteForm({ appId, defaultInterviewer, initial, onSent }: {
           {v.linkSource === 'manual' && (
             <label style={label}>Link meeting<input value={v.url} onChange={(e) => set({ url: e.target.value })} style={field} placeholder="https://zoom.us/j/…" required /></label>
           )}
-        </>
-      ) : (
-        <label style={label}>Alamat kantor & patokan<textarea rows={2} value={v.address} onChange={(e) => set({ address: e.target.value })} style={field} placeholder="Alamat, lantai, minta ke resepsionis" required /></label>
-      )}
+      </>
       <label style={label}>Pewawancara<input value={v.interviewer} onChange={(e) => set({ interviewer: e.target.value })} style={field} required /></label>
       <label style={label}>Catatan untuk kandidat<textarea rows={2} value={v.note} onChange={(e) => set({ note: e.target.value })} style={field} placeholder="mis. siapkan portofolio untuk dipresentasikan 10 menit" /></label>
       <button type="submit" style={{ ...btnSolid, alignSelf: 'flex-start' }} disabled={busy}>{busy ? 'Mengirim…' : 'Kirim undangan'}</button>

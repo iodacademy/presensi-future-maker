@@ -46,10 +46,12 @@ describe('model interview', () => {
   it('durasi hanya 30, 45, atau 60 menit', () => {
     expect(() => validateInterviewInput({ ...manual, durationMin: 20 })).toThrow('Durasi interview tidak dikenal');
   });
-  it('link sendiri wajib http(s), offline wajib alamat', () => {
+  it('wawancara hanya daring; undangan offline ditolak', () => {
+    expect(() => validateInterviewInput({ ...manual, mode: 'offline', address: 'Jl. Sudirman 1' })).toThrow('Wawancara hanya bisa daring');
+  });
+  it('link sendiri wajib http(s)', () => {
     expect(() => validateInterviewInput({ ...manual, url: 'zoom.us/j/1' })).toThrow('Tautan harus diawali http:// atau https://');
     expect(() => validateInterviewInput({ ...manual, url: '' })).toThrow('Tempel link meeting');
-    expect(() => validateInterviewInput({ ...manual, mode: 'offline', address: ' ' })).toThrow('Alamat kantor wajib diisi');
     expect(() => validateInterviewInput({ ...manual, interviewer: '' })).toThrow('Nama pewawancara wajib diisi');
   });
   it('pesan WhatsApp memuat posisi, perusahaan, jadwal, dan link', () => {

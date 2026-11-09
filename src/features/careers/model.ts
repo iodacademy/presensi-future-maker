@@ -373,13 +373,14 @@ export function validateInterviewInput(raw: unknown): InterviewInput {
   if (Number.isNaN(new Date(`${date}T${start}:00+07:00`).getTime())) throw new Error('Tanggal interview tidak sah');
   const durationMin = Number(r.durationMin);
   if (![30, 45, 60].includes(durationMin)) throw new Error('Durasi interview tidak dikenal');
-  const mode = r.mode === 'offline' ? 'offline' : r.mode === 'online' ? 'online' : null;
-  if (!mode) throw new Error('Mode interview tidak dikenal');
-  const linkSource = mode === 'online' && r.linkSource === 'meet-auto' ? 'meet-auto' : 'manual';
-  const url = mode === 'online' && linkSource === 'manual' ? link(r.url) : '';
-  if (mode === 'online' && linkSource === 'manual' && !url) throw new Error('Tempel link meeting');
-  const address = mode === 'offline' ? str(r.address) : '';
-  if (mode === 'offline' && !address) throw new Error('Alamat kantor wajib diisi');
+  // Undangan baru hanya daring (keputusan pemilik produk); mode offline tetap dibaca untuk undangan lama
+  // New invites are online only (product owner's decision); offline stays readable for older invites
+  if (r.mode !== 'online') throw new Error('Wawancara hanya bisa daring');
+  const mode = 'online' as const;
+  const linkSource = r.linkSource === 'meet-auto' ? 'meet-auto' : 'manual';
+  const url = linkSource === 'manual' ? link(r.url) : '';
+  if (linkSource === 'manual' && !url) throw new Error('Tempel link meeting');
+  const address = '';
   const interviewer = str(r.interviewer);
   if (!interviewer) throw new Error('Nama pewawancara wajib diisi');
   const note = str(r.note);
