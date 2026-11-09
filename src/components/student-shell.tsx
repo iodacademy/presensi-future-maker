@@ -87,6 +87,7 @@ export function StudentShell({ userName, children }: StudentShellProps) {
   const pathname = usePathname();
   const context = useContext(StudentContext);
   const reminderCount = (context?.reminders.surveys.length ?? 0) + (context?.reminders.exams.length ?? 0);
+  const careerCount = context?.reminders.careers?.length ?? 0;
   const navItems = NAV_ITEMS.filter((item) => item.href !== '/app/karier' || context?.careerAccess);
 
   function isActive(href: string) {
@@ -138,7 +139,8 @@ export function StudentShell({ userName, children }: StudentShellProps) {
                 <Icon size={16} color={active ? 'var(--color-primary)' : 'var(--color-student-inactive)'} strokeWidth={2} />
                 <span style={{ flex: 1 }}>{item.label}</span>
                 {item.href === '/app/jadwal' && <ReminderCount count={reminderCount} />}
-                {item.href === '/app/karier' && (
+                {item.href === '/app/karier' && careerCount > 0 && <ReminderCount count={careerCount} />}
+                {item.href === '/app/karier' && careerCount === 0 && (
                   <span style={{ backgroundColor: '#FFD200', color: '#243c4b', fontSize: '9px', fontWeight: 700, padding: '1px 6px', borderRadius: '999px' }}>Baru</span>
                 )}
               </Link>
@@ -212,6 +214,11 @@ export function StudentShell({ userName, children }: StudentShellProps) {
               {item.href === '/app/jadwal' && reminderCount > 0 && (
                 <span style={{ position: 'absolute', top: '-6px', left: 'calc(50% + 6px)' }}>
                   <ReminderCount count={reminderCount} />
+                </span>
+              )}
+              {item.href === '/app/karier' && careerCount > 0 && (
+                <span style={{ position: 'absolute', top: '-6px', left: 'calc(50% + 6px)' }}>
+                  <ReminderCount count={careerCount} />
                 </span>
               )}
               {/* Lima menu pada layar 360px menyisakan sekitar 66px per tombol.

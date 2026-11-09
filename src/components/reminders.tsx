@@ -2,14 +2,14 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Bell, BellRing, ClipboardCheck, MessageSquare, ChevronRight, X } from 'lucide-react';
+import { Bell, BellRing, Briefcase, ClipboardCheck, MessageSquare, ChevronRight, X } from 'lucide-react';
 import type { StudentReminders } from '@/features/dashboard/types';
 import { formatDateTimeWib } from '@/lib/time';
 
 export interface ReminderRow {
   key: string;
   href: string;
-  kind: 'survei' | 'kuis';
+  kind: 'survei' | 'kuis' | 'karier';
   title: string;
   meta: string;
 }
@@ -17,11 +17,21 @@ export interface ReminderRow {
 const KIND_STYLE = {
   survei: { icon: MessageSquare, color: '#0f766e', bg: '#d5f5ef' },
   kuis: { icon: ClipboardCheck, color: '#7c3aed', bg: '#f1e8ff' },
+  karier: { icon: Briefcase, color: '#067647', bg: '#dcfae6' },
 } as const;
 
 /** Satu daftar baris untuk lonceng, toast, dan halaman notifikasi / One row list for the bell, toast and notifications page */
-export function reminderRows({ surveys, exams }: StudentReminders): ReminderRow[] {
+export function reminderRows({ surveys, exams, careers = [] }: StudentReminders): ReminderRow[] {
   return [
+    // Kabar rekrutmen didahulukan: tawaran dan undangan interview punya tenggat dari mitra
+    // Recruitment news comes first: offers and interview invites carry a partner's deadline
+    ...careers.map((c) => ({
+      key: `karier.${c.appId}.${c.kind}`,
+      href: '/app/karier?tab=lamaran',
+      kind: 'karier' as const,
+      title: c.kind === 'tawaran' ? `Kamu lolos! ${c.jobTitle}` : `Lolos ke tahap interview: ${c.jobTitle}`,
+      meta: c.kind === 'tawaran' ? `${c.partnerName} · terima atau tolak tawaran` : `${c.partnerName} · konfirmasi kehadiran`,
+    })),
     ...surveys.map((s) => ({
       key: `survei.${s.formId}.${s.sessionId}`,
       href: `/app/survei/${s.formId}/${s.sessionId}`,

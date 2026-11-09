@@ -6,7 +6,7 @@
  * changes. Admins run selection until the PIC portal arrives in stage 3.
  */
 import { getAdminDb } from '../../lib/firebase/admin';
-import { APPLICATION_STATUS_LABELS, type Application, type ApplicationStatus, type JobQuestion } from './model';
+import { APPLICATION_STATUS_LABELS, FINAL_MESSAGE, FINAL_STATUSES, type Application, type ApplicationStatus, type JobQuestion } from './model';
 
 export interface ApplicantRow {
   id: string; number: string; fullName: string; email: string; phone: string; city: string; school: string; major: string; className: string;
@@ -55,8 +55,13 @@ export async function getApplicationForAdmin(id: string): Promise<Application & 
 
 export async function setApplicationStatus(id: string, status: unknown, rejectReason?: unknown): Promise<void> {
   if (typeof status !== 'string' || !(status in APPLICATION_STATUS_LABELS)) throw new Error('Status lamaran tidak dikenal');
+  // Status akhir hanya lahir dari jawaban kandidat, yang sekaligus menutup lamarannya yang lain
+  // Final statuses only come from the candidate's answer, which also closes their other applications
+  if (FINAL_STATUSES.includes(status as ApplicationStatus)) throw new Error('Status ini hanya bisa dari jawaban kandidat');
   const ref = db().collection('jobApplications').doc(id);
-  if (!(await ref.get()).exists) throw new Error('Lamaran tidak ditemukan');
+  const cur = await ref.get();
+  if (!cur.exists) throw new Error('Lamaran tidak ditemukan');
+  if (FINAL_STATUSES.includes(cur.get('status'))) throw new Error(FINAL_MESSAGE);
   const t = new Date().toISOString();
   // Alasan penolakan bersifat internal dan hanya bermakna untuk status tidak lolos
   // The rejection reason is internal and only means something for the rejected status

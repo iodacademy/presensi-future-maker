@@ -69,6 +69,21 @@ describe('pendaftaran lamaran dibuka dan ditutup admin', () => {
   });
 });
 
+describe('satu peserta, satu tempat magang', () => {
+  it('peserta yang sudah menerima tawaran tidak bisa melamar lagi', async () => {
+    data.jobApplications.j9_u1 = { jobId: 'j9', studentId: 'u1', status: 'bergabung' };
+    await expect(submitApplication(actor('u1'), body(), now)).rejects.toThrow('Kamu sudah menerima tawaran magang');
+  });
+  it('akun demo tetap bisa melamar lowongan demo selama pendaftaran ditutup', async () => {
+    delete data.settings;
+    data.jobs.jd = { ...job, eligibility: { mode: 'classes', classIds: ['demo'] }, scheme: 'full' };
+    data.studentCvs.cvd = { ownerUid: 'ud', kind: 'cv', fileName: 'CV Demo.pdf', deleted: false, uploadedAt: '1' };
+    const r = await submitApplication(actor('ud', 'demo'), body({ jobId: 'jd', cvId: 'cvd', workIds: [], submissionIds: [] }), now);
+    expect(r.id).toBe('jd_ud');
+    await expect(submitApplication(actor('u1'), body({ jobId: 'jd' }), now)).rejects.toThrow('Pendaftaran lamaran belum dibuka');
+  });
+});
+
 describe('kirim lamaran', () => {
   it('lamaran sah tersimpan dengan nomor berurutan dan salinan lampiran', async () => {
     const r = await submitApplication(actor('u1'), body(), now);

@@ -8,12 +8,13 @@
  * guessed id does not reveal that it exists.
  */
 import { getAdminDb } from '../../lib/firebase/admin';
+import { whatsAppLink } from '../../lib/whatsapp';
 import { cancelCalendarEvent } from '../calendar/client';
 import { publicUrl } from '../exhibition/media';
 import type { Actor } from '../auth/types';
 import { getApplicationForAdmin, listApplicants, setApplicationStatus, type ApplicantRow } from './applicants-service';
 import { getPartner } from './admin-service';
-import { jobState, validatePartnerInput, type ApplicationStatus, type Interview, type Job } from './model';
+import { interviewMessage, jobState, offerMessage, validatePartnerInput, type ApplicationStatus, type Interview, type Job } from './model';
 
 export type PartnerActor = Actor & { partnerId: string };
 const db = () => getAdminDb();
@@ -24,13 +25,27 @@ async function ownApplication(actor: PartnerActor, appId: string) {
   return snap;
 }
 
+// Pesan WhatsApp ucapan selamat untuk kandidat yang diloloskan / The congratulation WhatsApp message for a passed candidate
+async function offerWaLink(a: { jobId: string; fullName: string; phone: string }): Promise<string | null> {
+  const job = await db().collection('jobs').doc(a.jobId).get();
+  return whatsAppLink(a.phone, offerMessage({ studentName: a.fullName, jobTitle: String(job.get('title') ?? 'Lowongan'), partnerName: String(job.get('partnerName') ?? '') }));
+}
+
 export async function partnerDashboard(actor: PartnerActor, now: Date) {
   const [partner, jSnap, aSnap] = await Promise.all([
     db().collection('partners').doc(actor.partnerId).get(),
     db().collection('jobs').where('partnerId', '==', actor.partnerId)
       .select('title', 'employment', 'scheme', 'quota', 'status', 'opensAt', 'closesAt', 'applicantCount').get(),
-    db().collection('jobApplications').where('partnerId', '==', actor.partnerId).select('jobId', 'status').get(),
+    db().collection('jobApplications').where('partnerId', '==', actor.partnerId).select('jobId', 'status', 'contactedAt', 'personal.fullName', 'personal.phone').get(),
   ]);
+  // Kandidat lolos yang belum dihubungi PIC / Passed candidates the PIC has not contacted yet
+  const toContact = await Promise.all(aSnap.docs
+    .filter((a) => ['diterima', 'bergabung'].includes(a.get('status')) && !a.get('contactedAt'))
+    .map(async (a) => {
+      const x = { jobId: String(a.get('jobId')), fullName: String(a.get('personal.fullName') ?? ''), phone: String(a.get('personal.phone') ?? '') };
+      const title = jSnap.docs.find((j) => j.id === x.jobId)?.get('title') ?? 'Lowongan';
+      return { id: a.id, fullName: x.fullName, jobTitle: String(title), status: a.get('status') as ApplicationStatus, waLink: await offerWaLink(x) };
+    }));
   const apps = aSnap.docs.map((a) => ({ jobId: a.get('jobId') as string, status: a.get('status') as ApplicationStatus }));
   const count = (s: ApplicationStatus) => apps.filter((a) => a.status === s).length;
   const jobs = jSnap.docs
@@ -46,6 +61,7 @@ export async function partnerDashboard(actor: PartnerActor, now: Date) {
     picName: actor.name,
     stats: { newCount: count('baru'), shortlist: count('shortlist'), interviews: count('interview'), activeJobs: jobs.filter((j) => j.state === 'aktif').length },
     jobs,
+    toContact,
   };
 }
 
@@ -63,16 +79,27 @@ export async function listCandidates(actor: PartnerActor, jobId: string): Promis
 export async function getCandidate(actor: PartnerActor, appId: string) {
   const snap = await ownApplication(actor, appId);
   if (snap.get('status') === 'baru') await setApplicationStatus(appId, 'ditinjau');
-  return getApplicationForAdmin(appId);
+  const c = await getApplicationForAdmin(appId);
+  const job = await db().collection('jobs').doc(c.jobId).get();
+  const names = { studentName: c.personal.fullName, jobTitle: String(job.get('title') ?? 'Lowongan'), partnerName: String(job.get('partnerName') ?? '') };
+  const interview = (c as { interview?: Interview }).interview;
+  return {
+    ...c,
+    // Tautan WhatsApp siap kirim untuk undangan interview dan ucapan lolos / Ready-to-send WhatsApp links for the interview invite and the pass message
+    interviewWaLink: c.status === 'interview' && interview ? whatsAppLink(c.personal.phone, interviewMessage({ ...names, interview })) : null,
+    offerWaLink: ['diterima', 'bergabung'].includes(c.status) ? whatsAppLink(c.personal.phone, offerMessage(names)) : null,
+  };
 }
 
 // Interview diatur lewat formulir undangan; baru tidak bisa dipilih kembali / Interview goes through the invite form; new cannot be chosen again
 const PIC_STATUSES: ApplicationStatus[] = ['ditinjau', 'shortlist', 'diterima', 'tidak-lolos'];
 
-export async function decideCandidate(actor: PartnerActor, appId: string, status: unknown, reason?: unknown): Promise<void> {
+export async function decideCandidate(actor: PartnerActor, appId: string, status: unknown, reason?: unknown): Promise<{ waLink: string | null }> {
   const snap = await ownApplication(actor, appId);
   if (!PIC_STATUSES.includes(status as ApplicationStatus)) throw new Error('Status ini tidak bisa dipilih');
   await setApplicationStatus(appId, status, reason);
+  const personal = snap.get('personal') as { fullName: string; phone: string };
+  const waLink = status === 'diterima' ? await offerWaLink({ jobId: String(snap.get('jobId')), fullName: personal.fullName, phone: personal.phone }) : null;
   // Kandidat yang ditolak sebelum interview tidak boleh tetap menerima undangan dan pengingat kalender
   // A candidate rejected before the interview must not keep receiving the calendar invite and reminders
   const interview = snap.get('interview') as Interview | undefined;
@@ -80,6 +107,7 @@ export async function decideCandidate(actor: PartnerActor, appId: string, status
     await cancelCalendarEvent(interview.calendarEventId).catch((e) => console.error('[karier] batal acara interview', e));
     await db().collection('jobApplications').doc(appId).update({ 'interview.calendarEventId': null });
   }
+  return { waLink };
 }
 
 // Nama untuk kerangka portal: satu baca dokumen, bukan pemindaian lamaran / Names for the portal frame: one document read, not an application scan

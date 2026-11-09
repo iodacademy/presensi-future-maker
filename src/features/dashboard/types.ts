@@ -101,6 +101,8 @@ export interface StudentPerformance {
 export interface StudentReminders {
   surveys: { formId: string; formTitle: string; sessionId: string; sessionTitle: string }[];
   exams: { id: string; title: string; dueAt: string | null; sessionTitle: string | null }[];
+  /** Undangan interview dan tawaran magang yang menunggu jawaban / Interview invites and internship offers awaiting an answer */
+  careers?: { appId: string; kind: 'interview' | 'tawaran'; jobTitle: string; partnerName: string }[];
 }
 
 /**

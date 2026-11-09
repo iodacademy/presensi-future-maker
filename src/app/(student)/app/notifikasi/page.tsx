@@ -15,6 +15,7 @@ import { reminderRows, ReminderItem } from '@/components/reminders';
 export default function StudentNotificationsPage() {
   const rows = reminderRows(useStudentReminders());
   const groups = [
+    { label: 'Kabar rekrutmen', rows: rows.filter((r) => r.kind === 'karier') },
     { label: 'Survei belum diisi', rows: rows.filter((r) => r.kind === 'survei') },
     { label: 'Kuis belum dikerjakan', rows: rows.filter((r) => r.kind === 'kuis') },
   ].filter((g) => g.rows.length > 0);
@@ -27,7 +28,7 @@ export default function StudentNotificationsPage() {
       <div className="student-topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--color-student-border)', padding: '18px 28px', paddingRight: '200px', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', fontWeight: 700, color: 'var(--color-text-main)' }}>Notifikasi</h1>
-          <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>Survei dan kuis yang masih menunggu kamu</p>
+          <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>Kabar rekrutmen, survei, dan kuis yang menunggu kamu</p>
         </div>
       </div>
 
@@ -36,7 +37,7 @@ export default function StudentNotificationsPage() {
           <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', border: '1px solid var(--color-student-border)', padding: '40px 16px', textAlign: 'center' }}>
             <CheckCircle2 size={36} color="var(--color-success)" style={{ margin: '0 auto 10px', display: 'block' }} />
             <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-main)' }}>Semua beres</div>
-            <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px' }}>Tidak ada survei atau kuis yang menunggu.</p>
+            <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px' }}>Tidak ada kabar rekrutmen, survei, atau kuis yang menunggu.</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>

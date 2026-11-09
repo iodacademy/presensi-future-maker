@@ -225,16 +225,34 @@ export function isoToWib(iso: string): { date: string; time: string } {
 
 // ---- Lamaran / Applications ----
 
-export type ApplicationStatus = 'baru' | 'ditinjau' | 'shortlist' | 'interview' | 'diterima' | 'tidak-lolos';
+/**
+ * diterima berarti PIC meloloskan kandidat dan menunggu jawabannya; bergabung dan menolak adalah jawaban
+ * kandidat; ditutup berarti kandidat sudah menerima tawaran di tempat lain.
+ *
+ * diterima means the PIC passed the candidate and awaits their answer; bergabung and menolak are the
+ * candidate's answers; ditutup means the candidate already accepted an offer elsewhere.
+ */
+export type ApplicationStatus = 'baru' | 'ditinjau' | 'shortlist' | 'interview' | 'diterima' | 'tidak-lolos' | 'bergabung' | 'menolak' | 'ditutup';
 export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
-  baru: 'Baru', ditinjau: 'Ditinjau', shortlist: 'Shortlist', interview: 'Interview', diterima: 'Diterima', 'tidak-lolos': 'Tidak lolos',
+  baru: 'Baru', ditinjau: 'Ditinjau', shortlist: 'Shortlist', interview: 'Interview', diterima: 'Lolos · menunggu jawaban', 'tidak-lolos': 'Tidak lolos',
+  bergabung: 'Menerima tawaran', menolak: 'Menolak tawaran', ditutup: 'Ditutup · diterima di tempat lain',
 };
 // Shortlist sengaja tampil sama dengan "Dilihat mitra" agar siswa tidak menebak peringkatnya
 // Shortlist deliberately reads as "Dilihat mitra" so students do not guess their ranking
 const STUDENT_STATUS_LABELS: Record<ApplicationStatus, string> = {
-  baru: 'Terkirim', ditinjau: 'Dilihat mitra', shortlist: 'Dilihat mitra', interview: 'Undangan interview', diterima: 'Diterima', 'tidak-lolos': 'Belum lolos',
+  baru: 'Terkirim', ditinjau: 'Dilihat mitra', shortlist: 'Dilihat mitra', interview: 'Lolos ke tahap interview', diterima: 'Lolos', 'tidak-lolos': 'Belum lolos',
+  bergabung: 'Tawaran diterima', menolak: 'Tawaran ditolak', ditutup: 'Ditutup',
 };
 export const REJECT_MESSAGE = 'Terima kasih sudah melamar. Kali ini kamu belum lolos ke tahap berikutnya.';
+export const CLOSED_ELSEWHERE_MESSAGE = 'Lamaran ini ditutup karena kamu sudah menerima tawaran magang di tempat lain.';
+/** Status akhir: tidak bisa diubah PIC maupun admin lagi / Final statuses: neither PIC nor admin can change them again */
+export const FINAL_STATUSES: ApplicationStatus[] = ['bergabung', 'menolak', 'ditutup'];
+export const FINAL_MESSAGE = 'Lamaran ini sudah final dan tidak bisa diproses lagi';
+/** Lamaran yang masih berjalan, ditutup saat kandidat menerima tawaran lain / Applications still running, closed when the candidate accepts another offer */
+export const isOpenApplication = (s: ApplicationStatus): boolean => !['tidak-lolos', ...FINAL_STATUSES].includes(s);
+/** Kelas fiktif akun demo: tidak masuk dashboard dan hanya melihat lowongan demo / The demo accounts' fictitious class: kept off the dashboard and shown only demo jobs */
+export const DEMO_CLASS_ID = 'demo';
+export const HANDOVER_NOTE = 'Proses selanjutnya, mulai dari kontrak magang, onboarding, dan administrasi lainnya, diserahkan ke mitra. Hubungi kandidat langsung untuk melanjutkannya.';
 export const studentStatusLabel = (s: ApplicationStatus): string => STUDENT_STATUS_LABELS[s] ?? s;
 export const formatApplicationNumber = (n: number): string => `FM-JOB-${String(n).padStart(4, '0')}`;
 
@@ -374,6 +392,14 @@ export function interviewTimeLabel(i: Pick<InterviewInput, 'date' | 'start' | 'd
   const fmt = (iso: string) => new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }).replace(':', '.');
   const day = new Date(startsAt).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
   return { day, time: `${fmt(startsAt)}–${fmt(endsAt)} WIB` };
+}
+
+export function offerMessage(x: { studentName: string; jobTitle: string; partnerName: string }): string {
+  return [
+    `Halo ${x.studentName}, selamat! Kamu lolos seleksi posisi ${x.jobTitle} di ${x.partnerName}.`,
+    'Mohon jawab tawaran ini (terima atau tolak) lewat menu Karier di aplikasi Future Makers.',
+    'Setelah kamu menerima, kami akan menghubungimu untuk kontrak magang dan onboarding. Terima kasih.',
+  ].join('\n');
 }
 
 export function interviewMessage(x: { studentName: string; jobTitle: string; partnerName: string; interview: InterviewInput }): string {

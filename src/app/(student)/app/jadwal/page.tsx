@@ -544,7 +544,7 @@ export default function StudentJadwalPage() {
   // The mandatory-task pop-up reopens every time the schedule page opens; it can
   // be minimised but not dismissed while anything is still due.
   const [pendingOpen, setPendingOpen] = useState(true);
-  const pendingRows = reminderRows(useStudentReminders());
+  const pendingRows = reminderRows({ ...useStudentReminders(), careers: [] });
   const [loading, setLoading] = useState(true);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());

@@ -5,18 +5,21 @@ import Link from 'next/link';
 import { alertBox, btnSolid } from '@/app/(admin)/admin/pameran/admin-ui';
 import { countdownParts, EMPLOYMENT_LABELS, formatCountdown, SCHEME_LABELS, type Employment, type Scheme } from '@/features/careers/model';
 import { box, h1, MitraShell, sub } from './shell';
+import { ContactCandidate } from './contact-candidate';
 
 type Dash = {
   picName: string; partnerName: string; stats: { newCount: number; shortlist: number; interviews: number; activeJobs: number };
   jobs: { id: string; title: string; employment: Employment; scheme: Scheme; quota: number; closesAt: string; applicantCount: number; newCount: number }[];
+  toContact: { id: string; fullName: string; jobTitle: string; waLink: string | null }[];
 };
 
 export default function MitraDashboardPage() {
   const [d, setD] = useState<Dash | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
+  const load = () => fetch('/api/mitra/dashboard').then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.error); setD(j); }).catch((e) => setError(e.message));
   useEffect(() => {
-    fetch('/api/mitra/dashboard').then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.error); setD(j); }).catch((e) => setError(e.message));
+    load();
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
@@ -29,6 +32,12 @@ export default function MitraDashboardPage() {
         <p style={sub}>Kamu melihat lowongan dan pelamar untuk <b>{d?.partnerName}</b> saja.</p>
       </div>
       {error && <div role="alert" style={alertBox}>{error}</div>}
+      {d && d.toContact.length > 0 && (
+        <section aria-label="Kandidat lolos yang perlu dihubungi" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <h2 style={{ ...h1, fontSize: '14px', color: '#067647' }}>{d.toContact.length} kandidat lolos perlu segera dihubungi</h2>
+          {d.toContact.map((c) => <ContactCandidate key={c.id} appId={c.id} name={c.fullName} jobTitle={c.jobTitle} waLink={c.waLink} onContacted={load} />)}
+        </section>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
         {stats.map(([k, l]) => (
           <div key={k} style={box}>

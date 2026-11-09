@@ -8,5 +8,5 @@ export const GET = (_req: Request, { params }: Ctx) => asPartner(async (actor) =
 export const PATCH = (request: Request, { params }: Ctx) =>
   asPartner(async (actor) => {
     const body = (await request.json()) as { status?: unknown; rejectReason?: unknown };
-    await decideCandidate(actor, (await params).id, body.status, body.rejectReason);
+    return decideCandidate(actor, (await params).id, body.status, body.rejectReason);
   });

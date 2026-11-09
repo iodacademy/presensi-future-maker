@@ -2,11 +2,14 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { MessageCircle } from 'lucide-react';
+import { waButton } from '../contact-candidate';
 import { alertBox, btn, btnSolid } from '@/app/(admin)/admin/pameran/admin-ui';
 import { interviewTimeLabel, type Interview } from '@/features/careers/model';
 import { box, h1, MitraShell, sub } from '../shell';
 
-type Row = { id: string; number: string; fullName: string; phone: string; interview: Omit<Interview, 'calendarEventId'> };
+type Row = { id: string; number: string; fullName: string; phone: string; interview: Omit<Interview, 'calendarEventId'>; waLink: string | null };
 const CONFIRM: Record<string, [string, string, string]> = {
   pending: ['Menunggu konfirmasi', '#F3F4F6', '#5b6b75'], hadir: ['Hadir', '#ECFDF3', '#067647'], 'jadwal-ulang': ['Minta jadwal ulang', '#FFF7E0', '#946200'],
 };
@@ -19,6 +22,7 @@ const CONFIRM: Record<string, [string, string, string]> = {
 export default function JadwalPage() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
   const load = useCallback(() => {
     fetch('/api/mitra/interviews').then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); setRows(d.interviews); }).catch((e) => setError(e.message));
   }, []);
@@ -33,6 +37,9 @@ export default function JadwalPage() {
     }
     const res = await fetch(`/api/mitra/candidates/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, rejectReason }) });
     if (!res.ok) { setError((await res.json()).error); return; }
+    // Kandidat yang lolos dibuka di detailnya: di sana PIC diminta segera menghubunginya
+    // A passed candidate opens on their detail page, where the PIC is asked to contact them right away
+    if (status === 'diterima') { router.push(`/mitra/kandidat/${id}`); return; }
     load();
   }
 
@@ -55,8 +62,9 @@ export default function JadwalPage() {
                 {r.interview.rescheduleNote && <span style={{ color: 'var(--color-text-muted)' }}>Catatan kandidat: {r.interview.rescheduleNote}</span>}
               </div>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                {r.waLink && <a href={r.waLink} target="_blank" rel="noopener noreferrer" style={waButton}><MessageCircle size={14} aria-hidden /> WhatsApp</a>}
                 <Link href={`/mitra/kandidat/${r.id}`} style={{ ...btn, textDecoration: 'none' }}>Jadwalkan ulang</Link>
-                <button type="button" style={btnSolid} onClick={() => result(r.id, 'diterima')}>Diterima</button>
+                <button type="button" style={btnSolid} onClick={() => result(r.id, 'diterima')}>Lolos</button>
                 <button type="button" style={{ ...btn, borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }} onClick={() => result(r.id, 'tidak-lolos')}>Tidak diterima</button>
               </div>
             </section>

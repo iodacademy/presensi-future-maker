@@ -39,6 +39,12 @@ describe('pelamar untuk admin', () => {
     expect(a.className).toBe('Web Programming · Semarang');
   });
 
+  it('status jawaban kandidat tidak bisa dipilih admin, dan lamaran final tidak bisa diubah', async () => {
+    await expect(setApplicationStatus('j1_u1', 'bergabung')).rejects.toThrow('Status ini hanya bisa dari jawaban kandidat');
+    data.jobApplications.j1_u1.status = 'ditutup';
+    await expect(setApplicationStatus('j1_u1', 'ditinjau')).rejects.toThrow('Lamaran ini sudah final');
+  });
+
   it('status tak dikenal ditolak', async () => {
     await expect(setApplicationStatus('j1_u1', 'lolos')).rejects.toThrow('Status lamaran tidak dikenal');
   });

@@ -8,6 +8,7 @@ import { JobCard } from '@/features/careers/job-card';
 import { CATEGORY_LABELS, type Category } from '@/features/careers/model';
 import type { MyApplication, StudentJobCard } from '@/features/careers/student-service';
 import { InterviewCard } from './interview-card';
+import { OfferCard } from './offer-card';
 import { BLUE, btnOutline, card, errorBox, formatDate, getJson, heading, LINE, MUTED, pageWrap, pill, STATUS_PILL } from './ui';
 
 type Lowongan = { access: boolean; jobs: StudentJobCard[]; appliedJobIds: string[]; bannerClosesAt: string | null };
@@ -28,10 +29,14 @@ export default function KarierPage() {
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('tab') === 'lamaran') setTab('lamaran');
     getJson<Lowongan>('/api/karier/lowongan').then(setData).catch((e) => setError(e.message));
-    getJson<{ applications: MyApplication[] }>('/api/karier/lamaran').then((r) => setApps(r.applications)).catch((e) => setError(e.message));
+    loadApps();
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  function loadApps() {
+    getJson<{ applications: MyApplication[] }>('/api/karier/lamaran').then((r) => setApps(r.applications)).catch((e) => setError(e.message));
+  }
 
   function choose(t: 'lowongan' | 'lamaran') {
     setTab(t);
@@ -110,6 +115,12 @@ export default function KarierPage() {
                     </div>
                     {a.message && <p style={{ margin: 0, fontSize: '13px', color: MUTED }}>{a.message}</p>}
                     {a.interview && <InterviewCard appId={a.id} partnerName={a.partnerName} interview={a.interview} />}
+                    {a.status === 'diterima' && <OfferCard appId={a.id} jobTitle={a.jobTitle} partnerName={a.partnerName} onAnswered={loadApps} />}
+                    {a.status === 'bergabung' && (
+                      <p style={{ margin: 0, fontSize: '13px', color: '#067647', fontWeight: 600 }}>
+                        Kamu menerima tawaran ini. {a.partnerName} akan menghubungimu untuk kontrak magang dan onboarding.
+                      </p>
+                    )}
                   </div>
                 );
               })}

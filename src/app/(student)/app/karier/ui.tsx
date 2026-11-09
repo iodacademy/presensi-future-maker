@@ -26,8 +26,9 @@ export async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export const STATUS_PILL: Record<string, [string, string]> = {
-  Terkirim: ['#E6F1FB', BLUE], 'Dilihat mitra': ['#F5F3FF', '#6D28D9'], 'Undangan interview': ['#FFF7E0', '#946200'],
-  Diterima: ['#ECFDF3', '#067647'], 'Belum lolos': ['#F3F4F6', MUTED],
+  Terkirim: ['#E6F1FB', BLUE], 'Dilihat mitra': ['#F5F3FF', '#6D28D9'], 'Lolos ke tahap interview': ['#FFF7E0', '#946200'],
+  Lolos: ['#ECFDF3', '#067647'], 'Tawaran diterima': ['#067647', '#ffffff'], 'Belum lolos': ['#F3F4F6', MUTED],
+  'Tawaran ditolak': ['#F3F4F6', MUTED], Ditutup: ['#F3F4F6', MUTED],
 };
 
 export const formatDate = (iso: string) => new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' });

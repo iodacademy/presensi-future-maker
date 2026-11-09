@@ -1,13 +1,15 @@
 'use client';
 
 import React, { use, useCallback, useEffect, useState } from 'react';
+import { MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { alertBox, btn, btnSolid, field } from '@/app/(admin)/admin/pameran/admin-ui';
 import { APPLICATION_STATUS_LABELS, type Application, type Interview, type JobQuestion } from '@/features/careers/model';
 import { box, h1, MitraShell, sub } from '../../shell';
+import { ContactCandidate, waButton } from '../../contact-candidate';
 import { InviteForm } from './invite-form';
 
-type Candidate = Application & { className: string; questions: JobQuestion[]; interview?: Interview };
+type Candidate = Application & { className: string; questions: JobQuestion[]; interview?: Interview; interviewWaLink: string | null; offerWaLink: string | null };
 const REASONS = ['Skill belum sesuai', 'Portofolio kurang relevan', 'Kuota sudah terpenuhi', 'Lainnya'];
 
 /**
@@ -40,6 +42,7 @@ export default function CandidatePage({ params }: { params: Promise<{ id: string
     const r = await fetch(`/api/mitra/candidates/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, rejectReason }) });
     if (!r.ok) { setError((await r.json()).error); return; }
     setRejecting(false);
+    setInviting(false);
     await load();
   }
 
@@ -94,14 +97,33 @@ export default function CandidatePage({ params }: { params: Promise<{ id: string
               )}
               <section style={{ ...box, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <b style={{ fontSize: '10px', letterSpacing: '.06em', color: 'var(--color-text-muted)' }}>KEPUTUSAN SELEKSI</b>
-                {c.status === 'diterima' || c.status === 'tidak-lolos' ? (
-                  <span style={{ fontSize: '12px' }}>Status kandidat sudah <b>{APPLICATION_STATUS_LABELS[c.status]}</b>.</span>
-                ) : inviting || c.status === 'interview' ? (
+                {c.status === 'diterima' || c.status === 'bergabung' ? (
                   <>
-                    {c.status === 'interview' && !inviting && <span style={{ fontSize: '12px' }}>Interview terjadwal. Lihat menu Jadwal interview untuk tindak lanjut.</span>}
-                    {(inviting || c.status === 'interview') && (
-                      <InviteForm appId={c.id} defaultInterviewer={c.interview?.interviewer ?? pic} initial={c.interview} onSent={load} />
+                    <span style={{ fontSize: '12px' }}>
+                      {c.status === 'bergabung' ? <><b>Kandidat menerima tawaran.</b> Lamarannya yang lain sudah ditutup otomatis.</> : <><b>Kandidat lolos.</b> Menunggu kandidat menerima atau menolak tawaran di aplikasi.</>}
+                    </span>
+                    <ContactCandidate appId={c.id} name={c.personal.fullName} waLink={c.offerWaLink} />
+                  </>
+                ) : c.status === 'menolak' ? (
+                  <span style={{ fontSize: '12px' }}><b>Kandidat menolak tawaran.</b> Lamaran ini sudah selesai.</span>
+                ) : c.status === 'ditutup' ? (
+                  <span style={{ fontSize: '12px' }}><b>Lamaran ditutup.</b> Kandidat sudah menerima tawaran magang di tempat lain, jadi lamaran ini tidak bisa diproses lagi.</span>
+                ) : c.status === 'tidak-lolos' ? (
+                  <span style={{ fontSize: '12px' }}>Status kandidat sudah <b>{APPLICATION_STATUS_LABELS[c.status]}</b>.</span>
+                ) : inviting ? (
+                  <>
+                    <InviteForm appId={c.id} defaultInterviewer={c.interview?.interviewer ?? pic} initial={c.interview} onSent={load} />
+                    {c.status === 'interview' && <button type="button" style={{ ...btn, alignSelf: 'flex-start' }} onClick={() => setInviting(false)}>Batal ubah jadwal</button>}
+                  </>
+                ) : c.status === 'interview' && !rejecting ? (
+                  <>
+                    <span style={{ fontSize: '12px' }}>Interview terjadwal. Kirim pengingat ke kandidat, lalu isi hasilnya setelah interview.</span>
+                    {c.interviewWaLink && (
+                      <a href={c.interviewWaLink} target="_blank" rel="noopener noreferrer" style={waButton}><MessageCircle size={14} aria-hidden /> Kirim jadwal lewat WhatsApp</a>
                     )}
+                    <button type="button" style={btnSolid} onClick={() => decide('diterima')}>Lolos interview, terima kandidat</button>
+                    <button type="button" style={{ ...btn, borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }} onClick={() => setRejecting(true)}>Tidak lolos</button>
+                    <button type="button" style={btn} onClick={() => setInviting(true)}>Jadwalkan ulang</button>
                   </>
                 ) : rejecting ? (
                   <>

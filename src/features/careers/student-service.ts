@@ -13,7 +13,7 @@ import { isStoredSubmissionFile } from '../tasks/submission-policy';
 import { applicationsOpen, CLOSED_MESSAGE } from './apply-gate';
 import { listCvs } from './cv-service';
 import {
-  canApplyScheme, hasCareerAccess, isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
+  canApplyScheme, CLOSED_ELSEWHERE_MESSAGE, DEMO_CLASS_ID, hasCareerAccess, isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
   type ApplicationStatus, type AttachedTask, type Interview, type AttachedWork, type CvFile, type Eligibility, type Job, type Logo, type Personal, type Socials,
 } from './model';
 
@@ -64,13 +64,18 @@ export async function latestFinalScore(uid: string): Promise<FinalScore> {
   return { finalScore: row?.score ?? null, finalScorePending: row?.pending ?? false, finalScoreAt: at };
 }
 
-export async function latestPlacement(uid: string): Promise<string | null> {
+// Akun demo tidak ada di dashboard, jadi skemanya ditetapkan Full Internship / Demo accounts are not on the dashboard, so their scheme is fixed at Full Internship
+export async function latestPlacement(uid: string, classId?: string | null): Promise<string | null> {
+  if (classId === DEMO_CLASS_ID) return 'full';
   return (await snapshotStandings()).rows[uid]?.placement ?? null;
 }
 
-export async function careerAccess(uid: string): Promise<boolean> {
-  return hasCareerAccess(await latestPlacement(uid));
+export async function careerAccess(uid: string, classId?: string | null): Promise<boolean> {
+  return hasCareerAccess(await latestPlacement(uid, classId));
 }
+
+/** Pendaftaran tutup tidak berlaku bagi akun demo / Closed applications do not apply to demo accounts */
+export const canSubmitNow = async (actor: Pick<Actor, 'classId'>): Promise<boolean> => actor.classId === DEMO_CLASS_ID || applicationsOpen();
 
 async function appliedJobIds(uid: string): Promise<Set<string>> {
   const snap = await db().collection('jobApplications').where('studentId', '==', uid).select('jobId').get();
@@ -81,7 +86,7 @@ async function appliedJobIds(uid: string): Promise<Set<string>> {
 function eligibilityCheck(actor: Actor) {
   let standing: Promise<[FinalScore, string | null]> | null = null;
   return async (job: Pick<Job, 'eligibility' | 'scheme'>) => {
-    standing ??= Promise.all([latestFinalScore(actor.uid), latestPlacement(actor.uid)]);
+    standing ??= Promise.all([latestFinalScore(actor.uid), latestPlacement(actor.uid, actor.classId)]);
     const [score, placement] = await standing;
     return canApplyScheme(placement, job.scheme) && isEligible(job.eligibility, { classId: actor.classId, finalScore: score.finalScore });
   };
@@ -107,7 +112,7 @@ async function visibleCards(actor: Actor, now: Date, partnerId?: string): Promis
 }
 
 export async function listOpenJobs(actor: Actor, now: Date) {
-  if (!(await careerAccess(actor.uid))) return { access: false, jobs: [] as StudentJobCard[], appliedJobIds: [] as string[], bannerClosesAt: null };
+  if (!(await careerAccess(actor.uid, actor.classId))) return { access: false, jobs: [] as StudentJobCard[], appliedJobIds: [] as string[], bannerClosesAt: null };
   const [jobs, applied] = await Promise.all([visibleCards(actor, now), appliedJobIds(actor.uid)]);
   const bannerClosesAt = jobs.reduce<string | null>((max, j) => (!max || j.closesAt > max ? j.closesAt : max), null);
   return { access: true, jobs, appliedJobIds: jobs.filter((j) => applied.has(j.id)).map((j) => j.id), bannerClosesAt };
@@ -141,7 +146,7 @@ export async function getJobForStudent(actor: Actor, id: string, now: Date) {
   const job = { ...(jSnap.data() as Job), id };
   const application = aSnap.exists ? { status: aSnap.get('status') as ApplicationStatus, number: aSnap.get('number') as string } : null;
   if (!application && (job.status !== 'published' || !isOpenToStudents(job, now) || !(await eligibilityCheck(actor)(job)))) return null;
-  const [partner, open] = await Promise.all([publicPartner(job.partnerId), applicationsOpen()]);
+  const [partner, open] = await Promise.all([publicPartner(job.partnerId), canSubmitNow(actor)]);
   return partner ? { job, partner, application, applicationsOpen: open } : null;
 }
 
@@ -219,7 +224,7 @@ export async function listMyApplications(uid: string): Promise<MyApplication[]> 
       return {
         id: a.id, jobId: a.get('jobId') as string, number: String(a.get('number') ?? ''), jobTitle: j?.title ?? 'Lowongan', partnerName: j?.partnerName ?? '',
         status, statusLabel: studentStatusLabel(status), submittedAt: String(a.get('submittedAt') ?? ''),
-        message: status === 'tidak-lolos' ? REJECT_MESSAGE : null,
+        message: status === 'tidak-lolos' ? REJECT_MESSAGE : status === 'ditutup' ? CLOSED_ELSEWHERE_MESSAGE : null,
         interview: status === 'interview' && a.get('interview') ? publicInterview(a.get('interview') as Interview) : null,
       };
     })

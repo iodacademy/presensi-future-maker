@@ -11,7 +11,7 @@ import { getAdminDb } from '../../lib/firebase/admin';
 import { whatsAppLink } from '../../lib/whatsapp';
 import type { Actor } from '../auth/types';
 import { cancelCalendarEvent, createCalendarEvent, isCalendarConfigured } from '../calendar/client';
-import { interviewMessage, interviewWindow, validateInterviewInput, type Interview } from './model';
+import { FINAL_MESSAGE, FINAL_STATUSES, interviewMessage, interviewWindow, validateInterviewInput, type Interview } from './model';
 import type { PartnerActor } from './partner-service';
 
 const apps = () => getAdminDb().collection('jobApplications');
@@ -19,6 +19,7 @@ const apps = () => getAdminDb().collection('jobApplications');
 export async function inviteToInterview(actor: PartnerActor, appId: string, raw: unknown, now: Date): Promise<{ waLink: string | null; meetUrl: string }> {
   const snap = await apps().doc(appId).get();
   if (!snap.exists || snap.get('partnerId') !== actor.partnerId) throw new Error('Lamaran tidak ditemukan');
+  if (FINAL_STATUSES.includes(snap.get('status'))) throw new Error(FINAL_MESSAGE);
   const input = validateInterviewInput(raw);
   const personal = snap.get('personal') as { fullName: string; email: string; phone: string };
   const job = await getAdminDb().collection('jobs').doc(String(snap.get('jobId'))).get();
@@ -67,12 +68,23 @@ export async function inviteToInterview(actor: PartnerActor, appId: string, raw:
 }
 
 export async function listInterviews(actor: PartnerActor) {
-  const snap = await apps().where('partnerId', '==', actor.partnerId).where('status', '==', 'interview')
-    .select('number', 'jobId', 'personal.fullName', 'personal.phone', 'interview').get();
+  const [snap, jobs] = await Promise.all([
+    apps().where('partnerId', '==', actor.partnerId).where('status', '==', 'interview')
+      .select('number', 'jobId', 'personal.fullName', 'personal.phone', 'interview').get(),
+    getAdminDb().collection('jobs').where('partnerId', '==', actor.partnerId).select('title', 'partnerName').get(),
+  ]);
+  const job = new Map(jobs.docs.map((j) => [j.id, { title: String(j.get('title') ?? ''), partnerName: String(j.get('partnerName') ?? '') }]));
   return snap.docs
     .map((a) => {
       const { calendarEventId: _c, ...interview } = a.get('interview') as Interview;
-      return { id: a.id, number: String(a.get('number') ?? ''), jobId: String(a.get('jobId')), fullName: String(a.get('personal.fullName') ?? ''), phone: String(a.get('personal.phone') ?? ''), interview };
+      const fullName = String(a.get('personal.fullName') ?? '');
+      const phone = String(a.get('personal.phone') ?? '');
+      const j = job.get(String(a.get('jobId'))) ?? { title: 'Lowongan', partnerName: '' };
+      return {
+        id: a.id, number: String(a.get('number') ?? ''), jobId: String(a.get('jobId')), fullName, phone, interview,
+        // Tombol WhatsApp di jadwal: pesan berisi waktu dan link interview / The schedule's WhatsApp button: a message with the interview time and link
+        waLink: whatsAppLink(phone, interviewMessage({ studentName: fullName, jobTitle: j.title, partnerName: j.partnerName, interview })),
+      };
     })
     .sort((a, b) => `${a.interview.date}${a.interview.start}`.localeCompare(`${b.interview.date}${b.interview.start}`));
 }

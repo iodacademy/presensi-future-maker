@@ -12,19 +12,22 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
-import { applicationsOpen, CLOSED_MESSAGE } from './apply-gate';
+import { CLOSED_MESSAGE } from './apply-gate';
 import { listCvs } from './cv-service';
 import { canApplyScheme, formatApplicationNumber, isEligible, isOpenToStudents, validateApplicationInput, type Job } from './model';
-import { latestFinalScore, latestPlacement, ownTasks, ownWorks } from './student-service';
+import { canSubmitNow, latestFinalScore, latestPlacement, ownTasks, ownWorks } from './student-service';
 
 export async function submitApplication(actor: Actor, raw: unknown, now: Date): Promise<{ id: string; number: string }> {
   const jobId = String((raw as { jobId?: unknown })?.jobId ?? '');
   if (!jobId) throw new Error('Lowongan tidak ditemukan');
-  if (!(await applicationsOpen())) throw new Error(CLOSED_MESSAGE);
+  if (!(await canSubmitNow(actor))) throw new Error(CLOSED_MESSAGE);
   const db = getAdminDb();
   const [cvs, covers, works, tasks, score, placement] = await Promise.all([
-    listCvs(actor.uid, 'cv'), listCvs(actor.uid, 'surat'), ownWorks(actor.uid), ownTasks(actor.uid), latestFinalScore(actor.uid), latestPlacement(actor.uid),
+    listCvs(actor.uid, 'cv'), listCvs(actor.uid, 'surat'), ownWorks(actor.uid), ownTasks(actor.uid), latestFinalScore(actor.uid), latestPlacement(actor.uid, actor.classId),
   ]);
+  // Satu peserta satu tempat magang / One participant, one internship place
+  const mine = await db.collection('jobApplications').where('studentId', '==', actor.uid).select('status').get();
+  if (mine.docs.some((d) => d.get('status') === 'bergabung')) throw new Error('Kamu sudah menerima tawaran magang, jadi tidak bisa melamar lagi');
   const jobRef = db.collection('jobs').doc(jobId);
   const appRef = db.collection('jobApplications').doc(`${jobId}_${actor.uid}`);
   const counterRef = db.collection('counters').doc('jobApplications');

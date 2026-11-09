@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 import { AppShell } from '@/components/app-shell';
 import { alertBox, api, btn, btnSolid, card, field, send } from '../../pameran/admin-ui';
 import type { ApplicantRow } from '@/features/careers/applicants-service';
-import { APPLICATION_STATUS_LABELS, type Application, type ApplicationStatus, type Job, type JobQuestion } from '@/features/careers/model';
+import { APPLICATION_STATUS_LABELS, FINAL_STATUSES, type Application, type ApplicationStatus, type Job, type JobQuestion } from '@/features/careers/model';
 
 type Detail = Application & { className: string; questions: JobQuestion[] };
 const th: React.CSSProperties = { textAlign: 'left', padding: '10px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)' };
@@ -94,9 +94,11 @@ export default function ApplicantsPage({ params }: { params: Promise<{ jobId: st
                   <td style={td}><Score r={r} /></td>
                   <td style={td}>{when(r.submittedAt)}</td>
                   <td style={td}>
-                    <select value={r.status} onChange={(e) => changeStatus(r.id, e.target.value as ApplicationStatus)} style={{ ...field, width: 'auto' }} aria-label={`Status ${r.fullName}`}>
-                      {(Object.keys(APPLICATION_STATUS_LABELS) as ApplicationStatus[]).map((s) => <option key={s} value={s}>{APPLICATION_STATUS_LABELS[s]}</option>)}
-                    </select>
+                    {FINAL_STATUSES.includes(r.status) ? APPLICATION_STATUS_LABELS[r.status] : (
+                      <select value={r.status} onChange={(e) => changeStatus(r.id, e.target.value as ApplicationStatus)} style={{ ...field, width: 'auto' }} aria-label={`Status ${r.fullName}`}>
+                        {(Object.keys(APPLICATION_STATUS_LABELS) as ApplicationStatus[]).filter((s) => !FINAL_STATUSES.includes(s)).map((s) => <option key={s} value={s}>{APPLICATION_STATUS_LABELS[s]}</option>)}
+                      </select>
+                    )}
                   </td>
                   <td style={td}>{when(r.statusChangedAt)}</td>
                   <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
