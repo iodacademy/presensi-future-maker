@@ -62,6 +62,12 @@ export async function setApplicationStatus(id: string, status: unknown, rejectRe
   const cur = await ref.get();
   if (!cur.exists) throw new Error('Lamaran tidak ditemukan');
   if (FINAL_STATUSES.includes(cur.get('status'))) throw new Error(FINAL_MESSAGE);
+  // Lamaran tidak lolos milik kandidat yang sudah bergabung di tempat lain tidak boleh dihidupkan lagi
+  // A rejected application of a candidate who already joined elsewhere must not be revived
+  if (status !== 'tidak-lolos') {
+    const mine = await db().collection('jobApplications').where('studentId', '==', cur.get('studentId')).select('status').get();
+    if (mine.docs.some((d) => d.id !== id && d.get('status') === 'bergabung')) throw new Error('Kandidat sudah menerima tawaran magang di tempat lain');
+  }
   const t = new Date().toISOString();
   // Alasan penolakan bersifat internal dan hanya bermakna untuk status tidak lolos
   // The rejection reason is internal and only means something for the rejected status

@@ -80,6 +80,19 @@ describe('jawaban siswa atas tawaran', () => {
     await expect(inviteToInterview(pic2, 'a2', { ...interview, linkSource: 'manual', url: 'https://zoom.us/j/1' }, now)).rejects.toThrow('Lamaran ini sudah final');
     expect(calendar.create).not.toHaveBeenCalled();
   });
+
+  it('lamaran tidak lolos tidak bisa dihidupkan lagi setelah kandidat menerima tawaran lain', async () => {
+    await respondOffer(andi, 'a1', 'terima', now);
+    const pic3 = { uid: 'r3', role: 'partner', partnerId: 'p3', email: 'p@k.id', name: 'Putri' } as never;
+    await expect(decideCandidate(pic3, 'a3', 'diterima')).rejects.toThrow('Kandidat sudah menerima tawaran magang di tempat lain');
+    expect(data.jobApplications.a3.status).toBe('tidak-lolos');
+  });
+
+  it('siswa tidak bisa memegang dua tawaran yang diterima', async () => {
+    data.jobApplications.a3.status = 'bergabung';
+    await expect(respondOffer(andi, 'a1', 'terima', now)).rejects.toThrow('Kamu sudah menerima tawaran magang lain');
+    expect(data.jobApplications.a1.status).toBe('diterima');
+  });
 });
 
 describe('PIC menghubungi kandidat', () => {

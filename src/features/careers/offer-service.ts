@@ -23,25 +23,27 @@ const apps = () => getAdminDb().collection('jobApplications');
 
 export async function respondOffer(actor: Actor, appId: string, response: unknown, now: Date): Promise<void> {
   if (response !== 'terima' && response !== 'tolak') throw new Error('Jawaban tidak dikenal');
-  const snap = await apps().doc(appId).get();
-  if (!snap.exists || snap.get('studentId') !== actor.uid) throw new Error('Lamaran tidak ditemukan');
-  if (snap.get('status') !== 'diterima') throw new Error('Belum ada tawaran untuk lamaran ini');
+  const ref = apps().doc(appId);
   const t = now.toISOString();
-  if (response === 'tolak') {
-    await snap.ref.update({ status: 'menolak', statusChangedAt: t, updatedAt: t });
-    return;
-  }
-
-  // ponytail: dibaca lalu ditulis dalam satu batch, bukan transaksi; PIC yang mengubah lamaran lain pada detik yang sama bisa lolos. Pindah ke transaksi bila itu terjadi.
-  // ponytail: read then written in one batch, not a transaction; a PIC changing another application in the same second can slip through. Move to a transaction if that happens.
-  const others = (await apps().where('studentId', '==', actor.uid).select('status', 'interview.calendarEventId').get()).docs
-    .filter((d) => d.id !== appId && isOpenApplication(d.get('status') as ApplicationStatus));
-  const batch = getAdminDb().batch();
-  batch.update(snap.ref, { status: 'bergabung', statusChangedAt: t, updatedAt: t });
-  for (const d of others) {
-    batch.update(d.ref, { status: 'ditutup', statusChangedAt: t, updatedAt: t, ...(d.get('interview.calendarEventId') ? { 'interview.calendarEventId': null } : {}) });
-  }
-  await batch.commit();
+  // Dalam satu transaksi: dua klik "terima" yang bersamaan tidak bisa sama-sama lolos
+  // In one transaction: two simultaneous "terima" clicks cannot both succeed
+  const others = await getAdminDb().runTransaction(async (tx) => {
+    const [snap, mine] = await Promise.all([tx.get(ref), tx.get(apps().where('studentId', '==', actor.uid).select('status', 'interview.calendarEventId'))]);
+    if (!snap.exists || snap.get('studentId') !== actor.uid) throw new Error('Lamaran tidak ditemukan');
+    if (snap.get('status') !== 'diterima') throw new Error('Belum ada tawaran untuk lamaran ini');
+    if (response === 'tolak') {
+      tx.update(ref, { status: 'menolak', statusChangedAt: t, updatedAt: t });
+      return [];
+    }
+    const rest = mine.docs.filter((d) => d.id !== appId);
+    if (rest.some((d) => d.get('status') === 'bergabung')) throw new Error('Kamu sudah menerima tawaran magang lain');
+    const open = rest.filter((d) => isOpenApplication(d.get('status') as ApplicationStatus));
+    tx.update(ref, { status: 'bergabung', statusChangedAt: t, updatedAt: t });
+    for (const d of open) {
+      tx.update(d.ref, { status: 'ditutup', statusChangedAt: t, updatedAt: t, ...(d.get('interview.calendarEventId') ? { 'interview.calendarEventId': null } : {}) });
+    }
+    return open;
+  });
   // Undangan Calendar dibatalkan setelah status tersimpan: kegagalan membatalkan tidak membuka kembali lamarannya
   // Calendar invites are cancelled after the status is saved: a failed cancel does not reopen the application
   for (const d of others) {
