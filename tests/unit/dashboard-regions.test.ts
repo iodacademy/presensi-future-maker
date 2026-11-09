@@ -145,6 +145,13 @@ describe('aktivitas login', () => {
     const blok = service.slice(service.indexOf('loginsSnap.docs'), service.indexOf('const logins:'));
     expect(blok).toMatch(/aktifIds\.has\(l\.uid\)/);
   });
+
+  it('login akun tanpa kelas, seperti akun demo, tidak dihitung', () => {
+    // Kota kosong menjadi kunci "" yang ditolak Firestore, sehingga seluruh ringkasan gagal tersimpan.
+    // An empty city becomes a "" key that Firestore rejects, so the whole snapshot fails to save.
+    const blok = service.slice(service.indexOf('loginsSnap.docs'), service.indexOf('const logins:'));
+    expect(blok).toMatch(/if \(!kota\) continue/);
+  });
 });
 
 /**

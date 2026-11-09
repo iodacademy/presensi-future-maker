@@ -497,9 +497,12 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   for (const d of loginsSnap.docs) {
     const l = d.data() as { uid: string; date: string };
     if (!aktifIds.has(l.uid)) continue;
+    const kota = kotaPerSiswa.get(l.uid) ?? '';
+    // Akun tanpa kelas yang ada (mis. akun demo) tidak punya kota; kunci "" ditolak Firestore
+    // An account without an existing class (e.g. the demo account) has no city; Firestore rejects a "" key
+    if (!kota) continue;
     if (!loginPerTanggal.has(l.date)) loginPerTanggal.set(l.date, {});
     const perKota = loginPerTanggal.get(l.date)!;
-    const kota = kotaPerSiswa.get(l.uid) ?? '';
     perKota[kota] = (perKota[kota] ?? 0) + 1;
   }
   // Hanya enam puluh hari terakhir yang disimpan. Grafiknya memperlihatkan
