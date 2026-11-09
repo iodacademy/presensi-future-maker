@@ -29,11 +29,21 @@ export default function KarierPage() {
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('tab') === 'lamaran') setTab('lamaran');
-    getJson<Lowongan>('/api/karier/lowongan').then(setData).catch((e) => setError(e.message));
+    loadJobs();
     loadApps();
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  function loadJobs() {
+    getJson<Lowongan>('/api/karier/lowongan').then(setData).catch((e) => setError(e.message));
+  }
+
+  // Menjawab tawaran mengubah jalur dan kuota, jadi kartu tier ikut dimuat ulang / Answering an offer changes the track and quota, so the tier card reloads too
+  function reloadAfterOffer() {
+    loadApps();
+    loadJobs();
+  }
 
   function loadApps() {
     getJson<{ applications: MyApplication[] }>('/api/karier/lamaran').then((r) => setApps(r.applications)).catch((e) => setError(e.message));
@@ -117,7 +127,7 @@ export default function KarierPage() {
                     </div>
                     {a.message && <p style={{ margin: 0, fontSize: '13px', color: MUTED }}>{a.message}</p>}
                     {a.interview && <InterviewCard appId={a.id} partnerName={a.partnerName} interview={a.interview} picWaLink={a.picWaLink} />}
-                    {a.status === 'diterima' && <OfferCard appId={a.id} jobTitle={a.jobTitle} partnerName={a.partnerName} project={a.scheme === 'project'} onAnswered={loadApps} />}
+                    {a.status === 'diterima' && <OfferCard appId={a.id} jobTitle={a.jobTitle} partnerName={a.partnerName} project={a.scheme === 'project'} onAnswered={reloadAfterOffer} />}
                     {a.status === 'bergabung' && (
                       <p style={{ margin: 0, fontSize: '13px', color: '#067647', fontWeight: 600 }}>
                         Kamu menerima tawaran ini. {a.partnerName} akan menghubungimu untuk kontrak magang dan onboarding.
