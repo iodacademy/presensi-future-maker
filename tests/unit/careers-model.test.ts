@@ -87,9 +87,26 @@ describe('model karier', () => {
   it('gaji satu angka tetap, boleh kosong', () => {
     expect(validateJobInput(baseJob).salary).toBeNull();
     expect(validateJobInput({ ...baseJob, salary: '' }).salary).toBeNull();
-    expect(validateJobInput({ ...baseJob, salary: '2000000' }).salary).toBe(2000000);
+    expect(validateJobInput({ ...baseJob, salary: '1500000' }).salary).toBe(1500000);
     expect(() => validateJobInput({ ...baseJob, salary: -5 })).toThrow('Gaji harus berupa angka rupiah');
     expect(() => validateJobInput({ ...baseJob, salary: 'dua juta' })).toThrow('Gaji harus berupa angka rupiah');
+  });
+
+  it('uang saku maksimal Rp1.500.000; Project Based wajib nilai minimal Rp500.000 dan durasi', () => {
+    expect(() => validateJobInput({ ...baseJob, salary: 1_500_001 })).toThrow('Uang saku maksimal Rp1.500.000');
+    expect(validateJobInput(baseJob).durationMonths).toBeNull();
+    const project = { ...baseJob, scheme: 'project', salary: 500_000, durationMonths: '2' };
+    expect(validateJobInput(project)).toMatchObject({ salary: 500_000, durationMonths: 2 });
+    expect(() => validateJobInput({ ...project, salary: 499_999 })).toThrow('Nilai proyek minimal Rp500.000');
+    expect(() => validateJobInput({ ...project, salary: '' })).toThrow('Nilai proyek minimal Rp500.000');
+    expect(() => validateJobInput({ ...project, durationMonths: '' })).toThrow('Durasi proyek 1 – 12 bulan');
+    expect(() => validateJobInput({ ...project, durationMonths: 13 })).toThrow('Durasi proyek 1 – 12 bulan');
+    // Durasi diabaikan untuk Full Internship / Duration is ignored for Full Internship
+    expect(validateJobInput({ ...baseJob, durationMonths: 3 }).durationMonths).toBeNull();
+  });
+
+  it('label Project Based menyebut durasi tanpa membagi nilainya', () => {
+    expect(salaryLabel(1_600_000, 'project', 2)).toBe('Rp 1.600.000 / project · 2 bulan');
   });
 
   it('label gaji per bulan, atau per project untuk Project Based', () => {

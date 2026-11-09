@@ -39,6 +39,8 @@ export interface JobInput {
   quota: number; description: string; qualifications: string[]; eligibility: Eligibility;
   /** Rupiah per bulan, atau per project untuk skema Project Based; null bila tidak dicantumkan / Rupiah per month, or per project for the Project Based scheme; null when not stated */
   salary: number | null;
+  /** Durasi proyek dalam bulan, hanya untuk Project Based; nilai proyek tidak dibagi per bulan / Project length in months, Project Based only; the project value is not split per month */
+  durationMonths: number | null;
   opensAt: string; closesAt: string; documents: JobDocuments; questions: JobQuestion[]; status: JobStatus;
 }
 export type Job = JobInput & { id: string; partnerName: string; applicantCount: number; createdAt: string; updatedAt: string };
@@ -158,8 +160,25 @@ function rupiah(v: unknown): number | null {
  * Salary label for students. Project Based is paid per project, Full Internship per month.
  * Older jobs without salary fields yield null, so no label shows.
  */
-export function salaryLabel(salary?: number | null, scheme?: Scheme): string | null {
-  return salary ? `Rp ${salary.toLocaleString('id-ID')} / ${salaryUnit(scheme)}` : null;
+export function salaryLabel(salary?: number | null, scheme?: Scheme, durationMonths?: number | null): string | null {
+  if (!salary) return null;
+  const base = `Rp ${salary.toLocaleString('id-ID')} / ${salaryUnit(scheme)}`;
+  return scheme === 'project' && durationMonths ? `${base} · ${durationMonths} bulan` : base;
+}
+
+export const MAX_SALARY = 1_500_000;
+export const MIN_PROJECT_SALARY = 500_000;
+
+// Batas uang saku mengikuti batas tier tertinggi; Project Based wajib bernilai dan berdurasi
+// The allowance cap follows the highest tier cap; Project Based must state a value and a duration
+function payTerms(scheme: Scheme, rawSalary: unknown, rawDuration: unknown): Pick<JobInput, 'salary' | 'durationMonths'> {
+  const salary = rupiah(rawSalary);
+  if (salary !== null && salary > MAX_SALARY) throw new Error('Uang saku maksimal Rp1.500.000');
+  if (scheme !== 'project') return { salary, durationMonths: null };
+  if (salary === null || salary < MIN_PROJECT_SALARY) throw new Error('Nilai proyek minimal Rp500.000');
+  const durationMonths = Number(rawDuration);
+  if (rawDuration === '' || rawDuration == null || !Number.isInteger(durationMonths) || durationMonths < 1 || durationMonths > 12) throw new Error('Durasi proyek 1 – 12 bulan');
+  return { salary, durationMonths };
 }
 
 export const salaryUnit = (scheme?: Scheme) => (scheme === 'project' ? 'project' : 'bulan');
@@ -178,11 +197,11 @@ export function validateJobInput(raw: unknown): JobInput {
   const closesAt = wibIso(r.closesAt, 'tutup');
   if (closesAt <= opensAt) throw new Error('Tanggal tutup harus setelah tanggal buka');
   const docs = obj(r.documents);
+  const scheme = oneOf<Scheme>(r.scheme, SCHEME_LABELS, 'Skema lowongan tidak dikenal');
   return {
-    partnerId, title, location, quota, opensAt, closesAt, salary: rupiah(r.salary),
+    partnerId, title, location, quota, opensAt, closesAt, scheme, ...payTerms(scheme, r.salary, r.durationMonths),
     employment: oneOf<Employment>(r.employment, EMPLOYMENT_LABELS, 'Jenis lowongan tidak dikenal'),
     category: oneOf<Category>(r.category, CATEGORY_LABELS, 'Bidang lowongan tidak dikenal'),
-    scheme: oneOf<Scheme>(r.scheme, SCHEME_LABELS, 'Skema lowongan tidak dikenal'),
     workMode: oneOf<WorkMode>(r.workMode, WORK_MODE_LABELS, 'Mode kerja tidak dikenal'),
     description: str(r.description),
     qualifications: lines(r.qualifications),
@@ -268,6 +287,10 @@ export interface Application {
   works: AttachedWork[]; tasks: AttachedTask[]; answers: Record<string, string>;
   finalScore: number | null; finalScorePending: boolean; finalScoreAt: string | null;
   status: ApplicationStatus; rejectReason: string; submittedAt: string; updatedAt: string; statusChangedAt: string;
+  /** Skema lowongan saat melamar; kosong pada lamaran lama (Full Internship) / The job's scheme at apply time; missing on older applications (Full Internship) */
+  scheme?: Scheme;
+  /** Waktu proyek Project Based ditandai selesai / When a Project Based project was marked finished */
+  completedAt?: string | null;
 }
 
 export function isOpenToStudents(job: Pick<Job, 'status' | 'opensAt' | 'closesAt'>, now: Date): boolean {

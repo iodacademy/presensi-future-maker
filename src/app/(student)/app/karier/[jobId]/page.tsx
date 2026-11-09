@@ -54,7 +54,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ jobId: str
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {[EMPLOYMENT_LABELS[d.job.employment], `${d.job.location} · ${WORK_MODE_LABELS[d.job.workMode]}`, `Kuota ${d.job.quota}`, salaryLabel(d.job.salary, d.job.scheme)].filter((c): c is string => !!c).map((c) => (
+                {[EMPLOYMENT_LABELS[d.job.employment], `${d.job.location} · ${WORK_MODE_LABELS[d.job.workMode]}`, `Kuota ${d.job.quota}`, salaryLabel(d.job.salary, d.job.scheme, d.job.durationMonths)].filter((c): c is string => !!c).map((c) => (
                   <span key={c} style={{ padding: '4px 10px', borderRadius: '6px', backgroundColor: '#f3f4f6', fontSize: '13px' }}>{c}</span>
                 ))}
               </div>

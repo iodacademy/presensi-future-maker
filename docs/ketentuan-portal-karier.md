@@ -90,9 +90,9 @@ Per 9 November 2026:
 | Satu lowongan satu lamaran | Sudah berjalan |
 | Batas format, ukuran, dan jumlah CV | Sudah berjalan |
 | Satu peserta satu penempatan untuk Full Internship | Sudah berjalan |
-| *Tier*, kuota, dan batas uang saku | Belum dibuat |
-| Jatah proyek dan penanda proyek selesai | Belum dibuat |
-| Perpindahan jalur Full Internship ke Project Based | Belum dibuat |
-| Durasi proyek di formulir lowongan | Belum dibuat |
+| *Tier*, kuota, dan batas uang saku | Sudah berjalan |
+| Jatah proyek dan penanda proyek selesai | Sudah berjalan |
+| Perpindahan jalur Full Internship ke Project Based | Sudah berjalan |
+| Durasi proyek di formulir lowongan | Sudah berjalan |
 
 Seluruh 23 lowongan yang terbit saat ini berskema Full Internship. Lowongan Project Based ditambahkan kemudian. Sampai lowongan itu ada, 17 peserta Project Based belum dapat melamar ke mana pun.

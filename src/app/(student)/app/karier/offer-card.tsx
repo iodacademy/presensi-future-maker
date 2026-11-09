@@ -11,7 +11,7 @@ import { btnOutline, btnPrimary, errorBox, getJson, LINE, MUTED } from './ui';
  * The internship offer card in Lamaran Saya. Accepting one offer closes every
  * other application, so the student is asked to confirm the choice first.
  */
-export function OfferCard({ appId, jobTitle, partnerName, onAnswered }: { appId: string; jobTitle: string; partnerName: string; onAnswered: () => void }) {
+export function OfferCard({ appId, jobTitle, partnerName, project = false, onAnswered }: { appId: string; jobTitle: string; partnerName: string; project?: boolean; onAnswered: () => void }) {
   const [asking, setAsking] = useState<'terima' | 'tolak' | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +37,9 @@ export function OfferCard({ appId, jobTitle, partnerName, onAnswered }: { appId:
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: `1px solid ${LINE}`, paddingTop: '10px' }}>
           <span style={{ fontSize: '13px', fontWeight: 600 }}>
             {asking === 'terima'
-              ? 'Yakin menerima? Semua lamaranmu yang lain akan ditutup, termasuk yang sudah dijadwalkan interview.'
+              ? project
+                ? 'Yakin menerima proyek ini? Lamaran Full Internship-mu yang masih berjalan akan ditutup, dan sesudahnya kamu hanya bisa melamar Project Based. Lamaran proyek lain tetap berjalan.'
+                : 'Yakin menerima? Semua lamaranmu yang lain akan ditutup, termasuk yang sudah dijadwalkan interview.'
               : 'Yakin menolak? Tawaran ini tidak bisa diambil lagi.'}
           </span>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

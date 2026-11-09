@@ -85,6 +85,28 @@ describe('bacaan siswa', () => {
     expect((await listOpenJobs(full, now)).jobs.map((j) => j.id).sort()).toEqual(['full', 'ok']);
   });
 
+  it('tier dan kuota ikut dikirim; lowongan di atas batas uang saku tier tidak tampil', async () => {
+    const { data } = await import('./careers-fake-db');
+    data.jobs.mahal = { ...job, salary: 1_500_000 };
+    data.jobs.pas = { ...job, salary: 1_000_000 };
+    const r = await listOpenJobs(andi, now);
+    expect(r.standing).toMatchObject({ track: 'project', tier: 'B', quota: 2, used: 0 });
+    expect(r.jobs.map((j) => j.id).sort()).toEqual(['ok', 'pas']);
+  });
+
+  it('kuota penuh menghentikan formulir lamaran sebelum diisi', async () => {
+    const { data } = await import('./careers-fake-db');
+    data.jobApplications.x1_u1 = { jobId: 'x1', studentId: 'u1', status: 'bergabung', scheme: 'project' };
+    data.jobApplications.x2_u1 = { jobId: 'x2', studentId: 'u1', status: 'interview', scheme: 'project' };
+    await expect(getApplyContext(andi, 'ok', now)).rejects.toThrow('Jatah proyekmu sedang penuh');
+  });
+
+  it('proyek yang sudah ditandai selesai berlabel Proyek selesai', async () => {
+    const { data } = await import('./careers-fake-db');
+    data.jobApplications.ok_u1 = { jobId: 'ok', studentId: 'u1', status: 'bergabung', scheme: 'project', number: 'FM-JOB-0001', submittedAt: '1', completedAt: '2026-11-04T00:00:00Z' };
+    expect((await listMyApplications('u1'))[0].statusLabel).toBe('Proyek selesai');
+  });
+
   it('siswa tanpa skema magang tidak punya akses Karier', async () => {
     const r = await listOpenJobs({ uid: 'u8', role: 'student', classId: 'k1' } as never, now);
     expect(r).toMatchObject({ access: false, jobs: [] });

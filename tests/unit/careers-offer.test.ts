@@ -14,7 +14,7 @@ vi.mock('../../src/features/calendar/client', () => ({
 }));
 
 import { studentStatusLabel } from '../../src/features/careers/model';
-import { careerReminders, markContacted, respondOffer } from '../../src/features/careers/offer-service';
+import { careerReminders, markContacted, markProjectDone, respondOffer } from '../../src/features/careers/offer-service';
 import { decideCandidate, partnerDashboard } from '../../src/features/careers/partner-service';
 import { inviteToInterview, listInterviews } from '../../src/features/careers/interview-service';
 import { latestPlacement } from '../../src/features/careers/student-service';
@@ -140,5 +140,54 @@ describe('akun demo', () => {
   it('peserta kelas demo selalu berskema Full Internship', async () => {
     expect(await latestPlacement('siapa-saja', 'demo')).toBe('full');
     expect(await latestPlacement('siapa-saja', 'k1')).toBeNull();
+  });
+});
+
+describe('Project Based: beberapa proyek sekaligus', () => {
+  // Andi SPA 80 (tier B, jatah proyek 2) / Andi SPA 80 (tier B, two project slots)
+  beforeEach(() => {
+    data.dashboardSnapshots = { s: { generatedAt: '2026-11-08T00:00:00Z', version: 19, ranking: [{ studentId: 'u1', score: 80, pending: [], placement: 'full' }] } };
+    Object.assign(data.jobApplications.a1, { scheme: 'project' });
+    Object.assign(data.jobApplications.a2, { scheme: 'full' });
+    Object.assign(data.jobApplications.a4, { scheme: 'project' });
+  });
+
+  it('menerima proyek hanya menutup lamaran Full Internship; lamaran proyek lain tetap berjalan', async () => {
+    await respondOffer(andi, 'a1', 'terima', now);
+    expect(data.jobApplications.a1.status).toBe('bergabung');
+    expect(data.jobApplications.a2.status).toBe('ditutup');
+    expect(data.jobApplications.a4.status).toBe('baru');
+    expect(calendar.cancel).toHaveBeenCalledWith('ev-b');
+  });
+
+  it('proyek kedua bisa diterima selama jatah masih ada, lalu penuh', async () => {
+    data.jobApplications.a3 = app('j3', 'p3', 'bergabung', { scheme: 'project' });
+    await respondOffer(andi, 'a1', 'terima', now);
+    expect(data.jobApplications.a1.status).toBe('bergabung');
+    data.jobApplications.a4.status = 'diterima';
+    await expect(respondOffer(andi, 'a4', 'terima', now)).rejects.toThrow('Jatah proyekmu sedang penuh');
+    expect(data.jobApplications.a4.status).toBe('diterima');
+  });
+
+  it('peserta yang sudah menerima Full Internship tidak bisa menerima proyek', async () => {
+    data.jobApplications.a3 = app('j3', 'p3', 'bergabung', { scheme: 'full' });
+    await expect(respondOffer(andi, 'a1', 'terima', now)).rejects.toThrow('Kamu sudah menerima tawaran magang lain');
+  });
+
+  it('PIC tetap bisa meloloskan lamaran proyek lain dari kandidat yang sedang mengerjakan proyek', async () => {
+    await respondOffer(andi, 'a1', 'terima', now);
+    const pic3 = { uid: 'r3', role: 'partner', partnerId: 'p3', email: 'p@k.id', name: 'Putri' } as never;
+    await decideCandidate(pic3, 'a4', 'diterima');
+    expect(data.jobApplications.a4.status).toBe('diterima');
+  });
+
+  it('PIC mitranya sendiri dan admin menandai proyek selesai', async () => {
+    await respondOffer(andi, 'a1', 'terima', now);
+    const pic2 = { uid: 'r2', role: 'partner', partnerId: 'p2', email: 'x@lain.id', name: 'X' } as never;
+    await expect(markProjectDone('a1', now, pic2)).rejects.toThrow('Lamaran tidak ditemukan');
+    await expect(markProjectDone('a4', now)).rejects.toThrow('Hanya proyek yang sedang berjalan');
+    await markProjectDone('a1', now, rina);
+    expect(data.jobApplications.a1.completedAt).toBe(now.toISOString());
+    await expect(markProjectDone('a1', now)).rejects.toThrow('Hanya proyek yang sedang berjalan');
   });
 });

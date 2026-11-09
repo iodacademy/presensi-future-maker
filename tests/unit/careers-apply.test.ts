@@ -129,9 +129,55 @@ describe('kirim lamaran', () => {
     await expect(submitApplication(actor('u1'), body({ jobId: 'j3' }), now)).rejects.toThrow('Kamu belum memenuhi syarat lowongan ini');
   });
 
+  it('skema lowongan disimpan di lamaran', async () => {
+    await submitApplication(actor('u1'), body(), now);
+    expect(data.jobApplications.j1_u1.scheme).toBe('project');
+  });
+
   it('mentor tidak bisa memakai rute lamaran', async () => {
     getSessionActor.mockResolvedValue({ uid: 'm1', role: 'mentor' });
     const res = await lamarPost(new Request('http://x', { method: 'POST', body: JSON.stringify(body()) }));
     expect(res.status).toBe(403);
+  });
+});
+
+describe('tier: kuota lamaran dan batas uang saku', () => {
+  // u5 Full tier C (SPA 70), u6 Project Based tier B (SPA 80) / u5 Full tier C (SPA 70), u6 Project Based tier B (SPA 80)
+  beforeEach(() => {
+    const snap = data.dashboardSnapshots['2026-11-04'] as { ranking: unknown[] };
+    snap.ranking.push({ studentId: 'u5', score: 70, pending: [], placement: 'full' }, { studentId: 'u6', score: 80, pending: [], placement: 'project' });
+    data.studentCvs.cv5 = { ownerUid: 'u5', kind: 'cv', fileName: 'c.pdf', deleted: false, uploadedAt: '1' };
+    data.studentCvs.cv6 = { ownerUid: 'u6', kind: 'cv', fileName: 'c.pdf', deleted: false, uploadedAt: '1' };
+  });
+  const bare = (jobId: string, cvId: string) => body({ jobId, cvId, workIds: [], submissionIds: [] });
+
+  it('kuota Full tier C dua lamaran berjalan; lamaran tidak lolos mengembalikan jatah', async () => {
+    data.jobApplications.x1_u5 = { jobId: 'x1', studentId: 'u5', status: 'interview', scheme: 'full' };
+    data.jobApplications.x2_u5 = { jobId: 'x2', studentId: 'u5', status: 'baru', scheme: 'full' };
+    await expect(submitApplication(actor('u5'), bare('j3', 'cv5'), now)).rejects.toThrow('Kuota lamaranmu sedang penuh');
+    data.jobApplications.x2_u5.status = 'tidak-lolos';
+    expect((await submitApplication(actor('u5'), bare('j3', 'cv5'), now)).id).toBe('j3_u5');
+  });
+
+  it('uang saku di atas batas tier ditolak', async () => {
+    data.jobs.j4 = { ...job, scheme: 'full', salary: 800_000 };
+    await expect(submitApplication(actor('u5'), bare('j4', 'cv5'), now)).rejects.toThrow('Kamu belum memenuhi syarat lowongan ini');
+    data.jobs.j4.salary = 750_000;
+    expect((await submitApplication(actor('u5'), bare('j4', 'cv5'), now)).id).toBe('j4_u5');
+  });
+
+  it('Project Based tier B: proyek yang belum selesai memakai jatah sampai ditandai selesai', async () => {
+    data.jobApplications.p1_u6 = { jobId: 'p1', studentId: 'u6', status: 'bergabung', scheme: 'project' };
+    data.jobApplications.p2_u6 = { jobId: 'p2', studentId: 'u6', status: 'bergabung', scheme: 'project' };
+    await expect(submitApplication(actor('u6'), bare('j1', 'cv6'), now)).rejects.toThrow('Jatah proyekmu sedang penuh');
+    data.jobApplications.p1_u6.completedAt = '2026-11-04T00:00:00Z';
+    expect((await submitApplication(actor('u6'), bare('j1', 'cv6'), now)).id).toBe('j1_u6');
+  });
+
+  it('peserta Full yang sudah menerima proyek hanya bisa melamar Project Based', async () => {
+    data.jobApplications.p1_u5 = { jobId: 'p1', studentId: 'u5', status: 'bergabung', scheme: 'project', completedAt: '2026-11-04T00:00:00Z' };
+    data.jobs.j1.salary = 500_000;
+    await expect(submitApplication(actor('u5'), bare('j3', 'cv5'), now)).rejects.toThrow('Kamu belum memenuhi syarat lowongan ini');
+    expect((await submitApplication(actor('u5'), bare('j1', 'cv5'), now)).id).toBe('j1_u5');
   });
 });

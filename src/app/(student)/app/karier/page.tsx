@@ -7,11 +7,12 @@ import { CountdownBanner } from '@/features/careers/countdown-banner';
 import { JobCard } from '@/features/careers/job-card';
 import { CATEGORY_LABELS, type Category } from '@/features/careers/model';
 import type { MyApplication, StudentJobCard } from '@/features/careers/student-service';
+import { TIER_RULES, type CareerStanding } from '@/features/careers/tier';
 import { InterviewCard } from './interview-card';
 import { OfferCard } from './offer-card';
 import { BLUE, btnOutline, card, errorBox, formatDate, getJson, heading, LINE, MUTED, pageWrap, pill, STATUS_PILL } from './ui';
 
-type Lowongan = { access: boolean; jobs: StudentJobCard[]; appliedJobIds: string[]; bannerClosesAt: string | null };
+type Lowongan = { access: boolean; jobs: StudentJobCard[]; appliedJobIds: string[]; bannerClosesAt: string | null; standing: CareerStanding | null };
 
 /**
  * Portal Karier siswa: tab Lowongan dan Lamaran Saya. Tab disimpan di ?tab= agar tautan "Lihat status" langsung ke sana.
@@ -73,6 +74,7 @@ export default function KarierPage() {
 
         {data && !data.access ? null : tab === 'lowongan' ? (
           <>
+            {data?.standing && <TierCard s={data.standing} />}
             <CountdownBanner closesAt={data?.bannerClosesAt ?? null} />
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {([['', 'Semua'], ...Object.entries(CATEGORY_LABELS)] as [Category | '', string][]).map(([k, l]) => (
@@ -115,7 +117,7 @@ export default function KarierPage() {
                     </div>
                     {a.message && <p style={{ margin: 0, fontSize: '13px', color: MUTED }}>{a.message}</p>}
                     {a.interview && <InterviewCard appId={a.id} partnerName={a.partnerName} interview={a.interview} picWaLink={a.picWaLink} />}
-                    {a.status === 'diterima' && <OfferCard appId={a.id} jobTitle={a.jobTitle} partnerName={a.partnerName} onAnswered={loadApps} />}
+                    {a.status === 'diterima' && <OfferCard appId={a.id} jobTitle={a.jobTitle} partnerName={a.partnerName} project={a.scheme === 'project'} onAnswered={loadApps} />}
                     {a.status === 'bergabung' && (
                       <p style={{ margin: 0, fontSize: '13px', color: '#067647', fontWeight: 600 }}>
                         Kamu menerima tawaran ini. {a.partnerName} akan menghubungimu untuk kontrak magang dan onboarding.
@@ -129,5 +131,34 @@ export default function KarierPage() {
         )}
       </div>
     </StudentShell>
+  );
+}
+
+const rp = (n: number) => `Rp${n.toLocaleString('id-ID')}`;
+
+/**
+ * Tier dan sisa kuota peserta. Di jalur Project Based, proyek yang belum selesai ikut memakai jatah.
+ *
+ * The participant's tier and remaining quota. On the Project Based track, unfinished projects also use a slot.
+ */
+function TierCard({ s }: { s: CareerStanding }) {
+  if (s.locked) return <div style={{ ...card, color: MUTED }}>Kamu sudah menerima tawaran magang. Selamat! Lamaran baru tidak bisa dikirim lagi.</div>;
+  const project = s.track === 'project';
+  const caps = TIER_RULES[s.tier];
+  const left = Math.max(0, s.quota - s.used);
+  return (
+    <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <b style={{ fontSize: '14px' }}>{`Tier ${s.tier} · ${project ? 'Project Based' : 'Full Internship'}`}</b>
+      <span style={{ fontSize: '13px' }}>
+        {project
+          ? `Jatah proyek ${s.quota}, tersisa ${left}. Lamaran yang berjalan dan proyek yang belum selesai memakai jatah.`
+          : `Kuota ${s.quota} lamaran berjalan, tersisa ${left}. Lamaran yang tidak lolos mengembalikan jatah.`}
+      </span>
+      <span style={{ fontSize: '12px', color: MUTED }}>
+        {project
+          ? `Proyek bernilai sampai ${rp(caps.project.maxSalary)}.`
+          : `Uang saku sampai ${rp(caps.full.maxSalary)}/bulan, proyek sampai ${rp(caps.project.maxSalary)}.`}
+      </span>
+    </div>
   );
 }

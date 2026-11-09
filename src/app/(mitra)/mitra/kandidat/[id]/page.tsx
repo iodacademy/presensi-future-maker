@@ -8,6 +8,7 @@ import { APPLICATION_STATUS_LABELS, type Application, type Interview, type JobQu
 import { box, h1, MitraShell, sub } from '../../shell';
 import { ContactCandidate, waButton } from '../../contact-candidate';
 import { InviteForm } from './invite-form';
+import { ProjectDone } from '@/features/careers/project-done-button';
 
 type Candidate = Application & { className: string; questions: JobQuestion[]; interview?: Interview; interviewWaLink: string | null; offerWaLink: string | null };
 const REASONS = ['Skill belum sesuai', 'Portofolio kurang relevan', 'Kuota sudah terpenuhi', 'Lainnya'];
@@ -100,8 +101,13 @@ export default function CandidatePage({ params }: { params: Promise<{ id: string
                 {c.status === 'diterima' || c.status === 'bergabung' ? (
                   <>
                     <span style={{ fontSize: '12px' }}>
-                      {c.status === 'bergabung' ? <><b>Kandidat menerima tawaran.</b> Lamarannya yang lain sudah ditutup otomatis.</> : <><b>Kandidat lolos.</b> Menunggu kandidat menerima atau menolak tawaran di aplikasi.</>}
+                      {c.status === 'bergabung'
+                        ? c.scheme === 'project'
+                          ? <><b>Kandidat menerima proyek ini.</b> Tandai selesai setelah proyeknya rampung supaya kandidat bisa mengambil proyek lain.</>
+                          : <><b>Kandidat menerima tawaran.</b> Lamarannya yang lain sudah ditutup otomatis.</>
+                        : <><b>Kandidat lolos.</b> Menunggu kandidat menerima atau menolak tawaran di aplikasi.</>}
                     </span>
+                    {c.status === 'bergabung' && c.scheme === 'project' && <ProjectDone url={`/api/mitra/candidates/${c.id}/selesai`} completedAt={c.completedAt} onDone={load} />}
                     <ContactCandidate appId={c.id} name={c.personal.fullName} waLink={c.offerWaLink} />
                   </>
                 ) : c.status === 'menolak' ? (

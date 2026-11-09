@@ -6,12 +6,12 @@
  * changes. Admins run selection until the PIC portal arrives in stage 3.
  */
 import { getAdminDb } from '../../lib/firebase/admin';
-import { APPLICATION_STATUS_LABELS, FINAL_MESSAGE, FINAL_STATUSES, type Application, type ApplicationStatus, type JobQuestion } from './model';
+import { APPLICATION_STATUS_LABELS, FINAL_MESSAGE, FINAL_STATUSES, type Application, type ApplicationStatus, type JobQuestion, type Scheme } from './model';
 
 export interface ApplicantRow {
   id: string; number: string; fullName: string; email: string; phone: string; city: string; school: string; major: string; className: string;
   finalScore: number | null; finalScorePending: boolean; finalScoreAt: string | null; status: ApplicationStatus;
-  submittedAt: string; statusChangedAt: string; cvId: string; portfolioUrl: string;
+  submittedAt: string; statusChangedAt: string; cvId: string; portfolioUrl: string; scheme: Scheme; completedAt: string | null;
 }
 
 const db = () => getAdminDb();
@@ -24,7 +24,7 @@ async function classNames(): Promise<Map<string, string>> {
 export async function listApplicants(jobId: string): Promise<ApplicantRow[]> {
   const [snap, classes] = await Promise.all([
     db().collection('jobApplications').where('jobId', '==', jobId)
-      .select('number', 'personal', 'classId', 'finalScore', 'finalScorePending', 'finalScoreAt', 'status', 'submittedAt', 'statusChangedAt', 'cvId', 'portfolioUrl')
+      .select('number', 'personal', 'classId', 'finalScore', 'finalScorePending', 'finalScoreAt', 'status', 'submittedAt', 'statusChangedAt', 'cvId', 'portfolioUrl', 'scheme', 'completedAt')
       .get(),
     classNames(),
   ]);
@@ -36,7 +36,7 @@ export async function listApplicants(jobId: string): Promise<ApplicantRow[]> {
         id: a.id, number: d.number ?? '', fullName: p.fullName ?? '', email: p.email ?? '', phone: p.phone ?? '', city: p.city ?? '',
         school: p.school ?? '', major: p.major ?? '', className: classes.get(d.classId) ?? '',
         finalScore: d.finalScore ?? null, finalScorePending: !!d.finalScorePending, finalScoreAt: d.finalScoreAt ?? null,
-        status: d.status, submittedAt: d.submittedAt ?? '', statusChangedAt: d.statusChangedAt ?? '', cvId: d.cvId ?? '', portfolioUrl: d.portfolioUrl ?? '',
+        status: d.status, submittedAt: d.submittedAt ?? '', statusChangedAt: d.statusChangedAt ?? '', cvId: d.cvId ?? '', portfolioUrl: d.portfolioUrl ?? '', scheme: d.scheme ?? 'full', completedAt: d.completedAt ?? null,
       };
     })
     .sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
@@ -62,11 +62,16 @@ export async function setApplicationStatus(id: string, status: unknown, rejectRe
   const cur = await ref.get();
   if (!cur.exists) throw new Error('Lamaran tidak ditemukan');
   if (FINAL_STATUSES.includes(cur.get('status'))) throw new Error(FINAL_MESSAGE);
-  // Lamaran tidak lolos milik kandidat yang sudah bergabung di tempat lain tidak boleh dihidupkan lagi
-  // A rejected application of a candidate who already joined elsewhere must not be revived
+  // Lamaran tidak lolos milik kandidat yang sudah bergabung di tempat lain tidak boleh dihidupkan lagi.
+  // Kandidat yang mengerjakan proyek tetap boleh diproses untuk lamaran proyek lainnya.
+  // A rejected application of a candidate who already joined elsewhere must not be revived.
+  // A candidate working on a project may still be processed for their other project applications.
   if (status !== 'tidak-lolos') {
-    const mine = await db().collection('jobApplications').where('studentId', '==', cur.get('studentId')).select('status').get();
-    if (mine.docs.some((d) => d.id !== id && d.get('status') === 'bergabung')) throw new Error('Kandidat sudah menerima tawaran magang di tempat lain');
+    const mine = await db().collection('jobApplications').where('studentId', '==', cur.get('studentId')).select('status', 'scheme').get();
+    const joined = mine.docs.filter((d) => d.id !== id && d.get('status') === 'bergabung');
+    if (joined.some((d) => (d.get('scheme') ?? 'full') === 'full') || (joined.length > 0 && cur.get('scheme') !== 'project')) {
+      throw new Error('Kandidat sudah menerima tawaran magang di tempat lain');
+    }
   }
   const t = new Date().toISOString();
   // Alasan penolakan bersifat internal dan hanya bermakna untuk status tidak lolos

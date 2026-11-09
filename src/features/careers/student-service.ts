@@ -14,19 +14,20 @@ import { isStoredSubmissionFile } from '../tasks/submission-policy';
 import { applicationsOpen, CLOSED_MESSAGE } from './apply-gate';
 import { listCvs } from './cv-service';
 import {
-  canApplyScheme, CLOSED_ELSEWHERE_MESSAGE, rescheduleMessage, DEMO_CLASS_ID, hasCareerAccess, isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
+  CLOSED_ELSEWHERE_MESSAGE, rescheduleMessage, DEMO_CLASS_ID, hasCareerAccess, isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
   type ApplicationStatus, type AttachedTask, type Interview, type PicContact, type AttachedWork, type CvFile, type Eligibility, type Job, type Logo, type Personal, type Socials,
 } from './model';
+import { applyBlock, canSeeJob, careerStanding, tierOf, type CareerApp, type CareerStanding, type Tier } from './tier';
 
 export interface StudentJobCard {
   id: string; title: string; partnerId: string; partnerName: string; employment: Job['employment']; category: Job['category']; scheme: Job['scheme'];
   location: string; workMode: Job['workMode']; quota: number; opensAt: string; closesAt: string; applicantCount: number; logo: string | null;
-  salary: number | null;
+  salary: number | null; durationMonths: number | null;
 }
 export interface PublicPartner { id: string; name: string; field: string; about: string; logo: Logo | null; website: string; socials: Socials }
 export interface MyApplication {
   id: string; jobId: string; number: string; jobTitle: string; partnerName: string;
-  status: ApplicationStatus; statusLabel: string; submittedAt: string; message: string | null;
+  status: ApplicationStatus; statusLabel: string; submittedAt: string; message: string | null; scheme: Job['scheme'];
   interview: Omit<Interview, 'calendarEventId'> | null;
   /** WhatsApp ke PIC untuk minta jadwal ulang / WhatsApp to the PIC to ask for a new time */
   picWaLink: string | null;
@@ -34,7 +35,7 @@ export interface MyApplication {
 export interface FinalScore { finalScore: number | null; finalScorePending: boolean; finalScoreAt: string | null }
 
 const db = () => getAdminDb();
-const CARD_FIELDS = ['title', 'partnerId', 'partnerName', 'employment', 'category', 'scheme', 'location', 'workMode', 'quota', 'opensAt', 'closesAt', 'status', 'applicantCount', 'eligibility', 'salary'];
+const CARD_FIELDS = ['title', 'partnerId', 'partnerName', 'employment', 'category', 'scheme', 'location', 'workMode', 'quota', 'opensAt', 'closesAt', 'status', 'applicantCount', 'eligibility', 'salary', 'durationMonths'];
 
 type Standing = { score: number; pending: boolean; placement: string | null };
 
@@ -85,22 +86,43 @@ async function appliedJobIds(uid: string): Promise<Set<string>> {
   return new Set(snap.docs.map((d) => d.get('jobId') as string));
 }
 
-// Skema magang dan syarat lowongan diperiksa bersama / The internship scheme and the job's requirements are checked together
-function eligibilityCheck(actor: Actor) {
-  let standing: Promise<[FinalScore, string | null]> | null = null;
-  return async (job: Pick<Job, 'eligibility' | 'scheme'>) => {
-    standing ??= Promise.all([latestFinalScore(actor.uid), latestPlacement(actor.uid, actor.classId)]);
-    const [score, placement] = await standing;
-    return canApplyScheme(placement, job.scheme) && isEligible(job.eligibility, { classId: actor.classId, finalScore: score.finalScore });
+export const CAREER_APP_FIELDS = ['status', 'scheme', 'completedAt'];
+
+/**
+ * Bahan penilaian tier: penempatan, SPA, dan tier. Akun demo selalu tier A agar seluruh alur bisa dicoba.
+ *
+ * Inputs for the tier rules: placement, SPA, and tier. Demo accounts are always tier A so every flow can be tried.
+ */
+export async function standingInputs(actor: Pick<Actor, 'uid' | 'classId'>) {
+  const [score, placement] = await Promise.all([latestFinalScore(actor.uid), latestPlacement(actor.uid, actor.classId)]);
+  const tier: Tier = actor.classId === DEMO_CLASS_ID ? 'A' : tierOf(score.finalScore);
+  return { score, placement, tier, standing: (apps: CareerApp[]) => careerStanding(placement, score.finalScore, apps, tier) };
+}
+
+export async function myCareerStanding(actor: Pick<Actor, 'uid' | 'classId'>): Promise<CareerStanding> {
+  const [inputs, apps] = await Promise.all([
+    standingInputs(actor),
+    db().collection('jobApplications').where('studentId', '==', actor.uid).select(...CAREER_APP_FIELDS).get(),
+  ]);
+  return inputs.standing(apps.docs.map((d) => d.data() as CareerApp));
+}
+
+// Skema, tier, dan syarat lowongan diperiksa bersama / Scheme, tier, and the job's requirements are checked together
+function eligibilityCheck(actor: Actor, known?: Promise<CareerStanding>) {
+  let standing: Promise<[FinalScore, CareerStanding]> | null = null;
+  return async (job: Pick<Job, 'eligibility' | 'scheme' | 'salary'>) => {
+    standing ??= Promise.all([latestFinalScore(actor.uid), known ?? myCareerStanding(actor)]);
+    const [score, s] = await standing;
+    return canSeeJob(s, job) && isEligible(job.eligibility, { classId: actor.classId, finalScore: score.finalScore });
   };
 }
 
-async function visibleCards(actor: Actor, now: Date, partnerId?: string): Promise<StudentJobCard[]> {
+async function visibleCards(actor: Actor, now: Date, partnerId?: string, standing?: Promise<CareerStanding>): Promise<StudentJobCard[]> {
   let q = db().collection('jobs').where('status', '==', 'published');
   if (partnerId) q = q.where('partnerId', '==', partnerId);
   const [jSnap, pSnap] = await Promise.all([q.select(...CARD_FIELDS).get(), db().collection('partners').select('logo.thumb').get()]);
   const logos = new Map(pSnap.docs.map((p) => [p.id, (p.get('logo.thumb') as string) || null]));
-  const eligible = eligibilityCheck(actor);
+  const eligible = eligibilityCheck(actor, standing);
   const cards: StudentJobCard[] = [];
   for (const j of jSnap.docs) {
     const d = j.data() as Job;
@@ -108,17 +130,18 @@ async function visibleCards(actor: Actor, now: Date, partnerId?: string): Promis
     cards.push({
       id: j.id, title: d.title, partnerId: d.partnerId, partnerName: d.partnerName, employment: d.employment, category: d.category, scheme: d.scheme,
       location: d.location, workMode: d.workMode, quota: d.quota, opensAt: d.opensAt, closesAt: d.closesAt,
-      applicantCount: d.applicantCount ?? 0, logo: logos.get(d.partnerId) ?? null, salary: d.salary ?? null,
+      applicantCount: d.applicantCount ?? 0, logo: logos.get(d.partnerId) ?? null, salary: d.salary ?? null, durationMonths: d.durationMonths ?? null,
     });
   }
   return cards.sort((a, b) => a.closesAt.localeCompare(b.closesAt));
 }
 
 export async function listOpenJobs(actor: Actor, now: Date) {
-  if (!(await careerAccess(actor.uid, actor.classId))) return { access: false, jobs: [] as StudentJobCard[], appliedJobIds: [] as string[], bannerClosesAt: null };
-  const [jobs, applied] = await Promise.all([visibleCards(actor, now), appliedJobIds(actor.uid)]);
+  if (!(await careerAccess(actor.uid, actor.classId))) return { access: false, jobs: [] as StudentJobCard[], appliedJobIds: [] as string[], bannerClosesAt: null, standing: null };
+  const standing = myCareerStanding(actor);
+  const [jobs, applied, s] = await Promise.all([visibleCards(actor, now, undefined, standing), appliedJobIds(actor.uid), standing]);
   const bannerClosesAt = jobs.reduce<string | null>((max, j) => (!max || j.closesAt > max ? j.closesAt : max), null);
-  return { access: true, jobs, appliedJobIds: jobs.filter((j) => applied.has(j.id)).map((j) => j.id), bannerClosesAt };
+  return { access: true, jobs, appliedJobIds: jobs.filter((j) => applied.has(j.id)).map((j) => j.id), bannerClosesAt, standing: s };
 }
 
 function toPublic(id: string, d: Record<string, unknown>): PublicPartner {
@@ -163,6 +186,8 @@ export async function getApplyContext(actor: Actor, jobId: string, now: Date) {
   if (found?.application) throw new Error('Kamu sudah melamar lowongan ini');
   if (!found) throw new Error('Lowongan tidak bisa dilamar');
   if (!found.applicationsOpen) throw new Error(CLOSED_MESSAGE);
+  const blocked = applyBlock(await myCareerStanding(actor));
+  if (blocked) throw new Error(blocked);
   const uid = actor.uid;
   const [user, profile, career, cls, worksSnap, subsSnap, cvs, covers] = await Promise.all([
     db().collection('users').doc(uid).get(),
@@ -216,7 +241,7 @@ function publicInterview({ calendarEventId: _c, ...rest }: Interview): Omit<Inte
 
 export async function listMyApplications(uid: string): Promise<MyApplication[]> {
   const [aSnap, jSnap] = await Promise.all([
-    db().collection('jobApplications').where('studentId', '==', uid).select('jobId', 'partnerId', 'number', 'status', 'submittedAt', 'interview', 'personal.fullName').get(),
+    db().collection('jobApplications').where('studentId', '==', uid).select('jobId', 'partnerId', 'number', 'status', 'scheme', 'completedAt', 'submittedAt', 'interview', 'personal.fullName').get(),
     db().collection('jobs').select('title', 'partnerName').get(),
   ]);
   const jobs = new Map(jSnap.docs.map((j) => [j.id, { title: j.get('title') as string, partnerName: j.get('partnerName') as string }]));
@@ -235,7 +260,7 @@ export async function listMyApplications(uid: string): Promise<MyApplication[]> 
       const contact = pic ? { name: pic.name, email: pic.email, phone: pic.phone ?? '' } : undefined;
       return {
         id: a.id, jobId: a.get('jobId') as string, number: String(a.get('number') ?? ''), jobTitle: j?.title ?? 'Lowongan', partnerName: j?.partnerName ?? '',
-        status, statusLabel: studentStatusLabel(status), submittedAt: String(a.get('submittedAt') ?? ''),
+        scheme: (a.get('scheme') as Job['scheme'] | undefined) ?? 'full', status, statusLabel: a.get('completedAt') ? 'Proyek selesai' : status === 'bergabung' && a.get('scheme') === 'project' ? 'Proyek berjalan' : studentStatusLabel(status), submittedAt: String(a.get('submittedAt') ?? ''),
         message: status === 'tidak-lolos' ? REJECT_MESSAGE : status === 'ditutup' ? CLOSED_ELSEWHERE_MESSAGE : null,
         interview: raw ? { ...publicInterview(raw), contact } : null,
         picWaLink: raw && contact ? whatsAppLink(contact.phone, rescheduleMessage({

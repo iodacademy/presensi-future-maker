@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 import { AppShell } from '@/components/app-shell';
 import { alertBox, api, btn, btnSolid, card, field, send } from '../../pameran/admin-ui';
 import type { ApplicantRow } from '@/features/careers/applicants-service';
+import { ProjectDone } from '@/features/careers/project-done-button';
 import { APPLICATION_STATUS_LABELS, FINAL_STATUSES, type Application, type ApplicationStatus, type Job, type JobQuestion } from '@/features/careers/model';
 
 type Detail = Application & { className: string; questions: JobQuestion[] };
@@ -94,7 +95,9 @@ export default function ApplicantsPage({ params }: { params: Promise<{ jobId: st
                   <td style={td}><Score r={r} /></td>
                   <td style={td}>{when(r.submittedAt)}</td>
                   <td style={td}>
-                    {FINAL_STATUSES.includes(r.status) ? APPLICATION_STATUS_LABELS[r.status] : (
+                    {r.status === 'bergabung' && r.scheme === 'project' ? (
+                      <ProjectDone url={`/api/karier/applications/${r.id}/selesai`} completedAt={r.completedAt} onDone={load} />
+                    ) : FINAL_STATUSES.includes(r.status) ? APPLICATION_STATUS_LABELS[r.status] : (
                       <select value={r.status} onChange={(e) => changeStatus(r.id, e.target.value as ApplicationStatus)} style={{ ...field, width: 'auto' }} aria-label={`Status ${r.fullName}`}>
                         {(Object.keys(APPLICATION_STATUS_LABELS) as ApplicationStatus[]).filter((s) => !FINAL_STATUSES.includes(s)).map((s) => <option key={s} value={s}>{APPLICATION_STATUS_LABELS[s]}</option>)}
                       </select>
