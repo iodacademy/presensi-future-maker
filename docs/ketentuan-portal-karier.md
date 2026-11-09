@@ -30,13 +30,13 @@ Setiap peserta magang masuk satu *tier* berdasarkan SPA di dashboard nilai.
 
 | *Tier* | SPA | Kuota Full Internship | Kuota Project Based | Batas uang saku Full Internship | Batas uang saku Project Based |
 |---|---|---|---|---|---|
-| A | 85 ke atas | 5 lamaran berjalan | 3 jatah proyek | Rp1.000.000 per bulan | Rp1.500.000 per proyek |
-| B | 75 – 84 | 3 lamaran berjalan | 2 jatah proyek | Rp900.000 per bulan | Rp1.000.000 per proyek |
-| C | di bawah 75 | 2 lamaran berjalan | 1 jatah proyek | Rp800.000 per bulan | Rp500.000 per proyek |
+| A | 85 ke atas | 5 lamaran berjalan | 3 jatah proyek | Rp1.500.000 per bulan | Rp1.500.000 per proyek |
+| B | 75 – 84 | 3 lamaran berjalan | 2 jatah proyek | Rp1.000.000 per bulan | Rp1.000.000 per proyek |
+| C | di bawah 75 | 2 lamaran berjalan | 1 jatah proyek | Rp750.000 per bulan | Rp500.000 per proyek |
 
 Peserta hanya dapat melamar lowongan yang uang sakunya tidak melebihi batas *tier*-nya. Lowongan yang melebihi batas tidak tampil sebagai lowongan yang dapat dilamar.
 
-Nilai lowongan Project Based minimal Rp500.000 per proyek. Formulir lowongan menolak nilai di bawah angka itu.
+Uang saku lowongan maksimal Rp1.500.000, baik per bulan untuk Full Internship maupun per proyek untuk Project Based. Nilai lowongan Project Based minimal Rp500.000 per proyek. Formulir lowongan menolak nilai di luar batas tersebut.
 
 ## 3. Perbedaan Full Internship dan Project Based
 
