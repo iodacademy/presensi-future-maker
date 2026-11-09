@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { interviewTimeLabel, type Interview } from '@/features/careers/model';
 import { BLUE, btnOutline, btnPrimary, errorBox, getJson, input, LINE, MUTED } from './ui';
 
@@ -14,6 +15,7 @@ export function InterviewCard({ appId, partnerName, interview, picWaLink }: { ap
   const [asking, setAsking] = useState(false);
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
   const { day, time } = interviewTimeLabel(interview);
 
   async function reply(response: 'hadir' | 'jadwal-ulang') {
@@ -21,6 +23,9 @@ export function InterviewCard({ appId, partnerName, interview, picWaLink }: { ap
     try {
       await getJson(`/api/karier/lamaran/${appId}/konfirmasi`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ response, note }) });
       setState(response); setAsking(false);
+      // Notifikasi dihitung di layout; muat ulang agar lonceng dan angka menu ikut berubah
+      // Notifications are computed in the layout; refresh so the bell and menu count update too
+      router.refresh();
     } catch (e) { setError((e as Error).message); }
   }
 

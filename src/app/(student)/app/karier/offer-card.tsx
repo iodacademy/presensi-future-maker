@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { btnOutline, btnPrimary, errorBox, getJson, LINE, MUTED } from './ui';
 
 /**
@@ -14,12 +15,16 @@ export function OfferCard({ appId, jobTitle, partnerName, onAnswered }: { appId:
   const [asking, setAsking] = useState<'terima' | 'tolak' | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   async function answer(response: 'terima' | 'tolak') {
     setBusy(true); setError(null);
     try {
       await getJson(`/api/karier/lamaran/${appId}/tawaran`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ response }) });
       onAnswered();
+      // Notifikasi dihitung di layout; muat ulang agar lonceng dan angka menu ikut berubah
+      // Notifications are computed in the layout; refresh so the bell and menu count update too
+      router.refresh();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
 
