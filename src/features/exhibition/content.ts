@@ -67,7 +67,7 @@ export const TRACKS: Record<TrackKey, Track> = {
   da: { key: 'da', name: 'Data Analyst', short: 'Data Analyst', color: '#8AC208', fg: '#243C4B', tint: '#EEF6DC',
     tagline: 'Dari data mentah ke dashboard yang menjawab pertanyaan.',
     desc: 'Peserta mengolah data mentah menjadi dataset bersih, analisis, dan dashboard.',
-    types: ['Dashboard', 'Data Cleaning', 'Analisis Data'],
+    types: ['Capstone', 'Dashboard', 'Data Cleaning', 'Analisis Data'],
     outputs: ['Dataset hasil data cleaning', 'Dashboard interaktif (Looker Studio / Tableau)', 'Laporan analisis dan rekomendasi'] },
   smm: { key: 'smm', name: 'Social Media Marketing', short: 'SMM', color: '#DC0080', fg: '#FFFFFF', tint: '#FBE5F2',
     tagline: 'Konten, campaign, dan laporan performanya.',

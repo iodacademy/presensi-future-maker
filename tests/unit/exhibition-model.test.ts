@@ -19,7 +19,7 @@ describe('model pameran', () => {
 
   it('jenis karya per jurusan / work types per track', () => {
     expect(TRACKS.web.types).toEqual(['Landing Page', 'Aplikasi Web', 'Capstone']);
-    expect(TRACKS.da.types).toEqual(['Dashboard', 'Data Cleaning', 'Analisis Data']);
+    expect(TRACKS.da.types).toEqual(['Capstone', 'Dashboard', 'Data Cleaning', 'Analisis Data']);
     expect(TRACKS.smm.types).toEqual(['Capstone', 'Konten Feed', 'Reels', 'Brand Identity', 'Laporan Campaign']);
     expect(Object.keys(TYPE)).not.toContain('REST API');
     expect(TYPE['Dashboard'].tools).toEqual(['Python', 'HTML']);
