@@ -56,7 +56,7 @@ export function OfferCard({ appId, jobTitle, partnerName, project = false, onAns
           <button type="button" style={{ ...btnOutline, color: '#B42318', borderColor: '#B42318' }} onClick={() => setAsking('tolak')}>Tolak</button>
         </div>
       )}
-      <span style={{ fontSize: '12px', color: MUTED }}>Kamu hanya bisa menerima satu tempat magang.</span>
+      <span style={{ fontSize: '12px', color: MUTED }}>{project ? 'Kamu boleh memegang beberapa proyek sekaligus sesuai jatah tier-mu.' : 'Kamu hanya bisa menerima satu tempat magang.'}</span>
     </div>
   );
 }

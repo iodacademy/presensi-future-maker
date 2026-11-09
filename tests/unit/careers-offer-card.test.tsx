@@ -21,6 +21,12 @@ describe('jawaban siswa memperbarui notifikasi', () => {
     expect(refresh).toHaveBeenCalled();
   });
 
+  it('tawaran proyek tidak menyebut aturan satu tempat magang', () => {
+    render(<OfferCard appId="a1" jobTitle="Video" partnerName="PT DIPSI" project onAnswered={vi.fn()} />);
+    expect(screen.queryByText(/satu tempat magang/)).toBeNull();
+    expect(screen.getByText(/beberapa proyek sekaligus/)).toBeTruthy();
+  });
+
   it('konfirmasi hadir juga memuat ulang data halaman', async () => {
     ok();
     render(<InterviewCard appId="a1" partnerName="PT DIPSI" interview={{
