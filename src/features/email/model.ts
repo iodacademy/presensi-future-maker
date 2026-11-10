@@ -106,10 +106,10 @@ export function emailHtml(body: string): string {
   return `<!doctype html><html><body style="margin:0;padding:0;background:#F2F5F9">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F2F5F9;padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#1F2937">
-<tr><td style="background:#0072CE;padding:22px 32px"><div style="color:#ffffff;font-size:20px;font-weight:700">Future Innovators Bootcamp</div><div style="color:#DCEBFA;font-size:12px;margin-top:4px">Ioda Academy × Plan Indonesia</div></td></tr>
+<tr><td style="background:#0072CE;padding:22px 32px"><div style="color:#ffffff;font-size:20px;font-weight:700">Future Innovators Bootcamp</div></td></tr>
 <tr><td style="background:#FFC72C;height:5px;line-height:5px;font-size:0">&nbsp;</td></tr>
 <tr><td style="padding:28px 32px 24px;font-size:14px;line-height:1.65">${isi}</td></tr>
-<tr><td style="background:#F7F9FC;border-top:1px solid #E5E9F0;padding:16px 32px;font-size:11px;line-height:1.5;color:#5F6B7A">Email ini dikirim oleh tim Future Innovators Bootcamp, Ioda Academy × Plan Indonesia.</td></tr>
+<tr><td style="background:#F7F9FC;border-top:1px solid #E5E9F0;padding:16px 32px;font-size:11px;line-height:1.5;color:#5F6B7A">Email ini dikirim oleh tim Future Innovators Bootcamp.</td></tr>
 </table></td></tr></table></body></html>`;
 }
 
