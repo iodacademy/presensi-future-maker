@@ -286,7 +286,10 @@ Terkirim → Dilihat mitra → Lolos ke tahap interview → Lolos → Tawaran di
 ## 28. Fase Persiapan Kerja
 
 - Berlangsung 1 Februari – 30 April 2027
-- Kegiatan: [BUTUH DATA: rangkaian kegiatan fase persiapan kerja]
+- Perbaikan CV
+- Latihan wawancara
+- Informasi lowongan
+- Kegiatan *job matching*
 
 ## 29. Hal Penting untuk Diingat
 
