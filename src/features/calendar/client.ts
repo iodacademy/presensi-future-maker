@@ -99,6 +99,21 @@ export async function createCalendarEvent(input: CreateEventInput): Promise<Crea
   return callBridge('create', { ...input }) as Promise<CreateEventResult>;
 }
 
+export interface BridgeEmail { to: string; subject: string; body: string; htmlBody: string }
+
+/**
+ * Mengirim email lewat MailApp di Apps Script yang sama dengan kalender.
+ * Hasil dikembalikan per penerima sesuai urutan kiriman.
+ *
+ * Sends emails through MailApp in the same Apps Script as the calendar.
+ * Results come back per recipient in the order sent.
+ */
+export async function sendBridgeEmails(messages: BridgeEmail[]): Promise<{ results: { to: string; ok: boolean; error?: string }[]; quota: number | null }> {
+  const out = await callBridge('sendEmails', { messages });
+  if (!Array.isArray(out.results)) throw new Error('Apps Script belum mendukung pengiriman email. Perbarui dan deploy ulang Code.gs.');
+  return { results: out.results, quota: typeof out.quota === 'number' ? out.quota : null };
+}
+
 export async function cancelCalendarEvent(eventId: string): Promise<void> {
   await callBridge('cancel', { eventId });
 }

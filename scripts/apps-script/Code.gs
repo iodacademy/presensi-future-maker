@@ -101,6 +101,8 @@ function doPost(e) {
         return json(cancelEvent(body));
       case 'refreshMeet':
         return json(refreshMeet(body));
+      case 'sendEmails':
+        return json(sendEmails(body));
       default:
         return json({ error: 'Aksi tidak dikenal: ' + body.action }, 400);
     }
@@ -515,6 +517,31 @@ function mailReminder(event, start, minutesLeft) {
       'Masuk Google Meet: ' + link + '\n\n' +
       'Pesan ini dikirim otomatis oleh Future Innovators Bootcamp.',
   });
+}
+
+/**
+ * Mengirim email pengumuman dari halaman admin Email. Tiap penerima dicoba
+ * terpisah, sehingga satu alamat yang ditolak tidak menggagalkan yang lain,
+ * dan pengiriman berhenti begitu kuota harian MailApp habis.
+ *
+ * Sends announcement emails from the admin Email page. Each recipient is tried
+ * separately, so one rejected address does not fail the others, and sending
+ * stops once the MailApp daily quota runs out.
+ */
+function sendEmails(body) {
+  var messages = body.messages || [];
+  var results = messages.map(function (m) {
+    if (MailApp.getRemainingDailyQuota() < 1) {
+      return { to: m.to, ok: false, error: 'Kuota harian email Apps Script habis. Kirim lagi besok.' };
+    }
+    try {
+      MailApp.sendEmail({ to: m.to, subject: m.subject, body: m.body, htmlBody: m.htmlBody, name: 'Future Innovators Bootcamp' });
+      return { to: m.to, ok: true };
+    } catch (err) {
+      return { to: m.to, ok: false, error: String(err && err.message ? err.message : err) };
+    }
+  });
+  return { results: results, quota: MailApp.getRemainingDailyQuota() };
 }
 
 function markReminded(eventId, priv) {
