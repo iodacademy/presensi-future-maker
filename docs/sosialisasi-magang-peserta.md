@@ -7,7 +7,7 @@ Poin tiap slide. Satu judul `##` = satu slide.
 ## 1. Fase Magang Future Makers
 
 - Sosialisasi untuk peserta yang mendapat skema magang
-- Isi: jadwal, skema, cara melamar, rekrutmen, etika, fasilitas, kontrak, dan penilaian
+- Isi: jadwal, skema, cara melamar, rekrutmen, etika, fasilitas, kontrak, penilaian, dan bantuan
 
 ## 2. Agenda
 
@@ -18,20 +18,21 @@ Poin tiap slide. Satu judul `##` = satu slide.
 5. Tahapan rekrutmen mitra
 6. Alur wawancara dan tes
 7. Menerima tawaran
-8. Etika selama magang jarak jauh
-9. Fasilitas selama magang
-10. Kontrak magang
-11. Penilaian selama magang
-12. Tanya jawab
+8. Waspada lowongan palsu
+9. Etika selama magang jarak jauh
+10. Kontrak, uang saku, dan fasilitas
+11. Logbook, izin, dan sertifikat
+12. Penilaian selama magang
+13. Fase persiapan kerja
+14. Kontak dan bantuan
 
 ## 3. Jadwal Fase Magang
 
 | Tahap | Waktu |
 |---|---|
-| Bootcamp teknis dan capstone | 28 September – 12 November 2026 |
-| Penetapan skema magang | [BUTUH DATA: tanggal pengumuman skema] |
-| Pembukaan pendaftaran di Portal Karier | [BUTUH DATA: tanggal buka dan tutup pendaftaran] |
-| Seleksi oleh mitra | [BUTUH DATA: rentang tanggal seleksi] |
+| Pengumuman skema magang | 10 November 2026 |
+| Pembukaan pendaftaran di Portal Karier | 10 November 2026 |
+| Seleksi serentak oleh mitra | 11 – 20 November 2026 |
 | Magang berbayar | 23 November 2026 – 19 Februari 2027 |
 | Persiapan kerja | 1 Februari – 30 April 2027 |
 
@@ -116,7 +117,7 @@ Dua nilai dipakai bersama.
 
 ## 10. Aturan Melamar
 
-- Pendaftaran dibuka admin; sebelum itu lowongan hanya bisa dilihat
+- Pendaftaran dibuka 10 November 2026; sebelum itu lowongan hanya bisa dilihat
 - Satu lowongan hanya bisa dilamar sekali
 - Lamaran terkirim tidak bisa diubah
 - CV wajib PDF, maksimal 2 MB, paling banyak 5 CV tersimpan
@@ -133,7 +134,13 @@ Dua nilai dipakai bersama.
 - Peserta Full Internship yang menerima proyek pindah ke skema Project Based
 - Pertimbangkan semua tawaran sebelum menekan Terima tawaran
 
-## 12. Tahapan Rekrutmen Tiap Mitra
+## 12. Belum Lolos di Mitra Mana Pun?
+
+- Program tetap mencarikan mitra lain yang bersedia menerima
+- Tetap pantau notifikasi dan Portal Karier
+- Hubungi PIC daerah untuk mengetahui perkembangannya
+
+## 13. Tahapan Rekrutmen Tiap Mitra
 
 Setiap mitra memakai tahapan sendiri.
 
@@ -143,16 +150,17 @@ Setiap mitra memakai tahapan sendiri.
 | CV dan wawancara | CV dinilai → wawancara → lolos |
 | CV, tes, dan wawancara | CV dinilai → tes → wawancara → lolos |
 
+- Seleksi serentak berlangsung 11 – 20 November 2026
 - Tahapan tiap lowongan tercantum di halaman detail lowongan
 - Pantau status lamaran di bagian Lamaran Saya
 
-## 13. Alur Lamaran di Portal Karier
+## 14. Alur Lamaran di Portal Karier
 
 Terkirim → Dilihat mitra → Lolos ke tahap interview → Lolos → Tawaran diterima
 
 - [VIDEO: Video Demo Portal Karier untuk Peserta]
 
-## 14. Alur Wawancara
+## 15. Alur Wawancara
 
 - Undangan muncul di lonceng notifikasi dan menu Karier
 - Kartu undangan memuat tanggal, jam, tautan rapat, dan kontak PIC
@@ -166,7 +174,7 @@ Terkirim → Dilihat mitra → Lolos ke tahap interview → Lolos → Tawaran di
 - Periksa koneksi internet, kamera, dan mikrofon lebih dulu
 - Siapkan CV dan portofolio yang dilamarkan
 
-## 15. Berhalangan Hadir Wawancara
+## 16. Berhalangan Hadir Wawancara
 
 1. Tekan Minta jadwal ulang
 2. Tulis alasan dan usulan waktu lain
@@ -176,14 +184,21 @@ Terkirim → Dilihat mitra → Lolos ke tahap interview → Lolos → Tawaran di
 - PIC yang menentukan jadwal baru
 - Minta jadwal ulang segera setelah tahu berhalangan
 
-## 16. Tes dari Mitra
+## 17. Tes dari Mitra
 
 - Sebagian mitra memberi tes sebelum wawancara
 - Kerjakan sesuai instruksi dan tenggat dari mitra
 - Kerjakan sendiri; hasil tes menjadi bahan penilaian mitra
-- Tanyakan kepada PIC bila instruksi tes belum jelas
+- Tanyakan kepada PIC mitra bila instruksi tes belum jelas
 
-## 17. Etika Komunikasi Selama Magang Jarak Jauh
+## 18. WASPADA LOWONGAN PALSU
+
+- Lowongan resmi hanya ada di Portal Karier Future Makers
+- Program tidak memungut biaya apa pun untuk melamar maupun magang
+- Abaikan tawaran magang yang meminta uang, data rekening, atau kata sandi
+- Laporkan tawaran mencurigakan ke PIC daerah
+
+## 19. Etika Komunikasi Selama Magang Jarak Jauh
 
 - Balas pesan kerja di jam kerja, dan kabari bila butuh waktu lebih lama
 - Kirim kabar progres tanpa menunggu ditanya
@@ -191,69 +206,106 @@ Terkirim → Dilihat mitra → Lolos ke tahap interview → Lolos → Tawaran di
 - Pakai kanal komunikasi yang ditetapkan perusahaan
 - Kabari atasan sebelum berhalangan, bukan sesudahnya
 
-## 18. Integritas dan Kerahasiaan
+## 20. Integritas dan Kerahasiaan
 
 - Kerjakan tugas sendiri dan sebutkan bila memakai bantuan AI
 - Jangan menyalin karya orang lain tanpa izin
 - Data, akun, dan dokumen perusahaan bersifat rahasia
 - Jangan membagikan pekerjaan perusahaan ke media sosial atau portofolio tanpa izin tertulis
 
-## 19. Kedisiplinan dan Profesionalisme
+## 21. Kedisiplinan dan Profesionalisme
 
+- Siap bekerja pukul 08.00 WIB sesuai jam kerja
 - Hadir di rapat tepat waktu dengan kamera menyala bila diminta
 - Selesaikan tugas sesuai tenggat yang disepakati
 - Siapkan tempat kerja yang tenang dan koneksi yang stabil
 - Pakai bahasa yang sopan di semua kanal kerja
 - Terima masukan dan perbaiki pekerjaan sesuai arahan
 
-## 20. Skala Prioritas
+## 22. Skala Prioritas
 
 - Catat semua tugas beserta tenggatnya
 - Tanyakan urutan prioritas kepada atasan bila tugas bertabrakan
 - Kerjakan tugas mendesak dan penting lebih dulu
 - Sampaikan sejak awal bila beban kerja melebihi waktu yang tersedia
 
-## 21. Fasilitas Selama Magang
+## 23. Kontrak Magang
 
-| Fasilitas | Keterangan |
+| Ketentuan | Isi |
 |---|---|
-| Uang saku | Sesuai kontrak dengan mitra |
-| Mentoring 1 on 1 | Pemesanan lewat menu Mentoring di LMS, sama seperti fase bootcamp |
-| Durasi sesi mentoring | 45 menit per sesi pada fase bootcamp; [BUTUH DATA: durasi dan kuota sesi fase magang] |
-| Fasilitas lain | [BUTUH DATA: fasilitas tambahan bila ada] |
+| Lokasi | Remote |
+| Hari kerja | Senin – Jumat; tanggal merah dan cuti bersama libur |
+| Jam kerja | 08.00 – 17.00 WIB |
+| Posisi, durasi, dan uang saku | Sesuai kontrak dengan mitra |
 
-- Pakai sesi mentoring untuk membahas kendala magang sejak dini
-
-## 22. Kontrak Magang
-
-- Kontrak memuat posisi, durasi, uang saku, jam kerja, dan hari kerja
-- Jam kerja dan hari kerja: [BUTUH DATA: ketentuan standar atau mengikuti kontrak tiap mitra]
 - Baca kontrak sebelum menandatangani dan tanyakan bagian yang belum jelas
 - Proses kontrak dan *onboarding* dilakukan oleh mitra
 
 **Belum menerima kontrak?**
 
-- Segera lapor ke penyelenggara program atau PIC daerah masing-masing
-- Kontak pelaporan: [BUTUH DATA: nama dan kontak PIC tiap daerah]
+- Segera lapor ke PIC daerah masing-masing (kontak di slide 30)
 
-## 23. Penilaian Selama Magang
+## 24. Uang Saku dan Fasilitas
+
+| Hal | Diatur oleh |
+|---|---|
+| Nominal uang saku | Lowongan dan kontrak mitra |
+| Jadwal dan cara pembayaran uang saku | Mitra masing-masing |
+| Fasilitas di luar uang saku | Kontrak kerja mitra, bila ada |
+
+- Tanyakan jadwal pembayaran kepada mitra saat penandatanganan kontrak
+
+## 25. Mentoring 1 on 1
+
+| Ketentuan | Isi |
+|---|---|
+| Pemesanan | Menu Mentoring di LMS, sama seperti fase bootcamp |
+| Durasi | 30 – 45 menit per sesi |
+| Kuota | 2 sesi per orang setiap bulan |
+| Kewajiban | Minimal 1 sesi setiap bulan |
+
+- Pakai sesi mentoring untuk membahas kendala magang sejak dini
+
+## 26. Logbook, Izin, dan Sertifikat
+
+| Hal | Ketentuan |
+|---|---|
+| Logbook | Wajib diisi selama magang |
+| Izin dan sakit | Lapor langsung ke mitra masing-masing |
+| Sertifikat magang | Diterbitkan mitra masing-masing |
+
+- Isi logbook secara rutin, jangan ditumpuk di akhir periode
+
+## 27. Penilaian Selama Magang
 
 - Penilaian kinerja dilakukan mitra, bukan Plan Indonesia
 - Mitra dapat menghentikan magang lebih awal bila kinerja tidak memenuhi standar
 - Magang yang dihentikan lebih awal kehilangan sisa uang saku dan tidak mendapat tempat pengganti
 - Sampaikan kendala lewat mentoring sebelum berdampak pada penilaian
 
-## 24. Hal Penting untuk Diingat
+## 28. Fase Persiapan Kerja
+
+- Berlangsung 1 Februari – 30 April 2027
+- Kegiatan: [BUTUH DATA: rangkaian kegiatan fase persiapan kerja]
+
+## 29. Hal Penting untuk Diingat
 
 - Program membuka akses, keputusan penerimaan tetap di tangan mitra
 - Hanya lamar lowongan lewat Portal Karier Future Makers
 - Simpan nomor WhatsApp aktif di data lamaran
-- Fase persiapan kerja berjalan 1 Februari – 30 April 2027
+- Isi logbook dan ikuti mentoring minimal 1 kali setiap bulan
 
-## 25. Kontak dan Bantuan
+## 30. Kontak dan Bantuan
 
-- Penyelenggara program: [BUTUH DATA: kontak penyelenggara]
-- PIC daerah: [BUTUH DATA: kontak PIC tiap daerah]
-- Panduan Portal Karier: Panduan Portal Karier untuk Peserta (PDF)
+| Keperluan | Kontak |
+|---|---|
+| PIC Semarang | Rama · 0881037638372 |
+| PIC Surabaya | Cholis · 081281731250 |
+| PIC Yogyakarta | Zulfa · 085244775901 |
+| PIC DKI Jakarta | Ghea · 081383157825 |
+| Bantuan teknis Portal Karier | Rama · 0881037638372 |
+| Pengaduan pelanggaran (pelecehan, diskriminasi) | Penyelenggara program · +6282119504847 |
 
-## 26. Tanya Jawab
+- Panduan lengkap: Panduan Portal Karier untuk Peserta (PDF)
+
+## 31. Tanya Jawab
