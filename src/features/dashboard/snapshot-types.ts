@@ -174,6 +174,8 @@ export interface RankedStudent {
   placementReasons: string[];
   /** Komponen yang belum dinilai; tidak ada pada ringkasan sebelum versi 17 / Components not yet graded; absent before version 17 */
   pending?: GradeComponent[];
+  /** Semua tenggat capstone lewat tanpa kiriman; capstone dihitung 0 / Every capstone deadline passed unsubmitted; the capstone counts as 0 */
+  capstoneMissing?: boolean;
 }
 
 /**

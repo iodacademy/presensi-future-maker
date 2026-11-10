@@ -159,6 +159,14 @@ export function gradeParticipant(input: {
   capstoneTaskIds: string[];
   /** Nilai capstone dari impor Excel / The capstone score from the Excel import */
   capstone: number | null;
+  /**
+   * Semua tenggat capstone lewat tanpa kiriman. Nilainya 0 hanya bila belum ada
+   * nilai maupun impor, jadi kiriman susulan yang dinilai tetap menang.
+   *
+   * Every capstone deadline passed with no submission. It scores 0 only when
+   * there is no grade or import, so a graded late submission still wins.
+   */
+  capstoneMissed?: boolean;
 }): { score: number; breakdown: ComponentBreakdown[]; pending: GradeComponent[] } {
   // Pertemuan yang berakhir sebelum peserta bergabung tidak dihitung kecuali
   // ia tercatat di sana. / Meetings that ended before the participant joined
@@ -188,14 +196,15 @@ export function gradeParticipant(input: {
   // overrides grading done afterwards.
   const cap = input.capstoneTaskIds.map(input.taskScore);
   const capDinilai = cap.some((n) => n !== null);
+  const capTidakKumpul = !capDinilai && input.capstone === null && input.capstoneMissed === true;
 
   return calculateFinalGrade({
-    capstone: capDinilai ? averageWithZeros(cap, cap.length) : input.capstone,
+    capstone: capDinilai ? averageWithZeros(cap, cap.length) : capTidakKumpul ? 0 : input.capstone,
     attendance: sesi.length > 0 ? Math.round((hadir / sesi.length) * 100) : null,
     tasks: tugas.length > 0 ? averageWithZeros(tugas, tugas.length) : null,
     quiz: kuis.length > 0 ? averageWithZeros(kuis, kuis.length) : null,
     details: {
-      capstone: capDinilai ? 'Dari penilaian tugas capstone' : input.capstone !== null ? 'Dari impor nilai' : 'Belum dinilai',
+      capstone: capDinilai ? 'Dari penilaian tugas capstone' : input.capstone !== null ? 'Dari impor nilai' : capTidakKumpul ? 'Tidak mengumpulkan capstone' : 'Belum dinilai',
       attendance: sesi.length > 0 ? `${hadir} dari ${sesi.length} pertemuan` : 'Belum ada pertemuan',
       tasks: tugas.length > 0 ? `${tugas.filter((n) => n !== null).length} dari ${tugas.length} tugas dinilai` : 'Belum ada tugas',
       quiz: kuis.length > 0 ? `${kuis.filter((n) => n !== null).length} dari ${kuis.length} ujian dikerjakan` : 'Belum ada ujian',

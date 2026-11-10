@@ -114,7 +114,7 @@ export function PlacementGroups({ rows, jurusanKelas }: { rows: RankedStudent[];
               {shown.map(({ r, rank }) => (
                 <tr key={r.studentId}>
                   <td className={s.ctr}><span className={s.rkn}>{rank}</span></td>
-                  <td>{r.studentName}<div className={s.plSub}>{r.className}</div></td>
+                  <td>{r.studentName}<div className={s.plSub}>{r.className}</div>{r.capstoneMissing && <div className={s.plMiss}>Tidak mengumpulkan capstone</div>}</td>
                   <td className={`${s.ctr} ${s.num}`}><b className={s.plSpa}>{r.score}</b></td>
                   <td className={`${s.ctr} ${s.num}`}><b className={s.plSpa}>{r.combined ?? '–'}</b></td>
                   {COLS.map((c) => (

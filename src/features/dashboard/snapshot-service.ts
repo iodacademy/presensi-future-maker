@@ -109,7 +109,7 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  * 19: Full needs a combined score of 60, and absences drop the scheme one tier
  *     instead of knocking out a Full-level participant.
  */
-export const SNAPSHOT_VERSION = 19;
+export const SNAPSHOT_VERSION = 20;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -685,6 +685,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
       const nilaiTugas = nilaiTugasPerSiswa.get(st.uid);
       const joinIso = joinPerSiswa.get(st.uid) ?? '';
       const examIds = exams.filter((e) => e.classId === cid && e.kind !== 'pretest').map((e) => e.id);
+      const tugasCapstone = capstonePerKelasId.get(cid) ?? [];
       const nilai = gradeParticipant({
         sessions: sesiPerKelas.get(cid) ?? [],
         joinIso,
@@ -694,9 +695,11 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         taskScore: (id) => nilaiTugas?.get(id) ?? null,
         examIds,
         quizScore: (id) => nilaiTertinggi.get(id)?.get(st.uid) ?? null,
-        capstoneTaskIds: (capstonePerKelasId.get(cid) ?? []).map((t) => t.id),
+        capstoneTaskIds: tugasCapstone.map((t) => t.id),
         capstone: nilaiCapstone.get(st.uid) ?? null,
+        capstoneMissed: tugasCapstone.length > 0 && tugasCapstone.every((t) => statusKumpul(st.uid, t) === false),
       });
+      const capstoneMissing = nilai.breakdown.find((b) => b.component === 'capstone')?.detail === 'Tidak mengumpulkan capstone';
       const komponen = (k: string) => nilai.breakdown.find((b) => b.component === k)?.score ?? 0;
       const absent = countAbsent({
         sessions: sesiPerKelas.get(cid) ?? [],
@@ -712,7 +715,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         quizScores: examIds.map((id) => nilaiPertama.get(id)?.get(st.uid) ?? null),
       });
       const { placement, reasons } = decidePlacement({
-        spa: nilai.score, capstone: komponen('capstone'), tasks: komponen('tasks'), absent, capstoneGraded: !nilai.pending.includes('capstone'),
+        spa: nilai.score, capstone: komponen('capstone'), tasks: komponen('tasks'), absent, capstoneGraded: !nilai.pending.includes('capstone'), capstoneMissing,
       });
       return {
         studentId: st.uid,
@@ -736,6 +739,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         placement,
         placementReasons: reasons,
         pending: nilai.pending,
+        capstoneMissing,
       };
     })
     // Bila SPA sama, capstone lalu kehadiran menentukan urutan (skema magang)

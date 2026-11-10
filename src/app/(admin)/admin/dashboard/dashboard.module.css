@@ -675,6 +675,17 @@
   margin-top: 2px;
 }
 
+.plMiss {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
 .plSpa {
   font-size: 15px;
 }

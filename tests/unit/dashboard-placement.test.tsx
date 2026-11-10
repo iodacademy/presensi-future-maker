@@ -2,7 +2,7 @@ import React from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { PlacementGroups } from '../../src/app/(admin)/admin/dashboard/placement-groups';
-import { byPerformance } from '../../src/app/(admin)/admin/dashboard/ranking-groups';
+import { byPerformance, RankingGroups } from '../../src/app/(admin)/admin/dashboard/ranking-groups';
 import type { RankedStudent } from '../../src/features/dashboard/snapshot-types';
 
 const row = (studentName: string, city: string, placement: RankedStudent['placement'], placementReasons: string[] = []): RankedStudent => ({
@@ -31,6 +31,16 @@ describe('panel skema magang', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Surabaya/ }));
     expect(screen.getByText('Andi')).toBeTruthy();
     expect(screen.getByText(/skema magangnya belum bisa ditentukan/)).toBeTruthy();
+  });
+
+  it('peserta yang tidak mengumpulkan capstone diberi tanda', () => {
+    render(<PlacementGroups jurusanKelas={jurusan} rows={[{ ...row('Budi', 'Semarang', 'none', ['Tidak mengumpulkan capstone']), capstoneMissing: true }]} />);
+    expect(screen.getAllByText('Tidak mengumpulkan capstone').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('tanda tidak mengumpulkan capstone juga muncul di Performance terbaik', () => {
+    render(<RankingGroups jurusanKelas={jurusan} rows={[{ ...row('Budi', 'Semarang', 'none'), capstoneMissing: true }, row('Roi', 'Semarang', 'full')]} />);
+    expect(screen.getAllByText('Tidak mengumpulkan capstone')).toHaveLength(1);
   });
 
   it('kartu skema menyaring tabel', () => {

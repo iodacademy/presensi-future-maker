@@ -238,6 +238,24 @@ describe('nilai akhir satu peserta', () => {
     capstone: 80,
   };
 
+  it('tenggat capstone lewat tanpa kiriman: capstone 0, tidak lagi menunggu', () => {
+    const hasil = gradeParticipant({ ...dasar, capstone: null, capstoneTaskIds: ['c1'], capstoneMissed: true, present: () => true, taskScore: () => null, quizScore: () => 100 });
+    const cap = hasil.breakdown.find((b) => b.component === 'capstone')!;
+    expect(cap.score).toBe(0);
+    expect(cap.detail).toBe('Tidak mengumpulkan capstone');
+    expect(hasil.pending).not.toContain('capstone');
+  });
+
+  it('kiriman capstone yang belum dinilai tetap menunggu', () => {
+    const hasil = gradeParticipant({ ...dasar, capstone: null, capstoneTaskIds: ['c1'], capstoneMissed: false, present: () => true, taskScore: () => null, quizScore: () => 100 });
+    expect(hasil.pending).toContain('capstone');
+  });
+
+  it('nilai capstone yang ada tidak tertimpa tanda tidak mengumpulkan', () => {
+    const hasil = gradeParticipant({ ...dasar, capstone: 70, capstoneMissed: true, present: () => true, taskScore: () => 100, quizScore: () => 100 });
+    expect(hasil.breakdown.find((b) => b.component === 'capstone')!.score).toBe(70);
+  });
+
   it('hanya menghitung hadir, bukan izin atau sakit', () => {
     const hasil = gradeParticipant({ ...dasar, present: (id) => id === 's1', taskScore: () => 100, quizScore: () => 100 });
     expect(hasil.breakdown.find((b) => b.component === 'attendance')!.score).toBe(50);

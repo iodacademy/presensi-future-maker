@@ -48,8 +48,13 @@ export function combinedScore(capstone: number, tasks: number): number {
  * Without a capstone score the SPA and combined score are still far below their
  * final values, so the scheme is undecided, not "not placed".
  */
-export function decidePlacement(p: { spa: number; capstone: number; tasks: number; absent: number; capstoneGraded?: boolean }): { placement: Placement; reasons: string[] } {
+export function decidePlacement(p: { spa: number; capstone: number; tasks: number; absent: number; capstoneGraded?: boolean; capstoneMissing?: boolean }): { placement: Placement; reasons: string[] } {
   if (p.capstoneGraded === false) return { placement: 'pending', reasons: ['Capstone belum dinilai'] };
+  if (p.capstoneMissing) {
+    // Penyebab sebenarnya disebut lebih dulu dari ambang yang gagal / The real cause is named before the failed thresholds
+    const hasil = decidePlacement({ ...p, capstoneMissing: false });
+    return { ...hasil, reasons: ['Tidak mengumpulkan capstone', ...hasil.reasons] };
+  }
   const { full, project } = PLACEMENT_RULES;
   const nilai = combinedScore(p.capstone, p.tasks);
   // Ambang nilai yang belum tercapai untuk satu tingkat / Score thresholds not reached for one tier

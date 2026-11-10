@@ -31,6 +31,10 @@ describe('penentuan skema magang', () => {
   });
   it('capstone yang belum dinilai menunda penentuan, bukan menolak', () => {
     expect(decidePlacement({ spa: 25, capstone: 0, tasks: 0, absent: 0, capstoneGraded: false })).toEqual({ placement: 'pending', reasons: ['Capstone belum dinilai'] });
+    // Tidak mengumpulkan capstone disebut paling depan / Not submitting the capstone is named first
+    expect(decidePlacement({ spa: 45, capstone: 0, tasks: 80, absent: 0, capstoneMissing: true })).toEqual({
+      placement: 'none', reasons: ['Tidak mengumpulkan capstone', 'SPA di bawah 50', 'Nilai TPM + capstone di bawah 50'],
+    });
   });
   it('urutan: SPA, lalu capstone, lalu kehadiran', () => {
     const rows = [
