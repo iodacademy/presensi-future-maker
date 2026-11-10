@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
 import { getEmailHash, normalizeEmail } from '../auth/policy';
 import {
-  jobState, partnerNameKey, validateJobInput, validatePartnerInput,
+  DEMO_CLASS_ID, jobState, partnerNameKey, validateJobInput, validatePartnerInput,
   type Category, type Employment, type Job, type JobStatus, type Partner, type Scheme, type WorkMode,
 } from './model';
 
@@ -17,6 +17,8 @@ export interface PartnerRow { id: string; name: string; field: string; logoThumb
 export interface JobRow {
   id: string; title: string; employment: Employment; category: Category; scheme: Scheme; location: string; workMode: WorkMode; quota: number;
   partnerId: string; partnerName: string; picName: string; opensAt: string; closesAt: string; status: JobStatus; applicantCount: number;
+  /** Lowongan fiktif untuk akun demo; tidak dihitung dalam total kuota / A fictitious job for demo accounts; left out of the quota total */
+  demo: boolean;
 }
 
 const partners = () => getAdminDb().collection('partners');
@@ -129,12 +131,15 @@ const JOB_ROW_FIELDS = [
 ];
 
 export async function listJobs(): Promise<JobRow[]> {
-  const [jSnap, pSnap] = await Promise.all([jobs().select(...JOB_ROW_FIELDS).get(), partners().select('pics').get()]);
+  const [jSnap, pSnap] = await Promise.all([jobs().select(...JOB_ROW_FIELDS, 'eligibility').get(), partners().select('pics').get()]);
   const pic = new Map(pSnap.docs.map((p) => [p.id, ((p.data().pics ?? []) as { name: string }[])[0]?.name ?? '']));
   return jSnap.docs
     .map((j) => {
       const d = j.data();
-      return { ...(Object.fromEntries(JOB_ROW_FIELDS.map((f) => [f, d[f]])) as Omit<JobRow, 'id' | 'picName'>), id: j.id, picName: pic.get(d.partnerId) ?? '', applicantCount: d.applicantCount ?? 0 };
+      return {
+        ...(Object.fromEntries(JOB_ROW_FIELDS.map((f) => [f, d[f]])) as Omit<JobRow, 'id' | 'picName' | 'demo'>), id: j.id, picName: pic.get(d.partnerId) ?? '', applicantCount: d.applicantCount ?? 0,
+        demo: d.eligibility?.mode === 'classes' && (d.eligibility.classIds ?? []).includes(DEMO_CLASS_ID),
+      };
     })
     .sort((a, b) => b.closesAt.localeCompare(a.closesAt));
 }

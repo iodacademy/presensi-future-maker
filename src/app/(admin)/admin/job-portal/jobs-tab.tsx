@@ -32,6 +32,9 @@ export function JobsTab({ rows, onEdit, onChanged, onError }: {
     try { await send(`/api/karier/jobs/${r.id}`, 'DELETE', {}); onChanged(); } catch (e) { onError((e as Error).message); }
   }
 
+  // Lowongan demo fiktif tidak menambah kursi magang sungguhan / Fictitious demo jobs add no real internship seats
+  const real = rows.filter((r) => !r.demo);
+
   if (rows.length === 0) {
     return <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Belum ada lowongan. Tambahkan mitra, lalu tekan "+ Tambah lowongan".</p>;
   }
@@ -40,7 +43,7 @@ export function JobsTab({ rows, onEdit, onChanged, onError }: {
     <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--color-border)', borderRadius: '12px', overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '760px' }}>
         <thead>
-          <tr><th style={th}>Posisi</th><th style={th}>Perusahaan → PIC</th><th style={th}>Tutup dalam</th><th style={th}>Pelamar</th><th style={th}>Status</th><th style={th} aria-label="Aksi" /></tr>
+          <tr><th style={th}>Posisi</th><th style={th}>Perusahaan → PIC</th><th style={th}>Tutup dalam</th><th style={th}>Kuota</th><th style={th}>Pelamar</th><th style={th}>Status</th><th style={th} aria-label="Aksi" /></tr>
         </thead>
         <tbody>
           {rows.map((r) => {
@@ -57,6 +60,7 @@ export function JobsTab({ rows, onEdit, onChanged, onError }: {
                     {formatCountdown(parts)}
                   </span>
                 </td>
+                <td style={td}>{r.quota}</td>
                 <td style={td}>{r.applicantCount}</td>
                 <td style={td}><span style={{ padding: '2px 8px', borderRadius: '6px', fontWeight: 600, backgroundColor: s.bg, color: s.fg }}>{s.label}</span></td>
                 <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
@@ -71,6 +75,10 @@ export function JobsTab({ rows, onEdit, onChanged, onError }: {
           })}
         </tbody>
       </table>
+      <div style={{ padding: '10px 12px', fontSize: '12px', fontWeight: 600, borderTop: '1px solid var(--color-border)', backgroundColor: '#F8FBFE' }}>
+        {`Total kuota: ${real.reduce((n, r) => n + (r.quota || 0), 0)} kursi dari ${real.length} lowongan`}
+        <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}> · lowongan demo tidak dihitung</span>
+      </div>
     </div>
   );
 }
