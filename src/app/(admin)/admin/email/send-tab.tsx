@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { btn, btnSolid, field, label, send } from '../pameran/admin-ui';
-import { CATEGORY_LABELS, renderTemplate, templateVars, type EmailCategory, type EmailTemplate } from '@/features/email/model';
+import { CATEGORY_LABELS, emailHtml, renderTemplate, templateVars, type EmailCategory, type EmailTemplate } from '@/features/email/model';
 import type { Recipient, SendResult } from '@/features/email/service';
 import { Badge, panel, sub, td, th, waktu } from './email-ui';
 
@@ -27,6 +27,8 @@ export function SendTab({ recipients, templates, onSent, onError }: {
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [ujiKe, setUjiKe] = useState('');
+  const [ujiInfo, setUjiInfo] = useState<string | null>(null);
 
   useEffect(() => { if (!className && kelas.length) setClassName(kelas[0]); }, [kelas, className]);
   useEffect(() => { if (!templateId && templates.length) setTemplateId(templates[0].id); }, [templates, templateId]);
@@ -59,6 +61,15 @@ export function SendTab({ recipients, templates, onSent, onError }: {
       const r: SendResult = await send('/api/email/send', 'POST', { templateId: template.id, studentIds: terpilih.map((x) => x.studentId), resend });
       setResult(`${r.sent} terkirim, ${r.failed} gagal, ${r.skipped} dilewati karena sudah menerima template ini.${r.quota !== null ? ` Sisa kuota email hari ini: ${r.quota}.` : ''}`);
       onSent();
+    } catch (e) { onError((e as Error).message); } finally { setBusy(false); }
+  }
+
+  async function kirimUji() {
+    if (!template || !lihat) return;
+    setBusy(true); onError(null); setUjiInfo(null);
+    try {
+      const r = await send('/api/email/test', 'POST', { templateId: template.id, studentId: lihat.studentId, to: ujiKe });
+      setUjiInfo(`Email uji terkirim ke ${ujiKe}.${r.quota !== null ? ` Sisa kuota hari ini: ${r.quota}.` : ''}`);
     } catch (e) { onError((e as Error).message); } finally { setBusy(false); }
   }
 
@@ -121,9 +132,14 @@ export function SendTab({ recipients, templates, onSent, onError }: {
           <>
             <div style={sub}>Untuk {lihat.studentName} · {lihat.email}</div>
             <div style={{ fontSize: '12px', fontWeight: 700 }}>{renderTemplate(template.subject, templateVars(lihat))}</div>
-            <div style={{ fontSize: '11px', whiteSpace: 'pre-wrap', lineHeight: 1.55, maxHeight: '360px', overflowY: 'auto', borderTop: '1px solid var(--color-border)', paddingTop: '8px' }}>
-              {renderTemplate(template.body, templateVars(lihat))}
+            <iframe title="Pratinjau email" sandbox="" srcDoc={emailHtml(renderTemplate(template.body, templateVars(lihat)))}
+              style={{ width: '100%', height: '420px', border: '1px solid var(--color-border)', borderRadius: '8px', backgroundColor: '#F2F5F9' }} />
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <input style={field} type="email" value={ujiKe} onChange={(e) => setUjiKe(e.target.value)} placeholder="Email untuk uji" aria-label="Email untuk uji" />
+              <button type="button" style={{ ...btn, whiteSpace: 'nowrap' }} disabled={busy || !ujiKe.trim()} onClick={kirimUji}>Kirim uji</button>
             </div>
+            <div style={sub}>Kirim uji memakai data {lihat.studentName}, subjeknya diberi [UJI], dan tidak tercatat sebagai terkirim.</div>
+            {ujiInfo && <div role="status" style={{ ...sub, color: '#067647' }}>{ujiInfo}</div>}
             {lihat.category !== template.category && template.category !== 'umum' && (
               <div style={{ ...sub, color: '#B42318' }}>Status peserta ini ({lihat.label}) tidak sesuai kategori template ({CATEGORY_LABELS[template.category]}).</div>
             )}
@@ -137,7 +153,7 @@ export function SendTab({ recipients, templates, onSent, onError }: {
           {busy ? 'Mengirim…' : `Kirim ke ${resend ? terpilih.length : terpilih.length - sudahTerima} peserta`}
         </button>
         {result && <div role="status" style={{ fontSize: '11px', color: '#067647', backgroundColor: '#E6F4EA', borderRadius: '8px', padding: '8px 10px' }}>{result}</div>}
-        <div style={sub}>Batas kirim Apps Script: 100 email per hari untuk Gmail biasa, 1.500 untuk Google Workspace.</div>
+        <div style={sub}>Batas kirim Apps Script: 1.500 email per hari (akun Google Workspace).</div>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import { sendBridgeEmails } from '@/features/calendar/client';
 import { getSnapshot } from '@/features/dashboard/snapshot-service';
 import type { Actor } from '@/features/auth/types';
 import {
-  CATEGORY_LABELS, DEFAULT_TEMPLATES, emailStatus, planSend, renderTemplate, templateVars, toHtml, validateTemplateInput,
+  CATEGORY_LABELS, DEFAULT_TEMPLATES, emailHtml, emailStatus, planSend, renderTemplate, templateVars, validateTemplateInput,
   type EmailCategory, type EmailRow, type EmailTemplate,
 } from './model';
 
@@ -113,7 +113,7 @@ export async function sendEmails(actor: Actor, raw: unknown): Promise<SendResult
       const p = daftar.get(id)!;
       const vars = templateVars(p);
       const body = renderTemplate(template.body, vars);
-      return { p, msg: { to: p.email, subject: renderTemplate(template.subject, vars), body, htmlBody: toHtml(body) } };
+      return { p, msg: { to: p.email, subject: renderTemplate(template.subject, vars), body, htmlBody: emailHtml(body) } };
     });
     const bisa = kelompok.filter((k) => k.msg.to);
     const hasil = new Map<string, { ok: boolean; error?: string }>();
@@ -142,6 +142,30 @@ export async function sendEmails(actor: Actor, raw: unknown): Promise<SendResult
     await batch.commit();
   }
   return { sent, failed, skipped: plan.skipped.length, quota };
+}
+
+/**
+ * Kirim uji: template diisi dengan data satu peserta tetapi dikirim ke alamat
+ * uji. Tidak dicatat di riwayat supaya peserta itu tidak dianggap sudah menerima.
+ *
+ * Test send: the template is filled with one participant's data but sent to a
+ * test address. It is not logged, so that participant is not treated as having
+ * received it.
+ */
+export async function sendTestEmail(actor: Actor, raw: unknown): Promise<{ quota: number | null }> {
+  const r = (raw ?? {}) as { templateId?: unknown; studentId?: unknown; to?: unknown };
+  const to = String(r.to ?? '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw new Error('Alamat email uji tidak valid');
+  const tsnap = await templates().doc(String(r.templateId ?? '')).get();
+  if (!r.templateId || !tsnap.exists) throw new Error('Template tidak ditemukan');
+  const template = tsnap.data() as EmailTemplate;
+  const p = (await listRecipients(actor)).find((x) => x.studentId === r.studentId);
+  if (!p) throw new Error('Peserta contoh tidak ditemukan');
+  const vars = templateVars(p);
+  const body = renderTemplate(template.body, vars);
+  const out = await sendBridgeEmails([{ to, subject: `[UJI] ${renderTemplate(template.subject, vars)}`, body, htmlBody: emailHtml(body) }]);
+  if (!out.results[0]?.ok) throw new Error(out.results[0]?.error || 'Email uji gagal terkirim');
+  return { quota: out.quota };
 }
 
 export interface LogRow {

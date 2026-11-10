@@ -8,7 +8,7 @@ vi.mock('../../src/lib/firebase/admin', () => ({ getAdminDb: () => fakeDb }));
 vi.mock('../../src/features/calendar/client', () => ({ sendBridgeEmails: (m: unknown) => sendBridgeEmails(m) }));
 vi.mock('../../src/features/dashboard/snapshot-service', () => ({ getSnapshot: (a: unknown) => getSnapshot(a) }));
 
-import { listLogs, listRecipients, listTemplates, saveTemplate, sendEmails } from '../../src/features/email/service';
+import { listLogs, listRecipients, listTemplates, saveTemplate, sendEmails, sendTestEmail } from '../../src/features/email/service';
 
 const admin = { uid: 'adm', role: 'admin', name: 'Admin' } as never;
 const rank = (studentId: string, score: number, placement: string, reasons: string[] = []) => ({
@@ -101,5 +101,17 @@ describe('kirim email', () => {
     const logs = await listLogs();
     expect(logs[0]).not.toHaveProperty('body');
     expect(logs[0]).toMatchObject({ studentName: 'Peserta c', email: 'c@x.id', status: 'terkirim' });
+  });
+
+  it('kirim uji memakai data satu peserta, ke alamat uji, tanpa tercatat di riwayat', async () => {
+    await listTemplates();
+    await sendTestEmail(admin, { templateId: 'lulus-magang', studentId: 'a', to: 'uji@contoh.id' });
+    const pesan = sendBridgeEmails.mock.calls[0][0][0];
+    expect(pesan.to).toBe('uji@contoh.id');
+    expect(pesan.subject.startsWith('[UJI] ')).toBe(true);
+    expect(pesan.body).toContain('Halo Peserta a');
+    expect(pesan.htmlBody).toContain('Future Innovators Bootcamp');
+    expect(data.emailLogs).toBeUndefined();
+    await expect(sendTestEmail(admin, { templateId: 'lulus-magang', studentId: 'a', to: 'bukan-email' })).rejects.toThrow('Alamat email uji');
   });
 });

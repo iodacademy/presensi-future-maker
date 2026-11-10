@@ -21,6 +21,9 @@ export const CATEGORY_LABELS: Record<EmailCategory, string> = {
 /** SPA minimal untuk lulus, sama dengan rubrik di Google Sheet tracking / Minimum SPA to pass, matching the tracking sheet rubric */
 export const PASS_SPA = 60;
 
+const PORTAL_HOST = 'innovators.iodacademy.id/app/karier';
+const PORTAL = `https://${PORTAL_HOST}`;
+
 export const SCHEME_NAMES: Record<string, string> = { full: 'Full Internship', project: 'Project Based' };
 
 // Kontak PIC per kota kelas, sama dengan slide sosialisasi magang / PIC contact per class city, as in the internship briefing slides
@@ -86,6 +89,30 @@ export function toHtml(text: string): string {
   return esc.replace(/https?:\/\/[^\s<]+/g, (u) => `<a href="${u}">${u}</a>`).replace(/\n/g, '<br>');
 }
 
+/**
+ * Bingkai desain email. Tabel dan gaya inline dipakai karena Gmail dan Outlook
+ * membuang tag style dan tata letak flex; admin tetap cukup menulis teks biasa.
+ *
+ * The email design frame. Tables and inline styles are used because Gmail and
+ * Outlook strip style tags and flex layouts; admins still only write plain text.
+ */
+export function emailHtml(body: string): string {
+  // Tautan Portal Karier tampil sebagai tombol di tempatnya, dekat langkah yang memintanya
+  // The Portal Karier link shows as a button in place, next to the step that asks for it
+  const isi = toHtml(body).replace(
+    `<a href="${PORTAL}">${PORTAL}</a>`,
+    `<br><a href="${PORTAL}" style="display:inline-block;margin:8px 0 4px;background:#0072CE;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 20px;border-radius:8px">Buka Portal Karier</a>`,
+  );
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#F2F5F9">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F2F5F9;padding:24px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#1F2937">
+<tr><td style="background:#0072CE;padding:22px 32px"><div style="color:#ffffff;font-size:20px;font-weight:700">Future Innovators Bootcamp</div><div style="color:#DCEBFA;font-size:12px;margin-top:4px">Ioda Academy × Plan Indonesia</div></td></tr>
+<tr><td style="background:#FFC72C;height:5px;line-height:5px;font-size:0">&nbsp;</td></tr>
+<tr><td style="padding:28px 32px 24px;font-size:14px;line-height:1.65">${isi}</td></tr>
+<tr><td style="background:#F7F9FC;border-top:1px solid #E5E9F0;padding:16px 32px;font-size:11px;line-height:1.5;color:#5F6B7A">Email ini dikirim oleh tim Future Innovators Bootcamp, Ioda Academy × Plan Indonesia.</td></tr>
+</table></td></tr></table></body></html>`;
+}
+
 export function validateTemplateInput(raw: unknown): Pick<EmailTemplate, 'name' | 'category' | 'subject' | 'body'> {
   const r = (raw ?? {}) as Record<string, unknown>;
   const s = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
@@ -116,7 +143,7 @@ export function planSend(ids: string[], sent: Set<string>, resend: boolean): { s
   return { send: unik.filter((id) => !sent.has(id)), skipped: unik.filter((id) => sent.has(id)) };
 }
 
-const PORTAL = 'https://innovators.iodacademy.id/app/karier';
+
 const SALAM = '\n\nSalam,\nTim Future Innovators Bootcamp';
 
 // Template awal; admin menyuntingnya di halaman Email / Starter templates; admins edit them on the Email page

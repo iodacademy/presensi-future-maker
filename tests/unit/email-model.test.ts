@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emailStatus, planSend, renderTemplate, templateVars, toHtml, validateTemplateInput } from '../../src/features/email/model';
+import { emailHtml, emailStatus, planSend, renderTemplate, templateVars, toHtml, validateTemplateInput } from '../../src/features/email/model';
 
 const row = (score: number, placement: string, placementReasons: string[] = []) => ({
   studentId: 's1', studentName: 'Budi Santoso', className: 'Web Programming - Semarang', city: 'Semarang', score, placement, placementReasons,
@@ -44,6 +44,20 @@ describe('isian template', () => {
 
   it('HTML meloloskan karakter khusus dan memakai baris baru', () => {
     expect(toHtml('A <b>\nhttps://contoh.id/x')).toBe('A &lt;b&gt;<br><a href="https://contoh.id/x">https://contoh.id/x</a>');
+  });
+});
+
+describe('bingkai desain email', () => {
+  it('membungkus isi dengan kepala, isi yang diloloskan, dan kaki', () => {
+    const html = emailHtml('Halo <Budi>\nBaris dua');
+    expect(html).toContain('Future Innovators Bootcamp');
+    expect(html).toContain('Halo &lt;Budi&gt;<br>Baris dua');
+    expect(html).toContain('#0072CE');
+    expect(html).not.toContain('Buka Portal Karier');
+  });
+
+  it('menambah tombol Portal Karier bila isinya memuat tautan portal', () => {
+    expect(emailHtml('Buka https://innovators.iodacademy.id/app/karier sekarang')).toContain('>Buka Portal Karier<');
   });
 });
 
