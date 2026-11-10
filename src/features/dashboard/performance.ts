@@ -42,8 +42,10 @@ export function buildStudentPerformance(input: {
   // ia tercatat di sana. Tugas dan kuisnya tetap tampil, hanya tanpa tenggat.
   // Meetings that ended before the participant joined are left out unless they
   // are recorded there. Their tasks and quizzes still show, only without a deadline.
+  // Showcase tidak dihitung kehadirannya dan presensinya tidak diambil, jadi bila tampil selalu merah
+  // Showcase attendance is not counted nor taken, so if shown it would always be red
   const sessions = [...input.sessions]
-    .filter((s) => countsAfterJoin(s.endsAt, joinIso, statusBySession.has(s.id)))
+    .filter((s) => !/^Showcase\b/i.test(s.title) && countsAfterJoin(s.endsAt, joinIso, statusBySession.has(s.id)))
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 
   const attendance = sessions.map((s) => {

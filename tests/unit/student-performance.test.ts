@@ -36,6 +36,14 @@ describe('laporan performa peserta', () => {
     ]);
   });
 
+  it('tidak menampilkan sesi Showcase di laporan presensi', () => {
+    const { attendance } = buildStudentPerformance({
+      ...base,
+      sessions: [...base.sessions, { id: 'sc', title: 'Showcase: Presentasi capstone project', startsAt: '2026-10-04T02:00:00.000Z', endsAt: '2026-10-04T09:00:00.000Z' }],
+    });
+    expect(attendance.map((a) => a.sessionId)).not.toContain('sc');
+  });
+
   it('mengambil nilai terbaik dari percobaan yang selesai saja', () => {
     const { quizzes } = buildStudentPerformance({
       ...base,
