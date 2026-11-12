@@ -33,14 +33,17 @@ describe('ringkasan belajar di beranda', () => {
 
   it('belum lulus menyebut capstone yang tidak dikumpulkan', () => {
     render(<HomeSummary s={make({ score: 52, capstone: 0, placement: 'none', placementReasons: ['Tidak mengumpulkan capstone'] })} />);
-    expect(screen.getByText('SPA 52, batas lulus 60')).toBeTruthy();
+    expect(screen.getByText('Kurang 8 poin untuk lulus')).toBeTruthy();
+    expect(screen.getByText('Paling menurunkan nilai')).toBeTruthy();
     expect(screen.getByText('Tidak dikumpulkan')).toBeTruthy();
     expect(screen.queryByRole('list')).toBeNull();
   });
 
   it('lulus tanpa skema menunjukkan syarat yang gagal', () => {
     render(<HomeSummary s={make({ score: 66, combined: 60, absent: 4, placement: 'none' })} />);
-    expect(screen.getByText(/belum memenuhi syarat magang/)).toBeTruthy();
-    expect(screen.getAllByText('Absen maks. 3 kali').length).toBeGreaterThan(0);
+    expect(screen.getByText('Selamat, kamu lulus!')).toBeTruthy();
+    expect(screen.getByText('Syarat magang Project Based')).toBeTruthy();
+    // Syarat sudah ada di kartu utama, jadi kartu syarat terpisah tidak diulang / The requirements are in the main card, so the separate card is not repeated
+    expect(screen.getAllByText(/Absen maks\. 3 kali/)).toHaveLength(1);
   });
 });

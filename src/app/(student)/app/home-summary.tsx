@@ -31,6 +31,27 @@ function Tile({ label, value, sub, accent }: { label: string; value: React.React
   );
 }
 
+// SPA terhadap batas lulus: garis penanda di 60 / SPA against the pass mark: a marker line at 60
+function SpaMeter({ score, fill, muted, marker }: { score: number; fill: string; muted: string; marker: string }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <span style={{ fontSize: '12px', color: muted }}>SPA</span>
+        <b style={{ fontFamily: 'var(--font-heading)', fontSize: '26px' }}>{score}</b>
+      </div>
+      <div role="img" aria-label={`SPA ${score}, batas lulus ${PASS_SPA}`} style={{ position: 'relative', height: '8px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '4px', marginTop: '6px' }}>
+        <div style={{ width: `${Math.min(100, Math.max(0, score))}%`, height: '100%', backgroundColor: fill, borderRadius: '4px' }} />
+        <div style={{ position: 'absolute', left: `${PASS_SPA}%`, top: '-4px', width: '2px', height: '16px', backgroundColor: marker }} />
+      </div>
+      <div style={{ fontSize: '11px', color: muted, marginTop: '4px' }}>Batas lulus {PASS_SPA}</div>
+    </div>
+  );
+}
+
+const panel: React.CSSProperties = { backgroundColor: '#ffffff', color: 'var(--color-text-main)', borderRadius: '12px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px' };
+const panelTitle: React.CSSProperties = { fontSize: '12px', fontWeight: 700, color: MUTED };
+const twoCol: React.CSSProperties = { borderRadius: '18px', padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', alignItems: 'end', color: '#ffffff' };
+
 function Hero({ s }: { s: LearningSummary }) {
   if (s.state === 'ditempatkan' && s.internship) {
     return (
@@ -68,34 +89,52 @@ function Hero({ s }: { s: LearningSummary }) {
     );
   }
   if (s.state === 'tidak-ditempatkan') {
-    const gagal = s.requirements.filter((r) => !r.ok);
     return (
-      <section aria-label="Hasil akhir" style={{ ...card, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <span style={badge('#ECFDF3', '#067647')}><Check size={13} strokeWidth={3} aria-hidden /> LULUS</span>
-        <h2 style={{ ...h3, fontSize: '20px' }}>Selamat, kamu lulus</h2>
-        <div style={{ fontSize: '13px', color: MUTED }}>SPA {s.score} · belum memenuhi syarat magang:</div>
-        {gagal.map((r) => (
-          <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', backgroundColor: '#FEF3F2', borderRadius: '10px', padding: '9px 12px' }}>
-            <span>{r.label}</span><b style={{ color: '#B42318' }}>{r.value}</b>
-          </div>
-        ))}
+      <section aria-label="Hasil akhir" style={{ ...twoCol, backgroundColor: '#0E7A45' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <span style={badge('#ffffff', '#0E7A45')}><Check size={13} strokeWidth={3} aria-hidden /> LULUS</span>
+          <h2 style={{ margin: 0, fontFamily: 'var(--font-heading)', fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>Selamat, kamu lulus!</h2>
+          <SpaMeter score={s.score} fill="#ffffff" muted="#D1FADF" marker={YELLOW} />
+        </div>
+        <div style={panel}>
+          <span style={panelTitle}>Syarat magang Project Based</span>
+          {s.requirements.map((r) => (
+            <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', ...(r.ok ? {} : { backgroundColor: '#FEF3F2', borderRadius: '8px', padding: '6px 8px', margin: '0 -8px' }) }}>
+              <span><span aria-hidden style={{ color: r.ok ? '#067647' : '#B42318', fontWeight: 800 }}>{r.ok ? '✓' : '✕'}</span> {r.label}</span>
+              <b style={{ color: r.ok ? undefined : '#B42318' }}>{r.value}</b>
+            </div>
+          ))}
+        </div>
       </section>
     );
   }
   if (s.state === 'belum-lulus') {
-    const lemah = [...s.components].sort((a, b) => a.score - b.score).slice(0, 3);
+    // Urut menurut poin SPA yang hilang, bukan nilai mentah: capstone berbobot 45% lebih berpengaruh daripada kuis
+    // Ordered by SPA points lost, not raw score: the capstone at 45% weighs more than the quiz
+    const lemah = [...s.components].sort((a, b) => b.weight * (100 - b.score) - a.weight * (100 - a.score)).slice(0, 2);
     const tanpaCapstone = s.reasons.includes('Tidak mengumpulkan capstone');
     return (
-      <section aria-label="Hasil akhir" style={{ ...card, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <span style={badge('#FEF3F2', '#B42318')}>BELUM LULUS</span>
-        <h2 style={{ ...h3, fontSize: '20px' }}>SPA {s.score}, batas lulus {PASS_SPA}</h2>
-        {lemah.map((c) => (
-          <div key={c.key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-            <span>{c.label}</span>
-            <b style={{ color: c.key === 'capstone' && tanpaCapstone ? '#B42318' : undefined }}>{c.key === 'capstone' && tanpaCapstone ? 'Tidak dikumpulkan' : c.score}</b>
+      <section aria-label="Hasil akhir" style={{ ...twoCol, backgroundColor: '#273449' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <span style={badge('#FEE4E2', '#B42318')}>BELUM LULUS</span>
+          <h2 style={{ margin: 0, fontFamily: 'var(--font-heading)', fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>Kurang {PASS_SPA - s.score} poin untuk lulus</h2>
+          <SpaMeter score={s.score} fill="#F79009" muted="#CBD5E1" marker="#ffffff" />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={panel}>
+            <span style={panelTitle}>Paling menurunkan nilai</span>
+            {lemah.map((c) => {
+              const hilang = c.key === 'capstone' && tanpaCapstone;
+              return (
+                <div key={c.key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                  <span>{c.label} <span style={{ color: MUTED }}>{c.weight}%</span></span>
+                  <b style={{ color: hilang ? '#B42318' : undefined }}>{hilang ? 'Tidak dikumpulkan' : c.score}</b>
+                </div>
+              );
+            })}
           </div>
-        ))}
-        <div style={{ fontSize: '12px', color: MUTED }}>Pertanyaan: hubungi PIC kelasmu.</div>
+          <span style={{ fontSize: '12px', color: '#CBD5E1' }}>Pertanyaan: hubungi PIC kelasmu.</span>
+        </div>
       </section>
     );
   }
@@ -150,7 +189,7 @@ export function HomeSummary({ s }: { s: LearningSummary }) {
             <b>SPA</b><b style={{ color: BLUE }}>{s.score}</b>
           </div>
         </section>
-        {s.requirements.length > 0 && s.state !== 'ditempatkan' && (
+        {s.requirements.length > 0 && (s.state === 'full' || s.state === 'project') && (
           <section aria-label={reqTitle} style={{ ...card, display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <h3 style={h3}>{reqTitle}</h3>
             {s.requirements.map((r) => (
