@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 vi.mock('next/link', () => ({ default: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a> }));
 import { JobsTab } from '../../src/app/(admin)/admin/job-portal/jobs-tab';
@@ -18,5 +18,18 @@ describe('tabel lowongan admin', () => {
     render(<JobsTab rows={[row('a', 4), row('b', 2), row('c', 2, true)]} onEdit={vi.fn()} onChanged={vi.fn()} onError={vi.fn()} />);
     expect(screen.getByRole('columnheader', { name: 'Kuota' })).toBeTruthy();
     expect(screen.getByText('Total kuota: 6 kursi dari 2 lowongan')).toBeTruthy();
+  });
+
+  it('pencarian menyaring lowongan menurut posisi, perusahaan, atau PIC', () => {
+    const rows = [row('a', 4), { ...(row('b', 2) as object), title: 'KOL Specialist', partnerName: 'Ioda Academy', picName: 'Budi' } as never];
+    render(<JobsTab rows={rows} onEdit={vi.fn()} onChanged={vi.fn()} onError={vi.fn()} />);
+    const search = screen.getByRole('searchbox', { name: 'Cari lowongan' });
+    fireEvent.change(search, { target: { value: 'ioda' } });
+    expect(screen.queryByText('Posisi a')).toBeNull();
+    expect(screen.getByText('KOL Specialist')).toBeTruthy();
+    fireEvent.change(search, { target: { value: 'budi' } });
+    expect(screen.getByText('KOL Specialist')).toBeTruthy();
+    fireEvent.change(search, { target: { value: 'tidak ada' } });
+    expect(screen.getByText('Tidak ada lowongan yang cocok.')).toBeTruthy();
   });
 });

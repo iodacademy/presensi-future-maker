@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { btn, send } from '../pameran/admin-ui';
+import { btn, field, send } from '../pameran/admin-ui';
 import type { JobRow } from '@/features/careers/admin-service';
 import { countdownParts, EMPLOYMENT_LABELS, formatCountdown, jobState, SCHEME_LABELS, type JobState } from '@/features/careers/model';
 
@@ -25,6 +25,7 @@ export function JobsTab({ rows, onEdit, onChanged, onError }: {
   rows: JobRow[]; onEdit: (id: string) => void; onChanged: () => void; onError: (m: string) => void;
 }) {
   const [now, setNow] = useState(() => new Date());
+  const [q, setQ] = useState('');
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
 
   async function remove(r: JobRow) {
@@ -39,14 +40,21 @@ export function JobsTab({ rows, onEdit, onChanged, onError }: {
     return <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Belum ada lowongan. Tambahkan mitra, lalu tekan "+ Tambah lowongan".</p>;
   }
 
+  const needle = q.trim().toLowerCase();
+  const shown = rows.filter((r) => !needle || `${r.title} ${r.partnerName} ${r.picName} ${r.scheme ? SCHEME_LABELS[r.scheme] : ''}`.toLowerCase().includes(needle));
+
   return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <input type="search" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cari lowongan" placeholder="Cari posisi, perusahaan, atau PIC"
+      style={{ ...field, maxWidth: '360px' }} />
     <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--color-border)', borderRadius: '12px', overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '760px' }}>
         <thead>
           <tr><th style={th}>Posisi</th><th style={th}>Perusahaan → PIC</th><th style={th}>Tutup dalam</th><th style={th}>Kuota</th><th style={th}>Pelamar</th><th style={th}>Status</th><th style={th} aria-label="Aksi" /></tr>
         </thead>
         <tbody>
-          {rows.map((r) => {
+          {shown.length === 0 && <tr><td style={td} colSpan={7}><span style={{ color: 'var(--color-text-muted)' }}>Tidak ada lowongan yang cocok.</span></td></tr>}
+          {shown.map((r) => {
             const state = jobState(r, now);
             const parts = countdownParts(r.closesAt, now);
             const urgent = !parts.ended && parts.days === 0;
@@ -79,6 +87,7 @@ export function JobsTab({ rows, onEdit, onChanged, onError }: {
         {`Total kuota: ${real.reduce((n, r) => n + (r.quota || 0), 0)} kursi dari ${real.length} lowongan`}
         <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}> · lowongan demo tidak dihitung</span>
       </div>
+    </div>
     </div>
   );
 }

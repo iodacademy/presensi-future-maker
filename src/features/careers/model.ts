@@ -42,6 +42,14 @@ export interface JobInput {
   /** Durasi proyek dalam bulan, hanya untuk Project Based; nilai proyek tidak dibagi per bulan / Project length in months, Project Based only; the project value is not split per month */
   durationMonths: number | null;
   opensAt: string; closesAt: string; documents: JobDocuments; questions: JobQuestion[]; status: JobStatus;
+  /**
+   * Email PIC mitra yang mewawancarai pelamar lowongan ini; kosong berarti PIC pertama mitra.
+   * Kontak ini yang dilihat kandidat, jadi WhatsApp dan email tidak salah orang.
+   *
+   * Email of the partner PIC who interviews this job's applicants; empty means the partner's first PIC.
+   * Candidates see this contact, so WhatsApp and email reach the right person.
+   */
+  picEmail: string;
 }
 export type Job = JobInput & { id: string; partnerName: string; applicantCount: number; createdAt: string; updatedAt: string };
 
@@ -209,7 +217,13 @@ export function validateJobInput(raw: unknown): JobInput {
     documents: Object.fromEntries(DOC_KEYS.map((k) => [k, oneOf<DocRule>(docs[k] ?? 'off', DOC_RULE_LABELS, 'Aturan dokumen tidak dikenal')])) as unknown as JobDocuments,
     questions: validateQuestions(r.questions),
     status: r.status === 'published' ? 'published' : 'draft',
+    picEmail: str(r.picEmail).toLowerCase(),
   };
+}
+
+/** PIC sebuah lowongan; lowongan lama atau PIC yang sudah dihapus jatuh ke PIC pertama mitra / A job's PIC; older jobs or a removed PIC fall back to the partner's first PIC */
+export function jobPic<T extends { email: string }>(pics: T[], picEmail?: string | null): T | null {
+  return pics.find((p) => !!picEmail && p.email.toLowerCase() === picEmail) ?? pics[0] ?? null;
 }
 
 export function jobState(job: Pick<Job, 'status' | 'opensAt' | 'closesAt'>, now: Date): JobState {

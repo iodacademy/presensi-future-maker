@@ -55,7 +55,7 @@ vi.mock('../../src/lib/firebase/admin', () => ({
 }));
 
 import {
-  createJob, createPartner, deleteJob, listJobs, portalStats, updateJob, updatePartner,
+  createJob, createPartner, deleteJob, listJobs, updateJob, updatePartner,
 } from '../../src/features/careers/admin-service';
 import { GET as jobsGet, POST as jobsPost } from '../../src/app/api/karier/jobs/route';
 
@@ -101,6 +101,20 @@ describe('layanan admin Job Portal', () => {
     expect(data.jobs[id]).toMatchObject({ partnerName: 'PT DIPSI', applicantCount: 0, qualifications: ['Figma'] });
   });
 
+  it('PIC lowongan harus PIC mitranya, dan tampil di daftar lowongan', async () => {
+    await expect(createJob({ ...job, picEmail: 'orang@lain.id' })).rejects.toThrow('PIC lowongan tidak terdaftar di mitra ini');
+    const id = await createJob({ ...job, picEmail: ' RINA@dipsi.co.id ' });
+    expect(data.jobs[id].picEmail).toBe('rina@dipsi.co.id');
+    await expect(updateJob(id, { ...job, picEmail: 'orang@lain.id' })).rejects.toThrow('PIC lowongan tidak terdaftar di mitra ini');
+    expect((await listJobs()).find((r) => r.id === id)).toMatchObject({ picName: 'Rina Kusuma', picEmail: 'rina@dipsi.co.id' });
+  });
+
+  it('lowongan tanpa PIC sendiri memakai PIC pertama mitra', async () => {
+    const id = await createJob(job);
+    expect(data.jobs[id].picEmail).toBe('');
+    expect((await listJobs()).find((r) => r.id === id)?.picName).toBe('Rina Kusuma');
+  });
+
   it('lowongan untuk mitra tak dikenal ditolak', async () => {
     await expect(createJob({ ...job, partnerId: 'x' })).rejects.toThrow('Mitra tidak ditemukan');
   });
@@ -141,15 +155,6 @@ describe('layanan admin Job Portal', () => {
     expect(fields).not.toContain('description');
     expect(fields).not.toContain('qualifications');
     expect(fields).not.toContain('questions');
-  });
-
-  it('ringkasan menghitung lowongan aktif, pelamar, mitra, dan interview', async () => {
-    data.jobs.j1 = { ...job, partnerName: 'PT DIPSI', applicantCount: 14 };
-    data.jobs.j2 = { ...job, status: 'draft', partnerName: 'PT DIPSI', applicantCount: 0 };
-    data.jobs.j3 = { ...job, closesAt: '2026-11-04T00:00:00.000Z', partnerName: 'PT DIPSI', applicantCount: 6 };
-    data.jobApplications = { a1: { status: 'interview' }, a2: { status: 'baru' } };
-    const s = await portalStats(new Date('2026-11-05T00:00:00Z'));
-    expect(s).toEqual({ activeJobs: 1, applicants: 20, partners: 1, interviews: 1 });
   });
 
   it('hapus dan ubah lowongan memeriksa pelamar di dalam transaksi', async () => {

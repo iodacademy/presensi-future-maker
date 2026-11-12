@@ -11,7 +11,7 @@ import { getAdminDb } from '../../lib/firebase/admin';
 import { whatsAppLink } from '../../lib/whatsapp';
 import type { Actor } from '../auth/types';
 import { cancelCalendarEvent, createCalendarEvent, isCalendarConfigured } from '../calendar/client';
-import { FINAL_MESSAGE, FINAL_STATUSES, interviewMessage, interviewWindow, validateInterviewInput, type Interview, type PicContact } from './model';
+import { FINAL_MESSAGE, FINAL_STATUSES, interviewMessage, jobPic, interviewWindow, validateInterviewInput, type Interview, type PicContact } from './model';
 import type { PartnerActor } from './partner-service';
 
 const apps = () => getAdminDb().collection('jobApplications');
@@ -28,6 +28,16 @@ export async function inviteToInterview(actor: PartnerActor, appId: string, raw:
 
   if (input.linkSource === 'meet-auto' && !isCalendarConfigured()) throw new Error('Link Meet otomatis belum tersedia. Tempel link meeting sendiri.');
 
+  // Kontak kandidat adalah PIC lowongan, yaitu pewawancaranya, walau undangan dikirim PIC lain dari mitra yang sama.
+  // Lowongan tanpa PIC sendiri memakai PIC yang mengundang. PIC tanpa nomor tetap bisa dihubungi lewat email.
+  // The candidate's contact is the job's PIC, the interviewer, even when another PIC of the same partner sends the invite.
+  // A job without its own PIC uses the inviting PIC. A PIC without a number can still be emailed.
+  const pics = ((await getAdminDb().collection('partners').doc(actor.partnerId).get()).get('pics') ?? []) as PicContact[];
+  const own = job.get('picEmail') ? jobPic(pics, String(job.get('picEmail'))) : null;
+  const contact: PicContact = own
+    ? { name: own.name, email: own.email, phone: own.phone ?? '' }
+    : { name: actor.name, email: actor.email, phone: pics.find((p) => p.email === actor.email)?.phone ?? '' };
+
   const previous = snap.get('interview') as Interview | undefined;
 
   let url = input.url;
@@ -39,7 +49,7 @@ export async function inviteToInterview(actor: PartnerActor, appId: string, raw:
       description: [`Kandidat: ${personal.fullName}`, `Pewawancara: ${input.interviewer}`, input.note].filter(Boolean).join('\n'),
       ...interviewWindow(input),
       studentEmail: personal.email,
-      mentorEmail: actor.email,
+      mentorEmail: contact.email,
       // Interview perusahaan tidak direkam, berbeda dari sesi mentoring (keputusan pemilik produk)
       // Company interviews are not recorded, unlike mentoring sessions (product owner's decision)
       record: false,
@@ -54,10 +64,6 @@ export async function inviteToInterview(actor: PartnerActor, appId: string, raw:
   }
 
   const t = now.toISOString();
-  // Nomor PIC diambil dari data mitra; PIC tanpa nomor tetap bisa dihubungi lewat email
-  // The PIC's number comes from the partner record; a PIC without one can still be emailed
-  const pics = ((await getAdminDb().collection('partners').doc(actor.partnerId).get()).get('pics') ?? []) as PicContact[];
-  const contact: PicContact = { name: actor.name, email: actor.email, phone: pics.find((p) => p.email === actor.email)?.phone ?? '' };
   const interview: Interview = { ...input, url, confirmation: 'pending', rescheduleNote: '', calendarEventId, invitedAt: t, contact };
   await apps().doc(appId).update({ interview, status: 'interview', statusChangedAt: t, updatedAt: t });
   // Acara lama baru dibatalkan setelah jadwal baru tersimpan: bila pembuatan gagal, undangan lama tetap berlaku

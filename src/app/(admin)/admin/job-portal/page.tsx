@@ -8,13 +8,9 @@ import { JobsTab } from './jobs-tab';
 import { PartnersTab } from './partners-tab';
 import { PartnerForm } from './partner-form';
 import { JobForm } from './job-form';
+import { InsightsPanel } from './insights-panel';
 
-type Stats = { activeJobs: number; applicants: number; partners: number; interviews: number };
 type View = { kind: 'list' } | { kind: 'job'; id: string | null } | { kind: 'partner'; id: string | null };
-
-const STAT_LABELS: [keyof Stats, string][] = [
-  ['activeJobs', 'Lowongan aktif'], ['applicants', 'Total pelamar'], ['partners', 'Mitra terdaftar'], ['interviews', 'Interview terjadwal'],
-];
 
 /**
  * Panel admin Job Portal: lowongan dan mitra. Tab dipilih lewat ?tab= agar muat ulang tidak kembali ke Lowongan.
@@ -26,7 +22,7 @@ export default function AdminJobPortalPage() {
   const [view, setView] = useState<View>({ kind: 'list' });
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [partners, setPartners] = useState<PartnerRow[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<boolean | null>(null);
 
@@ -35,7 +31,7 @@ export default function AdminJobPortalPage() {
   const load = useCallback(async () => {
     try {
       const [j, p, g] = await Promise.all([api('/api/karier/jobs'), api('/api/karier/partners'), api('/api/karier/pendaftaran')]);
-      setJobs(j.jobs); setStats(j.stats); setPartners(p.partners); setOpen(g.open); setError(null);
+      setJobs(j.jobs); setReloadKey((k) => k + 1); setPartners(p.partners); setOpen(g.open); setError(null);
     } catch (e) { setError((e as Error).message); }
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -84,14 +80,7 @@ export default function AdminJobPortalPage() {
         <PartnerForm id={view.id} onDone={back} />
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
-            {STAT_LABELS.map(([k, l]) => (
-              <div key={k} style={{ backgroundColor: '#ffffff', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '14px 16px' }}>
-                <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{l}</div>
-                <div style={{ fontFamily: 'var(--font-heading)', fontSize: '22px', fontWeight: 700, color: 'var(--color-text-main)' }}>{stats ? stats[k] : '–'}</div>
-              </div>
-            ))}
-          </div>
+          {reloadKey > 0 && <InsightsPanel reloadKey={reloadKey} onError={setError} />}
           <div role="tablist" style={{ display: 'flex', gap: '8px' }}>
             {([['lowongan', 'Lowongan'], ['mitra', 'Mitra & PIC']] as const).map(([k, l]) => (
               <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => choose(k)}

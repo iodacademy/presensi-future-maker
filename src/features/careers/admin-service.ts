@@ -9,14 +9,18 @@ import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
 import { getEmailHash, normalizeEmail } from '../auth/policy';
 import {
-  DEMO_CLASS_ID, jobState, partnerNameKey, validateJobInput, validatePartnerInput,
+  DEMO_CLASS_ID, jobPic, jobState, partnerNameKey, validateJobInput, validatePartnerInput,
   type Category, type Employment, type Job, type JobStatus, type Partner, type Scheme, type WorkMode,
 } from './model';
 
-export interface PartnerRow { id: string; name: string; field: string; logoThumb: string; picNames: string[]; jobCount: number; picAccounts: string[] }
+export interface PartnerRow {
+  id: string; name: string; field: string; logoThumb: string; picNames: string[]; jobCount: number; picAccounts: string[];
+  /** Pilihan PIC di formulir lowongan / The PIC choices in the job form */
+  pics: { name: string; email: string }[];
+}
 export interface JobRow {
   id: string; title: string; employment: Employment; category: Category; scheme: Scheme; location: string; workMode: WorkMode; quota: number;
-  partnerId: string; partnerName: string; picName: string; opensAt: string; closesAt: string; status: JobStatus; applicantCount: number;
+  partnerId: string; partnerName: string; picName: string; picEmail: string; opensAt: string; closesAt: string; status: JobStatus; applicantCount: number;
   /** Lowongan fiktif untuk akun demo; tidak dihitung dalam total kuota / A fictitious job for demo accounts; left out of the quota total */
   demo: boolean;
 }
@@ -46,7 +50,8 @@ export async function listPartners(): Promise<PartnerRow[]> {
     const d = p.data();
     return {
       id: p.id, name: d.name ?? '', field: d.field ?? '', logoThumb: d.logo?.thumb ?? '',
-      picNames: ((d.pics ?? []) as { name: string }[]).map((x) => x.name), jobCount: counts.get(p.id) ?? 0, picAccounts: accounts.get(p.id) ?? [],
+      picNames: ((d.pics ?? []) as { name: string }[]).map((x) => x.name),
+      pics: ((d.pics ?? []) as { name: string; email: string }[]).map((x) => ({ name: x.name, email: x.email })), jobCount: counts.get(p.id) ?? 0, picAccounts: accounts.get(p.id) ?? [],
     };
   });
 }
@@ -127,17 +132,24 @@ export async function createPicAccounts(partnerId: string): Promise<{ created: s
 
 const JOB_ROW_FIELDS = [
   'title', 'employment', 'category', 'scheme', 'location', 'workMode', 'quota', 'partnerId', 'partnerName',
-  'opensAt', 'closesAt', 'status', 'applicantCount',
+  'opensAt', 'closesAt', 'status', 'applicantCount', 'picEmail',
 ];
+
+// PIC lowongan wajib salah satu PIC mitranya, agar kandidat tidak diarahkan ke orang luar
+// A job's PIC must be one of its partner's PICs, so candidates are never routed to an outsider
+function assertJobPic(partner: Pick<Partner, 'pics'>, picEmail: string) {
+  if (picEmail && !partner.pics.some((p) => p.email.toLowerCase() === picEmail)) throw new Error('PIC lowongan tidak terdaftar di mitra ini');
+}
 
 export async function listJobs(): Promise<JobRow[]> {
   const [jSnap, pSnap] = await Promise.all([jobs().select(...JOB_ROW_FIELDS, 'eligibility').get(), partners().select('pics').get()]);
-  const pic = new Map(pSnap.docs.map((p) => [p.id, ((p.data().pics ?? []) as { name: string }[])[0]?.name ?? '']));
+  const pics = new Map(pSnap.docs.map((p) => [p.id, (p.data().pics ?? []) as { name: string; email: string }[]]));
   return jSnap.docs
     .map((j) => {
       const d = j.data();
       return {
-        ...(Object.fromEntries(JOB_ROW_FIELDS.map((f) => [f, d[f]])) as Omit<JobRow, 'id' | 'picName' | 'demo'>), id: j.id, picName: pic.get(d.partnerId) ?? '', applicantCount: d.applicantCount ?? 0,
+        ...(Object.fromEntries(JOB_ROW_FIELDS.map((f) => [f, d[f]])) as Omit<JobRow, 'id' | 'picName' | 'demo'>), id: j.id,
+        picName: jobPic(pics.get(d.partnerId) ?? [], d.picEmail)?.name ?? '', picEmail: d.picEmail ?? '', applicantCount: d.applicantCount ?? 0,
         demo: d.eligibility?.mode === 'classes' && (d.eligibility.classIds ?? []).includes(DEMO_CLASS_ID),
       };
     })
@@ -153,6 +165,7 @@ export async function createJob(raw: unknown): Promise<string> {
   const input = validateJobInput(raw);
   const partner = await getPartner(input.partnerId);
   if (!partner) throw new Error('Mitra tidak ditemukan');
+  assertJobPic(partner, input.picEmail);
   const t = now();
   const ref = await jobs().add({ ...input, partnerName: partner.name, applicantCount: 0, createdAt: t, updatedAt: t });
   return ref.id;
@@ -175,11 +188,12 @@ export async function updateJob(id: string, raw: unknown): Promise<void> {
     if (!snap.exists) throw new Error('Lowongan tidak ditemukan');
     const current = snap.data() as Job;
     let partnerName = current.partnerName;
-    if (input.partnerId !== current.partnerId) {
-      if ((current.applicantCount ?? 0) > 0) throw new Error('Mitra lowongan yang sudah punya pelamar tidak bisa diganti');
+    if (input.partnerId !== current.partnerId && (current.applicantCount ?? 0) > 0) throw new Error('Mitra lowongan yang sudah punya pelamar tidak bisa diganti');
+    if (input.partnerId !== current.partnerId || input.picEmail) {
       const partner = await tx.get(partners().doc(input.partnerId));
       if (!partner.exists) throw new Error('Mitra tidak ditemukan');
       partnerName = partner.data()!.name;
+      assertJobPic({ pics: partner.data()!.pics ?? [] }, input.picEmail);
     }
     tx.update(jobs().doc(id), { ...input, partnerName, updatedAt: now() });
   });
@@ -192,20 +206,4 @@ export async function deleteJob(id: string): Promise<void> {
     if (((snap.data() as Job).applicantCount ?? 0) > 0) throw new Error('Lowongan yang sudah punya pelamar tidak bisa dihapus');
     tx.delete(jobs().doc(id));
   });
-}
-
-export async function portalStats(at: Date): Promise<{ activeJobs: number; applicants: number; partners: number; interviews: number }> {
-  const db = getAdminDb();
-  const [jSnap, pCount, iCount] = await Promise.all([
-    jobs().select('status', 'opensAt', 'closesAt', 'applicantCount').get(),
-    partners().count().get(),
-    db.collection('jobApplications').where('status', '==', 'interview').count().get(),
-  ]);
-  const rows = jSnap.docs.map((j) => j.data() as Pick<Job, 'status' | 'opensAt' | 'closesAt' | 'applicantCount'>);
-  return {
-    activeJobs: rows.filter((r) => jobState(r, at) === 'aktif').length,
-    applicants: rows.reduce((sum, r) => sum + (r.applicantCount ?? 0), 0),
-    partners: pCount.data().count,
-    interviews: iCount.data().count,
-  };
 }
