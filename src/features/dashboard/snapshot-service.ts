@@ -12,7 +12,7 @@ import { hitungFase, keteranganFase } from './phases';
 import { buildFeedbackReport } from './feedback';
 import { countAbsent, gradeParticipant, gradedMeetings, performanceScore } from '../grading/policy';
 import { combinedScore, comparePlacementRank, decidePlacement } from '../grading/placement';
-import { SPECIAL_CASE_COLLECTION, withSpecialCases } from '../grading/special-case';
+import { SPECIAL_CASE_COLLECTION, withPlacementOverride, withSpecialCases } from '../grading/special-case';
 import { wibDate } from '@/lib/time';
 import {
   DISABILITY_LABELS,
@@ -110,7 +110,7 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  * 19: Full needs a combined score of 60, and absences drop the scheme one tier
  *     instead of knocking out a Full-level participant.
  */
-export const SNAPSHOT_VERSION = 21;
+export const SNAPSHOT_VERSION = 22;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -178,7 +178,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     // snapshot would read forty thousand documents for one chart alone -- nearly
     // the entire daily read quota.
     db.collection('lmsLogins').where('date', '>=', wibDate(new Date(Date.now() - 60 * 24 * 60 * 60 * 1000))).get(),
-    db.collection(SPECIAL_CASE_COLLECTION).select('studentId', 'scores', 'reason').get(),
+    db.collection(SPECIAL_CASE_COLLECTION).select('studentId', 'scores', 'reason', 'placement').get(),
   ]);
 
   const classes = classesSnap.docs.map((d) => d.data() as ClassDocument);
@@ -561,6 +561,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   // Nilai kasus khusus dari admin menggantikan nilai mentor di perhitungan, dan peserta itu ditandai
   // Special-case grades from an admin replace the mentor's in the calculation, and the participant is flagged
   const kasusKhusus = new Map(specialSnap.docs.map((d) => [String(d.get('studentId')), String(d.get('reason') ?? 'Kasus khusus')]));
+  const penempatanKhusus = new Map(specialSnap.docs.filter((d) => d.get('placement')).map((d) => [String(d.get('studentId')), d.get('placement') as 'full' | 'project']));
   const nilaiTugasPerSiswa = withSpecialCases(nilaiMentor, specialSnap.docs.map((d) => ({ studentId: String(d.get('studentId')), scores: (d.get('scores') ?? {}) as Record<string, number> })));
 
   // Terkumpul atau tidak dicatat terpisah dari nilainya: tugas yang terkumpul
@@ -722,9 +723,9 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         taskScores: (tugasPerKelasId.get(cid) ?? []).map((t) => nilaiTugas?.get(t.id) ?? null),
         quizScores: examIds.map((id) => nilaiPertama.get(id)?.get(st.uid) ?? null),
       });
-      const { placement, reasons } = decidePlacement({
+      const { placement, reasons } = withPlacementOverride(decidePlacement({
         spa: nilai.score, capstone: komponen('capstone'), tasks: komponen('tasks'), absent, capstoneGraded: !nilai.pending.includes('capstone'), capstoneMissing,
-      });
+      }), penempatanKhusus.get(st.uid));
       return {
         studentId: st.uid,
         studentName: st.name,

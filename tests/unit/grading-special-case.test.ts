@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { withSpecialCases } from '../../src/features/grading/special-case';
+import { SPECIAL_PLACEMENT_REASON, withPlacementOverride, withSpecialCases } from '../../src/features/grading/special-case';
 import { gradeParticipant } from '../../src/features/grading/policy';
 
 describe('nilai kasus khusus', () => {
@@ -20,5 +20,12 @@ describe('nilai kasus khusus', () => {
     });
     expect(hasil.breakdown.find((b) => b.component === 'tasks')!.detail).toMatch(/kasus khusus/);
     expect(hasil.breakdown.find((b) => b.component === 'capstone')!.detail).toMatch(/kasus khusus/);
+  });
+
+  it('penempatan khusus dari mitra menggantikan skema hasil aturan, dengan alasannya', () => {
+    const aturan = { placement: 'project' as const, reasons: ['SPA di bawah 70'] };
+    expect(withPlacementOverride(aturan, 'full')).toEqual({ placement: 'full', reasons: [SPECIAL_PLACEMENT_REASON] });
+    expect(withPlacementOverride(aturan, undefined)).toBe(aturan);
+    expect(SPECIAL_PLACEMENT_REASON).toBe('Penempatan khusus dari mitra');
   });
 });

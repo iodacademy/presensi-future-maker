@@ -7,6 +7,8 @@
  * capstone scores. Stored apart from the mentor's grading, so the original
  * score survives and every view can flag that the score was set.
  */
+import type { Placement } from './placement';
+
 export interface SpecialCaseGrade {
   studentId: string;
   /** taskId -> nilai yang ditetapkan / taskId -> the score that was set */
@@ -14,6 +16,8 @@ export interface SpecialCaseGrade {
   /** Nilai LMS sebelum ditetapkan / The LMS score before it was set */
   original: Record<string, number | null>;
   reason: string;
+  /** Skema magang yang ditetapkan, mis. sudah diterima mitra lewat seleksi awal / The internship scheme that was set, e.g. already accepted by a partner through early selection */
+  placement?: 'full' | 'project';
   setBy: string;
   setAt: string;
 }
@@ -31,4 +35,12 @@ export function withSpecialCases(
     out.set(c.studentId, m);
   }
   return out;
+}
+
+export const SPECIAL_PLACEMENT_REASON = 'Penempatan khusus dari mitra';
+
+export function withPlacementOverride<T extends { placement: Placement; reasons: string[] }>(
+  decided: T, placement: 'full' | 'project' | undefined,
+): T | { placement: Placement; reasons: string[] } {
+  return placement ? { placement, reasons: [SPECIAL_PLACEMENT_REASON] } : decided;
 }
