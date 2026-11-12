@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import type { RankedStudent } from '@/features/dashboard/snapshot-types';
 import s from './dashboard.module.css';
 
-type RankRow = Pick<RankedStudent, 'studentId' | 'studentName' | 'className' | 'city' | 'componentDetails' | 'perfScore' | 'perfAttendance' | 'perfTasks' | 'perfQuiz' | 'capstoneMissing'>;
+type RankRow = Pick<RankedStudent, 'studentId' | 'studentName' | 'className' | 'city' | 'componentDetails' | 'perfScore' | 'perfAttendance' | 'perfTasks' | 'perfQuiz' | 'capstoneMissing' | 'specialCase'>;
 
 // Seri dipecah oleh kehadiran, lalu TPM, lalu kuis, mengikuti urutan bobotnya / Ties are broken by attendance, then TPM, then quiz, following their weights
 export const byPerformance = (a: RankRow, b: RankRow) =>
@@ -53,7 +53,7 @@ export function RankingGroups({ rows, jurusanKelas }: { rows: RankRow[]; jurusan
               {g.rows.slice(0, 5).map((r, i) => (
                 <div key={r.studentId} className={s.rkrow}>
                   <span className={`${s.rkn} ${i < 3 ? s.top : ''}`}>{i + 1}</span>
-                  <span>{r.studentName}{r.capstoneMissing && <div className={s.plMiss}>Tidak mengumpulkan capstone</div>}</span>
+                  <span>{r.studentName}{r.capstoneMissing && <div className={s.plMiss}>Tidak mengumpulkan capstone</div>}{r.specialCase && <div className={s.plSpecial} title={r.specialCase}>Nilai kasus khusus</div>}</span>
                   <span className={s.rkscore}>{r.perfScore}</span>
                 </div>
               ))}
@@ -130,7 +130,7 @@ function RankModal({ title, subtitle, rows, onClose }: { title: string; subtitle
               {rows.map((r, i) => (
                 <tr key={r.studentId}>
                   <td className={s.ctr}><span className={`${s.rkn} ${i < 3 ? s.top : ''}`}>{i + 1}</span></td>
-                  <td>{r.studentName}<div className={s.plSub}>{r.className}</div>{r.capstoneMissing && <div className={s.plMiss}>Tidak mengumpulkan capstone</div>}</td>
+                  <td>{r.studentName}<div className={s.plSub}>{r.className}</div>{r.capstoneMissing && <div className={s.plMiss}>Tidak mengumpulkan capstone</div>}{r.specialCase && <div className={s.plSpecial} title={r.specialCase}>Nilai kasus khusus</div>}</td>
                   <td className={`${s.ctr} ${s.num}`}>{r.perfAttendance}<div className={s.plSub}>{r.componentDetails.attendance}</div></td>
                   <td className={`${s.ctr} ${s.num}`}>{r.perfTasks}</td>
                   <td className={`${s.ctr} ${s.num}`}>{r.perfQuiz}</td>

@@ -176,6 +176,8 @@ export interface RankedStudent {
   pending?: GradeComponent[];
   /** Semua tenggat capstone lewat tanpa kiriman; capstone dihitung 0 / Every capstone deadline passed unsubmitted; the capstone counts as 0 */
   capstoneMissing?: boolean;
+  /** Alasan nilai kasus khusus yang ditetapkan admin / The reason for admin-set special-case grades */
+  specialCase?: string;
 }
 
 /**

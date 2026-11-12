@@ -167,6 +167,8 @@ export function gradeParticipant(input: {
    * there is no grade or import, so a graded late submission still wins.
    */
   capstoneMissed?: boolean;
+  /** Nilai tugas atau capstone ditetapkan admin (lihat special-case.ts) / Task or capstone scores set by an admin (see special-case.ts) */
+  specialCase?: boolean;
 }): { score: number; breakdown: ComponentBreakdown[]; pending: GradeComponent[] } {
   // Pertemuan yang berakhir sebelum peserta bergabung tidak dihitung kecuali
   // ia tercatat di sana. / Meetings that ended before the participant joined
@@ -198,15 +200,16 @@ export function gradeParticipant(input: {
   const capDinilai = cap.some((n) => n !== null);
   const capTidakKumpul = !capDinilai && input.capstone === null && input.capstoneMissed === true;
 
+  const khusus = input.specialCase ? ' · nilai kasus khusus' : '';
   return calculateFinalGrade({
     capstone: capDinilai ? averageWithZeros(cap, cap.length) : capTidakKumpul ? 0 : input.capstone,
     attendance: sesi.length > 0 ? Math.round((hadir / sesi.length) * 100) : null,
     tasks: tugas.length > 0 ? averageWithZeros(tugas, tugas.length) : null,
     quiz: kuis.length > 0 ? averageWithZeros(kuis, kuis.length) : null,
     details: {
-      capstone: capDinilai ? 'Dari penilaian tugas capstone' : input.capstone !== null ? 'Dari impor nilai' : capTidakKumpul ? 'Tidak mengumpulkan capstone' : 'Belum dinilai',
+      capstone: (capDinilai ? 'Dari penilaian tugas capstone' : input.capstone !== null ? 'Dari impor nilai' : capTidakKumpul ? 'Tidak mengumpulkan capstone' : 'Belum dinilai') + khusus,
       attendance: sesi.length > 0 ? `${hadir} dari ${sesi.length} pertemuan` : 'Belum ada pertemuan',
-      tasks: tugas.length > 0 ? `${tugas.filter((n) => n !== null).length} dari ${tugas.length} tugas dinilai` : 'Belum ada tugas',
+      tasks: (tugas.length > 0 ? `${tugas.filter((n) => n !== null).length} dari ${tugas.length} tugas dinilai` : 'Belum ada tugas') + khusus,
       quiz: kuis.length > 0 ? `${kuis.filter((n) => n !== null).length} dari ${kuis.length} ujian dikerjakan` : 'Belum ada ujian',
     },
   });

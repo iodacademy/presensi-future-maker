@@ -12,6 +12,7 @@ import { hitungFase, keteranganFase } from './phases';
 import { buildFeedbackReport } from './feedback';
 import { countAbsent, gradeParticipant, gradedMeetings, performanceScore } from '../grading/policy';
 import { combinedScore, comparePlacementRank, decidePlacement } from '../grading/placement';
+import { SPECIAL_CASE_COLLECTION, withSpecialCases } from '../grading/special-case';
 import { wibDate } from '@/lib/time';
 import {
   DISABILITY_LABELS,
@@ -109,7 +110,7 @@ export const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000;
  * 19: Full needs a combined score of 60, and absences drop the scheme one tier
  *     instead of knocking out a Full-level participant.
  */
-export const SNAPSHOT_VERSION = 20;
+export const SNAPSHOT_VERSION = 21;
 
 function persen(bagian: number, dari: number): number {
   if (dari <= 0) return 0;
@@ -151,6 +152,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     catatanSnap,
     profilesSnap,
     loginsSnap,
+    specialSnap,
   ] = await Promise.all([
     db.collection('classes').get(),
     db.collection('users').where('role', '==', 'student').get(),
@@ -176,6 +178,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
     // snapshot would read forty thousand documents for one chart alone -- nearly
     // the entire daily read quota.
     db.collection('lmsLogins').where('date', '>=', wibDate(new Date(Date.now() - 60 * 24 * 60 * 60 * 1000))).get(),
+    db.collection(SPECIAL_CASE_COLLECTION).select('studentId', 'scores', 'reason').get(),
   ]);
 
   const classes = classesSnap.docs.map((d) => d.data() as ClassDocument);
@@ -548,13 +551,17 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   // Per-participant, per-task scores for the table's columns. A summary figure
   // cannot say which task is blank, and that is what an admin looks for when
   // following up.
-  const nilaiTugasPerSiswa = new Map<string, Map<string, number | null>>();
+  const nilaiMentor = new Map<string, Map<string, number | null>>();
   for (const d of submissionsSnap.docs) {
     const sub = d.data() as { studentId: string; taskId: string; score: number | null };
     if (!aktifIds.has(sub.studentId)) continue;
-    if (!nilaiTugasPerSiswa.has(sub.studentId)) nilaiTugasPerSiswa.set(sub.studentId, new Map());
-    nilaiTugasPerSiswa.get(sub.studentId)!.set(sub.taskId, sub.score ?? null);
+    if (!nilaiMentor.has(sub.studentId)) nilaiMentor.set(sub.studentId, new Map());
+    nilaiMentor.get(sub.studentId)!.set(sub.taskId, sub.score ?? null);
   }
+  // Nilai kasus khusus dari admin menggantikan nilai mentor di perhitungan, dan peserta itu ditandai
+  // Special-case grades from an admin replace the mentor's in the calculation, and the participant is flagged
+  const kasusKhusus = new Map(specialSnap.docs.map((d) => [String(d.get('studentId')), String(d.get('reason') ?? 'Kasus khusus')]));
+  const nilaiTugasPerSiswa = withSpecialCases(nilaiMentor, specialSnap.docs.map((d) => ({ studentId: String(d.get('studentId')), scores: (d.get('scores') ?? {}) as Record<string, number> })));
 
   // Terkumpul atau tidak dicatat terpisah dari nilainya: tugas yang terkumpul
   // tetapi belum dinilai bernilai null pada nilainya -- sama dengan tugas yang
@@ -698,8 +705,9 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         capstoneTaskIds: tugasCapstone.map((t) => t.id),
         capstone: nilaiCapstone.get(st.uid) ?? null,
         capstoneMissed: tugasCapstone.length > 0 && tugasCapstone.every((t) => statusKumpul(st.uid, t) === false),
+        specialCase: kasusKhusus.has(st.uid),
       });
-      const capstoneMissing = nilai.breakdown.find((b) => b.component === 'capstone')?.detail === 'Tidak mengumpulkan capstone';
+      const capstoneMissing = nilai.breakdown.find((b) => b.component === 'capstone')?.detail.startsWith('Tidak mengumpulkan capstone') ?? false;
       const komponen = (k: string) => nilai.breakdown.find((b) => b.component === k)?.score ?? 0;
       const absent = countAbsent({
         sessions: sesiPerKelas.get(cid) ?? [],
@@ -740,6 +748,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
         placementReasons: reasons,
         pending: nilai.pending,
         capstoneMissing,
+        ...(kasusKhusus.has(st.uid) ? { specialCase: kasusKhusus.get(st.uid) } : {}),
       };
     })
     // Bila SPA sama, capstone lalu kehadiran menentukan urutan (skema magang)

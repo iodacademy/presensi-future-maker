@@ -686,6 +686,20 @@
   color: var(--color-danger);
 }
 
+/* Nilai ditetapkan admin: kuning, bukan merah, karena bukan kekurangan peserta / Admin-set grades: amber, not red, as it is not a participant shortfall */
+.plSpecial {
+  display: inline-block;
+  margin-top: 3px;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #FFF4D6;
+  color: #8A5A00;
+  cursor: help;
+}
+
 .plSpa {
   font-size: 15px;
 }

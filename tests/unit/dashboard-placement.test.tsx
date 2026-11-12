@@ -43,6 +43,12 @@ describe('panel skema magang', () => {
     expect(screen.getAllByText('Tidak mengumpulkan capstone')).toHaveLength(1);
   });
 
+  it('peserta bernilai kasus khusus diberi tanda beserta alasannya', () => {
+    render(<PlacementGroups jurusanKelas={jurusan} rows={[{ ...row('Budi', 'Semarang', 'full'), specialCase: 'Kasus khusus: diterima mitra lewat seleksi awal' }]} />);
+    const tanda = screen.getByText('Nilai kasus khusus');
+    expect(tanda.getAttribute('title')).toBe('Kasus khusus: diterima mitra lewat seleksi awal');
+  });
+
   it('kartu skema menyaring tabel', () => {
     render(<PlacementGroups jurusanKelas={jurusan} rows={[row('Roi', 'Semarang', 'full'), row('Vero', 'Semarang', 'project')]} />);
     fireEvent.click(screen.getByRole('button', { name: /Project Based/ }));

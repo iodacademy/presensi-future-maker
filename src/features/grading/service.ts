@@ -7,6 +7,7 @@ import { gradeParticipant, validateAssessmentScore } from './policy';
 import { joinMoment } from '../users/join-policy';
 import type { AssessmentKind, AssessmentScoreDocument, FinalGrade } from './types';
 import type { ParsedScoreRow } from './import-policy';
+import { SPECIAL_CASE_COLLECTION, withSpecialCases } from './special-case';
 
 function requireAdmin(actor: Actor): void {
   if (actor.role !== 'admin') {
@@ -142,7 +143,7 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
   requireAdmin(actor);
 
   const db = getAdminDb();
-  const [studentsSnap, classSnap, sessionsSnap, sharedSessionsSnap, tasksSnap, submissionsSnap, examsSnap, attemptsSnap, scoresSnap, attendanceSnap] =
+  const [studentsSnap, classSnap, sessionsSnap, sharedSessionsSnap, tasksSnap, submissionsSnap, examsSnap, attemptsSnap, scoresSnap, attendanceSnap, specialSnap] =
     await Promise.all([
       db.collection('users').where('classId', '==', classId).where('role', '==', 'student').where('active', '==', true).get(),
       db.collection('classes').doc(classId).get(),
@@ -155,6 +156,7 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
       db.collection('examAttempts').where('classId', '==', classId).get(),
       db.collection('assessmentScores').where('classId', '==', classId).get(),
       db.collection('attendance').where('classId', '==', classId).select('studentId', 'sessionId', 'status').get(),
+      db.collection(SPECIAL_CASE_COLLECTION).select('studentId', 'scores').get(),
     ]);
 
   const className = (classSnap.data()?.canonicalName as string) ?? '';
@@ -196,13 +198,17 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
     hadirPerSiswa.get(a.studentId)!.add(a.sessionId);
   }
 
-  const nilaiTugas = new Map<string, Map<string, number>>();
+  const nilaiMentor = new Map<string, Map<string, number | null>>();
   for (const d of submissionsSnap.docs) {
     const s = d.data() as { studentId: string; taskId: string; score: number | null };
     if (s.score === null || s.score === undefined) continue;
-    if (!nilaiTugas.has(s.studentId)) nilaiTugas.set(s.studentId, new Map());
-    nilaiTugas.get(s.studentId)!.set(s.taskId, s.score);
+    if (!nilaiMentor.has(s.studentId)) nilaiMentor.set(s.studentId, new Map());
+    nilaiMentor.get(s.studentId)!.set(s.taskId, s.score);
   }
+  // Sama dengan ringkasan dashboard: nilai kasus khusus menggantikan nilai mentor / As in the dashboard snapshot: special-case grades replace the mentor's
+  const kasus = specialSnap.docs.map((d) => ({ studentId: String(d.get('studentId')), scores: (d.get('scores') ?? {}) as Record<string, number> }));
+  const nilaiTugas = withSpecialCases(nilaiMentor, kasus);
+  const khusus = new Set(kasus.map((k) => k.studentId));
 
   // Nilai tertinggi tiap ujian yang dipakai, sejalan dengan aturan remedial:
   // percobaan ulang yang lulus sudah dipatok di KKM saat disimpan.
@@ -241,6 +247,7 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
         quizScore: (id) => kuisSiswa?.get(id) ?? null,
         capstoneTaskIds,
         capstone: penilaian.get(u.uid)?.get('capstone') ?? null,
+        specialCase: khusus.has(u.uid),
       });
 
       return { studentId: u.uid, studentName: u.name, classId, className, score, breakdown, pending };
