@@ -88,7 +88,13 @@ function Empty({ text }: { text: string }) {
  *
  * Performance report on the home page: ring summary, attendance, tasks and quizzes.
  */
-export function HomePerformance({ performance, progress, links = true }: { performance: StudentPerformance; progress?: StudentHomeProgress; /** false saat dipakai admin: tautannya menuju halaman peserta / false when used by an admin: the links lead to participant pages */ links?: boolean }) {
+export function HomePerformance({ performance, progress, links = true, overview = true }: {
+  performance: StudentPerformance; progress?: StudentHomeProgress;
+  /** false saat dipakai admin: tautannya menuju halaman peserta / false when used by an admin: the links lead to participant pages */
+  links?: boolean;
+  /** false bila ringkasan belajar sudah tampil, agar angkanya tidak dobel / false when the learning summary already shows, so figures are not repeated */
+  overview?: boolean;
+}) {
   const { attendance, quizzes, tasks } = performance;
 
   // Presensi dihitung terhadap pertemuan yang sudah berlalu: pertemuan
@@ -131,7 +137,7 @@ export function HomePerformance({ performance, progress, links = true }: { perfo
 
           Performance summary: the only dark-backed block, so the eye lands
           here first. */}
-      <section style={{ borderRadius: '16px', padding: '16px', minWidth: 0, background: 'linear-gradient(135deg, #0b4f8f 0%, var(--color-primary) 55%, #1aa3e0 100%)', color: '#ffffff', boxShadow: '0 10px 30px rgba(0, 114, 206, 0.25)' }}>
+      {overview && <section style={{ borderRadius: '16px', padding: '16px', minWidth: 0, background: 'linear-gradient(135deg, #0b4f8f 0%, var(--color-primary) 55%, #1aa3e0 100%)', color: '#ffffff', boxShadow: '0 10px 30px rgba(0, 114, 206, 0.25)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
           <TrendingUp size={16} color="#ffffff" />
           <h2 style={{ fontSize: '14px', color: '#ffffff', margin: 0 }}>Ringkasan Performa</h2>
@@ -160,7 +166,7 @@ export function HomePerformance({ performance, progress, links = true }: { perfo
             <Stat label="Mentoring" value={progress?.mentoringRatio ?? '0/2'} sub="sesi terpakai" color="#9be7c4" />
           </div>
         </div>
-      </section>
+      </section>}
 
       <div className="home-charts">
         <Card icon={CalendarCheck} accent={INFO} title="Laporan Presensi" subtitle={`${attendance.length} pertemuan`} href={links ? "/app/jadwal" : undefined}>

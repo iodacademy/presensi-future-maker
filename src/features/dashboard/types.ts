@@ -1,3 +1,4 @@
+import type { LearningSummary } from './learning-summary';
 // Tipe data agregat beranda siswa / Student home dashboard data types
 import type { TaskKind } from '../tasks/types';
 import type { ExamKind } from '../exams/types';
@@ -38,8 +39,8 @@ export interface StudentHomeProgress {
 
 export interface StudentHomeData {
   studentName: string;
-  /** Tempat magang bila peserta sudah ditempatkan, atau null / The internship once the participant is placed, or null */
-  internship?: { partnerName: string; position: string } | null;
+  /** Ringkasan hasil belajar dan magang; null bila nilai akhirnya belum ada / The learning and internship summary; null when there is no final score yet */
+  summary?: LearningSummary | null;
   className: string;
   activeSession: StudentHomeSession | null;
   nextSession: StudentHomeSession | null;

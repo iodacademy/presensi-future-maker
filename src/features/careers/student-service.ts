@@ -18,6 +18,7 @@ import {
   type ApplicationStatus, type PlacedAt, type AttachedTask, type Interview, type PicContact, type AttachedWork, type CvFile, type Eligibility, type Job, type Logo, type Personal, type Socials,
 } from './model';
 import { applyBlock, canSeeJob, careerStanding, tierOf, type CareerApp, type CareerStanding, type Tier } from './tier';
+import type { SummaryRow } from '../dashboard/learning-summary';
 
 export interface StudentJobCard {
   id: string; title: string; partnerId: string; partnerName: string; employment: Job['employment']; category: Job['category']; scheme: Job['scheme'];
@@ -37,7 +38,7 @@ export interface FinalScore { finalScore: number | null; finalScorePending: bool
 const db = () => getAdminDb();
 const CARD_FIELDS = ['title', 'partnerId', 'partnerName', 'employment', 'category', 'scheme', 'location', 'workMode', 'quota', 'opensAt', 'closesAt', 'status', 'applicantCount', 'eligibility', 'salary', 'durationMonths'];
 
-type Standing = { score: number; pending: boolean; placement: string | null };
+type Standing = { score: number; pending: boolean; placement: string | null; row: SummaryRow };
 
 /**
  * Nilai dan penempatan dari ringkasan dashboard terbaru, disimpan di cache 5 menit: layout siswa
@@ -56,8 +57,15 @@ const snapshotStandings = unstable_cache(async (): Promise<{ at: string | null; 
   // Snapshots before version 17 do not record pending components, so their score cannot be called final
   const unknown = Number(doc.get('version') ?? 1) < 17;
   const rows: Record<string, Standing> = {};
-  for (const r of (doc.get('ranking') ?? []) as { studentId: string; score: number; pending?: string[]; placement?: string }[]) {
-    rows[r.studentId] = { score: r.score, pending: unknown || (r.pending?.length ?? 0) > 0, placement: r.placement ?? null };
+  for (const r of (doc.get('ranking') ?? []) as (Partial<SummaryRow> & { studentId: string; score: number; pending?: string[]; placement?: string })[]) {
+    const pending = unknown || (r.pending?.length ?? 0) > 0;
+    rows[r.studentId] = {
+      score: r.score, pending, placement: r.placement ?? null,
+      row: {
+        score: r.score, capstone: r.capstone ?? 0, tasks: r.tasks ?? 0, attendance: r.attendance ?? 0, quiz: r.quiz ?? 0, combined: r.combined ?? 0,
+        absent: r.absent ?? 0, placement: (r.placement ?? 'pending') as SummaryRow['placement'], placementReasons: r.placementReasons ?? [], pending,
+      },
+    };
   }
   return { at: doc.id, rows };
 }, ['karier-ringkasan-nilai'], { revalidate: 300 });
@@ -73,6 +81,33 @@ export async function latestPlacement(uid: string, classId?: string | null): Pro
   if (classId === DEMO_CLASS_ID) return 'full';
   return (await snapshotStandings()).rows[uid]?.placement ?? null;
 }
+
+// Akun demo tidak ada di dashboard, jadi diberi nilai contoh supaya ringkasan beranda bisa diperagakan
+// Demo accounts are not on the dashboard, so they get sample scores to demonstrate the home summary
+const DEMO_ROW: SummaryRow = { score: 86, capstone: 85, tasks: 88, attendance: 92, quiz: 80, combined: 86, absent: 0, placement: 'full', placementReasons: [], pending: false };
+
+/** Nilai dan komponen peserta dari ringkasan dashboard terbaru, atau null / The participant's score and components from the latest snapshot, or null */
+export async function latestSummaryRow(uid: string, classId?: string | null): Promise<SummaryRow | null> {
+  if (classId === DEMO_CLASS_ID) return DEMO_ROW;
+  return (await snapshotStandings()).rows[uid]?.row ?? null;
+}
+
+/**
+ * Tenggat lamaran paling akhir di antara lowongan yang sedang dibuka, atau null bila pendaftaran tutup.
+ * Disimpan 5 menit untuk semua siswa, karena beranda membacanya setiap kali dibuka.
+ *
+ * The latest application deadline among open jobs, or null when applications are closed.
+ * Cached for 5 minutes for every student, since the home page reads it on each open.
+ */
+export const careerApplyUntil = unstable_cache(async (): Promise<string | null> => {
+  if (!(await applicationsOpen())) return null;
+  const now = new Date();
+  const snap = await db().collection('jobs').where('status', '==', 'published').select('status', 'opensAt', 'closesAt', 'eligibility').get();
+  return snap.docs
+    .map((d) => d.data() as Pick<Job, 'status' | 'opensAt' | 'closesAt' | 'eligibility'>)
+    .filter((j) => !(j.eligibility?.mode === 'classes' && j.eligibility.classIds.includes(DEMO_CLASS_ID)) && isOpenToStudents(j, now))
+    .reduce<string | null>((max, j) => (!max || j.closesAt > max ? j.closesAt : max), null);
+}, ['karier-tenggat-lamar'], { revalidate: 300 });
 
 export async function careerAccess(uid: string, classId?: string | null): Promise<boolean> {
   return hasCareerAccess(await latestPlacement(uid, classId));

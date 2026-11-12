@@ -13,7 +13,7 @@ import { isDeadlineUrgent, formatDeadlineLabel, formatProgressRatio } from './po
 import { buildStudentPerformance } from './performance';
 import { countsAfterJoin, effectiveDueAt } from '../users/join-policy';
 import type { ExamDocument, AttemptDocument } from '../exams/types';
-import { PLACEMENT_COLLECTION } from '../careers/model';
+import { learningSummaryFor } from './learning-summary-service';
 
 /**
  * Mengambil ringkasan beranda siswa: sesi aktif/berikutnya, mentoring terdekat,
@@ -250,12 +250,11 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
   // Mentoring: jumlah booking / 2
   const mentoringRatio = `${quotaCount}/2`;
 
-  // Penempatan magang di luar lamaran, mis. seleksi awal mitra / An internship placement outside applications, e.g. a partner's early selection
-  const placedSnap = await db.collection(PLACEMENT_COLLECTION).doc(actor.uid).get();
+  const summary = await learningSummaryFor(actor);
 
   return {
     studentName: actor.name || 'Peserta',
-    internship: placedSnap.exists ? { partnerName: String(placedSnap.get('partnerName') ?? ''), position: String(placedSnap.get('position') ?? '') } : null,
+    summary,
     className: classData.canonicalName,
     activeSession,
     nextSession,

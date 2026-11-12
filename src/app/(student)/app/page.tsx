@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { MapPin, QrCode, Video, CalendarDays, Clock, Users, ChevronRight } from 'lucide-react';
 import { StudentShell } from '@/components/student-shell';
 import { HomePerformance } from './home-performance';
+import { HomeSummary } from './home-summary';
 import { formatLongDateWib } from '@/lib/time';
 import type { StudentHomeData } from '@/features/dashboard/types';
 
@@ -71,16 +72,7 @@ export default function StudentHomePage() {
         ) : (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0 }}>
-              {data?.internship && (
-                <div role="status" style={{ background: 'linear-gradient(135deg, #0072CE, #0B5CAD)', color: '#ffffff', borderRadius: '14px', padding: '18px 20px', display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ flex: '1 1 260px' }}>
-                    <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px', color: '#FFC72C' }}>DITEMPATKAN MAGANG</div>
-                    <div style={{ fontFamily: 'var(--font-heading)', fontSize: '16px', fontWeight: 700, marginTop: '4px' }}>{data.internship.position}</div>
-                    <div style={{ fontSize: '12px', marginTop: '2px' }}>{data.internship.partnerName}</div>
-                    <div style={{ fontSize: '11px', marginTop: '8px', opacity: 0.85 }}>Mitra akan menghubungimu.</div>
-                  </div>
-                </div>
-              )}
+              {data?.summary && <HomeSummary s={data.summary} />}
               {/* Card Sesi Berlangsung (node 11:2735) / Sesi Berikutnya (node 11:2810) */}
               {activeSession ? (
                 <div style={{ backgroundColor: 'var(--color-primary)', color: '#ffffff', borderRadius: '14px', padding: '20px' }}>
@@ -104,7 +96,9 @@ export default function StudentHomePage() {
                     </Link>
                   )}
                 </div>
-              ) : (
+              ) : (nextSession || !data?.summary) && (
+                // Setelah nilai akhir keluar dan jadwal habis, kartu sesi kosong hanya memakan tempat
+                // Once the final score is out and the schedule is over, an empty session card only takes space
                 <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', border: '1px solid var(--color-border)', padding: '16px', textAlign: 'center' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)' }}>SESI BERIKUTNYA</div>
                   <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)', marginTop: '6px' }}>
@@ -157,7 +151,7 @@ export default function StudentHomePage() {
                 </div>
               )}
 
-              {data?.performance && <HomePerformance performance={data.performance} progress={progress} />}
+              {data?.performance && <HomePerformance performance={data.performance} progress={progress} overview={!data.summary} />}
             </div>
           </>
         )}
