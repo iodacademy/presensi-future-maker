@@ -22,7 +22,8 @@ function statusTone(s: ApplicationStatus): { bg: string; fg: string } {
   return { bg: '#E6F1FB', fg: '#0072CE' };
 }
 
-type Detail = { kind: 'applied' | 'notApplied' | 'accepted' } | { kind: 'status'; status: ApplicationStatus };
+type Detail = { kind: 'applied' | 'notApplied' | 'accepted' } | { kind: 'status'; status: ApplicationStatus } | { kind: 'partner'; partnerId: string };
+const keyOf = (d: Detail | null) => (!d ? '' : d.kind === 'status' ? `status:${d.status}` : d.kind === 'partner' ? `partner:${d.partnerId}` : d.kind);
 
 function Legend() {
   return (
@@ -127,11 +128,19 @@ export function InsightsPanel({ onError, reloadKey }: { onError: (m: string) => 
     api('/api/karier/insights').then((d) => setData(d.insights)).catch((e) => onError((e as Error).message));
   }, [reloadKey, onError]);
 
+  // Panel samping ditutup dengan Escape, seperti dialog lain / The side panel closes on Escape, like other dialogs
+  useEffect(() => {
+    if (!detail) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDetail(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [detail]);
+
   const s = useMemo(() => (data ? summarize(data, program || null) : null), [data, program]);
   const jobById = useMemo(() => new Map((data?.jobs ?? []).map((j) => [j.id, j])), [data]);
   if (!data || !s) return <div style={muted}>Memuat ringkasan…</div>;
 
-  const toggle = (d: Detail) => setDetail((cur) => (cur && cur.kind === d.kind && (cur.kind !== 'status' || (d.kind === 'status' && cur.status === d.status)) ? null : d));
+  const toggle = (d: Detail) => { setQ(''); setDetail((cur) => (keyOf(cur) === keyOf(d) ? null : d)); };
   const isOpen = (kind: Detail['kind']) => detail?.kind === kind;
   const maxPartner = Math.max(1, ...s.byPartner.map((p) => p.total));
   const funnel = s.funnel.filter((f) => f.count > 0);
@@ -145,11 +154,14 @@ export function InsightsPanel({ onError, reloadKey }: { onError: (m: string) => 
     : detail.kind === 'applied' ? s.applied.map((st) => ({ student: st, apps: st.apps }))
     : detail.kind === 'notApplied' ? s.notApplied.map((st) => ({ student: st, apps: [] }))
     : detail.kind === 'accepted' ? s.accepted.map((a) => ({ student: a.student, apps: [a.app] }))
+    : detail.kind === 'partner' ? s.applicantsOf(detail.partnerId)
     : s.students.map((st) => ({ student: st, apps: st.apps.filter((a) => a.status === byStatus) })).filter((r) => r.apps.length > 0);
   const needle = q.trim().toLowerCase();
   const shown = rows.filter((r) => !needle || `${r.student.name} ${r.student.className} ${r.apps.map((a) => `${jobById.get(a.jobId)?.title} ${jobById.get(a.jobId)?.partnerName}`).join(' ')}`.toLowerCase().includes(needle));
+  const partner = detail?.kind === 'partner' ? s.byPartner.find((p) => p.partnerId === detail.partnerId) : undefined;
   const detailTitle = !detail ? '' : detail.kind === 'applied' ? 'Peserta yang sudah melamar' : detail.kind === 'notApplied' ? 'Peserta yang belum melamar'
-    : detail.kind === 'accepted' ? 'Peserta yang diterima' : `Lamaran berstatus ${APPLICATION_STATUS_LABELS[byStatus!]}`;
+    : detail.kind === 'accepted' ? 'Peserta yang diterima' : detail.kind === 'partner' ? `Pelamar di ${partner?.partnerName ?? 'perusahaan ini'}`
+    : `Lamaran berstatus ${APPLICATION_STATUS_LABELS[byStatus!]}`;
 
   return (
     <section aria-label="Ringkasan Job Portal" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -196,47 +208,63 @@ export function InsightsPanel({ onError, reloadKey }: { onError: (m: string) => 
       </div>
 
       {detail && (
-        <div style={panel}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <div style={{ fontSize: '13px', fontWeight: 700 }}>{detailTitle} <span style={muted}>({shown.length})</span></div>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama, kelas, posisi, perusahaan" aria-label="Cari di detail" style={{ ...field, width: '240px' }} />
-              <button type="button" style={btn} onClick={() => setDetail(null)}>Tutup</button>
+        <>
+          <div onClick={() => setDetail(null)} aria-hidden style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.35)', zIndex: 60 }} />
+          <aside role="dialog" aria-modal="true" aria-label={detailTitle}
+            style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(820px, 94vw)', backgroundColor: '#ffffff', zIndex: 61, boxShadow: '-12px 0 32px rgba(15, 23, 42, 0.18)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '18px 20px 12px', borderBottom: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: 700 }}>{detailTitle}</div>
+                  <div style={muted}>{partner ? `${partner.total} posisi (${partner.full} Full · ${partner.project} Project) · ${shown.length} pelamar` : `${shown.length} peserta`}</div>
+                </div>
+                <button type="button" style={btn} onClick={() => setDetail(null)} aria-label="Tutup panel">Tutup</button>
+              </div>
+              <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama, kelas, posisi, perusahaan" aria-label="Cari di detail" style={field} />
             </div>
-          </div>
-          <div style={{ overflowX: 'auto', maxHeight: '460px', overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px' }}>
-              <thead><tr><th style={th}>Peserta</th><th style={th}>Penempatan</th><th style={th}>{detail.kind === 'notApplied' ? 'Lamaran' : 'Lamaran & progres'}</th></tr></thead>
-              <tbody>
-                {shown.map(({ student, apps }) => (
-                  <tr key={student.studentId}>
-                    <td style={td}><div style={{ fontWeight: 600 }}>{student.name}</div><div style={muted}>{student.className}</div></td>
-                    <td style={td}><span style={{ color: COLOR[student.placement], fontWeight: 700 }}>{SCHEME_LABELS[student.placement]}</span></td>
-                    <td style={td}>{apps.length === 0 ? <span style={muted}>Belum mengirim lamaran</span> : apps.map((a) => <AppLine key={a.id} app={a} job={jobById.get(a.jobId)} />)}</td>
-                  </tr>
-                ))}
-                {shown.length === 0 && <tr><td style={td} colSpan={3}><span style={muted}>Tidak ada peserta.</span></td></tr>}
-              </tbody>
-            </table>
-          </div>
-        </div>
+            <div style={{ flex: 1, overflow: 'auto', padding: '0 12px 16px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '560px' }}>
+                <thead><tr><th style={th}>Peserta</th><th style={th}>Penempatan</th><th style={th}>{detail.kind === 'notApplied' ? 'Lamaran' : 'Lamaran & progres'}</th></tr></thead>
+                <tbody>
+                  {shown.map(({ student, apps }) => (
+                    <tr key={student.studentId}>
+                      <td style={td}><div style={{ fontWeight: 600 }}>{student.name}</div><div style={muted}>{student.className}</div></td>
+                      <td style={td}><span style={{ color: COLOR[student.placement], fontWeight: 700 }}>{SCHEME_LABELS[student.placement]}</span></td>
+                      <td style={td}>{apps.length === 0 ? <span style={muted}>Belum mengirim lamaran</span> : apps.map((a) => <AppLine key={a.id} app={a} job={jobById.get(a.jobId)} />)}</td>
+                    </tr>
+                  ))}
+                  {shown.length === 0 && <tr><td style={td} colSpan={3}><span style={muted}>Tidak ada peserta.</span></td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </aside>
+        </>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '12px' }}>
         <div style={panel}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <div style={{ fontSize: '13px', fontWeight: 700 }}>Posisi per perusahaan</div>
+            <div style={{ fontSize: '13px', fontWeight: 700 }}>Posisi per perusahaan <span style={muted}>· klik untuk melihat pelamarnya</span></div>
             <Legend />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', maxHeight: '320px', overflowY: 'auto' }}>
-            {s.byPartner.map((p) => (
-              <div key={p.partnerName} style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 38%) 1fr 30px', alignItems: 'center', gap: '8px' }}
-                title={`${p.partnerName}: ${p.full} Full Internship, ${p.project} Project Based`}>
-                <span style={{ fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.partnerName}</span>
-                <StackBar full={p.full} project={p.project} max={maxPartner} />
-                <span style={{ fontSize: '11px', fontWeight: 700, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{p.total}</span>
-              </div>
-            ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '360px', overflowY: 'auto' }}>
+            <div aria-hidden style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 34%) 1fr 34px 64px', gap: '8px', fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', padding: '0 4px' }}>
+              <span>Perusahaan</span><span /><span style={{ textAlign: 'right' }}>Posisi</span><span style={{ textAlign: 'right' }}>Pelamar</span>
+            </div>
+            {s.byPartner.map((p) => {
+              const on = keyOf(detail) === `partner:${p.partnerId}`;
+              return (
+                <button key={p.partnerId} type="button" onClick={() => toggle({ kind: 'partner', partnerId: p.partnerId })} aria-pressed={on}
+                  aria-label={`${p.partnerName}: ${p.total} posisi, ${p.applicants} pelamar`}
+                  title={`${p.partnerName}: ${p.full} Full Internship, ${p.project} Project Based, ${p.applicants} pelamar`}
+                  style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 34%) 1fr 34px 64px', alignItems: 'center', gap: '8px', background: on ? 'var(--color-primary-light)' : 'none', border: 'none', borderRadius: '6px', padding: '3px 4px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', color: 'inherit' }}>
+                  <span style={{ fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.partnerName}</span>
+                  <StackBar full={p.full} project={p.project} max={maxPartner} />
+                  <span style={{ fontSize: '11px', fontWeight: 700, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{p.total}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: p.applicants ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>{p.applicants} orang</span>
+                </button>
+              );
+            })}
             {s.byPartner.length === 0 && <span style={muted}>Belum ada lowongan untuk jurusan ini.</span>}
           </div>
         </div>
@@ -246,7 +274,7 @@ export function InsightsPanel({ onError, reloadKey }: { onError: (m: string) => 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {funnel.map((f) => {
               const tone = statusTone(f.status);
-              const on = detail?.kind === 'status' && detail.status === f.status;
+              const on = keyOf(detail) === `status:${f.status}`;
               return (
                 <button key={f.status} type="button" onClick={() => toggle({ kind: 'status', status: f.status })} aria-pressed={on}
                   style={{ display: 'grid', gridTemplateColumns: 'minmax(110px, 40%) 1fr 30px', alignItems: 'center', gap: '8px', background: on ? 'var(--color-primary-light)' : 'none', border: 'none', borderRadius: '6px', padding: '3px 4px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>

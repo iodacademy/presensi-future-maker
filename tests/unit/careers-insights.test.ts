@@ -25,8 +25,8 @@ describe('ringkasan Job Portal', () => {
     expect(s.partners).toBe(2);
     expect(s.quota).toEqual({ total: 12, full: 7, project: 5 });
     expect(s.byPartner).toEqual([
-      { partnerName: 'PT A', full: 7, project: 0, total: 7 },
-      { partnerName: 'PT B', full: 0, project: 5, total: 5 },
+      { partnerId: 'p1', partnerName: 'PT A', full: 7, project: 0, total: 7, applicants: 1 },
+      { partnerId: 'p2', partnerName: 'PT B', full: 0, project: 5, total: 5, applicants: 2 },
     ]);
   });
 
@@ -54,5 +54,11 @@ describe('ringkasan Job Portal', () => {
   it('progres lamaran menghitung tiap status lamaran', () => {
     const s = summarize(data, null);
     expect(Object.fromEntries(s.funnel.map((f) => [f.status, f.count]))).toMatchObject({ interview: 1, diterima: 1, bergabung: 1, ditutup: 1, baru: 0 });
+  });
+
+  it('pelamar per perusahaan dihitung per orang, walau satu orang melamar dua posisinya', () => {
+    const s = summarize(data, null);
+    expect(s.applicantsOf('p1').map((x) => [x.student.name, x.apps.map((a) => a.jobId)])).toEqual([['Andi', ['j1', 'j3']]]);
+    expect(s.applicantsOf('p2').map((x) => x.student.name)).toEqual(['Caca', 'Dodi']);
   });
 });

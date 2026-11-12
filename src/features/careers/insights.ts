@@ -36,9 +36,15 @@ export function summarize(x: PortalInsights, program: string | null) {
   const jobById = new Map(x.jobs.map((j) => [j.id, j]));
   const students = x.students.filter((s) => !program || s.program === program);
 
-  const partnerMap = new Map<string, { partnerName: string; full: number; project: number; total: number }>();
+  // Pelamar sebuah perusahaan: peserta yang melamar salah satu posisinya, dengan lamaran ke perusahaan itu saja
+  // A company's applicants: participants who applied to any of its positions, with their applications there only
+  const applicantsOf = (partnerId: string) => students
+    .map((student) => ({ student, apps: student.apps.filter((a) => jobById.get(a.jobId)?.partnerId === partnerId) }))
+    .filter((x) => x.apps.length > 0);
+
+  const partnerMap = new Map<string, { partnerId: string; partnerName: string; full: number; project: number; total: number; applicants: number }>();
   for (const j of jobs) {
-    const p = partnerMap.get(j.partnerId) ?? { partnerName: j.partnerName, full: 0, project: 0, total: 0 };
+    const p = partnerMap.get(j.partnerId) ?? { partnerId: j.partnerId, partnerName: j.partnerName, full: 0, project: 0, total: 0, applicants: applicantsOf(j.partnerId).length };
     p[j.scheme] += j.quota;
     p.total += j.quota;
     partnerMap.set(j.partnerId, p);
@@ -57,6 +63,7 @@ export function summarize(x: PortalInsights, program: string | null) {
     accepted: students.flatMap((student) => student.apps
       .filter((app) => ACCEPTED.includes(app.status) && jobById.has(app.jobId))
       .map((app) => ({ student, app, job: jobById.get(app.jobId)! }))),
+    applicantsOf,
     funnel: FUNNEL.map((status) => ({ status, count: apps.filter((a) => a.status === status).length })),
   };
 }

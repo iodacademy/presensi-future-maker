@@ -44,4 +44,21 @@ describe('panel ringkasan Job Portal', () => {
     expect(screen.getByText('Bela')).toBeTruthy();
     expect(screen.queryByText('Andi')).toBeNull();
   });
+
+  it('detail terbuka sebagai panel samping yang bisa ditutup dengan Escape', async () => {
+    render(<InsightsPanel reloadKey={1} onError={vi.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Belum melamar/ }));
+    expect(screen.getByRole('dialog', { name: 'Peserta yang belum melamar' })).toBeTruthy();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('perusahaan menampilkan jumlah pelamar dan siapa saja saat diklik', async () => {
+    render(<InsightsPanel reloadKey={1} onError={vi.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'PT A: 3 posisi, 1 pelamar' }));
+    const panel = screen.getByRole('dialog', { name: 'Pelamar di PT A' });
+    expect(within(panel).getByText('Andi')).toBeTruthy();
+    expect(within(panel).queryByText('Bela')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Ioda Academy: 5 posisi, 0 pelamar' })).toBeTruthy();
+  });
 });
