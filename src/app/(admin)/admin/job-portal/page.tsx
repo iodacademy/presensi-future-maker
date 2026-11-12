@@ -25,6 +25,7 @@ export default function AdminJobPortalPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<boolean | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   useEffect(() => { if (new URLSearchParams(window.location.search).get('tab') === 'mitra') setTab('mitra'); }, []);
 
@@ -48,6 +49,14 @@ export default function AdminJobPortalPage() {
     try { setOpen((await send('/api/karier/pendaftaran', 'POST', { open: next })).open); } catch (e) { setError((e as Error).message); }
   }
 
+  async function resetDemo() {
+    if (!window.confirm('Reset akun demo? Semua lamaran akun demo dihapus agar demo bisa diulang. CV dan profilnya tetap. Data peserta asli tidak tersentuh.')) return;
+    try {
+      const r = await send('/api/karier/demo/reset', 'POST', {});
+      setInfo(`Akun demo direset: ${r.applications} lamaran dihapus.`); setError(null); load();
+    } catch (e) { setError((e as Error).message); }
+  }
+
   return (
     <AppShell role="admin" userName="Administrator">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
@@ -65,6 +74,7 @@ export default function AdminJobPortalPage() {
                 {open ? 'Pendaftaran lamaran: dibuka' : 'Pendaftaran lamaran: ditutup'}
               </button>
             )}
+            <button type="button" style={btn} onClick={resetDemo} title="Hapus lamaran akun demo agar demo bisa diulang">Reset akun demo</button>
             <button type="button" style={btn} onClick={() => setView({ kind: 'partner', id: null })}>+ Tambah mitra</button>
             <button type="button" style={btnSolid} onClick={() => setView({ kind: 'job', id: null })} disabled={partners.length === 0}
               title={partners.length === 0 ? 'Tambahkan mitra lebih dulu' : undefined}>+ Tambah lowongan</button>
@@ -73,6 +83,7 @@ export default function AdminJobPortalPage() {
       </div>
 
       {error && <div role="alert" style={alertBox}>{error}</div>}
+      {info && <div role="status" style={{ ...alertBox, backgroundColor: '#ECFDF3', color: '#067647' }}>{info}</div>}
 
       {view.kind === 'job' ? (
         <JobForm id={view.id} onDone={back} />
