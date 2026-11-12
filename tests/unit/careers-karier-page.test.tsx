@@ -33,7 +33,7 @@ describe('halaman Karier siswa', () => {
     }));
     window.history.replaceState(null, '', '/app/karier');
     render(<KarierPage />);
-    expect(await screen.findByText('Kamu sudah ditempatkan magang. Selamat!')).toBeTruthy();
+    expect(await screen.findByText('Ditempatkan magang')).toBeTruthy();
     expect(screen.getByText('Digital Marketing Intern · PT Mayar Kernel Supernova')).toBeTruthy();
     expect(screen.queryByText(/Kuota/)).toBeNull();
   });

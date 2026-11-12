@@ -155,9 +155,9 @@ function TierCard({ s }: { s: CareerStanding }) {
   if (s.placedAt) {
     return (
       <div role="status" style={{ ...card, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <b style={{ fontSize: '14px' }}>Kamu sudah ditempatkan magang. Selamat!</b>
+        <b style={{ fontSize: '14px' }}>Ditempatkan magang</b>
         <span style={{ fontSize: '13px' }}>{`${s.placedAt.position} · ${s.placedAt.partnerName}`}</span>
-        <span style={{ fontSize: '12px', color: MUTED }}>Lamaran baru tidak bisa dikirim lagi. Mitra akan menghubungimu untuk langkah berikutnya.</span>
+        <span style={{ fontSize: '12px', color: MUTED }}>Lamaran baru tidak bisa dikirim.</span>
       </div>
     );
   }
