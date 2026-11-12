@@ -41,6 +41,17 @@ export function activeRole(primary: Role, extra: readonly string[] | null | unde
   return requested && (all as string[]).includes(requested) ? (requested as Role) : primary;
 }
 
+/** Mitra yang dipegang akun PIC: mitra utama ditambah mitra lain / The partners a PIC account holds: the primary partner plus others */
+export function availablePartners(primary: string | null | undefined, extra?: readonly string[] | null): string[] {
+  return [...new Set([primary, ...(extra ?? [])].filter((x): x is string => !!x))];
+}
+
+/** Mitra yang sedang dilihat: pilihan pengguna bila ia memegangnya / The partner in view: the user's choice when they hold it */
+export function activePartner(primary: string | null | undefined, extra: readonly string[] | null | undefined, requested?: string | null): string | null {
+  const all = availablePartners(primary, extra);
+  return requested && all.includes(requested) ? requested : all[0] ?? null;
+}
+
 /**
  * Menghasilkan hash SHA-256 hex untuk index pencarian email unik di Firestore.
  *

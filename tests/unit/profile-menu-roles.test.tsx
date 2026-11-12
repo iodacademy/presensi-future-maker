@@ -31,4 +31,18 @@ describe('pilihan peran di header', () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(screen.queryByRole('menuitemradio')).toBeNull();
   });
+
+  it('PIC beberapa mitra memilih mitra lewat menu yang sama', async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') return json({ redirect: '/mitra' });
+      return json({ role: 'partner', partnerId: 'p1', roles: [{ role: 'mentor', label: 'Mentor' }, { role: 'partner', partnerId: 'p1', label: 'PIC Mitra · Ioda' }, { role: 'partner', partnerId: 'p2', label: 'PIC Mitra · TryoutIn' }] });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ProfileMenu userName="Rama" roleLabel="PIC Mitra" />);
+    expect(await screen.findByText('PIC Mitra · Ioda', { selector: '[data-role-badge]' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Menu akun Rama/ }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'PIC Mitra · TryoutIn' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/auth/peran', expect.objectContaining({ body: JSON.stringify({ role: 'partner', partnerId: 'p2' }) })));
+  });
 });
+

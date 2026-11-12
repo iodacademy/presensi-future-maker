@@ -76,9 +76,30 @@ describe('akun PIC mitra', () => {
     expect(data.users.m1).toMatchObject({ active: true, role: 'mentor', roles: ['mentor'], partnerId: null });
   });
 
-  it('PIC mitra lain tidak bisa ditautkan ke mitra ini', async () => {
+  it('PIC mitra lain bisa juga menjadi PIC mitra ini, dan tampil di kedua mitra', async () => {
+    data.partners.p2 = { ...partner, name: 'PT Lain', nameKey: 'pt lain', pics: [{ name: 'Budi', phone: '', email: 'budi@dipsi.co.id' }] };
     data.users.x = { uid: 'x', role: 'partner', partnerId: 'p2', email: 'budi@dipsi.co.id', active: true };
     data.emailIndex[getEmailHash('budi@dipsi.co.id')] = { uid: 'x', role: 'partner' };
+    expect((await createPicAccounts('p1')).existing).toContain('budi@dipsi.co.id');
+    expect(data.users.x).toMatchObject({ role: 'partner', partnerId: 'p2', partnerIds: ['p2', 'p1'], active: true });
+    const rows = await listPartners();
+    expect(rows.find((r) => r.id === 'p1')!.picAccounts).toContain('budi@dipsi.co.id');
+    expect(rows.find((r) => r.id === 'p2')!.picAccounts).toContain('budi@dipsi.co.id');
+  });
+
+  it('dikeluarkan dari satu mitra, akun tetap aktif untuk mitra lainnya', async () => {
+    data.partners.p2 = { ...partner, name: 'PT Lain', nameKey: 'pt lain', pics: [{ name: 'Budi', phone: '', email: 'budi@dipsi.co.id' }] };
+    data.users.x = { uid: 'x', role: 'partner', partnerId: 'p2', email: 'budi@dipsi.co.id', active: true };
+    data.emailIndex[getEmailHash('budi@dipsi.co.id')] = { uid: 'x', role: 'partner' };
+    await createPicAccounts('p1');
+    const { nameKey: _k, active: _a, ...input } = partner;
+    await updatePartner('p1', { ...input, pics: [partner.pics[0]] });
+    expect(data.users.x).toMatchObject({ active: true, partnerId: 'p2', partnerIds: ['p2'] });
+  });
+
+  it('peserta tetap tidak bisa dijadikan PIC', async () => {
+    data.users.s1 = { uid: 's1', role: 'student', email: 'budi@dipsi.co.id', active: true };
+    data.emailIndex[getEmailHash('budi@dipsi.co.id')] = { uid: 's1', role: 'student' };
     await expect(createPicAccounts('p1')).rejects.toThrow('sudah dipakai akun lain');
   });
 

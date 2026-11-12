@@ -2,8 +2,8 @@ import { cookies } from 'next/headers';
 import { joinMoment } from '../users/join-policy';
 import { getAdminAuth, getAdminDb } from '../../lib/firebase/admin';
 import type { Actor, UserDocument } from './types';
-import { ACTIVE_ROLE_COOKIE, SESSION_COOKIE_NAME, SESSION_EXPIRES_MS } from './constants';
-import { activeRole, availableRoles, isValidRole } from './policy';
+import { ACTIVE_PARTNER_COOKIE, ACTIVE_ROLE_COOKIE, SESSION_COOKIE_NAME, SESSION_EXPIRES_MS } from './constants';
+import { activePartner, activeRole, availablePartners, availableRoles, isValidRole } from './policy';
 
 export { getRoleRedirectPath, isAuthorizedPath } from './paths';
 export { SESSION_COOKIE_NAME, SESSION_EXPIRES_DAYS, SESSION_EXPIRES_MS } from './constants';
@@ -101,7 +101,10 @@ export async function getSessionActor(): Promise<Actor | null> {
   // The cookie is user-editable; only a valid role name goes into the cache key
   const rawRole = cookieStore.get(ACTIVE_ROLE_COOKIE)?.value ?? '';
   const requestedRole = isValidRole(rawRole) ? rawRole : '';
-  const cacheKey = `${sessionCookie}|${requestedRole}`;
+  // Id mitra dibatasi bentuknya sebelum masuk kunci cache / A partner id's shape is bounded before entering the cache key
+  const rawPartner = cookieStore.get(ACTIVE_PARTNER_COOKIE)?.value ?? '';
+  const requestedPartner = /^[A-Za-z0-9_-]{1,64}$/.test(rawPartner) ? rawPartner : '';
+  const cacheKey = `${sessionCookie}|${requestedRole}|${requestedPartner}`;
   const cached = actorCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.actor;
@@ -133,14 +136,18 @@ export async function getSessionActor(): Promise<Actor | null> {
     if (!userData.active) return null;
 
     const role = activeRole(userData.role, userData.roles, requestedRole);
+    const roles = availableRoles(userData.role, userData.roles);
     const actor: Actor = {
       uid: userData.uid,
       email: userData.email,
       name: userData.name,
       role,
-      roles: availableRoles(userData.role, userData.roles),
+      roles,
+      // Daftar mitra ikut di setiap peran agar pilihan peran bisa menampilkan tiap mitra
+      // The partner list rides along in every role so the role picker can show each partner
+      ...(roles.includes('partner') ? { partnerIds: availablePartners(userData.partnerId, userData.partnerIds) } : {}),
       classId: userData.classId || null,
-      ...(role === 'partner' ? { partnerId: userData.partnerId ?? null } : {}),
+      ...(role === 'partner' ? { partnerId: activePartner(userData.partnerId, userData.partnerIds, requestedPartner) } : {}),
       // Dibawa bersama sesi agar tenggat per peserta tidak perlu baca tambahan.
       // Carried with the session so per-participant deadlines need no extra read.
       ...(role === 'student' ? { joinIso: joinMoment(userData) } : {}),

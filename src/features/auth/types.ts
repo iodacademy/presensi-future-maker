@@ -13,6 +13,8 @@ export interface UserDocument {
   classId: string | null;
   /** Mitra milik akun PIC; hanya untuk peran partner / The partner a PIC account belongs to; partner role only */
   partnerId?: string | null;
+  /** Semua mitra yang dipegang PIC, termasuk partnerId / Every partner the PIC holds, partnerId included */
+  partnerIds?: string[];
   /** Akun uji coba: tidak dihitung di dashboard / A test account: excluded from the dashboard */
   isTest?: boolean;
   /**
@@ -37,6 +39,8 @@ export interface Actor {
   classId: string | null;
   /** Mitra milik PIC yang masuk / The signed-in PIC's partner */
   partnerId?: string | null;
+  /** Semua mitra yang dipegang PIC / Every partner the PIC holds */
+  partnerIds?: string[];
   /** Saat peserta mulai dihitung (joinMoment); hanya untuk peserta / When the participant starts counting (joinMoment); participants only */
   joinIso?: string;
 }

@@ -30,7 +30,7 @@ export function ProfileMenu({ userName, roleLabel, onDark = false }: ProfileMenu
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [roles, setRoles] = useState<{ role: string; roles: { role: string; label: string }[] } | null>(null);
+  const [roles, setRoles] = useState<{ role: string; partnerId?: string; roles: { role: string; partnerId?: string; label: string }[] } | null>(null);
 
   // Akun berperan ganda melihat peran aktifnya dan bisa berpindah; akun satu peran tidak melihat apa pun
   // Multi-role accounts see their active role and can switch; single-role accounts see nothing extra
@@ -38,12 +38,13 @@ export function ProfileMenu({ userName, roleLabel, onDark = false }: ProfileMenu
     fetch('/api/auth/peran').then((r) => (r.ok ? r.json() : null)).then((d) => d && setRoles(d)).catch(() => undefined);
   }, []);
   const multi = roles && roles.roles.length > 1 ? roles : null;
-  const activeLabel = multi?.roles.find((r) => r.role === multi.role)?.label;
+  const isOn = (r: { role: string; partnerId?: string }) => r.role === multi?.role && (!r.partnerId || r.partnerId === multi.partnerId);
+  const activeLabel = multi?.roles.find(isOn)?.label;
 
-  async function switchRole(role: string) {
+  async function switchRole(role: string, partnerId?: string) {
     setBusy(true);
     try {
-      const res = await fetch('/api/auth/peran', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role }) });
+      const res = await fetch('/api/auth/peran', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(partnerId ? { role, partnerId } : { role }) });
       const d = await res.json();
       if (res.ok) { router.push(d.redirect); router.refresh(); }
     } finally {
@@ -187,9 +188,9 @@ export function ProfileMenu({ userName, roleLabel, onDark = false }: ProfileMenu
             <div style={{ padding: '6px 0', borderBottom: '1px solid var(--color-border)' }}>
               <div style={{ padding: '4px 14px', fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.04em' }}>MASUK SEBAGAI</div>
               {multi.roles.map((r) => {
-                const on = r.role === multi.role;
+                const on = isOn(r);
                 return (
-                  <button key={r.role} type="button" role="menuitemradio" aria-checked={on} disabled={busy || on} onClick={() => switchRole(r.role)}
+                  <button key={`${r.role}:${r.partnerId ?? ''}`} type="button" role="menuitemradio" aria-checked={on} disabled={busy || on} onClick={() => switchRole(r.role, r.partnerId)}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%', padding: '9px 14px', border: 'none', background: on ? 'var(--color-primary-light)' : 'none', cursor: on ? 'default' : 'pointer', fontSize: '12px', fontWeight: on ? 700 : 500, color: on ? 'var(--color-primary)' : 'var(--color-text-main)', textAlign: 'left' }}>
                     {r.label}
                     {on && <Check size={14} strokeWidth={2.5} aria-hidden />}

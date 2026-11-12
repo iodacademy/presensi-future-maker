@@ -7,7 +7,7 @@
  */
 import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
-import { getEmailHash, normalizeEmail } from '../auth/policy';
+import { availablePartners, getEmailHash, normalizeEmail } from '../auth/policy';
 import {
   DEMO_CLASS_ID, jobPicEmails, jobPics, jobState, partnerNameKey, validateJobInput, validatePartnerInput,
   type Category, type Employment, type Job, type JobStatus, type Partner, type Scheme, type WorkMode,
@@ -40,14 +40,16 @@ export async function listPartners(): Promise<PartnerRow[]> {
   const [pSnap, jSnap, aSnap, multiSnap] = await Promise.all([
     partners().select('name', 'field', 'logo.thumb', 'pics').get(),
     jobs().select('partnerId').get(),
-    getAdminDb().collection('users').where('role', '==', 'partner').select('email', 'partnerId').get(),
+    getAdminDb().collection('users').where('role', '==', 'partner').select('email', 'partnerId', 'partnerIds').get(),
     // Akun berperan ganda, mis. mentor yang juga PIC / Multi-role accounts, e.g. a mentor who is also a PIC
-    getAdminDb().collection('users').where('roles', 'array-contains', 'partner').select('email', 'partnerId').get(),
+    getAdminDb().collection('users').where('roles', 'array-contains', 'partner').select('email', 'partnerId', 'partnerIds').get(),
   ]);
   const accounts = new Map<string, string[]>();
   const seen = new Set<string>();
   [...aSnap.docs, ...multiSnap.docs].filter((u) => !seen.has(u.id) && seen.add(u.id))
-    .forEach((u) => accounts.set(u.get('partnerId'), [...(accounts.get(u.get('partnerId')) ?? []), u.get('email')]));
+    .forEach((u) => {
+      for (const pid of availablePartners(u.get('partnerId'), u.get('partnerIds'))) accounts.set(pid, [...(accounts.get(pid) ?? []), u.get('email')]);
+    });
   const counts = new Map<string, number>();
   jSnap.docs.forEach((j) => counts.set(j.get('partnerId'), (counts.get(j.get('partnerId')) ?? 0) + 1));
   return pSnap.docs.map((p) => {
@@ -82,18 +84,31 @@ export async function updatePartner(id: string, raw: unknown): Promise<void> {
   // PIC yang dihapus dari daftar kehilangan aksesnya: akun nonaktif tidak bisa masuk dan sesinya ditolak
   // A PIC removed from the list loses access: an inactive account cannot sign in and its session is refused
   const keep = new Set(input.pics.map((p) => normalizeEmail(p.email)));
-  // Hanya akun PIC yang memiliki partnerId / Only PIC accounts carry a partnerId
-  const accounts = await getAdminDb().collection('users').where('partnerId', '==', id).select('email', 'active', 'role', 'roles').get();
-  // Akun berperan ganda dicabut peran PIC-nya walau sedang nonaktif, agar peran itu tidak kembali saat diaktifkan
-  // A multi-role account loses its PIC role even while inactive, so the role does not return on reactivation
-  const revoke = accounts.docs.filter((u) => !keep.has(normalizeEmail(String(u.get('email')))) && (u.get('role') !== 'partner' || u.get('active') !== false));
+  // Hanya akun PIC yang memiliki partnerId atau partnerIds / Only PIC accounts carry a partnerId or partnerIds
+  const fields = ['email', 'active', 'role', 'roles', 'partnerId', 'partnerIds'];
+  const [byMain, byList] = await Promise.all([
+    getAdminDb().collection('users').where('partnerId', '==', id).select(...fields).get(),
+    getAdminDb().collection('users').where('partnerIds', 'array-contains', id).select(...fields).get(),
+  ]);
+  const seen = new Set<string>();
+  const accounts = [...byMain.docs, ...byList.docs].filter((u) => !seen.has(u.id) && seen.add(u.id));
+  const revoke = accounts.filter((u) => !keep.has(normalizeEmail(String(u.get('email')))));
   if (revoke.length) {
     const b = getAdminDb().batch();
-    revoke.forEach((u) => b.update(u.ref, u.get('role') === 'partner'
-      ? { active: false, updatedAt: now() }
-      // Akun berperan ganda hanya kehilangan peran PIC; peran utamanya tetap jalan
-      // A multi-role account only loses the PIC role; its primary role keeps working
-      : { roles: ((u.get('roles') ?? []) as string[]).filter((r) => r !== 'partner'), partnerId: null, updatedAt: now() }));
+    for (const u of revoke) {
+      const rest = availablePartners(u.get('partnerId'), u.get('partnerIds')).filter((p) => p !== id);
+      if (rest.length) {
+        // Masih PIC mitra lain: hanya mitra ini yang dilepas / Still a PIC of other partners: only this partner is dropped
+        b.update(u.ref, { partnerId: rest[0], partnerIds: rest, updatedAt: now() });
+      } else if (u.get('role') === 'partner') {
+        // Akun PIC murni dinonaktifkan; yang sudah nonaktif tidak perlu ditulis ulang / A pure PIC account is deactivated; an inactive one needs no rewrite
+        if (u.get('active') !== false) b.update(u.ref, { active: false, partnerIds: [], updatedAt: now() });
+      } else {
+        // Akun berperan ganda kehilangan peran PIC walau sedang nonaktif, agar peran itu tidak kembali saat diaktifkan
+        // A multi-role account loses its PIC role even while inactive, so the role does not return on reactivation
+        b.update(u.ref, { roles: ((u.get('roles') ?? []) as string[]).filter((r) => r !== 'partner'), partnerId: null, partnerIds: [], updatedAt: now() });
+      }
+    }
     await b.commit();
   }
   if (input.name !== current.name) {
@@ -119,26 +134,34 @@ export async function createPicAccounts(partnerId: string): Promise<{ created: s
   const db = getAdminDb();
   const todo: { name: string; email: string }[] = [];
   const existing: string[] = [];
-  const link: { ref: FirebaseFirestore.DocumentReference; roles: string[] }[] = [];
+  const link: { ref: FirebaseFirestore.DocumentReference; update: Record<string, unknown> }[] = [];
   for (const pic of partner.pics) {
     const email = normalizeEmail(pic.email);
     const idx = await db.collection('emailIndex').doc(getEmailHash(email)).get();
     if (!idx.exists) { todo.push({ name: pic.name, email }); continue; }
     const user = await db.collection('users').doc(String(idx.get('uid'))).get();
-    if (user.get('role') === 'partner' && user.get('partnerId') === partnerId) {
-      existing.push(email);
+    const role = String(user.get('role'));
+    // Peserta tidak pernah menjadi PIC, agar lamaran tidak dinilai oleh sesama peserta
+    // A participant never becomes a PIC, so applications are never judged by a fellow participant
+    if (!['partner', 'mentor', 'admin'].includes(role)) throw new Error(`Email ${email} sudah dipakai akun lain. Pakai email lain untuk PIC.`);
+    existing.push(email);
+    const held = availablePartners(user.get('partnerId'), user.get('partnerIds'));
+    if (role === 'partner' && user.get('partnerId') === partnerId && held.length <= 1) {
       // PIC yang ditambahkan kembali diaktifkan lagi / A PIC added back is reactivated
       if (user.get('active') === false) await user.ref.update({ active: true, updatedAt: now() });
-    } else if (['mentor', 'admin'].includes(user.get('role')) && (!user.get('partnerId') || user.get('partnerId') === partnerId)) {
-      // Mentor atau admin yang juga PIC memakai akun yang sama dengan peran tambahan, bukan akun kedua
-      // A mentor or admin who is also a PIC keeps one account with an extra role, not a second account
-      existing.push(email);
-      link.push({ ref: user.ref, roles: [...new Set([String(user.get('role')), ...((user.get('roles') ?? []) as string[]), 'partner'])] });
-    } else throw new Error(`Email ${email} sudah dipakai akun lain. Pakai email lain untuk PIC.`);
+      continue;
+    }
+    // Satu akun untuk semua perannya: mentor/admin mendapat peran PIC, PIC mitra lain mendapat mitra tambahan
+    // One account for all its roles: a mentor/admin gains the PIC role, another partner's PIC gains an extra partner
+    link.push({ ref: user.ref, update: {
+      partnerId: held[0] ?? partnerId,
+      partnerIds: availablePartners(held[0] ?? partnerId, [...held, partnerId]),
+      ...(role === 'partner' ? { active: true } : { roles: [...new Set([role, ...((user.get('roles') ?? []) as string[]), 'partner'])] }),
+    } });
   }
   const t = now();
   const batch = db.batch();
-  for (const l of link) batch.update(l.ref, { roles: l.roles, partnerId, updatedAt: t });
+  for (const l of link) batch.update(l.ref, { ...l.update, updatedAt: t });
   for (const { name, email } of todo) {
     const uid = crypto.randomUUID();
     batch.set(db.collection('users').doc(uid), { uid, email, normalizedEmail: email, name, role: 'partner', partnerId, active: true, classId: null, createdAt: t, updatedAt: t });
