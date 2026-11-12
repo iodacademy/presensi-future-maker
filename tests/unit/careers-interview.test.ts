@@ -137,6 +137,12 @@ describe('kontak PIC dan jadwal ulang', () => {
     expect(data.jobApplications.a1.interview).toMatchObject({ contact: { name: 'Budi HR', email: 'budi@dipsi.co.id', phone: '0811111111' } });
   });
 
+  it('lowongan dengan beberapa PIC: kontak undangan adalah PIC lowongan yang mengundang', async () => {
+    data.jobs.j1.picEmails = ['budi@dipsi.co.id', 'rina@dipsi.co.id'];
+    await inviteToInterview(rina, 'a1', manual, now);
+    expect(data.jobApplications.a1.interview).toMatchObject({ contact: { name: 'Rina', email: 'rina@dipsi.co.id', phone: '0822222222' } });
+  });
+
   it('undangan lama tanpa kontak memakai PIC lowongan bila sudah ditentukan', async () => {
     data.jobs.j1.picEmail = 'rina@dipsi.co.id';
     await inviteToInterview(rina, 'a1', manual, now);

@@ -14,7 +14,7 @@ import { isStoredSubmissionFile } from '../tasks/submission-policy';
 import { applicationsOpen, CLOSED_MESSAGE } from './apply-gate';
 import { listCvs } from './cv-service';
 import {
-  jobPic, PLACEMENT_COLLECTION, CLOSED_ELSEWHERE_MESSAGE, rescheduleMessage, DEMO_CLASS_ID, hasCareerAccess, isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
+  jobPic, jobPicEmails, PLACEMENT_COLLECTION, CLOSED_ELSEWHERE_MESSAGE, rescheduleMessage, DEMO_CLASS_ID, hasCareerAccess, isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
   type ApplicationStatus, type PlacedAt, type AttachedTask, type Interview, type PicContact, type AttachedWork, type CvFile, type Eligibility, type Job, type Logo, type Personal, type Socials,
 } from './model';
 import { applyBlock, canSeeJob, careerStanding, tierOf, type CareerApp, type CareerStanding, type Tier } from './tier';
@@ -285,9 +285,9 @@ function publicInterview({ calendarEventId: _c, ...rest }: Interview): Omit<Inte
 export async function listMyApplications(uid: string): Promise<MyApplication[]> {
   const [aSnap, jSnap] = await Promise.all([
     db().collection('jobApplications').where('studentId', '==', uid).select('jobId', 'partnerId', 'number', 'status', 'scheme', 'completedAt', 'submittedAt', 'interview', 'personal.fullName').get(),
-    db().collection('jobs').select('title', 'partnerName', 'picEmail').get(),
+    db().collection('jobs').select('title', 'partnerName', 'picEmail', 'picEmails').get(),
   ]);
-  const jobs = new Map(jSnap.docs.map((j) => [j.id, { title: j.get('title') as string, partnerName: j.get('partnerName') as string, picEmail: String(j.get('picEmail') ?? '') }]));
+  const jobs = new Map(jSnap.docs.map((j) => [j.id, { title: j.get('title') as string, partnerName: j.get('partnerName') as string, picEmails: jobPicEmails(j.data()) }]));
   // Undangan lama belum menyimpan kontak PIC: dipakai PIC lowongannya / Older invites lack a PIC contact: the job's PIC is used
   const needPics = [...new Set(aSnap.docs.filter((a) => a.get('status') === 'interview' && !a.get('interview.contact')).map((a) => String(a.get('partnerId'))))];
   const partnerPics = new Map(await Promise.all(needPics.map(async (id) => {
@@ -299,7 +299,7 @@ export async function listMyApplications(uid: string): Promise<MyApplication[]> 
       const status = a.get('status') as ApplicationStatus;
       const j = jobs.get(a.get('jobId'));
       const raw = status === 'interview' ? (a.get('interview') as Interview | undefined) : undefined;
-      const pic = raw ? raw.contact ?? jobPic(partnerPics.get(String(a.get('partnerId'))) ?? [], j?.picEmail) : null;
+      const pic = raw ? raw.contact ?? jobPic(partnerPics.get(String(a.get('partnerId'))) ?? [], j?.picEmails) : null;
       const contact = pic ? { name: pic.name, email: pic.email, phone: pic.phone ?? '' } : undefined;
       return {
         id: a.id, jobId: a.get('jobId') as string, number: String(a.get('number') ?? ''), jobTitle: j?.title ?? 'Lowongan', partnerName: j?.partnerName ?? '',

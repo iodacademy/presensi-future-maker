@@ -5,7 +5,7 @@ import { alertBox, api, btn, btnSolid, card, field, label, send } from '../pamer
 import type { PartnerRow } from '@/features/careers/admin-service';
 import { JobCard } from '@/features/careers/job-card';
 import {
-  CATEGORY_LABELS, DOC_RULE_LABELS, EMPLOYMENT_LABELS, isoToWib, QUESTION_KIND_LABELS, salaryUnit, SCHEME_LABELS, WORK_MODE_LABELS,
+  CATEGORY_LABELS, jobPicEmails, DOC_RULE_LABELS, EMPLOYMENT_LABELS, isoToWib, QUESTION_KIND_LABELS, salaryUnit, SCHEME_LABELS, WORK_MODE_LABELS,
   type Category, type DocRule, type Employment, type Job, type JobDocuments, type QuestionKind, type Scheme, type WorkMode,
 } from '@/features/careers/model';
 
@@ -30,7 +30,7 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
   const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [classes, setClasses] = useState<ClassOpt[]>([]);
   const [partnerId, setPartnerId] = useState('');
-  const [picEmail, setPicEmail] = useState('');
+  const [picEmails, setPicEmails] = useState<string[]>([]);
   const [title, setTitle] = useState('');
   const [employment, setEmployment] = useState<Employment>('magang-3');
   const [category, setCategory] = useState<Category>('teknologi');
@@ -60,7 +60,7 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
     api('/api/classes').then((d) => setClasses(d.classes)).catch(() => setClasses([]));
     if (!id) return;
     api(`/api/karier/jobs/${id}`).then(({ job: j }: { job: Job }) => {
-      setPartnerId(j.partnerId); setPicEmail(j.picEmail ?? ''); setTitle(j.title); setEmployment(j.employment); setCategory(j.category); setScheme(j.scheme ?? 'project');
+      setPartnerId(j.partnerId); setPicEmails(jobPicEmails(j)); setTitle(j.title); setEmployment(j.employment); setCategory(j.category); setScheme(j.scheme ?? 'project');
       setLocation(j.location); setWorkMode(j.workMode); setQuota(j.quota); setDescription(j.description);
       setSalary(j.salary ? String(j.salary) : ''); setDuration(j.durationMonths ? String(j.durationMonths) : '');
       setQualifications(j.qualifications.join('\n')); setEligMode(j.eligibility.mode);
@@ -77,14 +77,18 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
   const pics = partners.find((p) => p.id === partnerId)?.pics ?? [];
   // Lowongan lama tanpa PIC sendiri tampil memakai PIC pertama, sama dengan yang dilihat kandidat
   // Older jobs without their own PIC show the first PIC, the same one candidates see
-  const chosenPic = pics.find((p) => p.email.toLowerCase() === picEmail.toLowerCase()) ?? pics[0];
+  const chosen = picEmails.length ? picEmails : pics[0] ? [pics[0].email.toLowerCase()] : [];
+  const togglePic = (email: string) => {
+    const e = email.toLowerCase();
+    setPicEmails(chosen.includes(e) ? chosen.filter((x) => x !== e) : [...chosen, e]);
+  };
   const previewClose = closes.date ? new Date(`${closes.date}T${closes.time || '23:59'}:00+07:00`).toISOString() : now.toISOString();
 
   async function save(status: 'draft' | 'published') {
     setBusy(true); setError(null);
     try {
       const body = {
-        partnerId, picEmail: chosenPic?.email ?? '', title, employment, category, scheme, location, workMode, quota, description, qualifications, salary, durationMonths: duration,
+        partnerId, picEmails: chosen, title, employment, category, scheme, location, workMode, quota, description, qualifications, salary, durationMonths: duration,
         eligibility: eligMode === 'classes' ? { mode: 'classes', classIds } : eligMode === 'min-score' ? { mode: 'min-score', minScore } : { mode: 'all' },
         opensAt: opens, closesAt: closes, documents, status,
         questions: questions.map((q) => ({ id: q.id, label: q.label, kind: q.kind, options: q.optionsText, required: q.required })),
@@ -108,18 +112,21 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
 
         <h3 style={section}>1. Perusahaan</h3>
         <label style={label}>Nama perusahaan (mitra)
-          <select value={partnerId} onChange={(e) => { setPartnerId(e.target.value); setPicEmail(''); }} style={field} required>
+          <select value={partnerId} onChange={(e) => { setPartnerId(e.target.value); setPicEmails([]); }} style={field} required>
             <option value="">Pilih mitra</option>
             {partners.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </label>
         {partnerId && (
-          <label style={label}>PIC lowongan (pewawancara)
-            <select value={chosenPic?.email ?? ''} onChange={(e) => setPicEmail(e.target.value)} style={field}>
-              {pics.map((p) => <option key={p.email} value={p.email}>{p.name} · {p.email}</option>)}
-            </select>
-            <span style={muted}>Kandidat menghubungi PIC ini lewat WhatsApp dan email. Tambah PIC baru lewat tab Mitra & PIC.</span>
-          </label>
+          <fieldset style={{ border: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <legend style={{ ...label, marginBottom: '4px' }}>PIC lowongan (pewawancara)</legend>
+            {pics.map((p) => (
+              <label key={p.email} style={{ fontSize: '12px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <input type="checkbox" checked={chosen.includes(p.email.toLowerCase())} onChange={() => togglePic(p.email)} /> {p.name} · {p.email}
+              </label>
+            ))}
+            <span style={muted}>Boleh lebih dari satu. Kandidat menghubungi PIC yang mengundangnya interview. Tambah PIC baru lewat tab Mitra & PIC.</span>
+          </fieldset>
         )}
 
         <h3 style={section}>2. Detail posisi</h3>

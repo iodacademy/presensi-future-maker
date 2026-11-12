@@ -11,7 +11,7 @@ import { getAdminDb } from '../../lib/firebase/admin';
 import { whatsAppLink } from '../../lib/whatsapp';
 import type { Actor } from '../auth/types';
 import { cancelCalendarEvent, createCalendarEvent, isCalendarConfigured } from '../calendar/client';
-import { FINAL_MESSAGE, FINAL_STATUSES, interviewMessage, jobPic, interviewWindow, validateInterviewInput, type Interview, type PicContact } from './model';
+import { FINAL_MESSAGE, FINAL_STATUSES, interviewMessage, jobPic, jobPicEmails, interviewWindow, validateInterviewInput, type Interview, type PicContact } from './model';
 import type { PartnerActor } from './partner-service';
 
 const apps = () => getAdminDb().collection('jobApplications');
@@ -33,7 +33,10 @@ export async function inviteToInterview(actor: PartnerActor, appId: string, raw:
   // The candidate's contact is the job's PIC, the interviewer, even when another PIC of the same partner sends the invite.
   // A job without its own PIC uses the inviting PIC. A PIC without a number can still be emailed.
   const pics = ((await getAdminDb().collection('partners').doc(actor.partnerId).get()).get('pics') ?? []) as PicContact[];
-  const own = job.get('picEmail') ? jobPic(pics, String(job.get('picEmail'))) : null;
+  // PIC yang mengundang dipakai bila ia salah satu PIC lowongan, mis. pengganti user yang cuti
+  // The inviting PIC is used when they are one of the job's PICs, e.g. standing in for a user on leave
+  const emails = jobPicEmails(job.data() ?? {});
+  const own = emails.length ? jobPic(pics, emails, actor.email) : null;
   const contact: PicContact = own
     ? { name: own.name, email: own.email, phone: own.phone ?? '' }
     : { name: actor.name, email: actor.email, phone: pics.find((p) => p.email === actor.email)?.phone ?? '' };

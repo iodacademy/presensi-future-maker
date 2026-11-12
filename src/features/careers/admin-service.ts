@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import { getAdminDb } from '../../lib/firebase/admin';
 import { getEmailHash, normalizeEmail } from '../auth/policy';
 import {
-  DEMO_CLASS_ID, jobPic, jobState, partnerNameKey, validateJobInput, validatePartnerInput,
+  DEMO_CLASS_ID, jobPicEmails, jobPics, jobState, partnerNameKey, validateJobInput, validatePartnerInput,
   type Category, type Employment, type Job, type JobStatus, type Partner, type Scheme, type WorkMode,
 } from './model';
 
@@ -20,7 +20,7 @@ export interface PartnerRow {
 }
 export interface JobRow {
   id: string; title: string; employment: Employment; category: Category; scheme: Scheme; location: string; workMode: WorkMode; quota: number;
-  partnerId: string; partnerName: string; picName: string; picEmail: string; opensAt: string; closesAt: string; status: JobStatus; applicantCount: number;
+  partnerId: string; partnerName: string; picName: string; picEmails: string[]; opensAt: string; closesAt: string; status: JobStatus; applicantCount: number;
   /** Lowongan fiktif untuk akun demo; tidak dihitung dalam total kuota / A fictitious job for demo accounts; left out of the quota total */
   demo: boolean;
 }
@@ -150,13 +150,13 @@ export async function createPicAccounts(partnerId: string): Promise<{ created: s
 
 const JOB_ROW_FIELDS = [
   'title', 'employment', 'category', 'scheme', 'location', 'workMode', 'quota', 'partnerId', 'partnerName',
-  'opensAt', 'closesAt', 'status', 'applicantCount', 'picEmail',
+  'opensAt', 'closesAt', 'status', 'applicantCount', 'picEmail', 'picEmails',
 ];
 
 // PIC lowongan wajib salah satu PIC mitranya, agar kandidat tidak diarahkan ke orang luar
 // A job's PIC must be one of its partner's PICs, so candidates are never routed to an outsider
-function assertJobPic(partner: Pick<Partner, 'pics'>, picEmail: string) {
-  if (picEmail && !partner.pics.some((p) => p.email.toLowerCase() === picEmail)) throw new Error('PIC lowongan tidak terdaftar di mitra ini');
+function assertJobPic(partner: Pick<Partner, 'pics'>, picEmails: string[]) {
+  if (picEmails.some((e) => !partner.pics.some((p) => p.email.toLowerCase() === e))) throw new Error('PIC lowongan tidak terdaftar di mitra ini');
 }
 
 export async function listJobs(): Promise<JobRow[]> {
@@ -167,7 +167,9 @@ export async function listJobs(): Promise<JobRow[]> {
       const d = j.data();
       return {
         ...(Object.fromEntries(JOB_ROW_FIELDS.map((f) => [f, d[f]])) as Omit<JobRow, 'id' | 'picName' | 'demo'>), id: j.id,
-        picName: jobPic(pics.get(d.partnerId) ?? [], d.picEmail)?.name ?? '', picEmail: d.picEmail ?? '', applicantCount: d.applicantCount ?? 0,
+        // Tanpa PIC sendiri, kontaknya PIC pertama mitra / Without its own PIC, the contact is the partner's first PIC
+        picName: (jobPics(pics.get(d.partnerId) ?? [], jobPicEmails(d)).map((p) => p.name).join(', ') || pics.get(d.partnerId)?.[0]?.name) ?? '',
+        picEmails: jobPicEmails(d), applicantCount: d.applicantCount ?? 0,
         demo: d.eligibility?.mode === 'classes' && (d.eligibility.classIds ?? []).includes(DEMO_CLASS_ID),
       };
     })
@@ -183,7 +185,7 @@ export async function createJob(raw: unknown): Promise<string> {
   const input = validateJobInput(raw);
   const partner = await getPartner(input.partnerId);
   if (!partner) throw new Error('Mitra tidak ditemukan');
-  assertJobPic(partner, input.picEmail);
+  assertJobPic(partner, input.picEmails);
   const t = now();
   const ref = await jobs().add({ ...input, partnerName: partner.name, applicantCount: 0, createdAt: t, updatedAt: t });
   return ref.id;
@@ -207,11 +209,11 @@ export async function updateJob(id: string, raw: unknown): Promise<void> {
     const current = snap.data() as Job;
     let partnerName = current.partnerName;
     if (input.partnerId !== current.partnerId && (current.applicantCount ?? 0) > 0) throw new Error('Mitra lowongan yang sudah punya pelamar tidak bisa diganti');
-    if (input.partnerId !== current.partnerId || input.picEmail) {
+    if (input.partnerId !== current.partnerId || input.picEmails.length) {
       const partner = await tx.get(partners().doc(input.partnerId));
       if (!partner.exists) throw new Error('Mitra tidak ditemukan');
       partnerName = partner.data()!.name;
-      assertJobPic({ pics: partner.data()!.pics ?? [] }, input.picEmail);
+      assertJobPic({ pics: partner.data()!.pics ?? [] }, input.picEmails);
     }
     tx.update(jobs().doc(id), { ...input, partnerName, updatedAt: now() });
   });

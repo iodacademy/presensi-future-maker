@@ -101,17 +101,23 @@ describe('layanan admin Job Portal', () => {
     expect(data.jobs[id]).toMatchObject({ partnerName: 'PT DIPSI', applicantCount: 0, qualifications: ['Figma'] });
   });
 
-  it('PIC lowongan harus PIC mitranya, dan tampil di daftar lowongan', async () => {
-    await expect(createJob({ ...job, picEmail: 'orang@lain.id' })).rejects.toThrow('PIC lowongan tidak terdaftar di mitra ini');
-    const id = await createJob({ ...job, picEmail: ' RINA@dipsi.co.id ' });
-    expect(data.jobs[id].picEmail).toBe('rina@dipsi.co.id');
-    await expect(updateJob(id, { ...job, picEmail: 'orang@lain.id' })).rejects.toThrow('PIC lowongan tidak terdaftar di mitra ini');
-    expect((await listJobs()).find((r) => r.id === id)).toMatchObject({ picName: 'Rina Kusuma', picEmail: 'rina@dipsi.co.id' });
+  it('PIC lowongan harus PIC mitranya, boleh lebih dari satu, dan tampil di daftar lowongan', async () => {
+    data.partners.p1.pics = [...partner.pics, { name: 'Budi', phone: '0813', email: 'budi@dipsi.co.id' }];
+    await expect(createJob({ ...job, picEmails: ['rina@dipsi.co.id', 'orang@lain.id'] })).rejects.toThrow('PIC lowongan tidak terdaftar di mitra ini');
+    const id = await createJob({ ...job, picEmails: [' RINA@dipsi.co.id ', 'budi@dipsi.co.id', 'rina@dipsi.co.id'] });
+    expect(data.jobs[id].picEmails).toEqual(['rina@dipsi.co.id', 'budi@dipsi.co.id']);
+    await expect(updateJob(id, { ...job, picEmails: ['orang@lain.id'] })).rejects.toThrow('PIC lowongan tidak terdaftar di mitra ini');
+    expect((await listJobs()).find((r) => r.id === id)).toMatchObject({ picName: 'Rina Kusuma, Budi', picEmails: ['rina@dipsi.co.id', 'budi@dipsi.co.id'] });
+  });
+
+  it('lowongan lama dengan satu picEmail tetap terbaca', async () => {
+    data.jobs.lama = { ...job, partnerName: 'PT DIPSI', applicantCount: 0, picEmail: 'rina@dipsi.co.id' };
+    expect((await listJobs()).find((r) => r.id === 'lama')).toMatchObject({ picName: 'Rina Kusuma', picEmails: ['rina@dipsi.co.id'] });
   });
 
   it('lowongan tanpa PIC sendiri memakai PIC pertama mitra', async () => {
     const id = await createJob(job);
-    expect(data.jobs[id].picEmail).toBe('');
+    expect(data.jobs[id].picEmails).toEqual([]);
     expect((await listJobs()).find((r) => r.id === id)?.picName).toBe('Rina Kusuma');
   });
 

@@ -2,7 +2,7 @@ import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
 import { getSnapshot } from '../dashboard/snapshot-service';
 import type { InsightApp, InsightJob, InsightStudent, PortalInsights } from './insights';
-import { DEMO_CLASS_ID, jobPic, PLACEMENT_COLLECTION, type ApplicationStatus, type Eligibility, type Scheme } from './model';
+import { DEMO_CLASS_ID, jobPicEmails, jobPics, PLACEMENT_COLLECTION, type ApplicationStatus, type Eligibility, type Scheme } from './model';
 
 // "Web Programming - Semarang" menjadi "Web Programming" / "Web Programming - Semarang" becomes "Web Programming"
 const programOf = (className: string) => className.split(' - ')[0].trim();
@@ -18,7 +18,7 @@ export async function portalInsights(actor: Actor): Promise<PortalInsights> {
   const db = getAdminDb();
   const [snapshot, jSnap, pSnap, cSnap, aSnap, placedSnap] = await Promise.all([
     getSnapshot(actor),
-    db.collection('jobs').select('title', 'partnerId', 'partnerName', 'scheme', 'quota', 'status', 'picEmail', 'eligibility').get(),
+    db.collection('jobs').select('title', 'partnerId', 'partnerName', 'scheme', 'quota', 'status', 'picEmail', 'picEmails', 'eligibility').get(),
     db.collection('partners').select('pics').get(),
     db.collection('classes').select('canonicalName').get(),
     db.collection('jobApplications').select(
@@ -43,7 +43,7 @@ export async function portalInsights(actor: Actor): Promise<PortalInsights> {
       const programs = e?.mode === 'classes' ? [...new Set(e.classIds.map((id) => classProgram.get(id)).filter((p): p is string => !!p))].sort() : [];
       return {
         id: j.id, title: String(j.get('title') ?? ''), partnerId: String(j.get('partnerId') ?? ''), partnerName: String(j.get('partnerName') ?? ''),
-        picName: jobPic(pics.get(String(j.get('partnerId'))) ?? [], j.get('picEmail'))?.name ?? '',
+        picName: (jobPics(pics.get(String(j.get('partnerId'))) ?? [], jobPicEmails(j.data())).map((p) => p.name).join(', ') || pics.get(String(j.get('partnerId')))?.[0]?.name) ?? '',
         scheme: (j.get('scheme') as Scheme | undefined) ?? 'full', quota: Number(j.get('quota') ?? 0), programs,
       };
     });

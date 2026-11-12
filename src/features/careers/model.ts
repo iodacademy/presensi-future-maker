@@ -43,13 +43,13 @@ export interface JobInput {
   durationMonths: number | null;
   opensAt: string; closesAt: string; documents: JobDocuments; questions: JobQuestion[]; status: JobStatus;
   /**
-   * Email PIC mitra yang mewawancarai pelamar lowongan ini; kosong berarti PIC pertama mitra.
-   * Kontak ini yang dilihat kandidat, jadi WhatsApp dan email tidak salah orang.
+   * Email PIC mitra yang mewawancarai pelamar lowongan ini; kosong berarti PIC pertama mitra. Boleh
+   * lebih dari satu, mis. saat satu user cuti; kandidat menghubungi PIC yang mengundangnya.
    *
-   * Email of the partner PIC who interviews this job's applicants; empty means the partner's first PIC.
-   * Candidates see this contact, so WhatsApp and email reach the right person.
+   * Emails of the partner PICs who interview this job's applicants; empty means the partner's first PIC.
+   * May be several, e.g. while one user is on leave; candidates contact the PIC who invited them.
    */
-  picEmail: string;
+  picEmails: string[];
 }
 export type Job = JobInput & { id: string; partnerName: string; applicantCount: number; createdAt: string; updatedAt: string };
 
@@ -217,13 +217,31 @@ export function validateJobInput(raw: unknown): JobInput {
     documents: Object.fromEntries(DOC_KEYS.map((k) => [k, oneOf<DocRule>(docs[k] ?? 'off', DOC_RULE_LABELS, 'Aturan dokumen tidak dikenal')])) as unknown as JobDocuments,
     questions: validateQuestions(r.questions),
     status: r.status === 'published' ? 'published' : 'draft',
-    picEmail: str(r.picEmail).toLowerCase(),
+    picEmails: [...new Set((Array.isArray(r.picEmails) ? r.picEmails : r.picEmail ? [r.picEmail] : []).map((e) => str(e).toLowerCase()).filter(Boolean))],
   };
 }
 
-/** PIC sebuah lowongan; lowongan lama atau PIC yang sudah dihapus jatuh ke PIC pertama mitra / A job's PIC; older jobs or a removed PIC fall back to the partner's first PIC */
-export function jobPic<T extends { email: string }>(pics: T[], picEmail?: string | null): T | null {
-  return pics.find((p) => !!picEmail && p.email.toLowerCase() === picEmail) ?? pics[0] ?? null;
+/** Email PIC lowongan; lowongan lama menyimpan satu picEmail / A job's PIC emails; older jobs stored a single picEmail */
+export function jobPicEmails(job: { picEmails?: unknown; picEmail?: unknown }): string[] {
+  if (Array.isArray(job.picEmails)) return job.picEmails.map((e) => String(e).toLowerCase());
+  return job.picEmail ? [String(job.picEmail).toLowerCase()] : [];
+}
+
+/** PIC lowongan yang masih terdaftar di mitra, urut seperti di lowongan / The job's PICs still listed at the partner, in the job's order */
+export function jobPics<T extends { email: string }>(pics: T[], emails: string[]): T[] {
+  return emails.map((e) => pics.find((p) => p.email.toLowerCase() === e)).filter((p): p is T => !!p);
+}
+
+/**
+ * Satu PIC kontak sebuah lowongan: yang diminta bila ia PIC lowongan itu, lalu PIC lowongan pertama,
+ * lalu PIC pertama mitra untuk lowongan lama atau PIC yang sudah dihapus.
+ *
+ * One contact PIC for a job: the preferred one when they are the job's PIC, then the job's first PIC,
+ * then the partner's first PIC for older jobs or a removed PIC.
+ */
+export function jobPic<T extends { email: string }>(pics: T[], emails?: string[] | string | null, prefer?: string): T | null {
+  const own = jobPics(pics, Array.isArray(emails) ? emails : emails ? [emails] : []);
+  return own.find((p) => !!prefer && p.email.toLowerCase() === prefer.toLowerCase()) ?? own[0] ?? pics[0] ?? null;
 }
 
 export function jobState(job: Pick<Job, 'status' | 'opensAt' | 'closesAt'>, now: Date): JobState {
