@@ -84,7 +84,9 @@ export async function updatePartner(id: string, raw: unknown): Promise<void> {
   const keep = new Set(input.pics.map((p) => normalizeEmail(p.email)));
   // Hanya akun PIC yang memiliki partnerId / Only PIC accounts carry a partnerId
   const accounts = await getAdminDb().collection('users').where('partnerId', '==', id).select('email', 'active', 'role', 'roles').get();
-  const revoke = accounts.docs.filter((u) => u.get('active') !== false && !keep.has(normalizeEmail(String(u.get('email')))));
+  // Akun berperan ganda dicabut peran PIC-nya walau sedang nonaktif, agar peran itu tidak kembali saat diaktifkan
+  // A multi-role account loses its PIC role even while inactive, so the role does not return on reactivation
+  const revoke = accounts.docs.filter((u) => !keep.has(normalizeEmail(String(u.get('email')))) && (u.get('role') !== 'partner' || u.get('active') !== false));
   if (revoke.length) {
     const b = getAdminDb().batch();
     revoke.forEach((u) => b.update(u.ref, u.get('role') === 'partner'

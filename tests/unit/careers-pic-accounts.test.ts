@@ -81,5 +81,15 @@ describe('akun PIC mitra', () => {
     data.emailIndex[getEmailHash('budi@dipsi.co.id')] = { uid: 'x', role: 'partner' };
     await expect(createPicAccounts('p1')).rejects.toThrow('sudah dipakai akun lain');
   });
+
+  it('mentor nonaktif yang dikeluarkan dari daftar PIC tetap kehilangan peran PIC', async () => {
+    data.users.m1 = { uid: 'm1', role: 'mentor', email: 'budi@dipsi.co.id', name: 'Budi', active: true };
+    data.emailIndex[getEmailHash('budi@dipsi.co.id')] = { uid: 'm1', role: 'mentor' };
+    await createPicAccounts('p1');
+    data.users.m1.active = false;
+    const { nameKey: _k, active: _a, ...input } = partner;
+    await updatePartner('p1', { ...input, pics: [partner.pics[0]] });
+    expect(data.users.m1).toMatchObject({ roles: ['mentor'], partnerId: null });
+  });
 });
 

@@ -3,7 +3,7 @@ import { joinMoment } from '../users/join-policy';
 import { getAdminAuth, getAdminDb } from '../../lib/firebase/admin';
 import type { Actor, UserDocument } from './types';
 import { ACTIVE_ROLE_COOKIE, SESSION_COOKIE_NAME, SESSION_EXPIRES_MS } from './constants';
-import { activeRole, availableRoles } from './policy';
+import { activeRole, availableRoles, isValidRole } from './policy';
 
 export { getRoleRedirectPath, isAuthorizedPath } from './paths';
 export { SESSION_COOKIE_NAME, SESSION_EXPIRES_DAYS, SESSION_EXPIRES_MS } from './constants';
@@ -80,6 +80,7 @@ export async function createSessionCookieFromCustomToken(customToken: string): P
 // read per process is ~400ms (handshake included), subsequent ones ~80ms.
 const actorCache = new Map<string, { actor: Actor; expiresAt: number }>();
 const ACTOR_CACHE_TTL_MS = 30_000;
+const ACTOR_CACHE_MAX = 1_000;
 
 /**
  * Memverifikasi session cookie dan mengambil data aktor dari Firestore.
@@ -96,7 +97,10 @@ export async function getSessionActor(): Promise<Actor | null> {
 
   // Peran pilihan ikut menjadi kunci cache, supaya ganti peran langsung berlaku
   // The chosen role is part of the cache key, so a role switch applies at once
-  const requestedRole = cookieStore.get(ACTIVE_ROLE_COOKIE)?.value ?? '';
+  // Isi cookie bisa diubah pengguna; hanya nama peran sah yang masuk kunci cache
+  // The cookie is user-editable; only a valid role name goes into the cache key
+  const rawRole = cookieStore.get(ACTIVE_ROLE_COOKIE)?.value ?? '';
+  const requestedRole = isValidRole(rawRole) ? rawRole : '';
   const cacheKey = `${sessionCookie}|${requestedRole}`;
   const cached = actorCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
@@ -142,6 +146,13 @@ export async function getSessionActor(): Promise<Actor | null> {
       ...(role === 'student' ? { joinIso: joinMoment(userData) } : {}),
     };
 
+    // ponytail: buang entri kedaluwarsa saat cache melewati batas; LRU bila lalu lintas jauh lebih besar
+    // ponytail: drop expired entries once the cache passes its cap; LRU if traffic grows much larger
+    if (actorCache.size >= ACTOR_CACHE_MAX) {
+      const t = Date.now();
+      for (const [k, v] of actorCache) if (v.expiresAt <= t) actorCache.delete(k);
+      if (actorCache.size >= ACTOR_CACHE_MAX) actorCache.clear();
+    }
     actorCache.set(cacheKey, { actor, expiresAt: Date.now() + ACTOR_CACHE_TTL_MS });
     return actor;
   } catch (error) {
