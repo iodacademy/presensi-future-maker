@@ -75,6 +75,9 @@ describe('tawarkan posisi lain di perusahaan yang sama', () => {
   });
 
   it('kandidat yang tidak lolos di posisi awal bisa ditawari posisi lain dan kembali ditinjau', async () => {
+    data.jobApplications.a2.status = 'tidak-lolos';
+    data.jobApplications.a3.status = 'tidak-lolos';
+    data.jobApplications.a9.status = 'tidak-lolos';
     data.jobApplications.a1.status = 'tidak-lolos';
     data.jobApplications.a1.rejectReason = 'Kurang cocok';
     await offerOtherJob(rina, 'a1', 'j2');
@@ -89,6 +92,15 @@ describe('tawarkan posisi lain di perusahaan yang sama', () => {
     await expect(offerOtherJob(rina, 'a2', 'jf')).rejects.toThrow('Kandidat jalur Project Based tidak bisa ditawari Full Internship');
     data.jobApplications.a2.status = 'diterima';
     await expect(offerOtherJob(rina, 'a2', 'j2')).rejects.toThrow('Lamaran ini tidak bisa dialihkan');
+  });
+
+  it('aturan program tetap berlaku: batas nilai tier, jurusan, dan kuota lamaran saat dihidupkan lagi', async () => {
+    data.jobs.mahal = { ...job, title: 'Proyek Mahal', scheme: 'project', salary: 1_000_000, applicantCount: 0 };
+    await expect(offerOtherJob(rina, 'a2', 'mahal')).rejects.toThrow('Nilai posisi itu melebihi batas tier kandidat');
+    data.jobs.lainKelas = { ...job, title: 'Khusus Kelas Lain', scheme: 'project', eligibility: { mode: 'classes', classIds: ['k9'] }, applicantCount: 0 };
+    await expect(offerOtherJob(rina, 'a2', 'lainKelas')).rejects.toThrow('Kandidat tidak memenuhi syarat lowongan itu');
+    data.jobApplications.a1.status = 'tidak-lolos';
+    await expect(offerOtherJob(rina, 'a1', 'j2')).rejects.toThrow('Jatah lamaran kandidat sedang penuh');
   });
 });
 
