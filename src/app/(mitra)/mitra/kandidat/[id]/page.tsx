@@ -4,13 +4,17 @@ import React, { use, useCallback, useEffect, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { alertBox, btn, btnSolid, field } from '@/app/(admin)/admin/pameran/admin-ui';
-import { APPLICATION_STATUS_LABELS, type Application, type Interview, type JobQuestion } from '@/features/careers/model';
+import { APPLICATION_STATUS_LABELS, SCHEME_LABELS, type Application, type Interview, type JobQuestion, type Scheme } from '@/features/careers/model';
 import { box, h1, MitraShell, sub } from '../../shell';
 import { ContactCandidate, waButton } from '../../contact-candidate';
 import { InviteForm } from './invite-form';
 import { ProjectDone } from '@/features/careers/project-done-button';
 
-type Candidate = Application & { className: string; questions: JobQuestion[]; interview?: Interview; interviewWaLink: string | null; offerWaLink: string | null };
+type Candidate = Application & {
+  className: string; questions: JobQuestion[]; interview?: Interview; interviewWaLink: string | null; offerWaLink: string | null;
+  jobTitle?: string; offeredFrom?: { jobId: string; title: string }; otherJobs?: { id: string; title: string; scheme: Scheme }[];
+};
+const MOVABLE = ['baru', 'ditinjau', 'shortlist', 'interview', 'tidak-lolos'];
 const REASONS = ['Skill belum sesuai', 'Portofolio kurang relevan', 'Kuota sudah terpenuhi', 'Lainnya'];
 
 /**
@@ -26,6 +30,7 @@ export default function CandidatePage({ params }: { params: Promise<{ id: string
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState(REASONS[0]);
   const [pic, setPic] = useState('');
+  const [target, setTarget] = useState('');
 
   const load = useCallback(async () => {
     const r = await fetch(`/api/mitra/candidates/${id}`);
@@ -47,6 +52,17 @@ export default function CandidatePage({ params }: { params: Promise<{ id: string
     await load();
   }
 
+  // Kandidat ditawari posisi lain; lamarannya pindah ke lowongan itu / The candidate is offered another position; the application moves to that job
+  async function offerOther() {
+    const t = c?.otherJobs?.find((j) => j.id === target);
+    if (!t || !window.confirm(`Tawarkan ${c?.personal.fullName} posisi ${t.title}? Lamarannya dipindahkan ke lowongan itu dan diproses dari sana.`)) return;
+    setError(null);
+    const r = await fetch(`/api/mitra/candidates/${id}/alihkan`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: target }) });
+    if (!r.ok) { setError((await r.json()).error); return; }
+    setTarget('');
+    await load();
+  }
+
   const row = (k: string, v: React.ReactNode) => (v ? <React.Fragment key={k}><dt style={{ color: 'var(--color-text-muted)' }}>{k}</dt><dd style={{ margin: 0, wordBreak: 'break-word' }}>{v}</dd></React.Fragment> : null);
   const ext = (u: string) => (/^https?:\/\//i.test(u) ? <a href={u} target="_blank" rel="noopener noreferrer">{u}</a> : null);
 
@@ -58,7 +74,7 @@ export default function CandidatePage({ params }: { params: Promise<{ id: string
         <>
           <div>
             <h1 style={h1}>{c.personal.fullName}</h1>
-            <p style={sub}>{c.number} · status {APPLICATION_STATUS_LABELS[c.status]}</p>
+            <p style={sub}>{c.number} · {c.jobTitle ? `${c.jobTitle} · ` : ''}status {APPLICATION_STATUS_LABELS[c.status]}{c.offeredFrom ? ` · ditawarkan, awalnya melamar ${c.offeredFrom.title}` : ''}</p>
           </div>
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
             <section style={{ ...box, flex: '1 1 460px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -155,6 +171,17 @@ export default function CandidatePage({ params }: { params: Promise<{ id: string
                   </>
                 )}
               </section>
+              {MOVABLE.includes(c.status) && (c.otherJobs?.length ?? 0) > 0 && (
+                <section style={{ ...box, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <b style={{ fontSize: '10px', letterSpacing: '.06em', color: 'var(--color-text-muted)' }}>TAWARKAN POSISI LAIN</b>
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Kandidat lebih cocok di posisi lain? Lamarannya dipindahkan ke posisi itu, lalu diproses seperti biasa.</span>
+                  <select value={target} onChange={(e) => setTarget(e.target.value)} style={field} aria-label="Posisi lain">
+                    <option value="">Pilih posisi</option>
+                    {c.otherJobs!.map((j) => <option key={j.id} value={j.id}>{j.title} · {SCHEME_LABELS[j.scheme]}</option>)}
+                  </select>
+                  <button type="button" style={btn} disabled={!target} onClick={offerOther}>Tawarkan posisi ini</button>
+                </section>
+              )}
             </aside>
           </div>
         </>

@@ -122,6 +122,7 @@ export default function KarierPage() {
                       <div>
                         <Link href={`/app/karier/${a.jobId}`} style={{ ...heading, fontSize: '16px', textDecoration: 'none' }}>{a.jobTitle}</Link>
                         <div style={{ fontSize: '13px', color: MUTED }}>{a.partnerName} · {a.number} · dikirim {formatDate(a.submittedAt)}</div>
+                        {a.offeredFrom && <div style={{ fontSize: '12px', color: '#0072CE', fontWeight: 600 }}>Ditawarkan mitra, awalnya melamar {a.offeredFrom}</div>}
                       </div>
                       <span style={pill(bg, fg)}>{a.statusLabel}</span>
                     </div>

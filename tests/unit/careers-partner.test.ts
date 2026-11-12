@@ -9,7 +9,8 @@ vi.mock('../../src/lib/firebase/admin', () => ({ getAdminDb: () => fakeDb, getAd
 const cancel = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock('../../src/features/calendar/client', () => ({ cancelCalendarEvent: cancel, isCalendarConfigured: () => true, createCalendarEvent: vi.fn() }));
 
-import { decideCandidate, getCandidate, listCandidates, partnerDashboard, partnerMe, updateOwnProfile } from '../../src/features/careers/partner-service';
+import { decideCandidate, getCandidate, listCandidates, offerOtherJob, partnerDashboard, partnerMe, updateOwnProfile } from '../../src/features/careers/partner-service';
+import { listMyApplications } from '../../src/features/careers/student-service';
 import { GET as dashGet } from '../../src/app/api/mitra/dashboard/route';
 
 const now = new Date('2026-11-05T00:00:00Z');
@@ -54,6 +55,40 @@ describe('PIC hanya melihat lowongan yang di-assign kepadanya', () => {
   it('PIC yang tidak di-assign ke lowongan mana pun (mis. HR) melihat semua lowongan perusahaannya', async () => {
     expect((await partnerDashboard(nabila, now)).jobs.map((j) => j.id).sort()).toEqual(['j1', 'j2', 'j3']);
     expect((await getCandidate(nabila, 'b1')).id).toBe('b1');
+  });
+});
+
+describe('tawarkan posisi lain di perusahaan yang sama', () => {
+  beforeEach(() => {
+    data.jobs.j2 = { ...job, title: 'Web Dev Simulator', scheme: 'project', applicantCount: 0 };
+    data.jobs.jf = { ...job, title: 'Full Role', scheme: 'full', applicantCount: 0 };
+    data.dashboardSnapshots = { '2026-11-04': { generatedAt: '2026-11-04T01:00:00Z', version: 22, ranking: [{ studentId: 'u1', score: 70, pending: [], placement: 'project' }] } };
+  });
+
+  it('memindahkan lamaran ke posisi lain beserta catatan posisi awalnya', async () => {
+    await offerOtherJob(rina, 'a2', 'j2');
+    expect(data.jobApplications.a2).toMatchObject({ jobId: 'j2', scheme: 'project', status: 'shortlist', offeredFrom: { jobId: 'j1', title: 'UI/UX Intern' } });
+    expect(data.jobs.j1.applicantCount).toBe(1);
+    expect(data.jobs.j2.applicantCount).toBe(1);
+    const mine = (await listMyApplications('u1')).find((x) => x.id === 'a2')!;
+    expect(mine).toMatchObject({ jobTitle: 'Web Dev Simulator', offeredFrom: 'UI/UX Intern' });
+  });
+
+  it('kandidat yang tidak lolos di posisi awal bisa ditawari posisi lain dan kembali ditinjau', async () => {
+    data.jobApplications.a1.status = 'tidak-lolos';
+    data.jobApplications.a1.rejectReason = 'Kurang cocok';
+    await offerOtherJob(rina, 'a1', 'j2');
+    expect(data.jobApplications.a1).toMatchObject({ jobId: 'j2', status: 'ditinjau', rejectReason: '' });
+  });
+
+  it('ditolak bila posisi milik mitra lain, sudah dilamar, melanggar skema, atau lamarannya final', async () => {
+    await expect(offerOtherJob(rina, 'a2', 'j9')).rejects.toThrow('Lowongan tidak ditemukan');
+    data.jobApplications.x = { ...data.jobApplications.a2, jobId: 'j2' };
+    await expect(offerOtherJob(rina, 'a2', 'j2')).rejects.toThrow('Kandidat sudah melamar posisi itu');
+    delete data.jobApplications.x;
+    await expect(offerOtherJob(rina, 'a2', 'jf')).rejects.toThrow('Kandidat jalur Project Based tidak bisa ditawari Full Internship');
+    data.jobApplications.a2.status = 'diterima';
+    await expect(offerOtherJob(rina, 'a2', 'j2')).rejects.toThrow('Lamaran ini tidak bisa dialihkan');
   });
 });
 

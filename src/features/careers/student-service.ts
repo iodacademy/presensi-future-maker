@@ -32,6 +32,8 @@ export interface MyApplication {
   interview: Omit<Interview, 'calendarEventId'> | null;
   /** WhatsApp ke PIC untuk minta jadwal ulang / WhatsApp to the PIC to ask for a new time */
   picWaLink: string | null;
+  /** Posisi yang awalnya dilamar bila mitra menawarkan posisi lain / The position first applied for when the partner offered another */
+  offeredFrom: string | null;
 }
 export interface FinalScore { finalScore: number | null; finalScorePending: boolean; finalScoreAt: string | null }
 
@@ -121,7 +123,7 @@ async function appliedJobIds(uid: string): Promise<Set<string>> {
   return new Set(snap.docs.map((d) => d.get('jobId') as string));
 }
 
-export const CAREER_APP_FIELDS = ['status', 'scheme', 'completedAt'];
+export const CAREER_APP_FIELDS = ['status', 'scheme', 'completedAt', 'jobId'];
 
 /**
  * Bahan penilaian tier: penempatan, SPA, dan tier. Akun demo selalu tier A agar seluruh alur bisa dicoba.
@@ -284,7 +286,7 @@ function publicInterview({ calendarEventId: _c, ...rest }: Interview): Omit<Inte
 
 export async function listMyApplications(uid: string): Promise<MyApplication[]> {
   const [aSnap, jSnap] = await Promise.all([
-    db().collection('jobApplications').where('studentId', '==', uid).select('jobId', 'partnerId', 'number', 'status', 'scheme', 'completedAt', 'submittedAt', 'interview', 'personal.fullName').get(),
+    db().collection('jobApplications').where('studentId', '==', uid).select('jobId', 'partnerId', 'number', 'status', 'scheme', 'completedAt', 'submittedAt', 'interview', 'personal.fullName', 'offeredFrom').get(),
     db().collection('jobs').select('title', 'partnerName', 'picEmail', 'picEmails').get(),
   ]);
   const jobs = new Map(jSnap.docs.map((j) => [j.id, { title: j.get('title') as string, partnerName: j.get('partnerName') as string, picEmails: jobPicEmails(j.data()) }]));
@@ -309,6 +311,7 @@ export async function listMyApplications(uid: string): Promise<MyApplication[]> 
         picWaLink: raw && contact ? whatsAppLink(contact.phone, rescheduleMessage({
           picName: contact.name, studentName: String(a.get('personal.fullName') ?? ''), jobTitle: j?.title ?? 'Lowongan', partnerName: j?.partnerName ?? '', interview: raw,
         })) : null,
+        offeredFrom: (a.get('offeredFrom.title') as string | undefined) ?? null,
       };
     })
     .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));

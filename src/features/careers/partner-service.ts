@@ -15,7 +15,9 @@ import type { Actor } from '../auth/types';
 import { getApplicationForAdmin, listApplicants, setApplicationStatus, type ApplicantRow } from './applicants-service';
 import { getPartner } from './admin-service';
 import { inScope, picJobScope } from './pic-scope';
-import { interviewMessage, jobState, offerMessage, validatePartnerInput, type ApplicationStatus, type Interview, type Job } from './model';
+import { canApplyScheme, interviewMessage, jobState, offerMessage, validatePartnerInput, type ApplicationStatus, type Interview, type Job, type Scheme } from './model';
+import { latestPlacement, myInternshipPlacement } from './student-service';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export type PartnerActor = Actor & { partnerId: string };
 const db = () => getAdminDb();
@@ -104,8 +106,15 @@ export async function getCandidate(actor: PartnerActor, appId: string) {
   const job = await db().collection('jobs').doc(c.jobId).get();
   const names = { studentName: c.personal.fullName, jobTitle: String(job.get('title') ?? 'Lowongan'), partnerName: String(job.get('partnerName') ?? '') };
   const interview = (c as { interview?: Interview }).interview;
+  // Posisi lain di perusahaan yang sama untuk ditawarkan / Other positions at the same company to offer
+  const others = await db().collection('jobs').where('partnerId', '==', actor.partnerId).select('title', 'scheme', 'status').get();
   return {
     ...c,
+    jobTitle: names.jobTitle,
+    otherJobs: others.docs
+      .filter((j) => j.id !== c.jobId && j.get('status') === 'published')
+      .map((j) => ({ id: j.id, title: String(j.get('title') ?? ''), scheme: (j.get('scheme') as Scheme | undefined) ?? 'full' }))
+      .sort((a, b) => a.title.localeCompare(b.title)),
     // Tautan WhatsApp siap kirim untuk undangan interview dan ucapan lolos / Ready-to-send WhatsApp links for the interview invite and the pass message
     interviewWaLink: c.status === 'interview' && interview ? whatsAppLink(c.personal.phone, interviewMessage({ ...names, interview })) : null,
     offerWaLink: ['diterima', 'bergabung'].includes(c.status) ? whatsAppLink(c.personal.phone, offerMessage(names)) : null,
@@ -114,6 +123,59 @@ export async function getCandidate(actor: PartnerActor, appId: string) {
 
 // Interview diatur lewat formulir undangan; baru tidak bisa dipilih kembali / Interview goes through the invite form; new cannot be chosen again
 const PIC_STATUSES: ApplicationStatus[] = ['ditinjau', 'shortlist', 'diterima', 'tidak-lolos'];
+
+// Tawaran yang menunggu jawaban dan status final tidak dialihkan / Offers awaiting an answer and final statuses are not moved
+const MOVABLE: ApplicationStatus[] = ['baru', 'ditinjau', 'shortlist', 'interview', 'tidak-lolos'];
+
+/**
+ * PIC menawarkan kandidat posisi lain di perusahaannya, walau kandidat tidak
+ * melamar posisi itu. Lamarannya dipindahkan beserta catatan posisi awal;
+ * kandidat yang tidak lolos di posisi awal kembali ditinjau. Aturan skema
+ * program tetap berlaku.
+ *
+ * A PIC offers a candidate another position at their company, even one the
+ * candidate did not apply to. The application moves along with a note of the
+ * original position; a candidate rejected there goes back to review. The
+ * programme's scheme rules still apply.
+ */
+export async function offerOtherJob(actor: PartnerActor, appId: string, targetJobId: unknown): Promise<void> {
+  const snap = await ownApplication(actor, appId);
+  const status = snap.get('status') as ApplicationStatus;
+  if (!MOVABLE.includes(status)) throw new Error('Lamaran ini tidak bisa dialihkan');
+  const target = String(targetJobId ?? '');
+  const fromId = String(snap.get('jobId'));
+  const [tj, from] = await Promise.all([db().collection('jobs').doc(target || '-').get(), db().collection('jobs').doc(fromId).get()]);
+  if (!tj.exists || tj.get('partnerId') !== actor.partnerId || tj.get('status') !== 'published' || target === fromId) throw new Error('Lowongan tidak ditemukan');
+
+  const studentId = String(snap.get('studentId'));
+  const [dup, mine, placedAt, placement] = await Promise.all([
+    db().collection('jobApplications').where('studentId', '==', studentId).where('jobId', '==', target).select().get(),
+    db().collection('jobApplications').where('studentId', '==', studentId).where('status', '==', 'bergabung').select('scheme').get(),
+    myInternshipPlacement(studentId),
+    latestPlacement(studentId, snap.get('classId')),
+  ]);
+  if (!dup.empty) throw new Error('Kandidat sudah melamar posisi itu');
+  if ((placedAt && placedAt.scheme !== 'project') || mine.docs.some((d) => (d.get('scheme') ?? 'full') === 'full')) {
+    throw new Error('Kandidat sudah menerima tawaran magang di tempat lain');
+  }
+  const scheme = (tj.get('scheme') as Scheme | undefined) ?? 'full';
+  if (!canApplyScheme(placement, scheme)) {
+    throw new Error(placement === 'project' ? 'Kandidat jalur Project Based tidak bisa ditawari Full Internship' : 'Kandidat tidak memenuhi skema posisi itu');
+  }
+
+  const t = new Date().toISOString();
+  const batch = db().batch();
+  batch.update(snap.ref, {
+    jobId: target, scheme,
+    // Posisi yang pertama dilamar tetap tercatat walau dialihkan berkali-kali / The first position applied for stays recorded through repeated moves
+    offeredFrom: snap.get('offeredFrom') ?? { jobId: fromId, title: String(from.get('title') ?? '') },
+    ...(status === 'tidak-lolos' ? { status: 'ditinjau', rejectReason: '', statusChangedAt: t } : {}),
+    updatedAt: t,
+  });
+  batch.update(from.ref, { applicantCount: FieldValue.increment(-1) });
+  batch.update(tj.ref, { applicantCount: FieldValue.increment(1) });
+  await batch.commit();
+}
 
 export async function decideCandidate(actor: PartnerActor, appId: string, status: unknown, reason?: unknown): Promise<{ waLink: string | null }> {
   const snap = await ownApplication(actor, appId);

@@ -44,7 +44,8 @@ export async function submitApplication(actor: Actor, raw: unknown, now: Date): 
     if (!canSeeJob(standing, job) || !isEligible(job.eligibility, { classId: actor.classId, finalScore: score.finalScore })) {
       throw new Error('Kamu belum memenuhi syarat lowongan ini');
     }
-    if (appSnap.exists) throw new Error('Kamu sudah melamar lowongan ini');
+    // Lamaran yang dialihkan mitra ke lowongan ini juga dihitung sudah melamar / An application a partner moved to this job also counts as applied
+    if (appSnap.exists || mine.docs.some((d) => d.get('jobId') === jobId)) throw new Error('Kamu sudah melamar lowongan ini');
     const blocked = applyBlock(standing);
     if (blocked) throw new Error(blocked);
 
