@@ -152,6 +152,15 @@ const rp = (n: number) => `Rp${n.toLocaleString('id-ID')}`;
  * The participant's tier and remaining quota. On the Project Based track, unfinished projects also use a slot.
  */
 function TierCard({ s }: { s: CareerStanding }) {
+  if (s.placedAt) {
+    return (
+      <div role="status" style={{ ...card, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <b style={{ fontSize: '14px' }}>Kamu sudah ditempatkan magang. Selamat!</b>
+        <span style={{ fontSize: '13px' }}>{`${s.placedAt.position} · ${s.placedAt.partnerName}`}</span>
+        <span style={{ fontSize: '12px', color: MUTED }}>Lamaran baru tidak bisa dikirim lagi. Mitra akan menghubungimu untuk langkah berikutnya.</span>
+      </div>
+    );
+  }
   if (s.locked) return <div style={{ ...card, color: MUTED }}>Kamu sudah menerima tawaran magang. Selamat! Lamaran baru tidak bisa dikirim lagi.</div>;
   const project = s.track === 'project';
   const caps = TIER_RULES[s.tier];

@@ -1,4 +1,4 @@
-import type { ApplicationStatus, InterviewConfirmation, InterviewInput, Scheme } from './model';
+import type { ApplicationStatus, InterviewConfirmation, InterviewInput, PlacedAt, Scheme } from './model';
 
 /**
  * Ringkasan Job Portal untuk admin. Modul ini murni, jadi filter jurusan
@@ -22,6 +22,8 @@ export interface InsightStudent {
   /** Penempatan dari dashboard; hanya yang berhak magang yang masuk ringkasan / Placement from the dashboard; only those entitled to an internship are included */
   placement: Scheme;
   apps: InsightApp[];
+  /** Ditempatkan di luar lamaran, mis. seleksi awal mitra / Placed outside applications, e.g. a partner's early selection */
+  placedAt?: PlacedAt | null;
 }
 export interface PortalInsights { programs: string[]; jobs: InsightJob[]; students: InsightStudent[] }
 
@@ -53,16 +55,22 @@ export function summarize(x: PortalInsights, program: string | null) {
   const sum = (s?: Scheme) => jobs.filter((j) => !s || j.scheme === s).reduce((n, j) => n + j.quota, 0);
 
   const apps = students.flatMap((s) => s.apps);
+  const accepted = students.flatMap((student) => student.apps
+    .filter((app) => ACCEPTED.includes(app.status) && jobById.has(app.jobId))
+    .map((app) => ({ student, app, job: jobById.get(app.jobId)! })));
+  const placed = students.filter((s) => s.placedAt);
   return {
     partners: partnerMap.size,
     byPartner,
     quota: { total: sum(), full: sum('full'), project: sum('project') },
     students,
     applied: students.filter((s) => s.apps.length > 0),
-    notApplied: students.filter((s) => s.apps.length === 0),
-    accepted: students.flatMap((student) => student.apps
-      .filter((app) => ACCEPTED.includes(app.status) && jobById.has(app.jobId))
-      .map((app) => ({ student, app, job: jobById.get(app.jobId)! }))),
+    // Yang sudah ditempatkan tidak perlu melamar, jadi tidak ikut daftar yang perlu diingatkan / Placed participants need not apply, so they are left off the list to remind
+    notApplied: students.filter((s) => s.apps.length === 0 && !s.placedAt),
+    accepted,
+    placed,
+    // Satu orang dihitung sekali walau diterima lewat lamaran dan penempatan sekaligus / One person counts once even when accepted both ways
+    acceptedCount: new Set([...accepted.map((a) => a.student.studentId), ...placed.map((s) => s.studentId)]).size,
     applicantsOf,
     funnel: FUNNEL.map((status) => ({ status, count: apps.filter((a) => a.status === status).length })),
   };

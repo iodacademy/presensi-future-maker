@@ -71,6 +71,16 @@ export default function StudentHomePage() {
         ) : (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0 }}>
+              {data?.internship && (
+                <div role="status" style={{ background: 'linear-gradient(135deg, #0072CE, #0B5CAD)', color: '#ffffff', borderRadius: '14px', padding: '18px 20px', display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 260px' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px', color: '#FFC72C' }}>SELAMAT, KAMU SUDAH DITEMPATKAN MAGANG</div>
+                    <div style={{ fontFamily: 'var(--font-heading)', fontSize: '16px', fontWeight: 700, marginTop: '4px' }}>{data.internship.position}</div>
+                    <div style={{ fontSize: '12px', marginTop: '2px' }}>{data.internship.partnerName}</div>
+                    <div style={{ fontSize: '11px', marginTop: '8px', opacity: 0.85 }}>Kamu tidak perlu melamar lowongan lain. Mitra akan menghubungimu untuk langkah berikutnya.</div>
+                  </div>
+                </div>
+              )}
               {/* Card Sesi Berlangsung (node 11:2735) / Sesi Berikutnya (node 11:2810) */}
               {activeSession ? (
                 <div style={{ backgroundColor: 'var(--color-primary)', color: '#ffffff', borderRadius: '14px', padding: '20px' }}>

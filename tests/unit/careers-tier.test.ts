@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canSeeJob, careerStanding, projectsOngoing, tierOf } from '../../src/features/careers/tier';
+import { applyBlock, canSeeJob, careerStanding, PLACED_MESSAGE, projectsOngoing, tierOf } from '../../src/features/careers/tier';
 
 const app = (status: string, scheme?: 'full' | 'project', completedAt?: string) => ({ status, scheme, completedAt }) as never;
 
@@ -39,6 +39,14 @@ describe('kuota dan jalur peserta', () => {
   it('peserta yang menerima tawaran Full Internship terkunci; lamaran lama tanpa skema dianggap Full', () => {
     expect(careerStanding('full', 90, [app('bergabung', 'full')]).locked).toBe(true);
     expect(careerStanding('full', 90, [app('bergabung')]).locked).toBe(true);
+  });
+
+  it('peserta yang sudah ditempatkan lewat seleksi awal mitra terkunci dan tahu tempatnya', () => {
+    const tempat = { partnerName: 'PT Mayar Kernel Supernova', position: 'Digital Marketing Intern' };
+    const s = careerStanding('full', 62, [], undefined, tempat);
+    expect(s).toMatchObject({ locked: true, placedAt: tempat });
+    expect(applyBlock(s)).toBe(PLACED_MESSAGE);
+    expect(careerStanding('full', 62, []).placedAt).toBeNull();
   });
 
   it('Tidak ditempatkan dan menunggu tidak punya jalur', () => {

@@ -38,6 +38,8 @@ export interface StudentHomeProgress {
 
 export interface StudentHomeData {
   studentName: string;
+  /** Tempat magang bila peserta sudah ditempatkan, atau null / The internship once the participant is placed, or null */
+  internship?: { partnerName: string; position: string } | null;
   className: string;
   activeSession: StudentHomeSession | null;
   nextSession: StudentHomeSession | null;

@@ -181,3 +181,11 @@ describe('tier: kuota lamaran dan batas uang saku', () => {
     expect((await submitApplication(actor('u5'), bare('j1', 'cv5'), now)).id).toBe('j1_u5');
   });
 });
+
+describe('peserta yang sudah ditempatkan', () => {
+  it('tidak bisa mengirim lamaran baru', async () => {
+    data.internshipPlacements = { u1: { studentId: 'u1', partnerName: 'PT Mayar Kernel Supernova', position: 'Digital Marketing Intern' } };
+    await expect(submitApplication(actor('u1'), body(), now)).rejects.toThrow('Kamu sudah ditempatkan magang');
+    expect(data.jobApplications.j1_u1).toBeUndefined();
+  });
+});

@@ -307,6 +307,20 @@ export interface Application {
   completedAt?: string | null;
 }
 
+/**
+ * Penempatan magang di luar alur lamaran, mis. peserta yang sudah dipilih mitra lewat seleksi awal.
+ * Peserta yang punya catatan ini terkunci dari melamar, sama seperti yang sudah menerima tawaran.
+ *
+ * An internship placement outside the application flow, e.g. a participant a partner picked through
+ * early selection. A participant with this record is locked out of applying, like one who accepted an offer.
+ */
+export interface InternshipPlacement {
+  studentId: string; partnerId: string | null; partnerName: string; position: string; jobId: string | null;
+  scheme: Scheme; source: string; placedAt: string;
+}
+export type PlacedAt = Pick<InternshipPlacement, 'partnerName' | 'position'>;
+export const PLACEMENT_COLLECTION = 'internshipPlacements';
+
 export function isOpenToStudents(job: Pick<Job, 'status' | 'opensAt' | 'closesAt'>, now: Date): boolean {
   return jobState(job, now) === 'aktif';
 }

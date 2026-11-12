@@ -14,8 +14,8 @@ import { isStoredSubmissionFile } from '../tasks/submission-policy';
 import { applicationsOpen, CLOSED_MESSAGE } from './apply-gate';
 import { listCvs } from './cv-service';
 import {
-  jobPic, CLOSED_ELSEWHERE_MESSAGE, rescheduleMessage, DEMO_CLASS_ID, hasCareerAccess, isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
-  type ApplicationStatus, type AttachedTask, type Interview, type PicContact, type AttachedWork, type CvFile, type Eligibility, type Job, type Logo, type Personal, type Socials,
+  jobPic, PLACEMENT_COLLECTION, CLOSED_ELSEWHERE_MESSAGE, rescheduleMessage, DEMO_CLASS_ID, hasCareerAccess, isEligible, isOpenToStudents, REJECT_MESSAGE, studentStatusLabel,
+  type ApplicationStatus, type PlacedAt, type AttachedTask, type Interview, type PicContact, type AttachedWork, type CvFile, type Eligibility, type Job, type Logo, type Personal, type Socials,
 } from './model';
 import { applyBlock, canSeeJob, careerStanding, tierOf, type CareerApp, type CareerStanding, type Tier } from './tier';
 
@@ -94,9 +94,15 @@ export const CAREER_APP_FIELDS = ['status', 'scheme', 'completedAt'];
  * Inputs for the tier rules: placement, SPA, and tier. Demo accounts are always tier A so every flow can be tried.
  */
 export async function standingInputs(actor: Pick<Actor, 'uid' | 'classId'>) {
-  const [score, placement] = await Promise.all([latestFinalScore(actor.uid), latestPlacement(actor.uid, actor.classId)]);
+  const [score, placement, placedAt] = await Promise.all([latestFinalScore(actor.uid), latestPlacement(actor.uid, actor.classId), myInternshipPlacement(actor.uid)]);
   const tier: Tier = actor.classId === DEMO_CLASS_ID ? 'A' : tierOf(score.finalScore);
-  return { score, placement, tier, standing: (apps: CareerApp[]) => careerStanding(placement, score.finalScore, apps, tier) };
+  return { score, placement, tier, standing: (apps: CareerApp[]) => careerStanding(placement, score.finalScore, apps, tier, placedAt) };
+}
+
+/** Tempat magang peserta dari penempatan di luar lamaran, atau null / The participant's internship from a placement outside applications, or null */
+export async function myInternshipPlacement(uid: string): Promise<PlacedAt | null> {
+  const d = await db().collection(PLACEMENT_COLLECTION).doc(uid).get();
+  return d.exists ? { partnerName: String(d.get('partnerName') ?? ''), position: String(d.get('position') ?? '') } : null;
 }
 
 export async function myCareerStanding(actor: Pick<Actor, 'uid' | 'classId'>): Promise<CareerStanding> {

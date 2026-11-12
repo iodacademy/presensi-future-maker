@@ -153,7 +153,10 @@ export function InsightsPanel({ onError, reloadKey }: { onError: (m: string) => 
   const rows: { student: InsightStudent; apps: InsightApp[] }[] = !detail ? []
     : detail.kind === 'applied' ? s.applied.map((st) => ({ student: st, apps: st.apps }))
     : detail.kind === 'notApplied' ? s.notApplied.map((st) => ({ student: st, apps: [] }))
-    : detail.kind === 'accepted' ? s.accepted.map((a) => ({ student: a.student, apps: [a.app] }))
+    : detail.kind === 'accepted' ? [
+      ...s.placed.map((st) => ({ student: st, apps: st.apps.filter((a) => a.status === 'diterima' || a.status === 'bergabung') })),
+      ...s.accepted.filter((a) => !a.student.placedAt).map((a) => ({ student: a.student, apps: [a.app] })),
+    ]
     : detail.kind === 'partner' ? s.applicantsOf(detail.partnerId)
     : s.students.map((st) => ({ student: st, apps: st.apps.filter((a) => a.status === byStatus) })).filter((r) => r.apps.length > 0);
   const needle = q.trim().toLowerCase();
@@ -199,9 +202,10 @@ export function InsightsPanel({ onError, reloadKey }: { onError: (m: string) => 
             <StackBar full={s.notApplied.filter((x) => x.placement === 'full').length} project={s.notApplied.filter((x) => x.placement === 'project').length} max={Math.max(1, s.notApplied.length)} />
           </div>
         </Kpi>
-        <Kpi title="Diterima" value={s.accepted.length} sub={`${joined} bergabung · ${s.accepted.length - joined} menunggu jawaban`}
+        <Kpi title="Diterima" value={s.acceptedCount} sub={`${s.placed.length} seleksi awal · ${joined} bergabung · ${s.accepted.length - joined} menunggu jawaban`}
           active={isOpen('accepted')} onClick={() => toggle({ kind: 'accepted' })}>
-          <Ring label={`${joined} bergabung, ${s.accepted.length - joined} menunggu jawaban`} parts={[
+          <Ring label={`${s.placed.length} seleksi awal, ${joined} bergabung, ${s.accepted.length - joined} menunggu jawaban`} parts={[
+            { value: s.placed.length, color: '#0B4F8A', name: 'Seleksi awal mitra' },
             { value: joined, color: '#067647', name: 'Bergabung' }, { value: s.accepted.length - joined, color: '#7FD3A4', name: 'Menunggu jawaban' },
           ]} />
         </Kpi>
@@ -230,7 +234,15 @@ export function InsightsPanel({ onError, reloadKey }: { onError: (m: string) => 
                     <tr key={student.studentId}>
                       <td style={td}><div style={{ fontWeight: 600 }}>{student.name}</div><div style={muted}>{student.className}</div></td>
                       <td style={td}><span style={{ color: COLOR[student.placement], fontWeight: 700 }}>{SCHEME_LABELS[student.placement]}</span></td>
-                      <td style={td}>{apps.length === 0 ? <span style={muted}>Belum mengirim lamaran</span> : apps.map((a) => <AppLine key={a.id} app={a} job={jobById.get(a.jobId)} />)}</td>
+                      <td style={td}>
+                        {student.placedAt && (
+                          <div style={{ padding: '3px 0' }}>
+                            <span style={{ fontWeight: 600 }}>{student.placedAt.position}</span> <span style={muted}>· {student.placedAt.partnerName}</span>{' '}
+                            <span style={{ padding: '1px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 700, backgroundColor: '#ECFDF3', color: '#067647' }}>Ditempatkan · seleksi awal mitra</span>
+                          </div>
+                        )}
+                        {apps.length === 0 ? (!student.placedAt && <span style={muted}>Belum mengirim lamaran</span>) : apps.map((a) => <AppLine key={a.id} app={a} job={jobById.get(a.jobId)} />)}
+                      </td>
                     </tr>
                   ))}
                   {shown.length === 0 && <tr><td style={td} colSpan={3}><span style={muted}>Tidak ada peserta.</span></td></tr>}

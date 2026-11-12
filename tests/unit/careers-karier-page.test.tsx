@@ -25,4 +25,17 @@ describe('halaman Karier siswa', () => {
     const lowongan = () => fetchMock.mock.calls.filter(([u]) => String(u).includes('/api/karier/lowongan')).length;
     await waitFor(() => expect(lowongan()).toBe(2));
   });
+
+  it('peserta yang sudah ditempatkan melihat tempat magangnya, bukan kuota lamaran', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url.includes('/api/karier/lowongan')) return json({ access: true, jobs: [], appliedJobIds: [], bannerClosesAt: null, standing: { track: 'full', tier: 'C', locked: true, quota: 2, used: 0, placedAt: { partnerName: 'PT Mayar Kernel Supernova', position: 'Digital Marketing Intern' } } });
+      return json({ applications: [] });
+    }));
+    window.history.replaceState(null, '', '/app/karier');
+    render(<KarierPage />);
+    expect(await screen.findByText('Kamu sudah ditempatkan magang. Selamat!')).toBeTruthy();
+    expect(screen.getByText('Digital Marketing Intern · PT Mayar Kernel Supernova')).toBeTruthy();
+    expect(screen.queryByText(/Kuota/)).toBeNull();
+  });
 });
+

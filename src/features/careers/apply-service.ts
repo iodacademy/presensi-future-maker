@@ -37,7 +37,7 @@ export async function submitApplication(actor: Actor, raw: unknown, now: Date): 
     // Own applications are read inside the transaction so two tabs cannot exceed the quota at once
     const [jobSnap, appSnap, counterSnap, mine] = await Promise.all([tx.get(jobRef), tx.get(appRef), tx.get(counterRef), tx.get(mineQuery)]);
     const standing = inputs.standing(mine.docs.map((d) => d.data() as CareerApp));
-    if (standing.locked) throw new Error(LOCKED_MESSAGE);
+    if (standing.locked) throw new Error(applyBlock(standing) ?? LOCKED_MESSAGE);
     if (!jobSnap.exists) throw new Error('Lowongan tidak ditemukan');
     const job = jobSnap.data() as Job;
     if (!isOpenToStudents(job, now)) throw new Error('Lowongan sudah ditutup');

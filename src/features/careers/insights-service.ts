@@ -2,7 +2,7 @@ import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
 import { getSnapshot } from '../dashboard/snapshot-service';
 import type { InsightApp, InsightJob, InsightStudent, PortalInsights } from './insights';
-import { DEMO_CLASS_ID, jobPic, type ApplicationStatus, type Eligibility, type Scheme } from './model';
+import { DEMO_CLASS_ID, jobPic, PLACEMENT_COLLECTION, type ApplicationStatus, type Eligibility, type Scheme } from './model';
 
 // "Web Programming - Semarang" menjadi "Web Programming" / "Web Programming - Semarang" becomes "Web Programming"
 const programOf = (className: string) => className.split(' - ')[0].trim();
@@ -16,7 +16,7 @@ const programOf = (className: string) => className.split(' - ')[0].trim();
  */
 export async function portalInsights(actor: Actor): Promise<PortalInsights> {
   const db = getAdminDb();
-  const [snapshot, jSnap, pSnap, cSnap, aSnap] = await Promise.all([
+  const [snapshot, jSnap, pSnap, cSnap, aSnap, placedSnap] = await Promise.all([
     getSnapshot(actor),
     db.collection('jobs').select('title', 'partnerId', 'partnerName', 'scheme', 'quota', 'status', 'picEmail', 'eligibility').get(),
     db.collection('partners').select('pics').get(),
@@ -25,7 +25,9 @@ export async function portalInsights(actor: Actor): Promise<PortalInsights> {
       'studentId', 'jobId', 'status', 'submittedAt', 'completedAt',
       'interview.date', 'interview.start', 'interview.durationMin', 'interview.confirmation', 'interview.interviewer',
     ).get(),
+    db.collection(PLACEMENT_COLLECTION).select('partnerName', 'position').get(),
   ]);
+  const placedAt = new Map(placedSnap.docs.map((d) => [d.id, { partnerName: String(d.get('partnerName') ?? ''), position: String(d.get('position') ?? '') }]));
 
   const classProgram = new Map(cSnap.docs.filter((c) => c.id !== DEMO_CLASS_ID).map((c) => [c.id, programOf(String(c.get('canonicalName') ?? ''))]));
   const pics = new Map(pSnap.docs.map((p) => [p.id, (p.get('pics') ?? []) as { name: string; email: string }[]]));
@@ -64,6 +66,7 @@ export async function portalInsights(actor: Actor): Promise<PortalInsights> {
     .map((r) => ({
       studentId: r.studentId, name: r.studentName, className: r.className, program: programOf(r.className), placement: r.placement as Scheme,
       apps: (appsByStudent.get(r.studentId) ?? []).sort((a, b) => b.submittedAt.localeCompare(a.submittedAt)),
+      placedAt: placedAt.get(r.studentId) ?? null,
     }));
 
   return { programs: [...new Set(classProgram.values())].filter(Boolean).sort(), jobs, students };

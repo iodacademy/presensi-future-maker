@@ -61,4 +61,17 @@ describe('ringkasan Job Portal', () => {
     expect(s.applicantsOf('p1').map((x) => [x.student.name, x.apps.map((a) => a.jobId)])).toEqual([['Andi', ['j1', 'j3']]]);
     expect(s.applicantsOf('p2').map((x) => x.student.name)).toEqual(['Caca', 'Dodi']);
   });
+
+  it('peserta yang ditempatkan lewat seleksi awal ikut terhitung diterima, tanpa dihitung ganda', () => {
+    const placed = { ...data, students: [...data.students,
+      { studentId: 's5', name: 'Eka', className: 'Digital Marketing - Semarang', program: 'Digital Marketing', placement: 'full' as const, apps: [], placedAt: { partnerName: 'Tebby', position: 'Content Creator' } },
+      { ...data.students[0], placedAt: { partnerName: 'PT A', position: 'Web Dev' } },
+    ].filter((x, i, arr) => arr.findIndex((y) => y.studentId === x.studentId) === i || x.placedAt) };
+    placed.students = placed.students.filter((x) => !(x.studentId === 's1' && !x.placedAt));
+    const s = summarize(placed, null);
+    expect(s.placed.map((x) => x.name)).toEqual(['Eka', 'Andi']);
+    expect(s.acceptedCount).toBe(3);
+    expect(s.notApplied.map((x) => x.name)).not.toContain('Eka');
+  });
 });
+
