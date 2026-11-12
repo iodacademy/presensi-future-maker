@@ -137,7 +137,7 @@ export async function standingInputs(actor: Pick<Actor, 'uid' | 'classId'>) {
 /** Tempat magang peserta dari penempatan di luar lamaran, atau null / The participant's internship from a placement outside applications, or null */
 export async function myInternshipPlacement(uid: string): Promise<PlacedAt | null> {
   const d = await db().collection(PLACEMENT_COLLECTION).doc(uid).get();
-  return d.exists ? { partnerName: String(d.get('partnerName') ?? ''), position: String(d.get('position') ?? '') } : null;
+  return d.exists ? { partnerName: String(d.get('partnerName') ?? ''), position: String(d.get('position') ?? ''), scheme: d.get('scheme') === 'project' ? 'project' : 'full' } : null;
 }
 
 export async function myCareerStanding(actor: Pick<Actor, 'uid' | 'classId'>): Promise<CareerStanding> {
@@ -213,8 +213,10 @@ export async function getJobForStudent(actor: Actor, id: string, now: Date) {
   const job = { ...(jSnap.data() as Job), id };
   const application = aSnap.exists ? { status: aSnap.get('status') as ApplicationStatus, number: aSnap.get('number') as string } : null;
   if (!application && (job.status !== 'published' || !isOpenToStudents(job, now) || !(await eligibilityCheck(actor)(job)))) return null;
-  const [partner, open] = await Promise.all([publicPartner(job.partnerId), canSubmitNow(actor)]);
-  return partner ? { job, partner, application, applicationsOpen: open } : null;
+  const [partner, open, standing] = await Promise.all([publicPartner(job.partnerId), canSubmitNow(actor), myCareerStanding(actor)]);
+  // Alasan tidak bisa melamar, mis. sudah ditempatkan atau kuota penuh; null berarti boleh
+  // Why the participant cannot apply, e.g. already placed or quota full; null means they may
+  return partner ? { job, partner, application, applicationsOpen: open, blocked: application ? null : applyBlock(standing) } : null;
 }
 
 export async function getPartnerProfile(actor: Actor, id: string, now: Date) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyBlock, canSeeJob, careerStanding, PLACED_MESSAGE, projectsOngoing, tierOf } from '../../src/features/careers/tier';
+import { applyBlock, canSeeJob, careerStanding, PLACED_MESSAGE, PROJECT_QUOTA_MESSAGE, projectsOngoing, tierOf } from '../../src/features/careers/tier';
 
 const app = (status: string, scheme?: 'full' | 'project', completedAt?: string) => ({ status, scheme, completedAt }) as never;
 
@@ -42,11 +42,21 @@ describe('kuota dan jalur peserta', () => {
   });
 
   it('peserta yang sudah ditempatkan lewat seleksi awal mitra terkunci dan tahu tempatnya', () => {
-    const tempat = { partnerName: 'PT Mayar Kernel Supernova', position: 'Digital Marketing Intern' };
+    const tempat = { partnerName: 'PT Mayar Kernel Supernova', position: 'Digital Marketing Intern', scheme: 'full' as const };
     const s = careerStanding('full', 62, [], undefined, tempat);
     expect(s).toMatchObject({ locked: true, placedAt: tempat });
     expect(applyBlock(s)).toBe(PLACED_MESSAGE);
     expect(careerStanding('full', 62, []).placedAt).toBeNull();
+  });
+
+  it('ditempatkan Project Based: tidak terkunci, pindah ke jalur proyek, dan penempatannya memakai satu jatah', () => {
+    const tempat = { partnerName: 'Ioda Academy', position: 'KOL Specialist', scheme: 'project' as const };
+    const s = careerStanding('full', 70, [app('baru', 'project')], undefined, tempat);
+    expect(s).toMatchObject({ locked: false, track: 'project', quota: 1, used: 2 });
+    expect(applyBlock(s)).toBe(PROJECT_QUOTA_MESSAGE);
+    const tierA = careerStanding('full', 90, [], undefined, tempat);
+    expect(tierA).toMatchObject({ locked: false, track: 'project', quota: 3, used: 1 });
+    expect(applyBlock(tierA)).toBeNull();
   });
 
   it('Tidak ditempatkan dan menunggu tidak punya jalur', () => {

@@ -40,14 +40,19 @@ export const projectsOngoing = (apps: CareerApp[]): number => apps.filter(ongoin
  * track, unfinished projects also use up the quota.
  */
 export function careerStanding(placement: string | null, spa: number | null, apps: CareerApp[], tier: Tier = tierOf(spa), placedAt: PlacedAt | null = null): CareerStanding {
-  const base = placement === 'full' || placement === 'project' ? placement : null;
-  const track: Scheme | null = base && apps.some((a) => a.status === 'bergabung' && schemeOf(a) === 'project') ? 'project' : base;
-  const locked = placedAt !== null || apps.some((a) => a.status === 'bergabung' && schemeOf(a) === 'full');
+  // Penempatan mitra mengikuti aturan tawaran yang diterima: Full Internship mengunci, Project Based
+  // menjadi satu proyek berjalan yang memakai jatah, sehingga peserta masih boleh melamar proyek lain.
+  // A partner placement follows the accepted-offer rules: Full Internship locks, Project Based counts as
+  // one ongoing project using a slot, so the participant may still apply to other projects.
+  const placedProject = placedAt?.scheme === 'project';
+  const base = placement === 'full' || placement === 'project' ? placement : placedProject ? 'project' : null;
+  const track: Scheme | null = base && (placedProject || apps.some((a) => a.status === 'bergabung' && schemeOf(a) === 'project')) ? 'project' : base;
+  const locked = (placedAt !== null && !placedProject) || apps.some((a) => a.status === 'bergabung' && schemeOf(a) === 'full');
   const running = apps.filter((a) => isOpenApplication(a.status)).length;
   return {
     track, tier, locked, placedAt,
     quota: TIER_RULES[tier][track ?? 'full'].quota,
-    used: running + (track === 'project' ? projectsOngoing(apps) : 0),
+    used: running + (track === 'project' ? projectsOngoing(apps) + (placedProject ? 1 : 0) : 0),
   };
 }
 
@@ -56,7 +61,7 @@ export const PLACED_MESSAGE = 'Kamu sudah ditempatkan magang, jadi tidak bisa me
 
 // Alasan peserta belum bisa mengirim lamaran baru, atau null / Why the participant cannot send a new application yet, or null
 export function applyBlock(s: CareerStanding): string | null {
-  if (s.placedAt) return PLACED_MESSAGE;
+  if (s.placedAt && s.locked) return PLACED_MESSAGE;
   if (s.locked) return LOCKED_MESSAGE;
   if (s.used >= s.quota) return s.track === 'project' ? PROJECT_QUOTA_MESSAGE : QUOTA_MESSAGE;
   return null;

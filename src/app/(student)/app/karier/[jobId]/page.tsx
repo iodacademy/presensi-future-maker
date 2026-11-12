@@ -12,7 +12,7 @@ import {
 import type { PublicPartner } from '@/features/careers/student-service';
 import { BLUE, btnGhost, btnOutline, btnPrimary, card, errorBox, getJson, heading, MUTED, pageWrap, pill } from '../ui';
 
-type Detail = { job: Job; partner: PublicPartner; application: { status: ApplicationStatus; number: string } | null; applicationsOpen: boolean };
+type Detail = { job: Job; partner: PublicPartner; application: { status: ApplicationStatus; number: string } | null; applicationsOpen: boolean; blocked?: string | null };
 const DOC = (rule: DocRule) => (rule === 'required' ? 'wajib' : 'opsional');
 
 /**
@@ -93,6 +93,8 @@ export default function JobDetailPage({ params }: { params: Promise<{ jobId: str
                 </>
               ) : parts.ended ? (
                 <span style={{ color: MUTED }}>Lowongan sudah ditutup.</span>
+              ) : d.blocked ? (
+                <span style={{ color: MUTED, fontSize: '14px' }}>{d.blocked}</span>
               ) : !d.applicationsOpen ? (
                 <span style={{ color: MUTED, fontSize: '14px' }}>Pendaftaran lamaran belum dibuka. Kamu sudah bisa melihat-lihat lowongan dan menyiapkan CV dulu.</span>
               ) : (

@@ -318,7 +318,7 @@ export interface InternshipPlacement {
   studentId: string; partnerId: string | null; partnerName: string; position: string; jobId: string | null;
   scheme: Scheme; source: string; placedAt: string;
 }
-export type PlacedAt = Pick<InternshipPlacement, 'partnerName' | 'position'>;
+export type PlacedAt = Pick<InternshipPlacement, 'partnerName' | 'position'> & { scheme?: Scheme };
 export const PLACEMENT_COLLECTION = 'internshipPlacements';
 
 export function isOpenToStudents(job: Pick<Job, 'status' | 'opensAt' | 'closesAt'>, now: Date): boolean {

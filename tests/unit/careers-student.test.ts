@@ -120,6 +120,13 @@ describe('bacaan siswa', () => {
     expect((await listOpenJobs(andi, now)).appliedJobIds).toEqual(['ok']);
   });
 
+  it('detail lowongan memberi tahu alasan tidak bisa melamar bagi peserta yang sudah ditempatkan', async () => {
+    const db = (await import('./careers-fake-db')).data;
+    expect((await getJobForStudent(andi, 'ok', now))?.blocked).toBeNull();
+    db.internshipPlacements = { u1: { studentId: 'u1', partnerName: 'PT Mayar Kernel Supernova', position: 'Digital Marketing Intern', scheme: 'full' } };
+    expect((await getJobForStudent(andi, 'ok', now))?.blocked).toBe('Kamu sudah ditempatkan magang, jadi tidak bisa melamar lagi');
+  });
+
   it('selama pendaftaran tutup, lowongan tetap bisa dilihat tetapi formulir lamaran ditolak', async () => {
     const db = (await import('./careers-fake-db')).data;
     expect((await getJobForStudent(andi, 'ok', now))?.applicationsOpen).toBe(true);
