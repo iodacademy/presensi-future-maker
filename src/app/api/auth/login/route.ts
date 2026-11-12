@@ -6,6 +6,7 @@ import {
   SESSION_EXPIRES_DAYS,
 } from '@/features/auth/session';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { ACTIVE_ROLE_COOKIE } from '@/features/auth/constants';
 
 /**
  * Masuk dengan email, dalam satu permintaan.
@@ -96,5 +97,8 @@ export async function POST(request: Request) {
     sameSite: 'lax',
     path: '/',
   });
+  // Setiap login mulai dari peran utama; pilihan peran sesi sebelumnya tidak terbawa
+  // Every sign-in starts in the primary role; a previous session's role choice does not carry over
+  response.cookies.delete(ACTIVE_ROLE_COOKIE);
   return response;
 }

@@ -58,4 +58,28 @@ describe('akun PIC mitra', () => {
     expect(await createPicAccounts('p1')).toEqual({ created: [], existing: ['rina@dipsi.co.id', 'budi@dipsi.co.id'] });
     expect(data.users[budi].active).toBe(true);
   });
+
+  it('email mentor dijadikan PIC: akun yang sama mendapat peran PIC, tanpa akun baru', async () => {
+    data.users.m1 = { uid: 'm1', role: 'mentor', email: 'budi@dipsi.co.id', name: 'Budi', active: true };
+    data.emailIndex[getEmailHash('budi@dipsi.co.id')] = { uid: 'm1', role: 'mentor' };
+    expect(await createPicAccounts('p1')).toEqual({ created: ['rina@dipsi.co.id'], existing: ['budi@dipsi.co.id'] });
+    expect(data.users.m1).toMatchObject({ role: 'mentor', roles: ['mentor', 'partner'], partnerId: 'p1', active: true });
+    expect((await listPartners())[0].picAccounts.sort()).toEqual(['budi@dipsi.co.id', 'rina@dipsi.co.id']);
+  });
+
+  it('mentor yang dikeluarkan dari daftar PIC hanya kehilangan peran PIC, akun mentornya tetap aktif', async () => {
+    data.users.m1 = { uid: 'm1', role: 'mentor', email: 'budi@dipsi.co.id', name: 'Budi', active: true };
+    data.emailIndex[getEmailHash('budi@dipsi.co.id')] = { uid: 'm1', role: 'mentor' };
+    await createPicAccounts('p1');
+    const { nameKey: _k, active: _a, ...input } = partner;
+    await updatePartner('p1', { ...input, pics: [partner.pics[0]] });
+    expect(data.users.m1).toMatchObject({ active: true, role: 'mentor', roles: ['mentor'], partnerId: null });
+  });
+
+  it('PIC mitra lain tidak bisa ditautkan ke mitra ini', async () => {
+    data.users.x = { uid: 'x', role: 'partner', partnerId: 'p2', email: 'budi@dipsi.co.id', active: true };
+    data.emailIndex[getEmailHash('budi@dipsi.co.id')] = { uid: 'x', role: 'partner' };
+    await expect(createPicAccounts('p1')).rejects.toThrow('sudah dipakai akun lain');
+  });
 });
+

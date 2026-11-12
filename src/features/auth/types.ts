@@ -7,6 +7,8 @@ export interface UserDocument {
   normalizedEmail: string;
   name: string;
   role: Role;
+  /** Peran tambahan, mis. mentor yang juga PIC mitra / Extra roles, e.g. a mentor who is also a partner PIC */
+  roles?: Role[];
   active: boolean;
   classId: string | null;
   /** Mitra milik akun PIC; hanya untuk peran partner / The partner a PIC account belongs to; partner role only */
@@ -30,6 +32,8 @@ export interface Actor {
   email: string;
   name: string;
   role: Role;
+  /** Semua peran akun ini; lebih dari satu memunculkan pilihan peran di header / Every role of this account; more than one shows a role picker in the header */
+  roles?: Role[];
   classId: string | null;
   /** Mitra milik PIC yang masuk / The signed-in PIC's partner */
   partnerId?: string | null;

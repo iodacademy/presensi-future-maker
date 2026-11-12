@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getAdminAuth } from '@/lib/firebase/admin';
 import { SESSION_COOKIE_NAME } from '@/features/auth/session';
+import { ACTIVE_ROLE_COOKIE } from '@/features/auth/constants';
 
 // Endpoint logout dan pencabutan sesi / Logout and session revocation endpoint
 export async function POST() {
@@ -21,5 +22,6 @@ export async function POST() {
 
   const response = NextResponse.json({ success: true });
   response.cookies.delete(SESSION_COOKIE_NAME);
+  response.cookies.delete(ACTIVE_ROLE_COOKIE);
   return response;
 }

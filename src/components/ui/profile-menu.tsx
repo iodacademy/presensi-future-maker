@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, ChevronDown } from 'lucide-react';
+import { LogOut, ChevronDown, Check } from 'lucide-react';
 
 interface ProfileMenuProps {
   userName: string;
@@ -30,6 +30,27 @@ export function ProfileMenu({ userName, roleLabel, onDark = false }: ProfileMenu
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [roles, setRoles] = useState<{ role: string; roles: { role: string; label: string }[] } | null>(null);
+
+  // Akun berperan ganda melihat peran aktifnya dan bisa berpindah; akun satu peran tidak melihat apa pun
+  // Multi-role accounts see their active role and can switch; single-role accounts see nothing extra
+  useEffect(() => {
+    fetch('/api/auth/peran').then((r) => (r.ok ? r.json() : null)).then((d) => d && setRoles(d)).catch(() => undefined);
+  }, []);
+  const multi = roles && roles.roles.length > 1 ? roles : null;
+  const activeLabel = multi?.roles.find((r) => r.role === multi.role)?.label;
+
+  async function switchRole(role: string) {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/auth/peran', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role }) });
+      const d = await res.json();
+      if (res.ok) { router.push(d.redirect); router.refresh(); }
+    } finally {
+      setBusy(false);
+      setOpen(false);
+    }
+  }
 
   // Menu ditutup oleh klik di luar dan oleh Escape. Tanpa keduanya menu
   // menggantung terbuka setelah perhatian berpindah, dan pengguna papan ketik
@@ -125,6 +146,11 @@ export function ProfileMenu({ userName, roleLabel, onDark = false }: ProfileMenu
         >
           {userName}
         </span>
+        {activeLabel && (
+          <span data-role-badge style={{ fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '999px', backgroundColor: onDark ? '#ffffff' : 'var(--color-primary-light)', color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>
+            {activeLabel}
+          </span>
+        )}
         <ChevronDown
           className="profile-menu-chevron"
           size={13}
@@ -154,8 +180,24 @@ export function ProfileMenu({ userName, roleLabel, onDark = false }: ProfileMenu
             <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {userName}
             </div>
-            <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '1px' }}>{roleLabel}</div>
+            <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '1px' }}>{activeLabel ?? roleLabel}</div>
           </div>
+
+          {multi && (
+            <div style={{ padding: '6px 0', borderBottom: '1px solid var(--color-border)' }}>
+              <div style={{ padding: '4px 14px', fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.04em' }}>MASUK SEBAGAI</div>
+              {multi.roles.map((r) => {
+                const on = r.role === multi.role;
+                return (
+                  <button key={r.role} type="button" role="menuitemradio" aria-checked={on} disabled={busy || on} onClick={() => switchRole(r.role)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%', padding: '9px 14px', border: 'none', background: on ? 'var(--color-primary-light)' : 'none', cursor: on ? 'default' : 'pointer', fontSize: '12px', fontWeight: on ? 700 : 500, color: on ? 'var(--color-primary)' : 'var(--color-text-main)', textAlign: 'left' }}>
+                    {r.label}
+                    {on && <Check size={14} strokeWidth={2.5} aria-hidden />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           <button
             type="button"

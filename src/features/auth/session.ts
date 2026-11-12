@@ -2,7 +2,8 @@ import { cookies } from 'next/headers';
 import { joinMoment } from '../users/join-policy';
 import { getAdminAuth, getAdminDb } from '../../lib/firebase/admin';
 import type { Actor, UserDocument } from './types';
-import { SESSION_COOKIE_NAME, SESSION_EXPIRES_MS } from './constants';
+import { ACTIVE_ROLE_COOKIE, SESSION_COOKIE_NAME, SESSION_EXPIRES_MS } from './constants';
+import { activeRole, availableRoles } from './policy';
 
 export { getRoleRedirectPath, isAuthorizedPath } from './paths';
 export { SESSION_COOKIE_NAME, SESSION_EXPIRES_DAYS, SESSION_EXPIRES_MS } from './constants';
@@ -93,7 +94,11 @@ export async function getSessionActor(): Promise<Actor | null> {
 
   if (!sessionCookie) return null;
 
-  const cached = actorCache.get(sessionCookie);
+  // Peran pilihan ikut menjadi kunci cache, supaya ganti peran langsung berlaku
+  // The chosen role is part of the cache key, so a role switch applies at once
+  const requestedRole = cookieStore.get(ACTIVE_ROLE_COOKIE)?.value ?? '';
+  const cacheKey = `${sessionCookie}|${requestedRole}`;
+  const cached = actorCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.actor;
   }
@@ -123,19 +128,21 @@ export async function getSessionActor(): Promise<Actor | null> {
     const userData = userDoc.data() as UserDocument;
     if (!userData.active) return null;
 
+    const role = activeRole(userData.role, userData.roles, requestedRole);
     const actor: Actor = {
       uid: userData.uid,
       email: userData.email,
       name: userData.name,
-      role: userData.role,
+      role,
+      roles: availableRoles(userData.role, userData.roles),
       classId: userData.classId || null,
-      ...(userData.role === 'partner' ? { partnerId: userData.partnerId ?? null } : {}),
+      ...(role === 'partner' ? { partnerId: userData.partnerId ?? null } : {}),
       // Dibawa bersama sesi agar tenggat per peserta tidak perlu baca tambahan.
       // Carried with the session so per-participant deadlines need no extra read.
-      ...(userData.role === 'student' ? { joinIso: joinMoment(userData) } : {}),
+      ...(role === 'student' ? { joinIso: joinMoment(userData) } : {}),
     };
 
-    actorCache.set(sessionCookie, { actor, expiresAt: Date.now() + ACTOR_CACHE_TTL_MS });
+    actorCache.set(cacheKey, { actor, expiresAt: Date.now() + ACTOR_CACHE_TTL_MS });
     return actor;
   } catch (error) {
     return null;

@@ -37,13 +37,17 @@ async function assertUniqueName(name: string, selfId?: string) {
 }
 
 export async function listPartners(): Promise<PartnerRow[]> {
-  const [pSnap, jSnap, aSnap] = await Promise.all([
+  const [pSnap, jSnap, aSnap, multiSnap] = await Promise.all([
     partners().select('name', 'field', 'logo.thumb', 'pics').get(),
     jobs().select('partnerId').get(),
     getAdminDb().collection('users').where('role', '==', 'partner').select('email', 'partnerId').get(),
+    // Akun berperan ganda, mis. mentor yang juga PIC / Multi-role accounts, e.g. a mentor who is also a PIC
+    getAdminDb().collection('users').where('roles', 'array-contains', 'partner').select('email', 'partnerId').get(),
   ]);
   const accounts = new Map<string, string[]>();
-  aSnap.docs.forEach((u) => accounts.set(u.get('partnerId'), [...(accounts.get(u.get('partnerId')) ?? []), u.get('email')]));
+  const seen = new Set<string>();
+  [...aSnap.docs, ...multiSnap.docs].filter((u) => !seen.has(u.id) && seen.add(u.id))
+    .forEach((u) => accounts.set(u.get('partnerId'), [...(accounts.get(u.get('partnerId')) ?? []), u.get('email')]));
   const counts = new Map<string, number>();
   jSnap.docs.forEach((j) => counts.set(j.get('partnerId'), (counts.get(j.get('partnerId')) ?? 0) + 1));
   return pSnap.docs.map((p) => {
@@ -78,11 +82,16 @@ export async function updatePartner(id: string, raw: unknown): Promise<void> {
   // PIC yang dihapus dari daftar kehilangan aksesnya: akun nonaktif tidak bisa masuk dan sesinya ditolak
   // A PIC removed from the list loses access: an inactive account cannot sign in and its session is refused
   const keep = new Set(input.pics.map((p) => normalizeEmail(p.email)));
-  const accounts = await getAdminDb().collection('users').where('role', '==', 'partner').where('partnerId', '==', id).select('email', 'active').get();
+  // Hanya akun PIC yang memiliki partnerId / Only PIC accounts carry a partnerId
+  const accounts = await getAdminDb().collection('users').where('partnerId', '==', id).select('email', 'active', 'role', 'roles').get();
   const revoke = accounts.docs.filter((u) => u.get('active') !== false && !keep.has(normalizeEmail(String(u.get('email')))));
   if (revoke.length) {
     const b = getAdminDb().batch();
-    revoke.forEach((u) => b.update(u.ref, { active: false, updatedAt: now() }));
+    revoke.forEach((u) => b.update(u.ref, u.get('role') === 'partner'
+      ? { active: false, updatedAt: now() }
+      // Akun berperan ganda hanya kehilangan peran PIC; peran utamanya tetap jalan
+      // A multi-role account only loses the PIC role; its primary role keeps working
+      : { roles: ((u.get('roles') ?? []) as string[]).filter((r) => r !== 'partner'), partnerId: null, updatedAt: now() }));
     await b.commit();
   }
   if (input.name !== current.name) {
@@ -108,6 +117,7 @@ export async function createPicAccounts(partnerId: string): Promise<{ created: s
   const db = getAdminDb();
   const todo: { name: string; email: string }[] = [];
   const existing: string[] = [];
+  const link: { ref: FirebaseFirestore.DocumentReference; roles: string[] }[] = [];
   for (const pic of partner.pics) {
     const email = normalizeEmail(pic.email);
     const idx = await db.collection('emailIndex').doc(getEmailHash(email)).get();
@@ -117,10 +127,16 @@ export async function createPicAccounts(partnerId: string): Promise<{ created: s
       existing.push(email);
       // PIC yang ditambahkan kembali diaktifkan lagi / A PIC added back is reactivated
       if (user.get('active') === false) await user.ref.update({ active: true, updatedAt: now() });
+    } else if (['mentor', 'admin'].includes(user.get('role')) && (!user.get('partnerId') || user.get('partnerId') === partnerId)) {
+      // Mentor atau admin yang juga PIC memakai akun yang sama dengan peran tambahan, bukan akun kedua
+      // A mentor or admin who is also a PIC keeps one account with an extra role, not a second account
+      existing.push(email);
+      link.push({ ref: user.ref, roles: [...new Set([String(user.get('role')), ...((user.get('roles') ?? []) as string[]), 'partner'])] });
     } else throw new Error(`Email ${email} sudah dipakai akun lain. Pakai email lain untuk PIC.`);
   }
   const t = now();
   const batch = db.batch();
+  for (const l of link) batch.update(l.ref, { roles: l.roles, partnerId, updatedAt: t });
   for (const { name, email } of todo) {
     const uid = crypto.randomUUID();
     batch.set(db.collection('users').doc(uid), { uid, email, normalizedEmail: email, name, role: 'partner', partnerId, active: true, classId: null, createdAt: t, updatedAt: t });

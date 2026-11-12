@@ -22,6 +22,25 @@ export function isValidRole(role: string): role is Role {
   return role === 'admin' || role === 'student' || role === 'mentor' || role === 'partner';
 }
 
+export const ROLE_LABELS: Record<Role, string> = { admin: 'Admin', mentor: 'Mentor', partner: 'PIC Mitra', student: 'Peserta' };
+
+/**
+ * Peran yang dimiliki akun: peran utama ditambah peran tambahan. Peran utama
+ * tidak pernah berubah, sehingga kueri seperti daftar mentor tetap benar.
+ *
+ * The roles an account holds: the primary role plus extra roles. The primary
+ * role never changes, so queries such as the mentor list stay correct.
+ */
+export function availableRoles(primary: Role, extra?: readonly string[] | null): Role[] {
+  return [...new Set([primary, ...(extra ?? []).filter(isValidRole)])];
+}
+
+/** Peran yang sedang dipakai: pilihan pengguna bila akunnya memiliki peran itu / The role in use: the user's choice when the account holds it */
+export function activeRole(primary: Role, extra: readonly string[] | null | undefined, requested?: string | null): Role {
+  const all = availableRoles(primary, extra);
+  return requested && (all as string[]).includes(requested) ? (requested as Role) : primary;
+}
+
 /**
  * Menghasilkan hash SHA-256 hex untuk index pencarian email unik di Firestore.
  *
