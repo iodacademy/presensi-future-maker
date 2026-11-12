@@ -112,5 +112,23 @@ describe('akun PIC mitra', () => {
     await updatePartner('p1', { ...input, pics: [partner.pics[0]] });
     expect(data.users.m1).toMatchObject({ roles: ['mentor'], partnerId: null });
   });
+
+  it('PIC yang dicabut dari mitra lama tidak mendapat aksesnya kembali saat ditautkan ke mitra lain', async () => {
+    data.partners.p2 = { ...partner, name: 'PT Lain', nameKey: 'pt lain', pics: [{ name: 'Budi', phone: '', email: 'budi@dipsi.co.id' }] };
+    data.users.x = { uid: 'x', role: 'partner', partnerId: 'p2', email: 'budi@dipsi.co.id', active: true };
+    data.emailIndex[getEmailHash('budi@dipsi.co.id')] = { uid: 'x', role: 'partner' };
+    const { nameKey: _k, active: _a, ...lain } = data.partners.p2 as typeof partner;
+    await updatePartner('p2', { ...lain, pics: [partner.pics[0]] });
+    expect(data.users.x).toMatchObject({ active: false, partnerId: null, partnerIds: [] });
+    await createPicAccounts('p1');
+    expect(data.users.x).toMatchObject({ active: true, partnerId: 'p1', partnerIds: ['p1'] });
+  });
+
+  it('akun PIC nonaktif dari data lama yang masih menyimpan mitra lama tidak membawanya', async () => {
+    data.users.x = { uid: 'x', role: 'partner', partnerId: 'p2', email: 'budi@dipsi.co.id', active: false };
+    data.emailIndex[getEmailHash('budi@dipsi.co.id')] = { uid: 'x', role: 'partner' };
+    await createPicAccounts('p1');
+    expect(data.users.x).toMatchObject({ active: true, partnerId: 'p1', partnerIds: ['p1'] });
+  });
 });
 

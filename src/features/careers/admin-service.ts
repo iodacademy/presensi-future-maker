@@ -101,8 +101,11 @@ export async function updatePartner(id: string, raw: unknown): Promise<void> {
         // Masih PIC mitra lain: hanya mitra ini yang dilepas / Still a PIC of other partners: only this partner is dropped
         b.update(u.ref, { partnerId: rest[0], partnerIds: rest, updatedAt: now() });
       } else if (u.get('role') === 'partner') {
-        // Akun PIC murni dinonaktifkan; yang sudah nonaktif tidak perlu ditulis ulang / A pure PIC account is deactivated; an inactive one needs no rewrite
-        if (u.get('active') !== false) b.update(u.ref, { active: false, partnerIds: [], updatedAt: now() });
+        // Akun PIC murni dinonaktifkan dan mitranya dikosongkan, termasuk data lama yang sudah nonaktif, agar
+        // menautkannya ke mitra lain kelak tidak menghidupkan akses ke mitra ini
+        // A pure PIC account is deactivated and its partners cleared, legacy inactive data included, so linking
+        // it to another partner later never revives access to this one
+        b.update(u.ref, { active: false, partnerId: null, partnerIds: [], updatedAt: now() });
       } else {
         // Akun berperan ganda kehilangan peran PIC walau sedang nonaktif, agar peran itu tidak kembali saat diaktifkan
         // A multi-role account loses its PIC role even while inactive, so the role does not return on reactivation
@@ -145,7 +148,8 @@ export async function createPicAccounts(partnerId: string): Promise<{ created: s
     // A participant never becomes a PIC, so applications are never judged by a fellow participant
     if (!['partner', 'mentor', 'admin'].includes(role)) throw new Error(`Email ${email} sudah dipakai akun lain. Pakai email lain untuk PIC.`);
     existing.push(email);
-    const held = availablePartners(user.get('partnerId'), user.get('partnerIds'));
+    // Akun nonaktif tidak membawa mitra lamanya / An inactive account carries none of its old partners
+    const held = user.get('active') === false ? [] : availablePartners(user.get('partnerId'), user.get('partnerIds'));
     if (role === 'partner' && user.get('partnerId') === partnerId && held.length <= 1) {
       // PIC yang ditambahkan kembali diaktifkan lagi / A PIC added back is reactivated
       if (user.get('active') === false) await user.ref.update({ active: true, updatedAt: now() });
