@@ -151,6 +151,16 @@ describe('kontak PIC dan jadwal ulang', () => {
     expect(a.interview?.contact).toEqual({ name: 'Rina', email: 'rina@dipsi.co.id', phone: '0822222222' });
   });
 
+  it('jadwal interview dan undangan hanya untuk lowongan yang di-assign ke PIC', async () => {
+    data.jobs.j1.picEmails = ['budi@dipsi.co.id'];
+    data.jobs.j2 = { partnerId: 'p1', partnerName: 'PT DIPSI', title: 'Lain', picEmails: ['rina@dipsi.co.id'] };
+    await expect(inviteToInterview(rina, 'a1', manual, now)).rejects.toThrow('Lamaran tidak ditemukan');
+    const budi = { uid: 'b1', role: 'partner', partnerId: 'p1', email: 'budi@dipsi.co.id', name: 'Budi HR' } as never;
+    await inviteToInterview(budi, 'a1', manual, now);
+    expect((await listInterviews(budi)).map((i) => i.id)).toEqual(['a1']);
+    expect(await listInterviews(rina)).toEqual([]);
+  });
+
   it('permintaan jadwal ulang muncul di dashboard PIC sampai PIC menjadwalkan ulang', async () => {
     await inviteToInterview(rina, 'a1', manual, now);
     await respondInterview({ uid: 'u1', role: 'student' } as never, 'a1', 'jadwal-ulang', 'Ada ujian, bisa Jumat?');

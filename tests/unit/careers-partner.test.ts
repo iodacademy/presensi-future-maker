@@ -32,6 +32,31 @@ beforeEach(() => {
   getSessionActor.mockResolvedValue({ uid: 'r1', role: 'partner', partnerId: 'p1' });
 });
 
+describe('PIC hanya melihat lowongan yang di-assign kepadanya', () => {
+  const budi = { uid: 'b1', role: 'partner', partnerId: 'p1', email: 'budi@dipsi.co.id', name: 'Budi' } as never;
+  const nabila = { uid: 'n1', role: 'partner', partnerId: 'p1', email: 'nabila@dipsi.co.id', name: 'Nabila' } as never;
+  beforeEach(() => {
+    data.jobs.j1 = { ...job, picEmails: ['rina@dipsi.co.id'] };
+    data.jobs.j2 = { ...job, title: 'Web Dev', picEmails: ['budi@dipsi.co.id', 'rina@dipsi.co.id'] };
+    data.jobs.j3 = { ...job, title: 'Admin', picEmails: ['budi@dipsi.co.id'] };
+    data.jobApplications.b1 = app('baru', 'p1', 'j3');
+  });
+
+  it('dashboard dan daftar kandidat hanya dari lowongan miliknya', async () => {
+    expect((await partnerDashboard(rina, now)).jobs.map((j) => j.id).sort()).toEqual(['j1', 'j2']);
+    expect((await partnerDashboard(budi, now)).jobs.map((j) => j.id).sort()).toEqual(['j2', 'j3']);
+    expect((await partnerDashboard(budi, now)).stats.newCount).toBe(1);
+    await expect(listCandidates(rina, 'j3')).rejects.toThrow('Lowongan tidak ditemukan');
+    await expect(getCandidate(rina, 'b1')).rejects.toThrow('Lamaran tidak ditemukan');
+    await expect(decideCandidate(rina, 'b1', 'ditinjau')).rejects.toThrow('Lamaran tidak ditemukan');
+  });
+
+  it('PIC yang tidak di-assign ke lowongan mana pun (mis. HR) melihat semua lowongan perusahaannya', async () => {
+    expect((await partnerDashboard(nabila, now)).jobs.map((j) => j.id).sort()).toEqual(['j1', 'j2', 'j3']);
+    expect((await getCandidate(nabila, 'b1')).id).toBe('b1');
+  });
+});
+
 describe('layanan PIC', () => {
   it('dashboard menghitung kandidat perusahaannya saja', async () => {
     const d = await partnerDashboard(rina, now);

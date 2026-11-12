@@ -17,7 +17,7 @@ import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
 import { cancelCalendarEvent } from '../calendar/client';
 import { isOpenApplication, type ApplicationStatus, type Interview } from './model';
-import type { PartnerActor } from './partner-service';
+import { ownApplication, type PartnerActor } from './partner-service';
 import { CAREER_APP_FIELDS, standingInputs } from './student-service';
 import { PROJECT_QUOTA_MESSAGE, projectsOngoing, TIER_RULES, type CareerApp } from './tier';
 
@@ -68,16 +68,15 @@ export async function respondOffer(actor: Actor, appId: string, response: unknow
  * An admin or the partner's PIC marks a project as finished; the participant gets one project slot back.
  */
 export async function markProjectDone(appId: string, now: Date, pic?: PartnerActor): Promise<void> {
-  const snap = await apps().doc(appId).get();
-  if (!snap.exists || (pic && snap.get('partnerId') !== pic.partnerId)) throw new Error('Lamaran tidak ditemukan');
+  const snap = pic ? await ownApplication(pic, appId) : await apps().doc(appId).get();
+  if (!snap.exists) throw new Error('Lamaran tidak ditemukan');
   if (snap.get('status') !== 'bergabung' || snap.get('scheme') !== 'project' || snap.get('completedAt')) throw new Error('Hanya proyek yang sedang berjalan yang bisa ditandai selesai');
   await snap.ref.update({ completedAt: now.toISOString(), updatedAt: now.toISOString() });
 }
 
 /** PIC menandai kandidat lolos sudah dihubungi / The PIC marks a passed candidate as contacted */
 export async function markContacted(actor: PartnerActor, appId: string, now: Date): Promise<void> {
-  const snap = await apps().doc(appId).get();
-  if (!snap.exists || snap.get('partnerId') !== actor.partnerId) throw new Error('Lamaran tidak ditemukan');
+  const snap = await ownApplication(actor, appId);
   await snap.ref.update({ contactedAt: now.toISOString() });
 }
 

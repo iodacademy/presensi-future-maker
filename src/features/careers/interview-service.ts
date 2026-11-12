@@ -12,13 +12,13 @@ import { whatsAppLink } from '../../lib/whatsapp';
 import type { Actor } from '../auth/types';
 import { cancelCalendarEvent, createCalendarEvent, isCalendarConfigured } from '../calendar/client';
 import { FINAL_MESSAGE, FINAL_STATUSES, interviewMessage, jobPic, jobPicEmails, interviewWindow, validateInterviewInput, type Interview, type PicContact } from './model';
-import type { PartnerActor } from './partner-service';
+import { ownApplication, type PartnerActor } from './partner-service';
+import { inScope, picJobScope } from './pic-scope';
 
 const apps = () => getAdminDb().collection('jobApplications');
 
 export async function inviteToInterview(actor: PartnerActor, appId: string, raw: unknown, now: Date): Promise<{ waLink: string | null; meetUrl: string }> {
-  const snap = await apps().doc(appId).get();
-  if (!snap.exists || snap.get('partnerId') !== actor.partnerId) throw new Error('Lamaran tidak ditemukan');
+  const snap = await ownApplication(actor, appId);
   if (FINAL_STATUSES.includes(snap.get('status'))) throw new Error(FINAL_MESSAGE);
   const input = validateInterviewInput(raw);
   const personal = snap.get('personal') as { fullName: string; email: string; phone: string };
@@ -84,10 +84,12 @@ export async function listInterviews(actor: PartnerActor) {
   const [snap, jobs] = await Promise.all([
     apps().where('partnerId', '==', actor.partnerId).where('status', '==', 'interview')
       .select('number', 'jobId', 'personal.fullName', 'personal.phone', 'interview').get(),
-    getAdminDb().collection('jobs').where('partnerId', '==', actor.partnerId).select('title', 'partnerName').get(),
+    getAdminDb().collection('jobs').where('partnerId', '==', actor.partnerId).select('title', 'partnerName', 'picEmails', 'picEmail').get(),
   ]);
   const job = new Map(jobs.docs.map((j) => [j.id, { title: String(j.get('title') ?? ''), partnerName: String(j.get('partnerName') ?? '') }]));
+  const scope = picJobScope(actor, jobs.docs.map((j) => ({ id: j.id, data: j.data() })));
   return snap.docs
+    .filter((a) => inScope(scope, String(a.get('jobId'))))
     .map((a) => {
       const { calendarEventId: _c, ...interview } = a.get('interview') as Interview;
       const fullName = String(a.get('personal.fullName') ?? '');

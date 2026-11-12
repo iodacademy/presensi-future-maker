@@ -14,14 +14,25 @@ import { publicUrl } from '../exhibition/media';
 import type { Actor } from '../auth/types';
 import { getApplicationForAdmin, listApplicants, setApplicationStatus, type ApplicantRow } from './applicants-service';
 import { getPartner } from './admin-service';
+import { inScope, picJobScope } from './pic-scope';
 import { interviewMessage, jobState, offerMessage, validatePartnerInput, type ApplicationStatus, type Interview, type Job } from './model';
 
 export type PartnerActor = Actor & { partnerId: string };
 const db = () => getAdminDb();
 
-async function ownApplication(actor: PartnerActor, appId: string) {
+/** Lowongan mitra yang terlihat oleh PIC ini; null berarti semua / The partner's jobs this PIC can see; null means all */
+export async function myJobScope(actor: PartnerActor): Promise<Set<string> | null> {
+  const snap = await db().collection('jobs').where('partnerId', '==', actor.partnerId).select('picEmails', 'picEmail').get();
+  return picJobScope(actor, snap.docs.map((j) => ({ id: j.id, data: j.data() })));
+}
+
+// Lamaran mitra lain atau lowongan yang tidak di-assign diperlakukan seolah tidak ada
+// Another partner's application, or one for an unassigned job, is treated as missing
+export async function ownApplication(actor: PartnerActor, appId: string) {
   const snap = await db().collection('jobApplications').doc(appId).get();
-  if (!snap.exists || snap.get('partnerId') !== actor.partnerId) throw new Error('Lamaran tidak ditemukan');
+  if (!snap.exists || snap.get('partnerId') !== actor.partnerId || !inScope(await myJobScope(actor), String(snap.get('jobId')))) {
+    throw new Error('Lamaran tidak ditemukan');
+  }
   return snap;
 }
 
@@ -32,12 +43,15 @@ async function offerWaLink(a: { jobId: string; fullName: string; phone: string }
 }
 
 export async function partnerDashboard(actor: PartnerActor, now: Date) {
-  const [partner, jSnap, aSnap] = await Promise.all([
+  const [partner, allJobs, allApps] = await Promise.all([
     db().collection('partners').doc(actor.partnerId).get(),
     db().collection('jobs').where('partnerId', '==', actor.partnerId)
-      .select('title', 'employment', 'scheme', 'quota', 'status', 'opensAt', 'closesAt', 'applicantCount').get(),
+      .select('title', 'employment', 'scheme', 'quota', 'status', 'opensAt', 'closesAt', 'applicantCount', 'picEmails', 'picEmail').get(),
     db().collection('jobApplications').where('partnerId', '==', actor.partnerId).select('jobId', 'status', 'contactedAt', 'personal.fullName', 'personal.phone', 'interview.confirmation', 'interview.rescheduleNote').get(),
   ]);
+  const scope = picJobScope(actor, allJobs.docs.map((j) => ({ id: j.id, data: j.data() })));
+  const jSnap = { docs: allJobs.docs.filter((j) => inScope(scope, j.id)) };
+  const aSnap = { docs: allApps.docs.filter((a) => inScope(scope, String(a.get('jobId')))) };
   // Kandidat lolos yang belum dihubungi PIC / Passed candidates the PIC has not contacted yet
   const toContact = await Promise.all(aSnap.docs
     .filter((a) => ['diterima', 'bergabung'].includes(a.get('status')) && !a.get('contactedAt'))
@@ -74,7 +88,7 @@ export async function partnerDashboard(actor: PartnerActor, now: Date) {
 
 export async function listCandidates(actor: PartnerActor, jobId: string): Promise<ApplicantRow[]> {
   const job = await db().collection('jobs').doc(jobId).get();
-  if (!job.exists || job.get('partnerId') !== actor.partnerId) throw new Error('Lowongan tidak ditemukan');
+  if (!job.exists || job.get('partnerId') !== actor.partnerId || !inScope(await myJobScope(actor), jobId)) throw new Error('Lowongan tidak ditemukan');
   return listApplicants(jobId);
 }
 
