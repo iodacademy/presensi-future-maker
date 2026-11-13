@@ -58,6 +58,7 @@ interface Q {
 type F = [string, unknown, string?];
 const match = (d: Doc, id: string, [f, v, op]: F) => {
   const val = typeof f === 'string' ? pick(d, f) : id;
+  if (op === 'in') return Array.isArray(v) && v.includes(val);
   return op === 'array-contains' ? Array.isArray(val) && val.includes(v) : val === v;
 };
 
