@@ -307,7 +307,8 @@ export const HANDOVER_NOTE = 'Proses selanjutnya, mulai dari kontrak magang, onb
 export const studentStatusLabel = (s: ApplicationStatus): string => STUDENT_STATUS_LABELS[s] ?? s;
 export const formatApplicationNumber = (n: number): string => `FM-JOB-${String(n).padStart(4, '0')}`;
 
-export type CvKind = 'cv' | 'surat';
+/** penerimaan: letter of acceptance atau kontrak magang / penerimaan: the internship letter of acceptance or contract */
+export type CvKind = 'cv' | 'surat' | 'penerimaan';
 export interface CvFile { id: string; ownerUid: string; kind: CvKind; fileName: string; size: number; storagePath: string; uploadedAt: string; deleted: boolean }
 export interface Personal { fullName: string; email: string; phone: string; city: string; school: string; major: string; linkedin: string }
 export interface AttachedWork { id: string; title: string; type: string; cover: string }

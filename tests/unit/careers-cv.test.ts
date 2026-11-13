@@ -89,3 +89,19 @@ describe('bank CV', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('dokumen penerimaan magang', () => {
+  it('hanya peserta yang sudah ditempatkan yang bisa mengunggah', async () => {
+    await expect(uploadCv('u1', 'penerimaan', file(pdf(), 'LoA.pdf'))).rejects.toThrow('Dokumen penerimaan hanya untuk peserta yang sudah ditempatkan');
+    data.internshipPlacements = { u1: { studentId: 'u1', partnerName: 'Mayar', position: 'DM' } };
+    const doc = await uploadCv('u1', 'penerimaan', file(pdf(), 'LoA.pdf'));
+    expect(data.studentCvs[doc.id]).toMatchObject({ ownerUid: 'u1', kind: 'penerimaan', fileName: 'LoA.pdf' });
+    expect((await listCvs('u1', 'penerimaan')).map((d) => d.id)).toEqual([doc.id]);
+  });
+
+  it('tawaran yang diterima lewat Portal Karier juga berarti sudah ditempatkan', async () => {
+    data.jobApplications = { a1: { studentId: 'u1', status: 'bergabung' } };
+    await expect(uploadCv('u1', 'penerimaan', file(pdf(), 'Kontrak.pdf'))).resolves.toBeTruthy();
+  });
+});
+

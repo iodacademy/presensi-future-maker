@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowRight, Check } from 'lucide-react';
 import type { LearningSummary } from '@/features/dashboard/learning-summary';
 import { PASS_SPA } from '@/features/dashboard/learning-summary';
+import { AcceptanceUpload } from './acceptance-upload';
 
 const BLUE = '#0072CE';
 const YELLOW = '#FFC72C';
@@ -158,6 +159,7 @@ export function HomeSummary({ s }: { s: LearningSummary }) {
   return (
     <>
       <Hero s={s} />
+      {s.state === 'ditempatkan' && <AcceptanceUpload />}
       {showSteps && (
         <section aria-label="Tahapan" style={card}>
           <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '6px' }}>

@@ -10,6 +10,7 @@ import type { MyApplication, StudentJobCard } from '@/features/careers/student-s
 import { TIER_RULES, type CareerStanding } from '@/features/careers/tier';
 import { InterviewCard } from './interview-card';
 import { OfferCard } from './offer-card';
+import { AcceptanceUpload } from '../acceptance-upload';
 import { BLUE, btnOutline, card, errorBox, formatDate, getJson, heading, LINE, MUTED, pageWrap, pill, STATUS_PILL } from './ui';
 
 type Lowongan = { access: boolean; jobs: StudentJobCard[]; appliedJobIds: string[]; bannerClosesAt: string | null; standing: CareerStanding | null };
@@ -155,14 +156,17 @@ const rp = (n: number) => `Rp${n.toLocaleString('id-ID')}`;
 function TierCard({ s }: { s: CareerStanding }) {
   if (s.placedAt) {
     return (
+      <>
       <div role="status" style={{ ...card, display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <b style={{ fontSize: '14px' }}>Ditempatkan magang</b>
         <span style={{ fontSize: '13px' }}>{`${s.placedAt.position} · ${s.placedAt.partnerName}`}</span>
-        <span style={{ fontSize: '12px', color: MUTED }}>Lamaran baru tidak bisa dikirim.</span>
+        <span style={{ fontSize: '12px', color: MUTED }}>{s.locked ? 'Lamaran baru tidak bisa dikirim.' : 'Kamu masih bisa melamar proyek lain selama jatahnya ada.'}</span>
       </div>
+      <AcceptanceUpload />
+      </>
     );
   }
-  if (s.locked) return <div style={{ ...card, color: MUTED }}>Kamu sudah menerima tawaran magang. Selamat! Lamaran baru tidak bisa dikirim lagi.</div>;
+  if (s.locked) return <><div style={{ ...card, color: MUTED }}>Kamu sudah menerima tawaran magang. Selamat! Lamaran baru tidak bisa dikirim lagi.</div><AcceptanceUpload /></>;
   const project = s.track === 'project';
   const caps = TIER_RULES[s.tier];
   const left = Math.max(0, s.quota - s.used);

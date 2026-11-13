@@ -93,7 +93,7 @@ function Kpi({ title, value, sub, active, onClick, children }: {
     : <div style={style}>{body}</div>;
 }
 
-function AppLine({ app, job }: { app: InsightApp; job?: InsightJob }) {
+export function AppLine({ app, job }: { app: InsightApp; job?: InsightJob }) {
   const tone = statusTone(app.status);
   const iv = app.status === 'interview' && app.interview ? interviewTimeLabel(app.interview) : null;
   return (

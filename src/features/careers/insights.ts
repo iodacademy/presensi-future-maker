@@ -24,6 +24,8 @@ export interface InsightStudent {
   apps: InsightApp[];
   /** Ditempatkan di luar lamaran, mis. seleksi awal mitra / Placed outside applications, e.g. a partner's early selection */
   placedAt?: PlacedAt | null;
+  /** Letter of acceptance atau kontrak terbaru yang diunggah peserta / The latest letter of acceptance or contract the participant uploaded */
+  acceptanceDoc?: { id: string; fileName: string; uploadedAt: string } | null;
 }
 export interface PortalInsights { programs: string[]; jobs: InsightJob[]; students: InsightStudent[] }
 

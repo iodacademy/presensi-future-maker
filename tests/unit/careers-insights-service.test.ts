@@ -55,4 +55,17 @@ describe('data ringkasan Job Portal', () => {
     expect(fields).not.toContain('answers');
     expect(fields).not.toContain('interview');
   });
+
+  it('menyertakan dokumen penerimaan terbaru yang belum dihapus', async () => {
+    const db = (await import('./careers-fake-db')).data;
+    db.studentCvs = {
+      d1: { ownerUid: 's1', kind: 'penerimaan', fileName: 'LoA lama.pdf', uploadedAt: '2026-11-12T00:00:00Z', deleted: false },
+      d2: { ownerUid: 's1', kind: 'penerimaan', fileName: 'LoA.pdf', uploadedAt: '2026-11-13T00:00:00Z', deleted: false },
+      d3: { ownerUid: 's2', kind: 'penerimaan', fileName: 'hapus.pdf', uploadedAt: '2026-11-13T00:00:00Z', deleted: true },
+      c1: { ownerUid: 's2', kind: 'cv', fileName: 'CV.pdf', uploadedAt: '2026-11-13T00:00:00Z', deleted: false },
+    };
+    const x = await portalInsights(admin);
+    expect(x.students.map((s) => s.acceptanceDoc?.fileName ?? null)).toEqual(['LoA.pdf', null]);
+  });
 });
+

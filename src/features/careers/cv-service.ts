@@ -16,9 +16,23 @@ const MAX_ACTIVE = 5;
 // Berkas terhapus tetap disimpan untuk lamaran lama, jadi unggah-hapus berulang dibatasi agar penyimpanan tidak tumbuh tanpa batas
 // Deleted files stay stored for older applications, so repeated upload-delete is capped to keep storage from growing without bound
 const MAX_TOTAL = 20;
-const KIND_NAME: Record<CvKind, string> = { cv: 'CV', surat: 'surat lamaran' };
+const KIND_NAME: Record<CvKind, string> = { cv: 'CV', surat: 'surat lamaran', penerimaan: 'dokumen penerimaan' };
 
 const cvs = () => getAdminDb().collection('studentCvs');
+
+/**
+ * Sudah ditempatkan: punya catatan penempatan dari mitra, atau sudah menerima tawaran lewat Portal Karier.
+ *
+ * Placed: has a partner placement record, or accepted an offer through the career portal.
+ */
+export async function isPlaced(uid: string): Promise<boolean> {
+  const db = getAdminDb();
+  const [placed, joined] = await Promise.all([
+    db.collection('internshipPlacements').doc(uid).get(),
+    db.collection('jobApplications').where('studentId', '==', uid).where('status', '==', 'bergabung').select().get(),
+  ]);
+  return placed.exists || !joined.empty;
+}
 const cleanName = (n: string) => n.replace(/[\\/\r\n"]/g, '_').trim().slice(0, 120) || 'berkas.pdf';
 
 async function allCvs(uid: string, kind?: CvKind): Promise<CvFile[]> {
@@ -31,7 +45,8 @@ export async function listCvs(uid: string, kind?: CvKind): Promise<CvFile[]> {
 }
 
 export async function uploadCv(uid: string, kind: CvKind, file: { name: string; type: string; size: number; bytes: Buffer }): Promise<CvFile> {
-  if (kind !== 'cv' && kind !== 'surat') throw new Error('Jenis berkas tidak dikenal');
+  if (!(kind in KIND_NAME)) throw new Error('Jenis berkas tidak dikenal');
+  if (kind === 'penerimaan' && !(await isPlaced(uid))) throw new Error('Dokumen penerimaan hanya untuk peserta yang sudah ditempatkan');
   if (file.size > MAX_PDF_BYTES || file.bytes.length > MAX_PDF_BYTES) throw new Error('Ukuran PDF maksimal 2 MB');
   // Isi diperiksa, bukan hanya nama dan jenis kiriman peramban yang dapat dipalsukan
   // The content is checked, not only the browser-sent name and type, which can be forged

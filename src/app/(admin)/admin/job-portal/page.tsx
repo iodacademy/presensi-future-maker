@@ -9,7 +9,9 @@ import { PartnersTab } from './partners-tab';
 import { PartnerForm } from './partner-form';
 import { JobForm } from './job-form';
 import { InsightsPanel } from './insights-panel';
+import { TrackingTab } from './tracking-tab';
 
+type Tab = 'lowongan' | 'mitra' | 'tracking';
 type View = { kind: 'list' } | { kind: 'job'; id: string | null } | { kind: 'partner'; id: string | null };
 
 /**
@@ -18,7 +20,7 @@ type View = { kind: 'list' } | { kind: 'job'; id: string | null } | { kind: 'par
  * Job Portal admin panel: jobs and partners. The tab lives in ?tab= so a reload does not jump back to Lowongan.
  */
 export default function AdminJobPortalPage() {
-  const [tab, setTab] = useState<'lowongan' | 'mitra'>('lowongan');
+  const [tab, setTab] = useState<Tab>('lowongan');
   const [view, setView] = useState<View>({ kind: 'list' });
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [partners, setPartners] = useState<PartnerRow[]>([]);
@@ -27,7 +29,10 @@ export default function AdminJobPortalPage() {
   const [open, setOpen] = useState<boolean | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  useEffect(() => { if (new URLSearchParams(window.location.search).get('tab') === 'mitra') setTab('mitra'); }, []);
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    if (t === 'mitra' || t === 'tracking') setTab(t);
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -37,7 +42,7 @@ export default function AdminJobPortalPage() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  function choose(key: 'lowongan' | 'mitra') {
+  function choose(key: Tab) {
     setTab(key);
     window.history.replaceState(null, '', `/admin/job-portal?tab=${key}`);
   }
@@ -93,7 +98,7 @@ export default function AdminJobPortalPage() {
         <>
           {reloadKey > 0 && <InsightsPanel reloadKey={reloadKey} onError={setError} />}
           <div role="tablist" style={{ display: 'flex', gap: '8px' }}>
-            {([['lowongan', 'Lowongan'], ['mitra', 'Mitra & PIC']] as const).map(([k, l]) => (
+            {([['lowongan', 'Lowongan'], ['mitra', 'Mitra & PIC'], ['tracking', 'Tracking peserta']] as const).map(([k, l]) => (
               <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => choose(k)}
                 style={{
                   padding: '7px 14px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontSize: '11px',
@@ -105,7 +110,9 @@ export default function AdminJobPortalPage() {
               </button>
             ))}
           </div>
-          {tab === 'mitra'
+          {tab === 'tracking'
+            ? <TrackingTab onError={setError} />
+            : tab === 'mitra'
             ? <PartnersTab rows={partners} onEdit={(id) => setView({ kind: 'partner', id })} />
             : <JobsTab rows={jobs} onEdit={(id) => setView({ kind: 'job', id })} onChanged={load} onError={setError} />}
         </>

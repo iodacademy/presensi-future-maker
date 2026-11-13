@@ -16,7 +16,7 @@ const programOf = (className: string) => className.split(' - ')[0].trim();
  */
 export async function portalInsights(actor: Actor): Promise<PortalInsights> {
   const db = getAdminDb();
-  const [snapshot, jSnap, pSnap, cSnap, aSnap, placedSnap] = await Promise.all([
+  const [snapshot, jSnap, pSnap, cSnap, aSnap, placedSnap, docSnap] = await Promise.all([
     getSnapshot(actor),
     db.collection('jobs').select('title', 'partnerId', 'partnerName', 'scheme', 'quota', 'status', 'picEmail', 'picEmails', 'eligibility').get(),
     db.collection('partners').select('pics').get(),
@@ -26,7 +26,16 @@ export async function portalInsights(actor: Actor): Promise<PortalInsights> {
       'interview.date', 'interview.start', 'interview.durationMin', 'interview.confirmation', 'interview.interviewer',
     ).get(),
     db.collection(PLACEMENT_COLLECTION).select('partnerName', 'position').get(),
+    db.collection('studentCvs').where('kind', '==', 'penerimaan').select('ownerUid', 'fileName', 'uploadedAt', 'deleted').get(),
   ]);
+  // Dokumen penerimaan terbaru per peserta / The latest acceptance document per participant
+  const acceptance = new Map<string, { id: string; fileName: string; uploadedAt: string }>();
+  for (const d of docSnap.docs) {
+    if (d.get('deleted')) continue;
+    const doc = { id: d.id, fileName: String(d.get('fileName') ?? ''), uploadedAt: String(d.get('uploadedAt') ?? '') };
+    const cur = acceptance.get(String(d.get('ownerUid')));
+    if (!cur || cur.uploadedAt < doc.uploadedAt) acceptance.set(String(d.get('ownerUid')), doc);
+  }
   const placedAt = new Map(placedSnap.docs.map((d) => [d.id, { partnerName: String(d.get('partnerName') ?? ''), position: String(d.get('position') ?? '') }]));
 
   const classProgram = new Map(cSnap.docs.filter((c) => c.id !== DEMO_CLASS_ID).map((c) => [c.id, programOf(String(c.get('canonicalName') ?? ''))]));
@@ -67,6 +76,7 @@ export async function portalInsights(actor: Actor): Promise<PortalInsights> {
       studentId: r.studentId, name: r.studentName, className: r.className, program: programOf(r.className), placement: r.placement as Scheme,
       apps: (appsByStudent.get(r.studentId) ?? []).sort((a, b) => b.submittedAt.localeCompare(a.submittedAt)),
       placedAt: placedAt.get(r.studentId) ?? null,
+      acceptanceDoc: acceptance.get(r.studentId) ?? null,
     }));
 
   return { programs: [...new Set(classProgram.values())].filter(Boolean).sort(), jobs, students };

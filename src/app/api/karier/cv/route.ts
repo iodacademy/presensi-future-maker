@@ -2,7 +2,7 @@ import { listCvs, MAX_PDF_BYTES, uploadCv } from '@/features/careers/cv-service'
 import type { CvKind } from '@/features/careers/model';
 import { asStudent } from '../guard';
 
-export const GET = () => asStudent(async (actor) => ({ cvs: await listCvs(actor.uid, 'cv'), covers: await listCvs(actor.uid, 'surat') }));
+export const GET = () => asStudent(async (actor) => ({ cvs: await listCvs(actor.uid, 'cv'), covers: await listCvs(actor.uid, 'surat'), acceptance: await listCvs(actor.uid, 'penerimaan') }));
 
 export const POST = (request: Request) =>
   asStudent(async (actor) => {
