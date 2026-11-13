@@ -103,5 +103,11 @@ describe('dokumen penerimaan magang', () => {
     data.jobApplications = { a1: { studentId: 'u1', status: 'bergabung' } };
     await expect(uploadCv('u1', 'penerimaan', file(pdf(), 'Kontrak.pdf'))).resolves.toBeTruthy();
   });
+
+  it('jenis berkas di luar daftar ditolak, termasuk nama bawaan JavaScript', async () => {
+    for (const kind of ['constructor', 'toString', '__proto__', 'lain']) {
+      await expect(uploadCv('u1', kind as never, file(pdf()))).rejects.toThrow('Jenis berkas tidak dikenal');
+    }
+  });
 });
 

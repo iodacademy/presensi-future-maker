@@ -45,7 +45,8 @@ export async function listCvs(uid: string, kind?: CvKind): Promise<CvFile[]> {
 }
 
 export async function uploadCv(uid: string, kind: CvKind, file: { name: string; type: string; size: number; bytes: Buffer }): Promise<CvFile> {
-  if (!(kind in KIND_NAME)) throw new Error('Jenis berkas tidak dikenal');
+  // Hanya milik objek sendiri, agar nama bawaan seperti constructor tidak lolos / Own keys only, so built-ins such as constructor do not pass
+  if (!Object.hasOwn(KIND_NAME, kind)) throw new Error('Jenis berkas tidak dikenal');
   if (kind === 'penerimaan' && !(await isPlaced(uid))) throw new Error('Dokumen penerimaan hanya untuk peserta yang sudah ditempatkan');
   if (file.size > MAX_PDF_BYTES || file.bytes.length > MAX_PDF_BYTES) throw new Error('Ukuran PDF maksimal 2 MB');
   // Isi diperiksa, bukan hanya nama dan jenis kiriman peramban yang dapat dipalsukan
