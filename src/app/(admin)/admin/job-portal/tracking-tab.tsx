@@ -28,7 +28,7 @@ const when = (iso: string) => new Date(iso).toLocaleDateString('id-ID', { day: '
  */
 export function TrackingTab({ onError }: { onError: (m: string) => void }) {
   const [data, setData] = useState<PortalInsights | null>(null);
-  const [kelas, setKelas] = useState('');
+  const [chosen, setKelas] = useState('');
   const [filter, setFilter] = useState<Filter>('semua');
   const [q, setQ] = useState('');
 
@@ -38,7 +38,9 @@ export function TrackingTab({ onError }: { onError: (m: string) => void }) {
 
   const jobById = useMemo(() => new Map((data?.jobs ?? []).map((j) => [j.id, j])), [data]);
   const classes = useMemo(() => [...new Set((data?.students ?? []).map((s) => s.className))].sort(), [data]);
-  useEffect(() => { if (!kelas && classes.length) setKelas(classes[0]); }, [classes, kelas]);
+  // Kelas bawaan dihitung langsung, bukan lewat efek yang bisa menimpa pilihan admin bila datanya lambat
+  // The default class is derived directly, not via an effect that could override the admin's choice when data loads late
+  const kelas = chosen || classes[0] || '';
 
   // Tempat magang: dari penempatan mitra, atau dari tawaran yang diterima lewat portal
   // The internship: from a partner placement, or from an offer accepted through the portal
