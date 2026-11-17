@@ -12,7 +12,7 @@ import { ProjectDone } from '@/features/careers/project-done-button';
 
 type Candidate = Application & {
   className: string; questions: JobQuestion[]; interview?: Interview; interviewWaLink: string | null; offerWaLink: string | null;
-  jobTitle?: string; offeredFrom?: { jobId: string; title: string }; otherJobs?: { id: string; title: string; scheme: Scheme }[];
+  jobTitle?: string; offeredFrom?: { jobId: string; title: string; partnerName?: string }; otherJobs?: { id: string; title: string; scheme: Scheme }[];
 };
 const MOVABLE = ['baru', 'ditinjau', 'shortlist', 'interview', 'tidak-lolos'];
 const REASONS = ['Skill belum sesuai', 'Portofolio kurang relevan', 'Kuota sudah terpenuhi', 'Lainnya'];
@@ -74,7 +74,7 @@ export default function CandidatePage({ params }: { params: Promise<{ id: string
         <>
           <div>
             <h1 style={h1}>{c.personal.fullName}</h1>
-            <p style={sub}>{c.number} · {c.jobTitle ? `${c.jobTitle} · ` : ''}status {APPLICATION_STATUS_LABELS[c.status]}{c.offeredFrom ? ` · ditawarkan, awalnya melamar ${c.offeredFrom.title}` : ''}</p>
+            <p style={sub}>{c.number} · {c.jobTitle ? `${c.jobTitle} · ` : ''}status {APPLICATION_STATUS_LABELS[c.status]}{c.offeredFrom ? ` · ditawarkan, awalnya melamar ${[c.offeredFrom.title, c.offeredFrom.partnerName].filter(Boolean).join(' · ')}` : ''}</p>
           </div>
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
             <section style={{ ...box, flex: '1 1 460px', display: 'flex', flexDirection: 'column', gap: '8px' }}>

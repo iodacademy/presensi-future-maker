@@ -11,6 +11,7 @@ vi.mock('../../src/features/calendar/client', () => ({ cancelCalendarEvent: canc
 
 import { decideCandidate, getCandidate, listCandidates, offerOtherJob, partnerDashboard, partnerMe, updateOwnProfile } from '../../src/features/careers/partner-service';
 import { listMyApplications } from '../../src/features/careers/student-service';
+import { adminMoveApplication } from '../../src/features/careers/move-service';
 import { GET as dashGet } from '../../src/app/api/mitra/dashboard/route';
 
 const now = new Date('2026-11-05T00:00:00Z');
@@ -161,5 +162,42 @@ describe('layanan PIC', () => {
   it('siswa tidak bisa membuka dashboard mitra', async () => {
     getSessionActor.mockResolvedValue({ uid: 'u1', role: 'student' });
     expect((await dashGet()).status).toBe(403);
+  });
+});
+
+describe('admin memindahkan lamaran ke lowongan perusahaan lain', () => {
+  beforeEach(() => {
+    data.jobs.j1 = { ...job, partnerName: 'PT DIPSI' };
+    data.jobs.jb = { ...job, partnerId: 'p2', partnerName: 'PT Lain', title: 'Social Media', applicantCount: 0 };
+    data.jobs.jf = { ...job, partnerId: 'p2', partnerName: 'PT Lain', title: 'Full Role', scheme: 'full', applicantCount: 0 };
+    data.dashboardSnapshots = { '2026-11-04': { generatedAt: '2026-11-04T01:00:00Z', version: 22, ranking: [{ studentId: 'u1', score: 70, pending: [], placement: 'project' }] } };
+  });
+
+  it('lamaran pindah ke perusahaan lain, ditinjau ulang di sana, dan interview lamanya dibatalkan', async () => {
+    data.jobApplications.a3.interview = { calendarEventId: 'ev-9', date: '2026-11-12', start: '10:00', durationMin: 45 };
+    await adminMoveApplication('a3', 'jb', false);
+    expect(data.jobApplications.a3).toMatchObject({ jobId: 'jb', partnerId: 'p2', status: 'ditinjau', interview: null, offeredFrom: { jobId: 'j1', title: 'UI/UX Intern', partnerName: 'PT DIPSI' } });
+    expect(cancel).toHaveBeenCalledWith('ev-9');
+    expect(data.jobs.j1.applicantCount).toBe(1);
+    expect(data.jobs.jb.applicantCount).toBe(1);
+    // PIC perusahaan awal tidak lagi melihatnya; PIC perusahaan tujuan melihatnya / The original PIC no longer sees it; the target PIC does
+    await expect(getCandidate(rina, 'a3')).rejects.toThrow('Lamaran tidak ditemukan');
+    expect((await getCandidate(lain, 'a3')).id).toBe('a3');
+  });
+
+  it('admin bisa langsung meloloskan saat memindahkan; kandidat lalu diminta menerima tawaran', async () => {
+    await adminMoveApplication('a2', 'jb', true);
+    expect(data.jobApplications.a2).toMatchObject({ jobId: 'jb', partnerId: 'p2', status: 'diterima', rejectReason: '' });
+    expect((await listMyApplications('u1')).find((x) => x.id === 'a2')).toMatchObject({ status: 'diterima', jobTitle: 'Social Media', offeredFrom: 'UI/UX Intern · PT DIPSI' });
+  });
+
+  it('aturan program tetap berlaku dan lamaran final tidak bisa dipindahkan', async () => {
+    await expect(adminMoveApplication('zz', 'jb', false)).rejects.toThrow('Lamaran tidak ditemukan');
+    await expect(adminMoveApplication('a2', 'jf', false)).rejects.toThrow('Kandidat jalur Project Based tidak bisa ditawari Full Internship');
+    data.jobApplications.x = { ...data.jobApplications.a2, jobId: 'jb', partnerId: 'p2' };
+    await expect(adminMoveApplication('a2', 'jb', false)).rejects.toThrow('Kandidat sudah melamar posisi itu');
+    delete data.jobApplications.x;
+    data.jobApplications.a2.status = 'bergabung';
+    await expect(adminMoveApplication('a2', 'jb', false)).rejects.toThrow('Lamaran ini tidak bisa dialihkan');
   });
 });

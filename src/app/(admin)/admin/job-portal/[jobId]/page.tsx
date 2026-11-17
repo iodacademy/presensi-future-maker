@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 import { AppShell } from '@/components/app-shell';
 import { alertBox, api, btn, btnSolid, card, field, send } from '../../pameran/admin-ui';
 import type { ApplicantRow } from '@/features/careers/applicants-service';
+import type { JobRow } from '@/features/careers/admin-service';
 import { ProjectDone } from '@/features/careers/project-done-button';
 import { APPLICATION_STATUS_LABELS, FINAL_STATUSES, type Application, type ApplicationStatus, type Job, type JobQuestion } from '@/features/careers/model';
 
@@ -36,17 +37,21 @@ export default function ApplicantsPage({ params }: { params: Promise<{ jobId: st
   const [rows, setRows] = useState<ApplicantRow[]>([]);
   const [open, setOpen] = useState<Detail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [allJobs, setAllJobs] = useState<JobRow[]>([]);
+  const [target, setTarget] = useState('');
+  const [pass, setPass] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [j, a] = await Promise.all([api(`/api/karier/jobs/${jobId}`), api(`/api/karier/jobs/${jobId}/applications`)]);
-      setJob(j.job); setRows(a.applicants); setError(null);
+      const [j, a, all] = await Promise.all([api(`/api/karier/jobs/${jobId}`), api(`/api/karier/jobs/${jobId}/applications`), api('/api/karier/jobs')]);
+      setJob(j.job); setRows(a.applicants); setAllJobs(all.jobs); setError(null);
     } catch (e) { setError((e as Error).message); }
   }, [jobId]);
   useEffect(() => { load(); }, [load]);
 
   async function changeStatus(id: string, status: ApplicationStatus) {
     let rejectReason = '';
+    if (status === 'diterima' && !window.confirm('Loloskan kandidat ini? Kandidat akan diminta menerima atau menolak tawaran di aplikasinya.')) return;
     if (status === 'tidak-lolos') {
       const r = window.prompt(`Alasan internal (tidak dikirim ke siswa):\n${REASONS.join(' / ')}`, REASONS[0]);
       if (r === null) return;
@@ -56,6 +61,19 @@ export default function ApplicantsPage({ params }: { params: Promise<{ jobId: st
   }
   async function view(id: string) {
     try { setOpen((await api(`/api/karier/applications/${id}`)).application); } catch (e) { setError((e as Error).message); }
+  }
+
+  // Lowongan tujuan dari perusahaan mana pun; aturan skema, tier, dan jurusan diperiksa server
+  // Target jobs from any company; scheme, tier, and programme rules are checked by the server
+  const targets = allJobs.filter((j) => j.status === 'published' && !j.demo && j.id !== jobId);
+  const companies = [...new Set(targets.map((j) => j.partnerName))].sort();
+  async function move(id: string) {
+    const t = targets.find((j) => j.id === target);
+    if (!t || !window.confirm(`Pindahkan lamaran ini ke ${t.title} · ${t.partnerName}?${pass ? ' Kandidat langsung lolos dan diminta menerima tawaran.' : ' Lamaran ditinjau ulang oleh PIC di sana.'}`)) return;
+    try {
+      await send(`/api/karier/applications/${id}/pindah`, 'POST', { jobId: target, pass });
+      setOpen(null); setTarget(''); setPass(false); await load();
+    } catch (e) { setError((e as Error).message); }
   }
 
   function exportXlsx() {
@@ -143,6 +161,24 @@ export default function ApplicantsPage({ params }: { params: Promise<{ jobId: st
                 {open.works.map((w) => <li key={w.id}><a href={`/karya/${w.id}`} target="_blank" rel="noopener noreferrer">{w.title}</a> · karya pameran {w.type}</li>)}
                 {open.tasks.map((t) => <li key={t.submissionId}><a href={/^https?:\/\//i.test(t.url) ? t.url : `/api/submissions/${t.submissionId}/file`} target="_blank" rel="noopener noreferrer">{t.title}</a> · tugas</li>)}
               </ul>
+            </div>
+          )}
+          {['baru', 'ditinjau', 'shortlist', 'interview', 'tidak-lolos'].includes(open.status) && targets.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', borderTop: '1px solid var(--color-border)', paddingTop: '10px' }}>
+              <b>Pindahkan ke lowongan lain</b>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '11px' }}>Bisa ke perusahaan lain. Lamaran pindah dari lowongan ini; interview di perusahaan awal dibatalkan.</span>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <select value={target} onChange={(e) => setTarget(e.target.value)} aria-label="Lowongan tujuan" style={{ ...field, width: 'auto', maxWidth: '360px' }}>
+                  <option value="">Pilih lowongan</option>
+                  {companies.map((c) => (
+                    <optgroup key={c} label={c}>{targets.filter((j) => j.partnerName === c).map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}</optgroup>
+                  ))}
+                </select>
+                <label style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <input type="checkbox" checked={pass} onChange={(e) => setPass(e.target.checked)} /> Langsung loloskan
+                </label>
+                <button type="button" style={btnSolid} disabled={!target} onClick={() => move(open.id)}>Pindahkan</button>
+              </div>
             </div>
           )}
           {open.questions.length > 0 && (

@@ -15,10 +15,8 @@ import type { Actor } from '../auth/types';
 import { getApplicationForAdmin, listApplicants, setApplicationStatus, type ApplicantRow } from './applicants-service';
 import { getPartner } from './admin-service';
 import { inScope, picJobScope } from './pic-scope';
-import { canApplyScheme, interviewMessage, isEligible, jobState, offerMessage, validatePartnerInput, type ApplicationStatus, type Interview, type Job, type Scheme } from './model';
-import { CAREER_APP_FIELDS, standingInputs } from './student-service';
-import { applyBlock, canSeeJob, type CareerApp } from './tier';
-import { FieldValue } from 'firebase-admin/firestore';
+import { interviewMessage, jobState, offerMessage, validatePartnerInput, type ApplicationStatus, type Interview, type Job, type Scheme } from './model';
+import { moveApplication } from './move-service';
 
 export type PartnerActor = Actor & { partnerId: string };
 const db = () => getAdminDb();
@@ -125,9 +123,6 @@ export async function getCandidate(actor: PartnerActor, appId: string) {
 // Interview diatur lewat formulir undangan; baru tidak bisa dipilih kembali / Interview goes through the invite form; new cannot be chosen again
 const PIC_STATUSES: ApplicationStatus[] = ['ditinjau', 'shortlist', 'diterima', 'tidak-lolos'];
 
-// Tawaran yang menunggu jawaban dan status final tidak dialihkan / Offers awaiting an answer and final statuses are not moved
-const MOVABLE: ApplicationStatus[] = ['baru', 'ditinjau', 'shortlist', 'interview', 'tidak-lolos'];
-
 /**
  * PIC menawarkan kandidat posisi lain di perusahaannya, walau kandidat tidak
  * melamar posisi itu. Lamarannya dipindahkan beserta catatan posisi awal;
@@ -140,50 +135,7 @@ const MOVABLE: ApplicationStatus[] = ['baru', 'ditinjau', 'shortlist', 'intervie
  * programme's scheme rules still apply.
  */
 export async function offerOtherJob(actor: PartnerActor, appId: string, targetJobId: unknown): Promise<void> {
-  const first = await ownApplication(actor, appId);
-  const target = String(targetJobId ?? '');
-  const studentId = String(first.get('studentId'));
-  const classId = (first.get('classId') as string | undefined) ?? null;
-  const inputs = await standingInputs({ uid: studentId, classId });
-  const jobRef = db().collection('jobs').doc(target || '-');
-  const mineQuery = db().collection('jobApplications').where('studentId', '==', studentId).select(...CAREER_APP_FIELDS);
-
-  // Semua pemeriksaan dibaca ulang di dalam transaksi, agar dua aksi bersamaan tidak sama-sama lolos
-  // Every check is re-read inside the transaction, so two simultaneous actions cannot both pass
-  await db().runTransaction(async (tx) => {
-    const [cur, tj, mine] = await Promise.all([tx.get(first.ref), tx.get(jobRef), tx.get(mineQuery)]);
-    const status = cur.get('status') as ApplicationStatus;
-    const fromId = String(cur.get('jobId'));
-    if (!MOVABLE.includes(status)) throw new Error('Lamaran ini tidak bisa dialihkan');
-    if (!tj.exists || tj.get('partnerId') !== actor.partnerId || tj.get('status') !== 'published' || target === fromId) throw new Error('Lowongan tidak ditemukan');
-    if (mine.docs.some((d) => d.id !== cur.id && d.get('jobId') === target)) throw new Error('Kandidat sudah melamar posisi itu');
-
-    // Aturan program sama dengan saat siswa melamar sendiri: skema, batas nilai tier, jurusan, dan kuota
-    // Programme rules match a student's own application: scheme, tier value cap, programme, and quota
-    const job = tj.data() as Job;
-    const standing = inputs.standing(mine.docs.map((d) => d.data() as CareerApp));
-    if (standing.locked) throw new Error('Kandidat sudah menerima tawaran magang di tempat lain');
-    if (!canApplyScheme(standing.track, job.scheme ?? 'full')) {
-      throw new Error(standing.track === 'project' ? 'Kandidat jalur Project Based tidak bisa ditawari Full Internship' : 'Kandidat tidak memenuhi skema posisi itu');
-    }
-    if (!canSeeJob(standing, { scheme: job.scheme ?? 'full', salary: job.salary })) throw new Error('Nilai posisi itu melebihi batas tier kandidat');
-    if (!isEligible(job.eligibility ?? { mode: 'all' }, { classId, finalScore: inputs.score.finalScore })) throw new Error('Kandidat tidak memenuhi syarat lowongan itu');
-    // Lamaran yang dihidupkan lagi kembali memakai kuota / A revived application uses a quota slot again
-    const blocked = status === 'tidak-lolos' ? applyBlock(standing) : null;
-    if (blocked) throw new Error('Jatah lamaran kandidat sedang penuh, jadi lamaran ini tidak bisa dihidupkan lagi');
-
-    const from = await tx.get(db().collection('jobs').doc(fromId));
-    const t = new Date().toISOString();
-    tx.update(cur.ref, {
-      jobId: target, scheme: job.scheme ?? 'full',
-      // Posisi yang pertama dilamar tetap tercatat walau dialihkan berkali-kali / The first position applied for stays recorded through repeated moves
-      offeredFrom: cur.get('offeredFrom') ?? { jobId: fromId, title: String(from.get('title') ?? '') },
-      ...(status === 'tidak-lolos' ? { status: 'ditinjau', rejectReason: '', statusChangedAt: t } : {}),
-      updatedAt: t,
-    });
-    tx.update(from.ref, { applicantCount: FieldValue.increment(-1) });
-    tx.update(jobRef, { applicantCount: FieldValue.increment(1) });
-  });
+  await moveApplication(await ownApplication(actor, appId), targetJobId, { partnerId: actor.partnerId });
 }
 
 export async function decideCandidate(actor: PartnerActor, appId: string, status: unknown, reason?: unknown): Promise<{ waLink: string | null }> {

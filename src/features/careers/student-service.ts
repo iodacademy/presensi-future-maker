@@ -284,6 +284,8 @@ function publicInterview({ calendarEventId: _c, ...rest }: Interview): Omit<Inte
   return rest;
 }
 
+const offeredLabel = (o?: { title: string; partnerName?: string }): string | null => (o ? [o.title, o.partnerName].filter(Boolean).join(' · ') : null);
+
 export async function listMyApplications(uid: string): Promise<MyApplication[]> {
   const [aSnap, jSnap] = await Promise.all([
     db().collection('jobApplications').where('studentId', '==', uid).select('jobId', 'partnerId', 'number', 'status', 'scheme', 'completedAt', 'submittedAt', 'interview', 'personal.fullName', 'offeredFrom').get(),
@@ -311,7 +313,8 @@ export async function listMyApplications(uid: string): Promise<MyApplication[]> 
         picWaLink: raw && contact ? whatsAppLink(contact.phone, rescheduleMessage({
           picName: contact.name, studentName: String(a.get('personal.fullName') ?? ''), jobTitle: j?.title ?? 'Lowongan', partnerName: j?.partnerName ?? '', interview: raw,
         })) : null,
-        offeredFrom: (a.get('offeredFrom.title') as string | undefined) ?? null,
+        // Perusahaan awal hanya disebut bila lamaran dipindahkan admin ke perusahaan lain / The original company is named only when an admin moved it to another company
+        offeredFrom: offeredLabel(a.get('offeredFrom') as { title: string; partnerName?: string } | undefined),
       };
     })
     .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
