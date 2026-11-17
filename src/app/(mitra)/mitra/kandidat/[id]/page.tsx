@@ -166,6 +166,9 @@ export default function CandidatePage({ params }: { params: Promise<{ id: string
                 ) : (
                   <>
                     <button type="button" style={btnSolid} onClick={() => setInviting(true)}>Lolos &amp; undang interview</button>
+                    {/* Untuk kandidat yang sudah diseleksi di luar portal; kandidat tetap harus menerima tawarannya sendiri
+                        For candidates already selected outside the portal; the candidate must still accept the offer themselves */}
+                    <button type="button" style={btn} onClick={() => window.confirm(`Loloskan ${c.personal.fullName} tanpa interview? Kandidat akan diminta menerima atau menolak tawaran di aplikasinya.`) && decide('diterima')}>Lolos, terima kandidat</button>
                     {c.status !== 'shortlist' && <button type="button" style={btn} onClick={() => decide('shortlist')}>Simpan ke shortlist</button>}
                     <button type="button" style={{ ...btn, borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }} onClick={() => setRejecting(true)}>Tidak lolos</button>
                   </>
