@@ -23,6 +23,7 @@ export function PartnerForm({ id, onDone }: { id: string | null; onDone: () => v
   const [fieldText, setFieldText] = useState('');
   const [about, setAbout] = useState('');
   const [website, setWebsite] = useState('');
+  const [address, setAddress] = useState('');
   const [socials, setSocials] = useState<Socials>({ instagram: '', linkedin: '', tiktok: '', youtube: '' });
   const [pics, setPics] = useState<PartnerPic[]>([emptyPic()]);
   const [logo, setLogo] = useState<Logo | null>(null);
@@ -37,7 +38,7 @@ export function PartnerForm({ id, onDone }: { id: string | null; onDone: () => v
   useEffect(() => {
     if (!id) return;
     api(`/api/karier/partners/${id}`).then(({ partner: p }) => {
-      setName(p.name); setFieldText(p.field); setAbout(p.about); setWebsite(p.website);
+      setName(p.name); setFieldText(p.field); setAbout(p.about); setWebsite(p.website); setAddress(p.address ?? '');
       setSocials(p.socials); setPics(p.pics.length ? p.pics : [emptyPic()]); setLogo(p.logo);
     }).catch((e) => setError(e.message));
   }, [id]);
@@ -48,7 +49,7 @@ export function PartnerForm({ id, onDone }: { id: string | null; onDone: () => v
     e.preventDefault();
     setBusy(true); setError(null);
     try {
-      const body = { name, field: fieldText, about, website, socials, pics, logo };
+      const body = { name, field: fieldText, about, website, socials, pics, logo, address };
       let pid = id ?? createdId;
       if (pid) await send(`/api/karier/partners/${pid}`, 'PATCH', body);
       else {
@@ -96,6 +97,7 @@ export function PartnerForm({ id, onDone }: { id: string | null; onDone: () => v
       </div>
 
       <label style={label}>Situs web<input value={website} onChange={(e) => setWebsite(e.target.value)} style={field} placeholder="https://…" /></label>
+      <label style={label}>Alamat perusahaan<input value={address} onChange={(e) => setAddress(e.target.value)} style={field} placeholder="Jl. …, kota" /></label>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
         {SOCIALS.map(([k, l, ph]) => (
           <label key={k} style={label}>{l}

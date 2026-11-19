@@ -10,6 +10,7 @@ import { PartnerForm } from './partner-form';
 import { JobForm } from './job-form';
 import { InsightsPanel } from './insights-panel';
 import { TrackingTab } from './tracking-tab';
+import { PassedExportButton } from './passed-export';
 
 type Tab = 'lowongan' | 'mitra' | 'tracking';
 type View = { kind: 'list' } | { kind: 'job'; id: string | null } | { kind: 'partner'; id: string | null };
@@ -79,6 +80,7 @@ export default function AdminJobPortalPage() {
                 {open ? 'Pendaftaran lamaran: dibuka' : 'Pendaftaran lamaran: ditutup'}
               </button>
             )}
+            <PassedExportButton onError={setError} />
             <button type="button" style={btn} onClick={resetDemo} title="Hapus lamaran akun demo agar demo bisa diulang">Reset akun demo</button>
             <button type="button" style={btn} onClick={() => setView({ kind: 'partner', id: null })}>+ Tambah mitra</button>
             <button type="button" style={btnSolid} onClick={() => setView({ kind: 'job', id: null })} disabled={partners.length === 0}

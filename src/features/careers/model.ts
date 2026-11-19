@@ -30,6 +30,8 @@ export interface Logo { thumb: string; full: string }
 
 export interface PartnerInput {
   name: string; field: string; about: string; logo: Logo | null; website: string; socials: Socials; pics: PartnerPic[];
+  /** Alamat kantor untuk data penempatan magang / The office address for internship placement data */
+  address: string;
 }
 export type Partner = PartnerInput & { id: string; nameKey: string; active: boolean; createdAt: string; updatedAt: string };
 
@@ -94,7 +96,7 @@ export function validatePartnerInput(raw: unknown): PartnerInput {
   const lg = r.logo ? obj(r.logo) : null;
   const socials = Object.fromEntries(SOCIAL_KEYS.map((k) => [k, link(obj(r.socials)[k])])) as unknown as Socials;
   return {
-    name, field: str(r.field), about: str(r.about), website: link(r.website), socials, pics,
+    name, field: str(r.field), about: str(r.about), website: link(r.website), socials, pics, address: str(r.address),
     logo: lg && (lg.thumb || lg.full) ? { thumb: link(lg.thumb), full: link(lg.full) } : null,
   };
 }
