@@ -18,7 +18,7 @@ export function PassedExportButton({ onError }: { onError: (m: string) => void }
       const { rows } = (await api('/api/karier/export/lolos')) as { rows: PassedRow[] };
       const sheet = rows.map((r) => ({
         'Nama peserta': r.name, Email: r.email, WA: r.phone, LOLOS: r.status, PT: r.company,
-        'Alamat perusahaan': r.address, Role: r.role, Gaji: r.salary, Tugas: r.tasks,
+        'Alamat perusahaan': r.address, Role: r.role, 'Jenis magang': r.scheme, Gaji: r.salary, Tugas: r.tasks,
       }));
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheet), 'Peserta lolos');

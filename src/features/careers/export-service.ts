@@ -1,7 +1,7 @@
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
 import { getSnapshot } from '../dashboard/snapshot-service';
-import { APPLICATION_STATUS_LABELS, DEMO_CLASS_ID, PLACEMENT_COLLECTION, salaryLabel, type Job } from './model';
+import { APPLICATION_STATUS_LABELS, DEMO_CLASS_ID, PLACEMENT_COLLECTION, salaryLabel, SCHEME_LABELS, type Job, type Scheme } from './model';
 
 export interface ExportRow {
   name: string; email: string;
@@ -50,7 +50,9 @@ export async function exportApplicants(actor: Actor, rawJobIds: unknown): Promis
 }
 
 export interface PassedRow {
-  name: string; email: string; phone: string; status: string; company: string; address: string; role: string; salary: string; tasks: string;
+  name: string; email: string; phone: string; status: string; company: string; address: string; role: string;
+  /** Jenis magang: Full Internship atau Project Based / Internship type: Full Internship or Project Based */
+  scheme: string; salary: string; tasks: string;
 }
 
 /**
@@ -67,9 +69,9 @@ export async function exportPassed(): Promise<PassedRow[]> {
   const [apps, placements] = await Promise.all([
     db.collection('jobApplications').where('status', 'in', ['diterima', 'bergabung'])
       .select('studentId', 'jobId', 'status', 'personal.fullName', 'personal.email', 'personal.phone').get(),
-    db.collection(PLACEMENT_COLLECTION).select('studentId', 'jobId', 'position', 'partnerName').get(),
+    db.collection(PLACEMENT_COLLECTION).select('studentId', 'jobId', 'position', 'partnerName', 'scheme').get(),
   ]);
-  const placed = placements.docs.map((d) => ({ studentId: String(d.get('studentId') ?? d.id), jobId: String(d.get('jobId') ?? ''), position: String(d.get('position') ?? ''), partnerName: String(d.get('partnerName') ?? '') }));
+  const placed = placements.docs.map((d) => ({ studentId: String(d.get('studentId') ?? d.id), jobId: String(d.get('jobId') ?? ''), position: String(d.get('position') ?? ''), partnerName: String(d.get('partnerName') ?? ''), scheme: (d.get('scheme') === 'project' ? 'project' : 'full') as Scheme }));
   const placedIds = placed.map((p) => p.studentId);
   const jobIds = [...new Set([...apps.docs.map((a) => String(a.get('jobId'))), ...placed.map((p) => p.jobId)].filter(Boolean))];
   const [jobSnaps, users, profiles] = await Promise.all([
@@ -86,10 +88,10 @@ export async function exportPassed(): Promise<PassedRow[]> {
   const phone = new Map(profiles.filter((p) => p.exists).map((p) => [p.id, String(p.get('phone') ?? '')]));
   const user = new Map(users.filter((u) => u.exists).map((u) => [u.id, u]));
 
-  const fromJob = (jobId: string, fallback: { company: string; role: string }) => {
+  const fromJob = (jobId: string, fallback: { company: string; role: string; scheme?: Scheme }) => {
     const j = jobs.get(jobId);
     return {
-      company: j?.partnerName || fallback.company, role: j?.title || fallback.role,
+      company: j?.partnerName || fallback.company, role: j?.title || fallback.role, scheme: SCHEME_LABELS[j?.scheme ?? fallback.scheme ?? 'full'],
       address: (j && address.get(j.partnerId)) || j?.location || '',
       salary: salaryLabel(j?.salary, j?.scheme, j?.durationMonths) ?? 'Tidak dicantumkan', tasks: j?.description ?? '',
     };
@@ -109,7 +111,7 @@ export async function exportPassed(): Promise<PassedRow[]> {
       const u = user.get(p.studentId);
       return {
         name: String(u?.get('name') ?? ''), email: String(u?.get('email') ?? ''), phone: phone.get(p.studentId) ?? '', status: 'Ditempatkan',
-        ...fromJob(p.jobId, { company: p.partnerName, role: p.position }),
+        ...fromJob(p.jobId, { company: p.partnerName, role: p.position, scheme: p.scheme }),
       };
     }),
   ];

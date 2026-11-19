@@ -75,9 +75,9 @@ describe('ekspor peserta intern yang lolos seleksi', () => {
 
   it('satu baris per peserta lolos dengan alamat, gaji, dan tugas dari lowongannya', async () => {
     expect(await exportPassed()).toEqual([
-      { name: 'Nama s2', email: 's2@x.id', phone: '08', status: 'Lolos · menunggu jawaban', company: 'Dynamic Buzz', address: 'Tangerang Selatan', role: 'Social Media', salary: 'Rp 500.000 / project · 2 bulan', tasks: 'Membuat konten' },
-      { name: 'Nama s5', email: 's5@x.id', phone: '0857', status: 'Ditempatkan', company: 'Dynamic Buzz', address: 'WFH', role: 'Webtoon', salary: 'Tidak dicantumkan', tasks: 'Menggambar webtoon' },
-      { name: 'Nama s1', email: 's1@x.id', phone: '08', status: 'Menerima tawaran', company: 'Ioda', address: 'Jl. Kemang Raya 1, Jakarta Selatan', role: 'Web Developer', salary: 'Rp 1.000.000 / bulan', tasks: 'Membangun halaman web' },
+      { name: 'Nama s2', email: 's2@x.id', phone: '08', status: 'Lolos · menunggu jawaban', company: 'Dynamic Buzz', address: 'Tangerang Selatan', role: 'Social Media', scheme: 'Project Based', salary: 'Rp 500.000 / project · 2 bulan', tasks: 'Membuat konten' },
+      { name: 'Nama s5', email: 's5@x.id', phone: '0857', status: 'Ditempatkan', company: 'Dynamic Buzz', address: 'WFH', role: 'Webtoon', scheme: 'Full Internship', salary: 'Tidak dicantumkan', tasks: 'Menggambar webtoon' },
+      { name: 'Nama s1', email: 's1@x.id', phone: '08', status: 'Menerima tawaran', company: 'Ioda', address: 'Jl. Kemang Raya 1, Jakarta Selatan', role: 'Web Developer', scheme: 'Full Internship', salary: 'Rp 1.000.000 / bulan', tasks: 'Membangun halaman web' },
     ]);
     expect(selects.jobApplications.flat()).not.toContain('answers');
   });
