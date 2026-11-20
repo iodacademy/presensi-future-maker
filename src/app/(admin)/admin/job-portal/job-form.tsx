@@ -77,7 +77,10 @@ export function JobForm({ id, onDone }: { id: string | null; onDone: () => void 
   const pics = partners.find((p) => p.id === partnerId)?.pics ?? [];
   // Lowongan lama tanpa PIC sendiri tampil memakai PIC pertama, sama dengan yang dilihat kandidat
   // Older jobs without their own PIC show the first PIC, the same one candidates see
-  const chosen = picEmails.length ? picEmails : pics[0] ? [pics[0].email.toLowerCase()] : [];
+  // PIC yang sudah dihapus dari mitra tidak tampil sebagai pilihan, jadi tidak boleh ikut terkirim
+  // A PIC already removed from the partner is not shown as a choice, so it must not be sent either
+  const valid = picEmails.filter((e) => pics.some((p) => p.email.toLowerCase() === e));
+  const chosen = valid.length ? valid : pics[0] ? [pics[0].email.toLowerCase()] : [];
   const togglePic = (email: string) => {
     const e = email.toLowerCase();
     setPicEmails(chosen.includes(e) ? chosen.filter((x) => x !== e) : [...chosen, e]);
