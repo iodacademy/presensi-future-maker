@@ -6,6 +6,7 @@ import { MapPin, QrCode, Video, CalendarDays, Clock, Users, ChevronRight } from 
 import { StudentShell } from '@/components/student-shell';
 import { HomePerformance } from './home-performance';
 import { HomeSummary } from './home-summary';
+import { RejectionPopup } from './rejection-popup';
 import { formatLongDateWib } from '@/lib/time';
 import type { StudentHomeData } from '@/features/dashboard/types';
 
@@ -37,6 +38,7 @@ export default function StudentHomePage() {
 
   return (
     <StudentShell userName={studentName}>
+      <RejectionPopup />
       {/* Header biru mobile (node 11:2724/2799) -- padding atas dikurangi dari 56 ke 24,
           nilai Figma 56 memperhitungkan status bar native yang tidak berlaku di web browser
           Blue mobile header (node 11:2724/2799) -- top padding reduced from 56 to 24,
