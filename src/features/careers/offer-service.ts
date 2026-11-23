@@ -16,7 +16,7 @@
 import { getAdminDb } from '../../lib/firebase/admin';
 import type { Actor } from '../auth/types';
 import { cancelCalendarEvent } from '../calendar/client';
-import { isOpenApplication, type ApplicationStatus, type Interview } from './model';
+import { isOpenApplication, PLACEMENT_COLLECTION, type ApplicationStatus, type Interview } from './model';
 import { ownApplication, type PartnerActor } from './partner-service';
 import { CAREER_APP_FIELDS, standingInputs } from './student-service';
 import { PROJECT_QUOTA_MESSAGE, projectsOngoing, TIER_RULES, type CareerApp } from './tier';
@@ -28,12 +28,14 @@ export async function respondOffer(actor: Actor, appId: string, response: unknow
   const ref = apps().doc(appId);
   const t = now.toISOString();
   const { tier } = await standingInputs(actor);
+  let jobId = '';
   // Dalam satu transaksi: dua klik "terima" yang bersamaan tidak bisa sama-sama lolos
   // In one transaction: two simultaneous "terima" clicks cannot both succeed
   const others = await getAdminDb().runTransaction(async (tx) => {
     const [snap, mine] = await Promise.all([tx.get(ref), tx.get(apps().where('studentId', '==', actor.uid).select(...CAREER_APP_FIELDS, 'interview.calendarEventId'))]);
     if (!snap.exists || snap.get('studentId') !== actor.uid) throw new Error('Lamaran tidak ditemukan');
     if (snap.get('status') !== 'diterima') throw new Error('Belum ada tawaran untuk lamaran ini');
+    jobId = String(snap.get('jobId'));
     if (response === 'tolak') {
       tx.update(ref, { status: 'menolak', statusChangedAt: t, updatedAt: t });
       return [];
@@ -60,6 +62,47 @@ export async function respondOffer(actor: Actor, appId: string, response: unknow
     const ev = d.get('interview.calendarEventId') as string | null;
     if (ev) await cancelCalendarEvent(ev).catch((e) => console.error('[karier] batal interview lamaran yang ditutup', e));
   }
+  // Penolakan otomatis tidak boleh menggagalkan jawaban yang sudah tersimpan / The automatic rejection must not fail an answer already saved
+  if (response === 'terima') await rejectWhenFull(jobId, now).catch((e) => console.error('[karier] tolak otomatis kuota penuh', e));
+}
+
+const STILL_OPEN: ApplicationStatus[] = ['baru', 'ditinjau', 'shortlist', 'interview'];
+export const FULL_QUOTA_REASON = 'Kuota sudah terpenuhi';
+
+/**
+ * Begitu kursi lowongan habis oleh peserta yang menerima tawaran atau ditempatkan,
+ * lamaran lain yang masih terbuka ditandai tidak lolos agar jatah lamaran pelamarnya
+ * kembali. Kandidat yang lolos dan masih menunggu jawaban dibiarkan sebagai cadangan.
+ *
+ * Once a job's seats are taken by participants who accepted or were placed, other
+ * applications still open are rejected so their applicants get their application
+ * quota back. Passed candidates still awaiting an answer are kept as backups.
+ */
+export async function rejectWhenFull(jobId: string, now: Date): Promise<number> {
+  const db = getAdminDb();
+  const [job, rows, placed] = await Promise.all([
+    db.collection('jobs').doc(jobId).get(),
+    apps().where('jobId', '==', jobId).select('status', 'interview.calendarEventId', 'interview.date').get(),
+    db.collection(PLACEMENT_COLLECTION).where('jobId', '==', jobId).select('jobId').get(),
+  ]);
+  const taken = rows.docs.filter((d) => d.get('status') === 'bergabung').length + placed.size;
+  if (!job.exists || taken < Number(job.get('quota'))) return 0;
+  const open = rows.docs.filter((d) => STILL_OPEN.includes(d.get('status')));
+  if (open.length === 0) return 0;
+  const t = now.toISOString();
+  const today = now.toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
+  const batch = db.batch();
+  for (const d of open) {
+    batch.update(d.ref, { status: 'tidak-lolos', rejectReason: FULL_QUOTA_REASON, statusChangedAt: t, updatedAt: t, ...(d.get('interview.calendarEventId') ? { 'interview.calendarEventId': null } : {}) });
+  }
+  await batch.commit();
+  // Interview yang sudah lewat tidak perlu dibatalkan; kandidat tidak perlu menerima email pembatalan
+  // Past interviews need no cancelling; candidates need not receive a cancellation email
+  for (const d of open) {
+    const ev = d.get('interview.calendarEventId') as string | null | undefined;
+    if (ev && String(d.get('interview.date') ?? '') >= today) await cancelCalendarEvent(ev).catch((e) => console.error('[karier] batal interview kuota penuh', e));
+  }
+  return open.length;
 }
 
 /**

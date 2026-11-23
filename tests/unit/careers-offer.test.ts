@@ -191,3 +191,38 @@ describe('Project Based: beberapa proyek sekaligus', () => {
     await expect(markProjectDone('a1', now)).rejects.toThrow('Hanya proyek yang sedang berjalan');
   });
 });
+
+describe('kuota penuh setelah tawaran diterima', () => {
+  const other = (id: string, status: string, extra: Record<string, unknown> = {}) => ({ ...app('j1', 'p1', status, extra), studentId: id });
+  beforeEach(() => {
+    // Kuota 3: satu sudah menerima, satu ditempatkan dari luar portal, Andi kursi terakhir
+    // Quota 3: one already accepted, one placed outside the portal, Andi takes the last seat
+    data.jobs.j1.quota = 3;
+    data.internshipPlacements = { u8: { studentId: 'u8', jobId: 'j1' } };
+    Object.assign(data.jobApplications, {
+      c1: other('u3', 'bergabung'),
+      c2: other('u4', 'ditinjau'),
+      c3: other('u5', 'interview', { interview: { ...interview, date: '2026-11-12', calendarEventId: 'ev-c' } }),
+      c4: other('u6', 'diterima'),
+      c5: other('u7', 'interview', { interview: { ...interview, date: '2026-11-01', calendarEventId: 'ev-lama' } }),
+    });
+  });
+
+  it('kursi terakhir terisi: lamaran kandidat lain yang masih terbuka otomatis tidak lolos agar jatah lamarannya kembali', async () => {
+    await respondOffer(andi, 'a1', 'terima', now);
+    for (const id of ['c2', 'c3', 'c5']) expect(data.jobApplications[id]).toMatchObject({ status: 'tidak-lolos', rejectReason: 'Kuota sudah terpenuhi' });
+    // Cadangan yang menunggu jawaban dan yang sudah bergabung tidak disentuh / Awaiting backups and joined candidates are untouched
+    expect(data.jobApplications.c4.status).toBe('diterima');
+    expect(data.jobApplications.c1.status).toBe('bergabung');
+    // Hanya undangan interview yang belum lewat yang dibatalkan / Only interviews still ahead are cancelled
+    expect(calendar.cancel).toHaveBeenCalledWith('ev-c');
+    expect(calendar.cancel).not.toHaveBeenCalledWith('ev-lama');
+  });
+
+  it('kursi belum penuh: lamaran kandidat lain tetap berjalan', async () => {
+    data.jobs.j1.quota = 4;
+    await respondOffer(andi, 'a1', 'terima', now);
+    expect(data.jobApplications.c2.status).toBe('ditinjau');
+    expect(data.jobApplications.c3.status).toBe('interview');
+  });
+});
