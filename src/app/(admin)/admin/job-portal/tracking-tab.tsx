@@ -6,29 +6,35 @@ import type { InsightStudent, PortalInsights } from '@/features/careers/insights
 import { SCHEME_LABELS } from '@/features/careers/model';
 import { AppLine } from './insights-panel';
 
-type Status = 'belum' | 'melamar' | 'ditempatkan';
+type Status = 'belum' | 'melamar' | 'keterima';
 type Filter = 'semua' | Status | 'belum-dokumen';
+type Place = { label: string; waiting: boolean };
 
 const muted: React.CSSProperties = { fontSize: '11px', color: 'var(--color-text-muted)' };
 const th: React.CSSProperties = { textAlign: 'left', padding: '9px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap' };
 const td: React.CSSProperties = { padding: '9px 10px', fontSize: '12px', borderBottom: '1px solid var(--color-border)', verticalAlign: 'top' };
 const TONE: Record<Status, { label: string; bg: string; fg: string }> = {
   belum: { label: 'Belum melamar', bg: '#FEF3F2', fg: '#B42318' },
-  melamar: { label: 'Sudah melamar', bg: '#E6F1FB', fg: '#0072CE' },
-  ditempatkan: { label: 'Ditempatkan', bg: '#ECFDF3', fg: '#067647' },
+  melamar: { label: 'Belum keterima', bg: '#E6F1FB', fg: '#0072CE' },
+  keterima: { label: 'Sudah keterima', bg: '#ECFDF3', fg: '#067647' },
 };
 const when = (iso: string) => new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', timeZone: 'Asia/Jakarta' });
+const labelled = (l: string, el: React.ReactNode) => <label style={{ ...muted, display: 'flex', flexDirection: 'column', gap: '4px', fontWeight: 600 }}>{l}{el}</label>;
 
 /**
- * Tracking peserta per kelas: siapa yang belum melamar, sudah melamar (di mana
- * dan statusnya), dan sudah ditempatkan beserta dokumen penerimaannya.
+ * Tracking peserta: siapa yang belum melamar, yang melamar tapi belum keterima
+ * (di mana saja dan statusnya), dan yang sudah keterima beserta tempatnya.
+ * Bisa disaring per kelas, perusahaan, dan skema magang.
  *
- * Participant tracking per class: who has not applied, who has (where and with
- * what status), and who is placed, with their acceptance document.
+ * Participant tracking: who has not applied, who applied but is not accepted yet
+ * (where and with what status), and who is accepted and where. Filterable by
+ * class, company, and internship scheme.
  */
 export function TrackingTab({ onError }: { onError: (m: string) => void }) {
   const [data, setData] = useState<PortalInsights | null>(null);
-  const [chosen, setKelas] = useState('');
+  const [kelas, setKelas] = useState('');
+  const [company, setCompany] = useState('');
+  const [scheme, setScheme] = useState('');
   const [filter, setFilter] = useState<Filter>('semua');
   const [q, setQ] = useState('');
 
@@ -38,44 +44,55 @@ export function TrackingTab({ onError }: { onError: (m: string) => void }) {
 
   const jobById = useMemo(() => new Map((data?.jobs ?? []).map((j) => [j.id, j])), [data]);
   const classes = useMemo(() => [...new Set((data?.students ?? []).map((s) => s.className))].sort(), [data]);
-  // Kelas bawaan dihitung langsung, bukan lewat efek yang bisa menimpa pilihan admin bila datanya lambat
-  // The default class is derived directly, not via an effect that could override the admin's choice when data loads late
-  const kelas = chosen || classes[0] || '';
+  const companies = useMemo(() => [...new Set([
+    ...(data?.jobs ?? []).map((j) => j.partnerName),
+    ...(data?.students ?? []).flatMap((s) => (s.placedAt ? [s.placedAt.partnerName] : [])),
+  ])].sort(), [data]);
 
-  // Tempat magang: dari penempatan mitra, atau dari tawaran yang diterima lewat portal
-  // The internship: from a partner placement, or from an offer accepted through the portal
-  const placeOf = (s: InsightStudent): string | null => {
-    if (s.placedAt) return `${s.placedAt.position} · ${s.placedAt.partnerName}`;
-    const joined = s.apps.find((a) => a.status === 'bergabung');
-    const job = joined ? jobById.get(joined.jobId) : undefined;
-    return job ? `${job.title} · ${job.partnerName}` : null;
-  };
-  const statusOf = (s: InsightStudent): Status => (placeOf(s) ? 'ditempatkan' : s.apps.length ? 'melamar' : 'belum');
+  // Keterima = penempatan mitra, tawaran yang sudah diterima peserta, atau lolos tapi belum dikonfirmasi peserta
+  // Accepted = a partner placement, an offer the participant accepted, or passed but not yet confirmed by the participant
+  const placesOf = (s: InsightStudent): Place[] => [
+    ...(s.placedAt ? [{ label: `${s.placedAt.position} · ${s.placedAt.partnerName}`, waiting: false }] : []),
+    ...s.apps.filter((a) => a.status === 'bergabung' || a.status === 'diterima').flatMap((a) => {
+      const job = jobById.get(a.jobId);
+      return job ? [{ label: `${job.title} · ${job.partnerName}`, waiting: a.status === 'diterima' }] : [];
+    }),
+  ];
+  const statusOf = (s: InsightStudent): Status => (placesOf(s).length ? 'keterima' : s.apps.length ? 'melamar' : 'belum');
+  const atCompany = (s: InsightStudent) => s.placedAt?.partnerName === company || s.apps.some((a) => jobById.get(a.jobId)?.partnerName === company);
 
   if (!data) return <div style={muted}>Memuat tracking peserta…</div>;
 
-  const inClass = data.students.filter((s) => s.className === kelas);
-  const count = (f: Filter) => inClass.filter((s) => match(s, f)).length;
+  const scoped = data.students.filter((s) => (!kelas || s.className === kelas) && (!scheme || s.placement === scheme) && (!company || atCompany(s)));
+  const count = (f: Filter) => scoped.filter((s) => match(s, f)).length;
   function match(s: InsightStudent, f: Filter) {
     if (f === 'semua') return true;
-    if (f === 'belum-dokumen') return statusOf(s) === 'ditempatkan' && !s.acceptanceDoc;
+    // LoA baru bisa ada setelah penempatan pasti, bukan saat masih menunggu konfirmasi / An LoA only exists once placement is confirmed, not while awaiting confirmation
+    if (f === 'belum-dokumen') return placesOf(s).some((p) => !p.waiting) && !s.acceptanceDoc;
     return statusOf(s) === f;
   }
   const needle = q.trim().toLowerCase();
-  const rows = inClass
+  const rows = scoped
     .filter((s) => match(s, filter) && (!needle || s.name.toLowerCase().includes(needle)))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const chips: [Filter, string][] = [['semua', 'Semua'], ['belum', 'Belum melamar'], ['melamar', 'Sudah melamar'], ['ditempatkan', 'Ditempatkan'], ['belum-dokumen', 'Belum unggah dokumen']];
+  const chips: [Filter, string][] = [['semua', 'Semua'], ['belum', 'Belum melamar'], ['melamar', 'Melamar, belum keterima'], ['keterima', 'Sudah keterima'], ['belum-dokumen', 'Belum unggah dokumen']];
 
   return (
     <section aria-label="Tracking peserta" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <label style={{ ...muted, display: 'flex', flexDirection: 'column', gap: '4px', fontWeight: 600 }}>Kelas
-          <select value={kelas} onChange={(e) => setKelas(e.target.value)} style={{ ...field, width: 'auto', minWidth: '260px' }}>
-            {classes.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </label>
-        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama peserta" aria-label="Cari nama peserta" style={{ ...field, maxWidth: '260px' }} />
+        {labelled('Kelas', <select value={kelas} onChange={(e) => setKelas(e.target.value)} style={{ ...field, width: 'auto', minWidth: '240px' }}>
+          <option value="">Semua kelas</option>
+          {classes.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>)}
+        {labelled('Perusahaan', <select value={company} onChange={(e) => setCompany(e.target.value)} style={{ ...field, width: 'auto', minWidth: '220px' }}>
+          <option value="">Semua perusahaan</option>
+          {companies.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>)}
+        {labelled('Skema', <select value={scheme} onChange={(e) => setScheme(e.target.value)} style={{ ...field, width: 'auto' }}>
+          <option value="">Semua skema</option>
+          {Object.entries(SCHEME_LABELS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        </select>)}
+        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama peserta" aria-label="Cari nama peserta" style={{ ...field, maxWidth: '240px' }} />
       </div>
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
         {chips.map(([f, l]) => (
@@ -85,17 +102,17 @@ export function TrackingTab({ onError }: { onError: (m: string) => void }) {
           </button>
         ))}
       </div>
-      <div style={muted}>Peserta yang berhak magang (Full Internship atau Project Based di dashboard).</div>
+      <div style={muted}>Peserta yang berhak magang (Full Internship atau Project Based di dashboard). Filter perusahaan menampilkan peserta yang melamar atau ditempatkan di perusahaan itu.</div>
       <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--color-border)', borderRadius: '12px', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '820px' }}>
-          <thead><tr><th style={th}>Peserta</th><th style={th}>Status</th><th style={th}>Lamaran</th><th style={th}>Penempatan</th></tr></thead>
+          <thead><tr><th style={th}>Peserta</th><th style={th}>Status</th><th style={th}>Lamaran</th><th style={th}>Keterima di</th></tr></thead>
           <tbody>
             {rows.map((s) => {
               const st = statusOf(s);
-              const place = placeOf(s);
+              const places = placesOf(s);
               return (
                 <tr key={s.studentId}>
-                  <td style={td}><div style={{ fontWeight: 600 }}>{s.name}</div><div style={muted}>{SCHEME_LABELS[s.placement]}</div></td>
+                  <td style={td}><div style={{ fontWeight: 600 }}>{s.name}</div><div style={muted}>{SCHEME_LABELS[s.placement]}</div>{!kelas && <div style={muted}>{s.className}</div>}</td>
                   <td style={td}><span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, backgroundColor: TONE[st].bg, color: TONE[st].fg, whiteSpace: 'nowrap' }}>{TONE[st].label}</span></td>
                   <td style={{ ...td, minWidth: '300px' }}>
                     {s.apps.length === 0 ? <span style={muted}>Belum ada lamaran</span> : (
@@ -106,10 +123,15 @@ export function TrackingTab({ onError }: { onError: (m: string) => void }) {
                     )}
                   </td>
                   <td style={td}>
-                    {place ? (
+                    {places.length ? (
                       <>
-                        <div style={{ fontWeight: 600 }}>{place}</div>
-                        {s.acceptanceDoc
+                        {places.map((p) => (
+                          <div key={p.label} style={{ padding: '2px 0' }}>
+                            <div style={{ fontWeight: 600 }}>{p.label}</div>
+                            {p.waiting && <div style={{ fontSize: '11px', fontWeight: 700, color: '#B54708' }}>Menunggu konfirmasi peserta</div>}
+                          </div>
+                        ))}
+                        {places.every((p) => p.waiting) ? null : s.acceptanceDoc
                           ? <div style={muted}><a href={`/api/karier/cv/${s.acceptanceDoc.id}`} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>Lihat dokumen</a> · {when(s.acceptanceDoc.uploadedAt)}</div>
                           : <div style={{ fontSize: '11px', fontWeight: 700, color: '#B42318' }}>Belum unggah LoA/kontrak</div>}
                       </>

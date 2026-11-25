@@ -16,6 +16,7 @@ const insights = {
     { studentId: 'b', name: 'Bela', className: 'Web Programming - Semarang', program: 'Web Programming', placement: 'full', apps: [] },
     { studentId: 'c', name: 'Caca', className: 'Web Programming - Semarang', program: 'Web Programming', placement: 'full', apps: [], placedAt: { partnerName: 'Mayar', position: 'DM Intern' }, acceptanceDoc: null },
     { studentId: 'd', name: 'Dodi', className: 'Web Programming - Semarang', program: 'Web Programming', placement: 'full', apps: [app('x3', 'j1', 'bergabung')], acceptanceDoc: { id: 'doc1', fileName: 'LoA.pdf', uploadedAt: '2026-11-13T00:00:00Z' } },
+    { studentId: 'f', name: 'Fani', className: 'Web Programming - Semarang', program: 'Web Programming', placement: 'project', apps: [app('x4', 'j2', 'diterima'), app('x5', 'j1', 'tidak-lolos')] },
     { studentId: 'e', name: 'Eka', className: 'Social Media Marketing - Surabaya', program: 'Social Media Marketing', placement: 'project', apps: [] },
   ],
 };
@@ -26,8 +27,8 @@ describe('tracking peserta per kelas', () => {
     render(<TrackingTab onError={vi.fn()} />);
     fireEvent.change(await screen.findByRole('combobox', { name: 'Kelas' }), { target: { value: 'Web Programming - Semarang' } });
     expect(screen.getByRole('button', { name: 'Belum melamar (1)' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Sudah melamar (1)' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Ditempatkan (2)' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Melamar, belum keterima (1)' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sudah keterima (3)' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Belum unggah dokumen (1)' })).toBeTruthy();
     const andi = screen.getByText('Andi').closest('tr')!;
     expect(within(andi).getByText('2 lamaran')).toBeTruthy();
@@ -37,5 +38,30 @@ describe('tracking peserta per kelas', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Belum unggah dokumen (1)' }));
     expect(screen.getByText('Caca')).toBeTruthy();
     expect(screen.queryByText('Andi')).toBeNull();
+  });
+
+  it('bawaannya semua kelas; diterima yang belum konfirmasi dihitung keterima beserta tempatnya', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ insights }), { status: 200 })));
+    render(<TrackingTab onError={vi.fn()} />);
+    expect(((await screen.findByRole('combobox', { name: 'Kelas' })) as HTMLSelectElement).value).toBe('');
+    expect(screen.getByRole('button', { name: 'Belum melamar (2)' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Sudah keterima (3)' }));
+    const fani = screen.getByText('Fani').closest('tr')!;
+    expect(within(fani).getByText('QA Tester · Ioda')).toBeTruthy();
+    expect(within(fani).getByText('Menunggu konfirmasi peserta')).toBeTruthy();
+    expect(screen.queryByText('Andi')).toBeNull();
+  });
+
+  it('saring per perusahaan dan skema magang', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ insights }), { status: 200 })));
+    render(<TrackingTab onError={vi.fn()} />);
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Perusahaan' }), { target: { value: 'Mayar' } });
+    expect(screen.getByText('Caca')).toBeTruthy();
+    expect(screen.queryByText('Andi')).toBeNull();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Perusahaan' }), { target: { value: 'Ioda' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Skema' }), { target: { value: 'project' } });
+    expect(screen.getByText('Fani')).toBeTruthy();
+    expect(screen.queryByText('Andi')).toBeNull();
+    expect(screen.queryByText('Caca')).toBeNull();
   });
 });
