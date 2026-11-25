@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { api, field } from '../pameran/admin-ui';
+import * as XLSX from 'xlsx';
+import { api, btn, field } from '../pameran/admin-ui';
 import type { InsightStudent, PortalInsights } from '@/features/careers/insights';
-import { SCHEME_LABELS } from '@/features/careers/model';
+import { APPLICATION_STATUS_LABELS, SCHEME_LABELS } from '@/features/careers/model';
 import { AppLine } from './insights-panel';
 
 type Status = 'belum' | 'melamar' | 'keterima';
@@ -75,6 +76,26 @@ export function TrackingTab({ onError }: { onError: (m: string) => void }) {
   const rows = scoped
     .filter((s) => match(s, filter) && (!needle || s.name.toLowerCase().includes(needle)))
     .sort((a, b) => a.name.localeCompare(b.name));
+  // Excel memuat baris yang sedang tampil, jadi filter di layar = isi berkas / The sheet holds the rows on screen, so the screen filter is the file's content
+  function download() {
+    const sheet = rows.map((s) => {
+      const places = placesOf(s);
+      const confirmed = places.some((p) => !p.waiting);
+      return {
+        'Nama peserta': s.name, Kelas: s.className, Skema: SCHEME_LABELS[s.placement], Status: TONE[statusOf(s)].label,
+        'Keterima di': places.map((p) => (p.waiting ? `${p.label} (menunggu konfirmasi peserta)` : p.label)).join('\n'),
+        'Jumlah lamaran': s.apps.length,
+        Lamaran: s.apps.map((a) => {
+          const job = jobById.get(a.jobId);
+          return `${job ? `${job.title} · ${job.partnerName}` : 'Lowongan'}: ${a.completedAt ? 'Proyek selesai' : APPLICATION_STATUS_LABELS[a.status]}`;
+        }).join('\n'),
+        'Dokumen LoA/kontrak': confirmed ? (s.acceptanceDoc ? 'Sudah' : 'Belum') : '-',
+      };
+    });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheet), 'Tracking peserta');
+    XLSX.writeFile(wb, `Tracking_peserta_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
   const chips: [Filter, string][] = [['semua', 'Semua'], ['belum', 'Belum melamar'], ['melamar', 'Melamar, belum keterima'], ['keterima', 'Sudah keterima'], ['belum-dokumen', 'Belum unggah dokumen']];
 
   return (
@@ -93,6 +114,7 @@ export function TrackingTab({ onError }: { onError: (m: string) => void }) {
           {Object.entries(SCHEME_LABELS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>)}
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama peserta" aria-label="Cari nama peserta" style={{ ...field, maxWidth: '240px' }} />
+        <button type="button" style={btn} onClick={download} disabled={rows.length === 0}>{`Unduh Excel (${rows.length})`}</button>
       </div>
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
         {chips.map(([f, l]) => (

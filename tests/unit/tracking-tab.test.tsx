@@ -1,6 +1,12 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+
+const { sheets, files } = vi.hoisted(() => ({ sheets: [] as unknown[][], files: [] as string[] }));
+vi.mock('xlsx', () => ({
+  utils: { book_new: () => ({}), json_to_sheet: (rows: unknown[]) => { sheets.push(rows); return {}; }, book_append_sheet: () => undefined },
+  writeFile: (_wb: unknown, name: string) => { files.push(name); },
+}));
 import { TrackingTab } from '../../src/app/(admin)/admin/job-portal/tracking-tab';
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -63,5 +69,22 @@ describe('tracking peserta per kelas', () => {
     expect(screen.getByText('Fani')).toBeTruthy();
     expect(screen.queryByText('Andi')).toBeNull();
     expect(screen.queryByText('Caca')).toBeNull();
+  });
+
+  it('unduh Excel berisi baris hasil filter saja, dengan tempat keterima dan daftar lamaran', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ insights }), { status: 200 })));
+    sheets.length = 0; files.length = 0;
+    render(<TrackingTab onError={vi.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Sudah keterima (3)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Unduh Excel (3)' }));
+    expect(files[0]).toMatch(/^Tracking_peserta_\d{4}-\d{2}-\d{2}\.xlsx$/);
+    const rows = sheets[0] as Record<string, string>[];
+    expect(rows.map((r) => r['Nama peserta'])).toEqual(['Caca', 'Dodi', 'Fani']);
+    const fani = rows[2];
+    expect(fani.Status).toBe('Sudah keterima');
+    expect(fani['Keterima di']).toBe('QA Tester · Ioda (menunggu konfirmasi peserta)');
+    expect(fani.Lamaran).toBe('QA Tester · Ioda: Lolos · menunggu jawaban\nWeb Developer · Ioda: Tidak lolos');
+    expect(rows[0]['Dokumen LoA/kontrak']).toBe('Belum');
+    expect(rows[1]['Dokumen LoA/kontrak']).toBe('Sudah');
   });
 });
