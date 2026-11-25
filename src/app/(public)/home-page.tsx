@@ -163,22 +163,22 @@ export default function HomePage({ people, works, best, testi, site }: Props) {
         <div style={css('max-width:1180px;margin:0 auto')}>
           <div style={css('display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px')}>
             <span style={css('font-size:15px;font-weight:700;color:var(--plan-blue)')}>Capstone project</span>
-            <h2 style={css(H2)}>Contoh Karya Setiap Kelas</h2>
+            <h2 style={css(H2)}>Karya Terbaik Setiap Kelas</h2>
           </div>
-          <div style={css('margin-top:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:16px')}>
-            {best.map((bw) => {
+          <div className="bento" style={css('margin-top:40px')}>
+            {best.map((bw, i) => {
               const c = COH[bw.cohort], tk = TRACKS[c.track];
               return (
-                <div key={bw.href} style={css(`background:${c.color};color:${c.fg};border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:16px`)}>
+                <div key={bw.href} className={i === 0 ? 'bento-item big' : 'bento-item'} style={css(`background:${c.color};color:${c.fg};border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:16px`)}>
                   <div style={css('display:flex;flex-direction:column;gap:2px')}>
                     <span style={css('font-size:14px;font-weight:700')}>{tk.name}</span>
                     <span style={css('font-family:var(--font-headline);font-weight:700;font-size:26px;line-height:1.1;letter-spacing:-0.02em')}>{c.city}</span>
                   </div>
-                  <div style={css('position:relative;aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:#fff;color:var(--dark-blue)')}>
+                  <div className="bento-foto" style={css('position:relative;border-radius:14px;overflow:hidden;background:#fff;color:var(--dark-blue)')}>
                     <Photo src={bw.thumb} placeholder={bw.type} />
                   </div>
                   <div style={css('display:flex;flex-direction:column;gap:4px')}>
-                    <span style={css('font-family:var(--font-headline);font-weight:700;font-size:19px;line-height:1.2')}>{bw.title}</span>
+                    <span style={css(`font-family:var(--font-headline);font-weight:700;font-size:${i === 0 ? 'clamp(22px,2.6vw,30px)' : '19px'};line-height:1.2`)}>{bw.title}</span>
                     <span style={css('font-size:14px;font-weight:700')}>{bw.nickname} · {bw.type}</span>
                   </div>
                   <Hv as={Link} href={bw.href} s="all:unset;cursor:pointer;margin-top:auto;align-self:flex-start;padding:9px 16px;border-radius:999px;background:#fff;color:var(--dark-blue);font-weight:700;font-size:14px" h="transform:translateY(-1px)">Lihat karya ›</Hv>

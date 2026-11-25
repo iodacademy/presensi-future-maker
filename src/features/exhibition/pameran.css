@@ -100,7 +100,19 @@ html:has(.pameran) *::-webkit-scrollbar { display: none; }
   opacity: .22;
   pointer-events: none;
 }
+/* Bento karya terbaik: karya pertama 2x2, sisanya kotak kecil / Best-works bento: first work 2x2, the rest small tiles */
+.pameran .bento { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.pameran .bento-item.big { grid-column: span 2; grid-row: span 2; }
+.pameran .bento-foto { aspect-ratio: 4 / 3; }
+.pameran .bento-item.big .bento-foto { aspect-ratio: auto; flex: 1; min-height: 260px; }
+@media (max-width: 960px) {
+  .pameran .bento { grid-template-columns: repeat(2, 1fr); }
+  .pameran .bento-item.big { grid-row: auto; }
+}
 @media (max-width: 640px) {
+  .pameran .bento { grid-template-columns: 1fr; }
+  .pameran .bento-item.big { grid-column: auto; }
+  .pameran .bento-item.big .bento-foto { aspect-ratio: 4 / 3; min-height: 0; }
   .pameran .tr-card, .pameran .tr-card.flip { grid-template-columns: 1fr; min-height: 0; }
   .pameran .tr-card.flip .tr-foto { order: 0; }
   .pameran .tr-foto { aspect-ratio: 4 / 3; }
