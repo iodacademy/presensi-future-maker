@@ -36,6 +36,7 @@ export function CreateSessionModal({
   const [entryMode, setEntryMode] = useState<'manual' | 'import'>('manual');
   const [title, setTitle] = useState(editSession?.title ?? '');
   const [mode, setMode] = useState<SessionMode>(editSession?.mode ?? 'online');
+  const [selfPaced, setSelfPaced] = useState(editSession?.selfPaced === true);
   const [date, setDate] = useState(editSession?.date ?? '');
   const [startTime, setStartTime] = useState(editSession?.startTime ?? '19:00');
   const [endTime, setEndTime] = useState(editSession?.endTime ?? '22:00');
@@ -92,10 +93,12 @@ export function CreateSessionModal({
         method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          classId, classIds: extraClassIds, title, date, startTime, endTime, mode,
-          zoomUrl: mode === 'online' ? zoomUrl : null,
-          address: mode === 'offline' ? address : null,
-          mapsUrl: mode === 'offline' ? mapsUrl : null,
+          classId, classIds: extraClassIds, title, date, startTime, endTime,
+          // Sesi mandiri tidak punya ruang bergabung / A self-paced session has no room to join
+          mode: selfPaced ? 'online' : mode, selfPaced,
+          zoomUrl: !selfPaced && mode === 'online' ? zoomUrl : null,
+          address: !selfPaced && mode === 'offline' ? address : null,
+          mapsUrl: !selfPaced && mode === 'offline' ? mapsUrl : null,
         }),
       });
 
@@ -179,6 +182,16 @@ export function CreateSessionModal({
               <input style={inputStyle} placeholder="State Management Lanjutan" value={title} onChange={(e) => setTitle(e.target.value)} required />
             </div>
 
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', border: selfPaced ? '1px solid var(--color-primary)' : '1px solid var(--color-border)', backgroundColor: selfPaced ? 'var(--color-primary-light)' : '#ffffff' }}>
+              <input type="checkbox" checked={selfPaced} onChange={(e) => setSelfPaced(e.target.checked)} style={{ margin: '2px 0 0' }} />
+              <span>
+                <span style={{ display: 'block', fontWeight: 700, color: 'var(--color-text-main)' }}>Sesi mandiri (self paced)</span>
+                <span style={{ display: 'block', color: 'var(--color-text-muted)', marginTop: '2px' }}>Tampil di jadwal bersama materinya, tanpa presensi dan tidak dihitung dalam kehadiran. Tanggal dan jam menandai kapan materinya dirilis.</span>
+              </span>
+            </label>
+
+            {!selfPaced && (
+            <>
             {/* MODA (node 10:1814): pill terisi biru untuk Online, abu untuk Offline */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={labelStyle}>MODA</label>
@@ -246,7 +259,10 @@ export function CreateSessionModal({
               </div>
             )}
 
-            {mode === 'online' ? (
+            </>
+            )}
+
+            {selfPaced ? null : mode === 'online' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label style={labelStyle}>LINK ZOOM (OPSIONAL)</label>
                 <div style={{ position: 'relative' }}>
@@ -284,7 +300,7 @@ export function CreateSessionModal({
             </div>
 
             {/* Info box kuning (node 10:1836) */}
-            {mode === 'online' && (
+            {!selfPaced && mode === 'online' && (
               <div style={{ backgroundColor: 'var(--color-warning-light)', padding: '10px', borderRadius: '8px', fontSize: '9px', color: '#7c2d12', lineHeight: 1.4 }}>
                 Karena Online: presensi otomatis buka 19:00 dan tutup 22:00, QR aktif sepanjang jam itu.
               </div>

@@ -6,6 +6,7 @@ import type { SubmissionDocument } from '../tasks/submission-types';
 import type { ExamDocument, AttemptDocument } from '../exams/types';
 import { countsAfterJoin, effectiveDueAt } from '../users/join-policy';
 import { isLateForStudent } from '../tasks/submission-policy';
+import { takesAttendance } from '../attendance/policy';
 
 const ATTENDANCE_STATUS = { present: 'hadir', excused: 'izin', sick: 'sakit', absent: 'alpa' } as const;
 
@@ -25,7 +26,7 @@ const ATTENDANCE_STATUS = { present: 'hadir', excused: 'izin', sick: 'sakit', ab
  * pretest (no meeting) comes first.
  */
 export function buildStudentPerformance(input: {
-  sessions: Pick<SessionDocument, 'id' | 'title' | 'startsAt' | 'endsAt'>[];
+  sessions: Pick<SessionDocument, 'id' | 'title' | 'startsAt' | 'endsAt' | 'selfPaced'>[];
   attendance: Pick<AttendanceDocument, 'sessionId' | 'status'>[];
   exams: Pick<ExamDocument, 'id' | 'title' | 'kind' | 'sessionId' | 'passingScore' | 'questionCount'>[];
   attempts: Pick<AttemptDocument, 'examId' | 'status' | 'score' | 'passed'>[];
@@ -44,8 +45,9 @@ export function buildStudentPerformance(input: {
   // are recorded there. Their tasks and quizzes still show, only without a deadline.
   // Showcase tidak dihitung kehadirannya dan presensinya tidak diambil, jadi bila tampil selalu merah
   // Showcase attendance is not counted nor taken, so if shown it would always be red
+  // Sesi mandiri juga tanpa presensi / Self-paced sessions take no attendance either
   const sessions = [...input.sessions]
-    .filter((s) => !/^Showcase\b/i.test(s.title) && countsAfterJoin(s.endsAt, joinIso, statusBySession.has(s.id)))
+    .filter((s) => takesAttendance(s) && !/^Showcase\b/i.test(s.title) && countsAfterJoin(s.endsAt, joinIso, statusBySession.has(s.id)))
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 
   const attendance = sessions.map((s) => {

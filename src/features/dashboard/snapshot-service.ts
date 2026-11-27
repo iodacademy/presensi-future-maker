@@ -11,6 +11,7 @@ import { countsAfterJoin, effectiveDueAt, joinMoment } from '../users/join-polic
 import { hitungFase, keteranganFase } from './phases';
 import { buildFeedbackReport } from './feedback';
 import { countAbsent, gradeParticipant, gradedMeetings, performanceScore } from '../grading/policy';
+import { takesAttendance } from '../attendance/policy';
 import { combinedScore, comparePlacementRank, decidePlacement } from '../grading/placement';
 import { SPECIAL_CASE_COLLECTION, withPlacementOverride, withSpecialCases } from '../grading/special-case';
 import { wibDate } from '@/lib/time';
@@ -257,6 +258,9 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   const sessions = sessionsSnap.docs
     .map((d) => d.data() as SessionDocument)
     .sort((a, b) => a.date.localeCompare(b.date));
+
+  // Sesi mandiri tampil di jadwal tetapi tidak dihitung kehadirannya / Self-paced sessions show on the schedule but never count for attendance
+  const sesiPresensi = sessions.filter(takesAttendance);
 
   const hadirPerSesi = new Map<string, Set<string>>();
   const statusPerSesi = new Map<string, Map<string, AttendanceStatus>>();
@@ -526,7 +530,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
 
   // --- peringkat dan daftar siaga ---------------------------------------
   const sesiDimulaiPerKelas = new Map<string, SessionDocument[]>();
-  for (const s of sessions) {
+  for (const s of sesiPresensi) {
     if (s.startsAt > nowIso) continue;
     for (const cid of s.classIds ?? [s.classId]) {
       if (!sesiDimulaiPerKelas.has(cid)) sesiDimulaiPerKelas.set(cid, []);
@@ -680,7 +684,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   // score. The Best Performance ranking uses its own rubric, without the
   // capstone (see performanceScore).
   const sesiPerKelas = new Map<string, { id: string; endsAt: string; title: string }[]>();
-  for (const x of sessions) {
+  for (const x of sesiPresensi) {
     for (const cid of new Set([x.classId, ...(x.classIds ?? [])])) {
       if (!sesiPerKelas.has(cid)) sesiPerKelas.set(cid, []);
       sesiPerKelas.get(cid)!.push({ id: x.id, endsAt: x.endsAt, title: x.title });
@@ -826,7 +830,7 @@ export async function computeSnapshot(actor: Actor): Promise<DashboardSnapshot> 
   // of columns that are not their schedule, and each counts as "absent", dropping
   // their attendance to a figure that never happened.
   const sesiPerKelasId = new Map<string, SessionDocument[]>();
-  for (const sesi of sessions) {
+  for (const sesi of sesiPresensi) {
     for (const cid of sesi.classIds ?? [sesi.classId]) {
       if (!sesiPerKelasId.has(cid)) sesiPerKelasId.set(cid, []);
       sesiPerKelasId.get(cid)!.push(sesi);

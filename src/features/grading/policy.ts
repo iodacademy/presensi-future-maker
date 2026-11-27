@@ -1,6 +1,7 @@
 // Aturan perhitungan nilai akhir / Final score calculation rules
 import { countsAfterJoin } from '../users/join-policy';
 import type { AttendanceStatus } from '../attendance/types';
+import { takesAttendance } from '../attendance/policy';
 import { GRADE_WEIGHTS, type ComponentBreakdown, type GradeComponent } from './types';
 
 /**
@@ -148,7 +149,7 @@ export function calculateFinalGrade(input: {
  * separately drifts into showing figures that differ from the official score.
  */
 export function gradeParticipant(input: {
-  sessions: { id: string; endsAt: string; title?: string }[];
+  sessions: { id: string; endsAt: string; title?: string; selfPaced?: boolean }[];
   joinIso: string;
   recorded: (sessionId: string) => boolean;
   present: (sessionId: string) => boolean;
@@ -222,10 +223,11 @@ export function gradeParticipant(input: {
  * The meetings graded for one participant; shared by the attendance score and
  * the absence count so both always look at the same meetings.
  */
-export function gradedMeetings<T extends { id: string; endsAt: string; title?: string }>(
+export function gradedMeetings<T extends { id: string; endsAt: string; title?: string; selfPaced?: boolean }>(
   sessions: T[], joinIso: string, recorded: (sessionId: string) => boolean
 ): T[] {
-  return sessions.filter((s) => /\bPertemuan\s+\d+/i.test(s.title ?? '') && countsAfterJoin(s.endsAt, joinIso, recorded(s.id)));
+  // Sesi mandiri tidak berpresensi walau berjudul "Pertemuan N" / Self-paced sessions take no attendance even when titled "Pertemuan N"
+  return sessions.filter((s) => takesAttendance(s) && /\bPertemuan\s+\d+/i.test(s.title ?? '') && countsAfterJoin(s.endsAt, joinIso, recorded(s.id)));
 }
 
 /**
@@ -238,7 +240,7 @@ export function gradedMeetings<T extends { id: string; endsAt: string; title?: s
  * does for the attendance score.
  */
 export function countAbsent(input: {
-  sessions: { id: string; endsAt: string; title?: string }[];
+  sessions: { id: string; endsAt: string; title?: string; selfPaced?: boolean }[];
   joinIso: string;
   nowIso: string;
   status: (sessionId: string) => AttendanceStatus | undefined;

@@ -8,7 +8,7 @@ import type { MentoringBookingDocument } from '../mentoring/types';
 import type { TaskDocument } from '../tasks/types';
 import type { ExamKind } from '../exams/types';
 import type { SubmissionDocument } from '../tasks/submission-types';
-import { isSessionAttendanceActive } from '../attendance/policy';
+import { isSessionAttendanceActive, takesAttendance } from '../attendance/policy';
 import { isDeadlineUrgent, formatDeadlineLabel, formatProgressRatio } from './policy';
 import { buildStudentPerformance } from './performance';
 import { countsAfterJoin, effectiveDueAt } from '../users/join-policy';
@@ -111,8 +111,10 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
 
   // Jika tidak ada sesi aktif, cari sesi berikutnya di masa depan / Find next upcoming session
   if (!activeSession) {
+    // Kartu pertemuan berikutnya untuk sesi bertatap muka; sesi mandiri tidak punya ruang bergabung
+    // The next-meeting card is for live sessions; self-paced ones have no room to join
     const upcoming = sessions
-      .filter((s) => s.endsAt > nowIso)
+      .filter((s) => takesAttendance(s) && s.endsAt > nowIso)
       .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 
     if (upcoming.length > 0) {
@@ -239,7 +241,7 @@ export async function getStudentHomeDashboard(actor: Actor): Promise<StudentHome
   // Pertemuan sebelum peserta bergabung tidak dihitung, kecuali ia tercatat di sana.
   // Meetings before the participant joined do not count, unless they are recorded there.
   const recordedSessionIds = new Set(attendSnap.docs.map((d) => (d.data() as AttendanceDocument).sessionId));
-  const pastSessions = sessions.filter((s) => s.endsAt <= nowIso && countsAfterJoin(s.endsAt, joinIso, recordedSessionIds.has(s.id)));
+  const pastSessions = sessions.filter((s) => takesAttendance(s) && s.endsAt <= nowIso && countsAfterJoin(s.endsAt, joinIso, recordedSessionIds.has(s.id)));
   const attendanceRatio = formatProgressRatio(attendedSessionIds.size, pastSessions.length || sessions.length);
 
   // Tugas Harian: jumlah tugas harian yang terkumpul / total tugas harian wajib

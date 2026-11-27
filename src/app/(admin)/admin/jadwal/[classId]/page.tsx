@@ -138,7 +138,10 @@ export default function AdminJadwalDetailPage({ params }: { params: Promise<{ cl
             const isOnline = session.mode === 'online';
             const dateLabel = formatDateLabel(session.date);
 
-            const subtitle = status === 'completed'
+            const mandiri = session.selfPaced === true;
+            const subtitle = mandiri
+              ? `${dateLabel} - rilis ${session.startTime} - Mandiri, tanpa presensi`
+              : status === 'completed'
               ? `${dateLabel} - Selesai - ${session.attendeeCount}/${classData?.studentCount || 0} hadir`
               : `${dateLabel} - ${session.startTime}-${session.endTime} - ${isOnline ? 'Online' : `Offline - ${session.address || ''}`}`;
 
@@ -170,7 +173,7 @@ export default function AdminJadwalDetailPage({ params }: { params: Promise<{ cl
                       color: status === 'upcoming' ? 'var(--color-text-main)' : '#ffffff',
                     }}
                   >
-                    {status === 'active' ? 'QR AKTIF' : status === 'completed' ? 'Selesai' : 'Terjadwal'}
+                    {mandiri ? 'Mandiri' : status === 'active' ? 'QR AKTIF' : status === 'completed' ? 'Selesai' : 'Terjadwal'}
                   </span>
 
                   {status === 'active' && (
@@ -182,7 +185,7 @@ export default function AdminJadwalDetailPage({ params }: { params: Promise<{ cl
                       Lihat QR
                     </button>
                   )}
-                  {status === 'upcoming' && (
+                  {status === 'upcoming' && !mandiri && (
                     <button
                       type="button"
                       onClick={() => setMonitorSessionId(session.id)}
@@ -200,7 +203,7 @@ export default function AdminJadwalDetailPage({ params }: { params: Promise<{ cl
                       itself as an attendance list, and an icon to be guessed at
                       beside two others has an admin press each in turn to find
                       the one they want. */}
-                  <button
+                  {!mandiri && <button
                     type="button"
                     aria-label={`Daftar hadir ${session.title}`}
                     onClick={() => setAttendanceSessionId(session.id)}
@@ -211,7 +214,7 @@ export default function AdminJadwalDetailPage({ params }: { params: Promise<{ cl
                     }}
                   >
                     Buka
-                  </button>
+                  </button>}
                   <button
                     type="button"
                     aria-label={`Ubah pertemuan ${session.title}`}

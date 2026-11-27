@@ -148,7 +148,7 @@ function buildGroups(items: SessionItem[], tasks: StudentTaskOutline[], standalo
       item,
       number: index + 1,
       sections: [
-        { label: 'Info Pertemuan', kind: 'info', entries: [{ key: `presensi.${session.id}`, kind: 'info', title: 'Jadwal & presensi', item } as Entry] },
+        { label: 'Info Pertemuan', kind: 'info', entries: [{ key: `presensi.${session.id}`, kind: 'info', title: session.selfPaced ? 'Jadwal belajar mandiri' : 'Jadwal & presensi', item } as Entry] },
         {
           label: 'Rekaman',
           kind: 'recording',
@@ -408,6 +408,25 @@ function Stage({ entry }: { entry: Entry }) {
   if (entry.kind === 'info' && entry.item) {
     const { session, attendance, isActive } = entry.item;
     const isOnline = session.mode === 'online';
+    // Sesi mandiri dipelajari sendiri dari materinya, tanpa ruang bergabung dan tanpa presensi
+    // A self-paced session is studied alone from its materials, with no room to join and no attendance
+    if (session.selfPaced) {
+      return (
+        <Card kind="info">
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-light)', padding: '3px 8px', borderRadius: '10px' }}>MANDIRI</span>
+          </div>
+          <Row label="Materi rilis">{formatDateWib(session.startsAt)}, {session.startTime} WIB</Row>
+          <Row label="Kehadiran">
+            <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>Tidak ada presensi untuk sesi mandiri</span>
+          </Row>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', marginTop: '16px', borderRadius: '6px', backgroundColor: 'var(--color-bg-student)' }}>
+            <Info size={11} color="var(--color-text-muted)" strokeWidth={2} />
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Pelajari rekaman dan materinya, lalu kerjakan tugasnya sesuai tenggat.</span>
+          </div>
+        </Card>
+      );
+    }
     return (
       <Card kind="info">
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
@@ -664,6 +683,8 @@ export default function StudentJadwalPage() {
   }
 
   const attendedCount = items.filter((i) => i.attendance).length;
+  // Pembagi kehadiran hanya pertemuan berpresensi / The attendance divisor counts only meetings that take attendance
+  const attendanceTotal = items.filter((i) => !i.session.selfPaced).length;
 
   const navButton = (target: Entry | undefined, dir: 'prev' | 'next') => {
     const next = dir === 'next';
@@ -751,13 +772,13 @@ export default function StudentJadwalPage() {
                 <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.85)', marginTop: '4px' }}>
                   {items.length} pertemuan · {materiCount} materi & tugas
                 </p>
-                {items.length > 0 && (
+                {attendanceTotal > 0 && (
                   <div style={{ marginTop: '10px' }}>
                     <div style={{ height: '6px', borderRadius: '3px', backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' }}>
-                      <div style={{ width: `${(attendedCount / items.length) * 100}%`, height: '100%', borderRadius: '3px', backgroundColor: 'var(--color-highlight-yellow)' }} />
+                      <div style={{ width: `${(attendedCount / attendanceTotal) * 100}%`, height: '100%', borderRadius: '3px', backgroundColor: 'var(--color-highlight-yellow)' }} />
                     </div>
                     <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.9)', marginTop: '4px' }}>
-                      Hadir {attendedCount} dari {items.length} pertemuan
+                      Hadir {attendedCount} dari {attendanceTotal} pertemuan
                     </div>
                   </div>
                 )}

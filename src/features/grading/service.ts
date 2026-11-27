@@ -147,9 +147,9 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
     await Promise.all([
       db.collection('users').where('classId', '==', classId).where('role', '==', 'student').where('active', '==', true).get(),
       db.collection('classes').doc(classId).get(),
-      db.collection('sessions').where('classId', '==', classId).select('endsAt', 'title').get(),
+      db.collection('sessions').where('classId', '==', classId).select('endsAt', 'title', 'selfPaced').get(),
       // Pertemuan gabungan menyimpan kelas tambahannya di classIds / A joint meeting stores its extra classes in classIds
-      db.collection('sessions').where('classIds', 'array-contains', classId).select('endsAt', 'title').get(),
+      db.collection('sessions').where('classIds', 'array-contains', classId).select('endsAt', 'title', 'selfPaced').get(),
       db.collection('tasks').where('classId', '==', classId).where('published', '==', true).get(),
       db.collection('submissions').where('classId', '==', classId).get(),
       db.collection('exams').where('classId', '==', classId).where('published', '==', true).get(),
@@ -160,9 +160,9 @@ export async function getFinalGrades(actor: Actor, classId: string): Promise<Fin
     ]);
 
   const className = (classSnap.data()?.canonicalName as string) ?? '';
-  const sesiKelas = new Map<string, { id: string; endsAt: string; title: string }>();
+  const sesiKelas = new Map<string, { id: string; endsAt: string; title: string; selfPaced: boolean }>();
   for (const d of [...sessionsSnap.docs, ...sharedSessionsSnap.docs]) {
-    sesiKelas.set(d.id, { id: d.id, endsAt: d.data().endsAt as string, title: (d.data().title as string) ?? '' });
+    sesiKelas.set(d.id, { id: d.id, endsAt: d.data().endsAt as string, title: (d.data().title as string) ?? '', selfPaced: d.data().selfPaced === true });
   }
 
   // Nilai Tugas hanya dari Tugas Praktik Mandiri: hasil praktik di kelas tidak

@@ -127,6 +127,7 @@ export async function createSession(actor: Actor, input: CreateSessionInput): Pr
     startsAt,
     endsAt,
     mode: validated.mode,
+    selfPaced: input.selfPaced === true,
     zoomUrl: validated.zoomUrl,
     address: validated.address,
     mapsUrl: validated.mapsUrl,
@@ -241,6 +242,16 @@ export async function updateSession(actor: Actor, input: UpdateSessionInput): Pr
   // copy of sessionEndsAt from the moment it was taken; shifting the time makes
   // that copy disagree with its session, so the attendance window and the
   // attendance report both go wrong. Title, links, and address stay editable.
+  // Menjadikan sesi mandiri membuang presensi yang sudah tercatat dari nilai peserta, jadi ditolak bila sudah ada catatan
+  // Making a session self-paced drops already-recorded attendance from participants' scores, so it is refused once records exist
+  const becomesSelfPaced = input.selfPaced === true && !current.selfPaced;
+  if (becomesSelfPaced) {
+    const recorded = await db.collection('attendance').where('sessionId', '==', input.sessionId).limit(1).get();
+    if (!recorded.empty) {
+      throw new Error('Pertemuan ini sudah punya catatan presensi, jadi tidak dapat dijadikan sesi mandiri.');
+    }
+  }
+
   if (timeChanged) {
     const attended = await db
       .collection('attendance')
@@ -277,6 +288,7 @@ export async function updateSession(actor: Actor, input: UpdateSessionInput): Pr
     startsAt,
     endsAt,
     mode: validated.mode,
+    ...(input.selfPaced !== undefined ? { selfPaced: input.selfPaced === true } : {}),
     zoomUrl: validated.zoomUrl,
     address: validated.address,
     mapsUrl: validated.mapsUrl,
@@ -929,6 +941,9 @@ export async function setAttendanceStatus(actor: Actor, input: SetAttendanceInpu
   const session = await getSessionById(input.sessionId);
   if (!session) {
     throw new Error('Sesi tidak ditemukan');
+  }
+  if (session.selfPaced) {
+    throw new Error('Sesi mandiri tidak memakai presensi');
   }
 
   const studentDoc = await db.collection('users').doc(input.studentId).get();

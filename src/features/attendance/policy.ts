@@ -199,6 +199,17 @@ export function isAttendanceWindowActive(
 }
 
 /**
+ * Pertemuan yang memakai presensi. Sesi mandiri tidak, sehingga dikeluarkan
+ * dari QR, presensi manual, dan setiap hitungan kehadiran.
+ *
+ * Meetings that take attendance. Self-paced ones do not, so they are left out
+ * of the QR, manual attendance, and every attendance count.
+ */
+export function takesAttendance(session: { selfPaced?: boolean }): boolean {
+  return session.selfPaced !== true;
+}
+
+/**
  * Menentukan apakah QR presensi sesi sedang aktif:
  * - Jika override = 'closed': selalu nonaktif (tutup manual oleh admin)
  * - Jika override = 'open': aktif (buka manual oleh admin untuk offline)
@@ -208,6 +219,10 @@ export function isAttendanceWindowActive(
  * Determines whether session attendance QR is currently active.
  */
 export function isSessionAttendanceActive(session: SessionDocument, currentIsoString: string): boolean {
+  if (!takesAttendance(session)) {
+    return false;
+  }
+
   if (session.attendanceOverride === 'closed') {
     return false;
   }

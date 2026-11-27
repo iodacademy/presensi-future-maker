@@ -46,6 +46,18 @@ export interface SessionDocument {
   startsAt: string; // ISO UTC
   endsAt: string; // ISO UTC
   mode: SessionMode;
+  /**
+   * Sesi mandiri (self paced): tampil di jadwal bersama materinya, tetapi
+   * tanpa presensi. Tidak ada QR, dan sesi ini tidak ikut dihitung dalam
+   * persentase maupun nilai kehadiran. Tanggal dan jamnya menandai kapan
+   * materinya dirilis. Sesi lama tidak memuat field ini, berarti berpresensi.
+   *
+   * A self-paced session: shown on the schedule with its materials, but with
+   * no attendance. It has no QR and never counts toward the attendance
+   * percentage or score. Its date and time mark when the material is released.
+   * Older sessions lack this field, meaning they take attendance.
+   */
+  selfPaced?: boolean;
   // Tautan bergabung ke sesi, dipakai sebelum dan selama sesi berlangsung
   // Join link for the session, used before and during the meeting
   zoomUrl: string | null;
@@ -152,6 +164,7 @@ export interface CreateSessionInput {
   zoomUrl?: string | null;
   address?: string | null;
   mapsUrl?: string | null;
+  selfPaced?: boolean;
 }
 
 export interface UpdateSessionInput {
@@ -165,6 +178,7 @@ export interface UpdateSessionInput {
   zoomUrl?: string | null;
   address?: string | null;
   mapsUrl?: string | null;
+  selfPaced?: boolean;
 }
 
 export interface AddRecordingInput {

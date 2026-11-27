@@ -62,9 +62,9 @@ export async function getStudentDetail(actor: Actor, uid: string): Promise<Stude
   const empty = Promise.resolve({ docs: [] as FirebaseFirestore.QueryDocumentSnapshot[] });
   const [classSnap, ownSessions, sharedSessions, tasksSnap, examsSnap, attendSnap, subsSnap, attemptsSnap, bookingsSnap, responsesSnap, profileSnap, noteSnap] = await Promise.all([
     classId ? db.collection('classes').doc(classId).get() : Promise.resolve(null),
-    classId ? db.collection('sessions').where('classId', '==', classId).select('id', 'title', 'startsAt', 'endsAt').get() : empty,
+    classId ? db.collection('sessions').where('classId', '==', classId).select('id', 'title', 'startsAt', 'endsAt', 'selfPaced').get() : empty,
     // Pertemuan gabungan menyimpan kelas tambahannya di classIds / A joint meeting stores its extra classes in classIds
-    classId ? db.collection('sessions').where('classIds', 'array-contains', classId).select('id', 'title', 'startsAt', 'endsAt').get() : empty,
+    classId ? db.collection('sessions').where('classIds', 'array-contains', classId).select('id', 'title', 'startsAt', 'endsAt', 'selfPaced').get() : empty,
     classId ? db.collection('tasks').where('classId', '==', classId).where('published', '==', true).select('id', 'title', 'kind', 'dueAt', 'order').get() : empty,
     classId ? db.collection('exams').where('classId', '==', classId).where('published', '==', true).select('id', 'title', 'kind', 'sessionId', 'passingScore', 'questionCount').get() : empty,
     db.collection('attendance').where('studentId', '==', uid).select('sessionId', 'status').get(),
@@ -84,7 +84,7 @@ export async function getStudentDetail(actor: Actor, uid: string): Promise<Stude
 
   const kelas = classSnap?.exists ? (classSnap.data() as ClassDocument) : null;
 
-  const sessions = new Map<string, Pick<SessionDocument, 'id' | 'title' | 'startsAt' | 'endsAt'>>();
+  const sessions = new Map<string, Pick<SessionDocument, 'id' | 'title' | 'startsAt' | 'endsAt' | 'selfPaced'>>();
   for (const d of [...ownSessions.docs, ...sharedSessions.docs]) {
     sessions.set(d.id, { ...(d.data() as SessionDocument), id: d.id });
   }
