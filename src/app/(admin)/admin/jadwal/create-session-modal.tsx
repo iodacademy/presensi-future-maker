@@ -185,7 +185,7 @@ export function CreateSessionModal({
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', border: selfPaced ? '1px solid var(--color-primary)' : '1px solid var(--color-border)', backgroundColor: selfPaced ? 'var(--color-primary-light)' : '#ffffff' }}>
               <input type="checkbox" checked={selfPaced} onChange={(e) => setSelfPaced(e.target.checked)} style={{ margin: '2px 0 0' }} />
               <span>
-                <span style={{ display: 'block', fontWeight: 700, color: 'var(--color-text-main)' }}>Sesi mandiri (self paced)</span>
+                <span style={{ display: 'block', fontWeight: 700, color: 'var(--color-text-main)' }}>Belajar mandiri (self paced)</span>
                 <span style={{ display: 'block', color: 'var(--color-text-muted)', marginTop: '2px' }}>Tampil di jadwal bersama materinya, tanpa presensi dan tidak dihitung dalam kehadiran. Tanggal dan jam menandai kapan materinya dirilis.</span>
               </span>
             </label>

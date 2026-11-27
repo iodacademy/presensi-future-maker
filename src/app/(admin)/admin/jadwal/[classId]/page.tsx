@@ -140,7 +140,7 @@ export default function AdminJadwalDetailPage({ params }: { params: Promise<{ cl
 
             const mandiri = session.selfPaced === true;
             const subtitle = mandiri
-              ? `${dateLabel} - rilis ${session.startTime} - Mandiri, tanpa presensi`
+              ? `${dateLabel} - rilis ${session.startTime} - Belajar mandiri, tanpa presensi`
               : status === 'completed'
               ? `${dateLabel} - Selesai - ${session.attendeeCount}/${classData?.studentCount || 0} hadir`
               : `${dateLabel} - ${session.startTime}-${session.endTime} - ${isOnline ? 'Online' : `Offline - ${session.address || ''}`}`;
@@ -173,7 +173,7 @@ export default function AdminJadwalDetailPage({ params }: { params: Promise<{ cl
                       color: status === 'upcoming' ? 'var(--color-text-main)' : '#ffffff',
                     }}
                   >
-                    {mandiri ? 'Mandiri' : status === 'active' ? 'QR AKTIF' : status === 'completed' ? 'Selesai' : 'Terjadwal'}
+                    {mandiri ? 'Belajar Mandiri' : status === 'active' ? 'QR AKTIF' : status === 'completed' ? 'Selesai' : 'Terjadwal'}
                   </span>
 
                   {status === 'active' && (

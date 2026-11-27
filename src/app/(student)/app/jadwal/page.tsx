@@ -414,11 +414,11 @@ function Stage({ entry }: { entry: Entry }) {
       return (
         <Card kind="info">
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
-            <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-light)', padding: '3px 8px', borderRadius: '10px' }}>MANDIRI</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-light)', padding: '3px 8px', borderRadius: '10px' }}>BELAJAR MANDIRI</span>
           </div>
           <Row label="Materi rilis">{formatDateWib(session.startsAt)}, {session.startTime} WIB</Row>
           <Row label="Kehadiran">
-            <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>Tidak ada presensi untuk sesi mandiri</span>
+            <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>Tidak ada presensi untuk belajar mandiri</span>
           </Row>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', marginTop: '16px', borderRadius: '6px', backgroundColor: 'var(--color-bg-student)' }}>
             <Info size={11} color="var(--color-text-muted)" strokeWidth={2} />
@@ -770,7 +770,7 @@ export default function StudentJadwalPage() {
                   </button>
                 </div>
                 <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.85)', marginTop: '4px' }}>
-                  {items.length} pertemuan · {materiCount} materi & tugas
+                  {attendanceTotal} pertemuan{items.length > attendanceTotal ? ` · ${items.length - attendanceTotal} belajar mandiri` : ''} · {materiCount} materi & tugas
                 </p>
                 {attendanceTotal > 0 && (
                   <div style={{ marginTop: '10px' }}>

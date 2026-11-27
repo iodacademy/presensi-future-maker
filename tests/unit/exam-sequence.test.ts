@@ -54,6 +54,19 @@ describe('urutan dan jadwal kuis', () => {
     expect(l('2026-10-23T09:00:01.000Z')).toEqual({ locked: false });
   });
 
+  it('menunggu sesi belajar mandiri terakhir walau nomornya dihitung terpisah dari pertemuan', () => {
+    // Pertemuan 1-5 dan Belajar Mandiri 1-7 dinomori terpisah; Belajar Mandiri 7 tetap materi terakhir
+    // Meetings 1-5 and Belajar Mandiri 1-7 are numbered separately; Belajar Mandiri 7 is still the last material
+    const jadwal = [
+      { id: 'p5', title: 'Pertemuan 5: Iklan', startsAt: '2026-12-09T12:00:00.000Z', endsAt: '2026-12-09T15:00:00.000Z' },
+      { id: 'm7', title: 'Belajar Mandiri 7: Pitching Deck', startsAt: '2026-12-10T01:02:00.000Z', endsAt: '2026-12-10T16:00:00.000Z' },
+      { id: 'm6', title: 'Belajar Mandiri 6: CRM', startsAt: '2026-12-10T01:01:00.000Z', endsAt: '2026-12-10T16:00:00.000Z' },
+    ];
+    const l = (nowIso: string) => computeExamLocks({ exams, sessions: jadwal, finishedExamIds: new Set(['pre']), nowIso }).get('post');
+    expect(l('2026-12-09T16:00:00.000Z')).toEqual({ locked: true, reason: 'jadwal', availableFrom: '2026-12-10T16:00:00.000Z' });
+    expect(l('2026-12-10T16:00:01.000Z')).toEqual({ locked: false });
+  });
+
   it('tidak menjadikan kuis tanpa soal sebagai syarat', () => {
     const l = computeExamLocks({
       exams: [...exams.filter((e) => e.id !== 'k1'), { id: 'k1', title: 'Kuis kosong', kind: 'kuis', sessionId: 's1', questionCount: 0 }],

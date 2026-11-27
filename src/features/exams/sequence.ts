@@ -46,8 +46,8 @@ export function orderExams<T extends SequenceExam>(exams: T[], sessionStart: Map
  *   kuis sebelumnya di jalur sudah dikerjakan. Kuis yang terlewat tetap dapat
  *   dikejar sesudahnya; menguncinya lagi setelah sesi berakhir membuat peserta
  *   yang absen tidak pernah dapat menyelesaikan jalurnya.
- * - Postest terbuka setelah pretest dikerjakan dan pertemuan materi terakhir
- *   ("Pertemuan N" bernomor terbesar) selesai. Showcase dan kelas karier
+ * - Postest terbuka setelah pretest dikerjakan dan materi terakhir ("Pertemuan
+ *   N" atau "Belajar Mandiri N" yang paling akhir selesai) usai. Showcase dan kelas karier
  *   sesudahnya bukan materi yang diukur postest, jadi tidak perlu ditunggu.
  *   Tanpa pertemuan bernomor, postest terbuka saat pertemuan terakhir dimulai.
  *
@@ -65,8 +65,8 @@ export function orderExams<T extends SequenceExam>(exams: T[], sessionStart: Map
  *   quiz on the path is done. A missed quiz can still be caught up afterwards;
  *   relocking it after the session ends would leave an absent participant
  *   unable to ever finish the path.
- * - The posttest opens once the pretest is done and the last material meeting
- *   (the highest-numbered "Pertemuan N") has ended. The showcase and career
+ * - The posttest opens once the pretest is done and the last material (the
+ *   "Pertemuan N" or "Belajar Mandiri N" that ends latest) is over. The showcase and career
  *   classes after it are not material the posttest measures, so they are not
  *   waited for. Without numbered meetings, it opens when the last meeting starts.
  *
@@ -86,8 +86,12 @@ export function computeExamLocks(input: {
     e.questionCount > 0 && !finishedExamIds.has(e.id) && !(e.dueAt && e.dueAt < nowIso);
   const sessionStart = new Map(input.sessions.map((s) => [s.id, s.startsAt]));
   const lastStart = input.sessions.map((s) => s.startsAt).sort().at(-1) ?? null;
-  const nomor = (s: { title?: string }) => Number(/^Pertemuan\s+(\d+)/i.exec(s.title ?? '')?.[1] ?? 0);
-  const materiTerakhir = input.sessions.filter((s) => nomor(s) > 0 && s.endsAt).sort((a, b) => nomor(b) - nomor(a))[0];
+  // Materi = "Pertemuan N" atau "Belajar Mandiri N". Keduanya dinomori terpisah, jadi yang
+  // terakhir dipilih dari waktu selesainya, bukan dari nomornya.
+  // Material = "Pertemuan N" or "Belajar Mandiri N". Each is numbered on its own, so the last
+  // one is picked by its end time, not by its number.
+  const materi = (s: { title?: string }) => /^(Pertemuan|Belajar Mandiri)\s+\d+/i.test(s.title ?? '');
+  const materiTerakhir = input.sessions.filter((s) => materi(s) && s.endsAt).sort((a, b) => b.endsAt!.localeCompare(a.endsAt!))[0];
   const postestBuka = materiTerakhir?.endsAt ?? lastStart;
   const ordered = orderExams(input.exams, sessionStart);
   const locks = new Map<string, ExamLock>();

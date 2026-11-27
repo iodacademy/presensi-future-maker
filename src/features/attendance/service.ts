@@ -248,7 +248,7 @@ export async function updateSession(actor: Actor, input: UpdateSessionInput): Pr
   if (becomesSelfPaced) {
     const recorded = await db.collection('attendance').where('sessionId', '==', input.sessionId).limit(1).get();
     if (!recorded.empty) {
-      throw new Error('Pertemuan ini sudah punya catatan presensi, jadi tidak dapat dijadikan sesi mandiri.');
+      throw new Error('Pertemuan ini sudah punya catatan presensi, jadi tidak dapat dijadikan sesi belajar mandiri.');
     }
   }
 
@@ -943,7 +943,7 @@ export async function setAttendanceStatus(actor: Actor, input: SetAttendanceInpu
     throw new Error('Sesi tidak ditemukan');
   }
   if (session.selfPaced) {
-    throw new Error('Sesi mandiri tidak memakai presensi');
+    throw new Error('Sesi belajar mandiri tidak memakai presensi');
   }
 
   const studentDoc = await db.collection('users').doc(input.studentId).get();

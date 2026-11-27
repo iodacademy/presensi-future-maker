@@ -526,6 +526,14 @@ describe('memasangkan kuis ke pertemuannya', () => {
     expect(cariSesiKuis('Kuis Pertemuan 3', kembar)).toBe(null);
   });
 
+  it('membedakan Belajar Mandiri N dari Pertemuan N yang bernomor sama', () => {
+    // Pertemuan dan sesi belajar mandiri dinomori terpisah, jadi nomornya dicocokkan bersama jenisnya
+    // Meetings and self-paced sessions are numbered separately, so the number is matched together with its kind
+    const campur = [...SESI, { id: 'm1', title: 'Belajar Mandiri 1: Ekosistem Digital Marketing' }];
+    expect(cariSesiKuis('Kuis Belajar Mandiri 1', campur)?.id).toBe('m1');
+    expect(cariSesiKuis('Kuis Pertemuan 1', campur)?.id).toBe('s1');
+  });
+
   it('mengembalikan null bila tidak ada pertemuan yang cocok', () => {
     expect(cariSesiKuis('Kuis Pertemuan 99', SESI)).toBe(null);
     expect(cariSesiKuis('Kuis Bonus', SESI)).toBe(null);

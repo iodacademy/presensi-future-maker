@@ -488,9 +488,15 @@ export function cariSesiKuis<T extends { title: string }>(judulKuis: string, ses
   const persis = sesi.find((x) => normalJudul(x.title) === tanpaAwalan);
   if (persis) return persis;
 
-  const nomor = judulKuis.match(/pertemuan\s*(\d+)/i)?.[1];
+  // Pertemuan dan Belajar Mandiri dinomori terpisah, jadi jenis dan nomornya dicocokkan bersama
+  // Meetings and Belajar Mandiri are numbered separately, so kind and number are matched together
+  const label = (judul: string) => {
+    const m = judul.match(/(pertemuan|belajar\s+mandiri)\s*(\d+)/i);
+    return m ? `${m[1].toLowerCase().replace(/\s+/g, ' ')} ${m[2]}` : null;
+  };
+  const nomor = label(judulKuis);
   if (!nomor) return null;
-  const senomor = sesi.filter((x) => x.title.match(/pertemuan\s*(\d+)/i)?.[1] === nomor);
+  const senomor = sesi.filter((x) => label(x.title) === nomor);
   return senomor.length === 1 ? senomor[0] : null;
 }
 
